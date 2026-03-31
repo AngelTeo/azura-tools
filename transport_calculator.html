@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Kelayakan — Jabatan Pengangkutan</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2e3347;
+    --accent: #00d4aa;
+    --accent2: #ff6b35;
+    --warn: #ffc107;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --text: #e8eaf0;
+    --text2: #8a90a8;
+    --text3: #555c7a;
+    --income-col: #0d2b20;
+    --cost-col: #2a1515;
+    --income-accent: #00d4aa;
+    --cost-accent: #ff6b35;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .header-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-sub { font-size: 12px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+  .header-badge {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text2);
+  }
+
+  /* VERDICT BANNER */
+  .verdict {
+    margin: 24px 40px 0;
+    border-radius: 12px;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.4s ease;
+    border: 1.5px solid transparent;
+  }
+  .verdict.profit {
+    background: rgba(0, 212, 170, 0.08);
+    border-color: var(--success);
+  }
+  .verdict.loss {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: var(--danger);
+  }
+  .verdict.breakeven {
+    background: rgba(255, 193, 7, 0.08);
+    border-color: var(--warn);
+  }
+  .verdict-icon { font-size: 32px; }
+  .verdict-label { font-size: 12px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
+  .verdict-text { font-size: 22px; font-weight: 700; }
+  .verdict.profit .verdict-text { color: var(--success); }
+  .verdict.loss .verdict-text { color: var(--danger); }
+  .verdict.breakeven .verdict-text { color: var(--warn); }
+  .verdict-right { margin-left: auto; text-align: right; }
+  .verdict-net-label { font-size: 12px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+  .verdict-net { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+
+  /* MAIN GRID */
+  .main { padding: 24px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* KPI STRIP */
+  .kpi-strip {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    transition: border-color 0.2s;
+  }
+  .kpi:hover { border-color: var(--accent); }
+  .kpi-label { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .kpi-value { font-size: 22px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .kpi.income .kpi-value { color: var(--income-accent); }
+  .kpi.cost .kpi-value { color: var(--cost-accent); }
+  .kpi.net .kpi-value { color: var(--text); }
+  .kpi.be .kpi-value { color: var(--warn); }
+
+  /* PANEL */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .panel-header .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .panel-header.income-h { background: rgba(0, 212, 170, 0.06); }
+  .panel-header.income-h .dot { background: var(--income-accent); }
+  .panel-header.cost-h { background: rgba(255, 107, 53, 0.06); }
+  .panel-header.cost-h .dot { background: var(--cost-accent); }
+  .panel-header.salary-h { background: rgba(138, 144, 168, 0.06); }
+  .panel-header.salary-h .dot { background: var(--text2); }
+  .panel-header .panel-total {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .panel-header.income-h .panel-total { color: var(--income-accent); }
+  .panel-header.cost-h .panel-total { color: var(--cost-accent); }
+  .panel-header.salary-h .panel-total { color: var(--text); }
+
+  /* ROWS */
+  .row-list { padding: 8px 0; }
+  .row-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 6px;
+    margin: 2px 8px;
+    transition: background 0.15s;
+  }
+  .row-item:hover { background: var(--surface2); }
+  .row-item.editable-row { cursor: default; }
+  .row-name {
+    font-size: 13px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .row-name .tag {
+    font-size: 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+  }
+  .row-input-wrap { display: flex; align-items: center; gap: 4px; }
+  .row-prefix { font-size: 11px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+  .row-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 8px;
+    width: 90px;
+    text-align: right;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .row-input:focus { border-color: var(--accent); }
+  .row-input.income-input:focus { border-color: var(--income-accent); }
+  .row-input.cost-input:focus { border-color: var(--cost-accent); }
+  .row-delete {
+    background: none; border: none;
+    color: var(--text3); cursor: pointer;
+    font-size: 16px; padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+    display: flex; align-items: center;
+  }
+  .row-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+  .row-delete.hidden { visibility: hidden; }
+
+  .row-computed {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 90px;
+    text-align: right;
+    padding: 4px 8px;
+  }
+
+  /* FORMULA ROW */
+  .formula-row {
+    background: var(--surface2);
+    border-radius: 6px;
+    margin: 4px 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .formula-row span { color: var(--text2); }
+
+  /* SALARY CALCULATOR */
+  .salary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .sal-row {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .sal-row:last-child { border-bottom: none; }
+  .sal-row.total-row {
+    background: var(--surface2);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .sal-label { color: var(--text2); }
+  .sal-val { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--text); }
+  .sal-row.total-row .sal-val { color: var(--cost-accent); }
+
+  /* ADD ROW BUTTON */
+  .add-btn {
+    margin: 8px 16px 12px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text3);
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 8px 16px;
+    cursor: pointer;
+    width: calc(100% - 32px);
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .add-btn.cost-add:hover { border-color: var(--cost-accent); color: var(--cost-accent); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* BREAKEVEN */
+  .be-panel {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .be-title {
+    font-size: 14px; font-weight: 700; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .be-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .be-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .be-card-label { font-size: 11px; color: var(--text2); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .be-card-val { font-size: 26px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--warn); }
+  .be-card-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+  .be-bar-wrap { grid-column: 1/-1; background: var(--surface2); border-radius: 10px; padding: 18px 20px; }
+  .be-bar-label { font-size: 12px; color: var(--text2); margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .be-bar-track { background: var(--border); border-radius: 100px; height: 12px; overflow: hidden; }
+  .be-bar-fill { height: 100%; border-radius: 100px; transition: width 0.5s ease, background 0.4s; }
+  .be-bar-legend { display: flex; gap: 20px; margin-top: 10px; font-size: 11px; color: var(--text3); }
+  .be-bar-legend span { display: flex; align-items: center; gap: 6px; }
+  .be-bar-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* ADD DIALOG */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 380px;
+    animation: fadeUp 0.2s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+  .modal-field { margin-bottom: 16px; }
+  .modal-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; }
+  .modal-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #0f1117; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary.cost-btn { background: var(--cost-accent); }
+  .btn-cancel { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-cancel:hover { border-color: var(--text2); }
+
+  /* SALARY FULL PANEL - span */
+  .salary-panel { grid-column: 1 / -1; }
+
+  /* TRIP CONFIG */
+  .trip-config {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 8px 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .trip-config .cfg-item { display: flex; align-items: center; gap: 6px; }
+  .cfg-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 8px;
+    width: 60px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .cfg-input:focus { border-color: var(--accent); }
+
+  .sep { color: var(--border); }
+
+  @media (max-width: 800px) {
+    .main { grid-template-columns: 1fr; padding: 16px; }
+    .header { padding: 14px 16px; }
+    .verdict { margin: 16px 16px 0; flex-wrap: wrap; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .be-grid { grid-template-columns: 1fr; }
+    .salary-panel { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🚛</div>
+  <div>
+    <div class="header-title">Kalkulator Kelayakan — Jabatan Pengangkutan</div>
+    <div class="header-sub">Azura Delta Sdn Bhd · Analisis Kewangan</div>
+  </div>
+  <div class="header-badge" id="lastUpdated">— dikira semula secara langsung —</div>
+</div>
+
+<!-- VERDICT -->
+<div class="verdict loss" id="verdictBanner">
+  <div class="verdict-icon" id="verdictIcon">❌</div>
+  <div>
+    <div class="verdict-label">Status Projek</div>
+    <div class="verdict-text" id="verdictText">Merugi</div>
+  </div>
+  <div class="verdict-right">
+    <div class="verdict-net-label">Untung / Rugi Bersih / Bulan</div>
+    <div class="verdict-net" id="verdictNet">RM 0.00</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi income">
+      <div class="kpi-label">Jumlah Pendapatan / Bulan</div>
+      <div class="kpi-value" id="kpiIncome">RM 0</div>
+      <div class="kpi-sub" id="kpiIncomeSub">—</div>
+    </div>
+    <div class="kpi cost">
+      <div class="kpi-label">Jumlah Kos / Bulan</div>
+      <div class="kpi-value" id="kpiCost">RM 0</div>
+      <div class="kpi-sub" id="kpiCostSub">—</div>
+    </div>
+    <div class="kpi net">
+      <div class="kpi-label">Margin Keuntungan</div>
+      <div class="kpi-value" id="kpiMargin">0%</div>
+      <div class="kpi-sub">untung bersih ÷ pendapatan</div>
+    </div>
+    <div class="kpi be">
+      <div class="kpi-label">Break-Even / Trip</div>
+      <div class="kpi-value" id="kpiBe">— bakul</div>
+      <div class="kpi-sub" id="kpiBeKg">pada RM10/bakul</div>
+    </div>
+  </div>
+
+  <!-- INCOME PANEL -->
+  <div class="panel">
+    <div class="panel-header income-h">
+      <div class="dot"></div>
+      PENDAPATAN BULANAN
+      <div class="panel-total" id="incomeTotal">RM 0.00</div>
+    </div>
+    <div class="row-list" id="incomeRows"></div>
+    <button class="add-btn" onclick="openModal('income')">＋ Tambah Sumber Pendapatan</button>
+  </div>
+
+  <!-- COST PANEL -->
+  <div class="panel">
+    <div class="panel-header cost-h">
+      <div class="dot"></div>
+      KOS TETAP &amp; BERUBAH / BULAN
+      <div class="panel-total" id="costTotal">RM 0.00</div>
+    </div>
+    <div class="row-list" id="costRows"></div>
+    <button class="add-btn cost-add" onclick="openModal('cost')">＋ Tambah Item Kos</button>
+  </div>
+
+  <!-- SALARY PANEL -->
+  <div class="panel salary-panel">
+    <div class="panel-header salary-h">
+      <div class="dot"></div>
+      PENGIRAAN GAJI PENUH — PEMANDU LORI
+      <div class="panel-total" id="salaryMonthlyTotal">RM 0.00 / bulan</div>
+    </div>
+    <div class="salary-grid">
+      <div>
+        <!-- Left Column: Gross -->
+        <div class="sal-row"><span class="sal-label">Gaji Asas (Basic)</span><span class="sal-val" id="sBasic">RM 3,000</span></div>
+        <div class="sal-row"><span class="sal-label">Elaun Makan (×Trip/Bulan)</span><span class="sal-val" id="sMeal">RM 0</span></div>
+        <div class="sal-row"><span class="sal-label">Service Excellence</span><span class="sal-val" id="sService">RM 500</span></div>
+        <div class="sal-row" style="border-top:1px solid var(--border)"><span class="sal-label">Jumlah Gaji Kasar</span><span class="sal-val" id="sGross">RM 0</span></div>
+      </div>
+      <div>
+        <!-- Right Column: Employer Contributions -->
+        <div class="sal-row"><span class="sal-label">KWSP Majikan (13% × Basic)</span><span class="sal-val" id="sKWSP">RM 0</span></div>
+        <div class="sal-row"><span class="sal-label">SOCSO + EIS (5% × Basic)</span><span class="sal-val" id="sSOCSO">RM 0</span></div>
+        <div class="sal-row"><span class="sal-label">Bonus ke-13 (÷12 bulan)</span><span class="sal-val" id="s13th">RM 0</span></div>
+        <div class="sal-row total-row"><span class="sal-label">KOS MAJIKAN / BULAN</span><span class="sal-val" id="sEmployer">RM 0</span></div>
+      </div>
+    </div>
+    <div style="padding: 10px 16px; font-size:11px; color:var(--text3); font-family:'IBM Plex Mono',monospace;">
+      * Kos gaji di atas sudah termasuk dalam seksyen "Kos Tetap & Berubah" di sebelah kiri
+    </div>
+  </div>
+
+  <!-- BREAK-EVEN PANEL -->
+  <div class="be-panel">
+    <div class="be-title">📊 Analisis Break-Even — Berapa Bakul Diperlukan?</div>
+    <div class="be-grid">
+      <div class="be-card">
+        <div class="be-card-label">Bakul Break-Even / Trip</div>
+        <div class="be-card-val" id="bePerTrip">—</div>
+        <div class="be-card-sub" id="bePerTripSub">bakul minimum setiap perjalanan</div>
+      </div>
+      <div class="be-card">
+        <div class="be-card-label">Bakul Break-Even / Bulan</div>
+        <div class="be-card-val" id="bePerMonth">—</div>
+        <div class="be-card-sub" id="bePerMonthSub">bakul minimum sebulan</div>
+      </div>
+      <div class="be-card">
+        <div class="be-card-label">Kapasiti Semasa / Bulan</div>
+        <div class="be-card-val" id="beCapacity">—</div>
+        <div class="be-card-sub" id="beCapacitySub">berdasarkan tetapan semasa</div>
+      </div>
+      <div class="be-bar-wrap">
+        <div class="be-bar-label">
+          <span>Pendapatan Semasa vs. Break-Even</span>
+          <span id="bePct">0%</span>
+        </div>
+        <div class="be-bar-track">
+          <div class="be-bar-fill" id="beBar" style="width:0%; background: var(--danger);"></div>
+        </div>
+        <div class="be-bar-legend">
+          <span><span class="dot" style="background:var(--success)"></span>Melebihi BE</span>
+          <span><span class="dot" style="background:var(--warn)"></span>Hampir BE (80–100%)</span>
+          <span><span class="dot" style="background:var(--danger)"></span>Bawah BE (&lt;80%)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Tambah Item</div>
+    <div class="modal-field">
+      <label class="modal-label">Nama Item</label>
+      <input class="modal-input" id="modalName" placeholder="cth: Pendapatan Eggplant Grade A" />
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Jumlah (RM / bulan)</label>
+      <input class="modal-input" id="modalAmount" type="number" placeholder="0.00" min="0" step="0.01" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="modalConfirm" onclick="confirmAdd()">Tambah</button>
+      <button class="btn btn-cancel" onclick="closeModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let tripsPerMonth = 12;
+let basketsPerTrip = 50;
+let pricePerBasket = 10;
+
+const incomeItems = [
+  { id: 1, name: 'Jualan Terung (Bakul × Harga × Trip)', computed: true, type: 'delivery' }
+];
+
+const costItems = [
+  { id: 10, name: 'Gaji Pemandu (Kos Majikan Penuh)', computed: true, type: 'salary' },
+  { id: 11, name: 'Bayaran Ansuran Lori', value: 1000, fixed: true },
+  { id: 12, name: 'Minyak (Fuel)', value: 600, fixed: false },
+  { id: 13, name: 'Tol (Toll)', value: 150, fixed: false },
+  { id: 14, name: 'Servis & Pembaikan', value: 200, fixed: false },
+];
+
+let nextId = 100;
+let modalMode = 'income';
+
+// ─── CALCULATIONS ─────────────────────────────────────────────────────────────
+function calcSalary() {
+  const basic = 3000;
+  const meal = 50 * tripsPerMonth;
+  const service = 500;
+  const gross = basic + meal + service;
+  const kwsp = basic * 0.13;
+  const socso = basic * 0.05;
+  const bonus13th = basic / 12;
+  const employer = gross + kwsp + socso + bonus13th;
+  return { basic, meal, service, gross, kwsp, socso, bonus13th, employer };
+}
+
+function calcAll() {
+  const sal = calcSalary();
+  const deliveryIncome = basketsPerTrip * pricePerBasket * tripsPerMonth;
+
+  let totalIncome = deliveryIncome;
+  incomeItems.forEach(it => { if (!it.computed) totalIncome += (parseFloat(it.value) || 0); });
+
+  let totalCost = sal.employer;
+  costItems.forEach(it => { if (!it.computed) totalCost += (parseFloat(it.value) || 0); });
+
+  const net = totalIncome - totalCost;
+  const margin = totalIncome > 0 ? (net / totalIncome) * 100 : 0;
+
+  // Break even
+  const nonDeliveryCosts = totalCost;
+  const beMonthlyIncome = totalCost;
+  const beBasketMonth = totalCost / pricePerBasket;
+  const beBasketTrip = beBasketMonth / tripsPerMonth;
+
+  const pct = Math.min((totalIncome / beMonthlyIncome) * 100, 200);
+
+  return { sal, deliveryIncome, totalIncome, totalCost, net, margin, beBasketTrip, beBasketMonth, beMonthlyIncome, pct };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function fmt(n) { return 'RM ' + Math.abs(n).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtN(n) { return n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+function renderAll() {
+  const r = calcAll();
+
+  // SALARY PANEL
+  document.getElementById('sBasic').textContent = fmt(r.sal.basic);
+  document.getElementById('sMeal').textContent = fmt(r.sal.meal);
+  document.getElementById('sService').textContent = fmt(r.sal.service);
+  document.getElementById('sGross').textContent = fmt(r.sal.gross);
+  document.getElementById('sKWSP').textContent = fmt(r.sal.kwsp);
+  document.getElementById('sSOCSO').textContent = fmt(r.sal.socso);
+  document.getElementById('s13th').textContent = fmt(r.sal.bonus13th);
+  document.getElementById('sEmployer').textContent = fmt(r.sal.employer);
+  document.getElementById('salaryMonthlyTotal').textContent = fmt(r.sal.employer) + ' / bulan';
+
+  // KPI
+  document.getElementById('kpiIncome').textContent = fmt(r.totalIncome);
+  document.getElementById('kpiIncomeSub').textContent = `${r.totalIncome > 0 ? '+' : ''}${fmtN(r.totalIncome)} / bulan`;
+  document.getElementById('kpiCost').textContent = fmt(r.totalCost);
+  document.getElementById('kpiCostSub').textContent = `${fmtN(r.totalCost)} / bulan`;
+  const marginEl = document.getElementById('kpiMargin');
+  marginEl.textContent = r.margin.toFixed(1) + '%';
+  marginEl.style.color = r.margin >= 0 ? 'var(--success)' : 'var(--danger)';
+
+  document.getElementById('kpiBe').textContent = Math.ceil(r.beBasketTrip) + ' bakul';
+  document.getElementById('kpiBeKg').textContent = `pada RM${pricePerBasket}/bakul`;
+
+  // INCOME ROWS
+  const incomeContainer = document.getElementById('incomeRows');
+  incomeContainer.innerHTML = '';
+
+  // Trip config row
+  const cfg = document.createElement('div');
+  cfg.className = 'trip-config';
+  cfg.innerHTML = `
+    <div class="cfg-item">🗓 <input class="cfg-input" id="cfgTrips" type="number" value="${tripsPerMonth}" min="1" max="31"> Trip / Bulan</div>
+    <div class="sep">|</div>
+    <div class="cfg-item">🧺 <input class="cfg-input" id="cfgBaskets" type="number" value="${basketsPerTrip}" min="1"> Bakul / Trip</div>
+    <div class="sep">|</div>
+    <div class="cfg-item">💰 RM<input class="cfg-input" id="cfgPrice" type="number" value="${pricePerBasket}" min="0.01" step="0.01"> / Bakul</div>
+  `;
+  incomeContainer.appendChild(cfg);
+
+  // Attach listeners after insert
+  document.getElementById('cfgTrips').addEventListener('input', e => { tripsPerMonth = parseFloat(e.target.value) || 1; renderAll(); });
+  document.getElementById('cfgBaskets').addEventListener('input', e => { basketsPerTrip = parseFloat(e.target.value) || 1; renderAll(); });
+  document.getElementById('cfgPrice').addEventListener('input', e => { pricePerBasket = parseFloat(e.target.value) || 1; renderAll(); });
+
+  // Delivery formula row
+  const fRow = document.createElement('div');
+  fRow.className = 'formula-row';
+  fRow.innerHTML = `🧺 <span>${basketsPerTrip} bakul</span> × <span>RM ${pricePerBasket}</span> × <span>${tripsPerMonth} trip</span> = <span style="color:var(--income-accent);font-weight:700">${fmt(r.deliveryIncome)}</span>`;
+  incomeContainer.appendChild(fRow);
+
+  // Delivery income row display
+  addDisplayRow(incomeContainer, 'Jualan Terung (Bulanan)', r.deliveryIncome, 'income', null, true);
+
+  incomeItems.forEach(it => {
+    if (!it.computed) addEditRow(incomeContainer, it, 'income');
+  });
+
+  document.getElementById('incomeTotal').textContent = fmt(r.totalIncome);
+
+  // COST ROWS
+  const costContainer = document.getElementById('costRows');
+  costContainer.innerHTML = '';
+
+  // Salary computed row
+  addDisplayRow(costContainer, 'Gaji Pemandu (Kos Majikan)', r.sal.employer, 'cost', null, true);
+
+  costItems.forEach(it => {
+    if (!it.computed) addEditRow(costContainer, it, 'cost');
+  });
+
+  document.getElementById('costTotal').textContent = fmt(r.totalCost);
+
+  // BREAK EVEN
+  document.getElementById('bePerTrip').textContent = Math.ceil(r.beBasketTrip) + ' bakul';
+  document.getElementById('bePerTripSub').textContent = `minimum ${Math.ceil(r.beBasketTrip)} bakul setiap perjalanan`;
+  document.getElementById('bePerMonth').textContent = Math.ceil(r.beBasketMonth) + ' bakul';
+  document.getElementById('bePerMonthSub').textContent = `× RM${pricePerBasket} = ${fmt(r.totalCost)}`;
+  document.getElementById('beCapacity').textContent = (basketsPerTrip * tripsPerMonth) + ' bakul';
+  document.getElementById('beCapacitySub').textContent = `${basketsPerTrip} bakul × ${tripsPerMonth} trip`;
+
+  const pctCapped = Math.min(r.pct, 100);
+  document.getElementById('bePct').textContent = r.pct.toFixed(1) + '%';
+  document.getElementById('beBar').style.width = pctCapped + '%';
+  let barColor = 'var(--danger)';
+  if (r.pct >= 100) barColor = 'var(--success)';
+  else if (r.pct >= 80) barColor = 'var(--warn)';
+  document.getElementById('beBar').style.background = barColor;
+
+  // VERDICT
+  const net = r.net;
+  const banner = document.getElementById('verdictBanner');
+  const icon = document.getElementById('verdictIcon');
+  const text = document.getElementById('verdictText');
+  const netEl = document.getElementById('verdictNet');
+  banner.className = 'verdict ' + (net > 0 ? 'profit' : net === 0 ? 'breakeven' : 'loss');
+  icon.textContent = net > 0 ? '✅' : net === 0 ? '⚖️' : '⚠️';
+  text.textContent = net > 0 ? `Untung RM ${fmtN(net)} sebulan` : net === 0 ? 'Tepat Break-Even' : `Rugi RM ${fmtN(Math.abs(net))} sebulan`;
+  netEl.textContent = (net >= 0 ? '+' : '-') + ' RM ' + fmtN(Math.abs(net));
+  netEl.style.color = net > 0 ? 'var(--success)' : net === 0 ? 'var(--warn)' : 'var(--danger)';
+}
+
+function addDisplayRow(container, name, value, type, id, locked) {
+  const row = document.createElement('div');
+  row.className = 'row-item';
+  row.innerHTML = `
+    <div class="row-name">${name} <span class="tag">AUTO</span></div>
+    <div class="row-computed" style="color:var(--${type === 'income' ? 'income' : 'cost'}-accent)">${fmt(value)}</div>
+    <button class="row-delete hidden">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function addEditRow(container, item, type) {
+  const row = document.createElement('div');
+  row.className = 'row-item editable-row';
+  row.innerHTML = `
+    <div class="row-name">${item.name}</div>
+    <div class="row-input-wrap">
+      <span class="row-prefix">RM</span>
+      <input class="row-input ${type}-input" type="number" value="${item.value || 0}" min="0" step="1" data-id="${item.id}" data-type="${type}" />
+    </div>
+    <button class="row-delete ${item.fixed ? '' : ''}" data-id="${item.id}" data-type="${type}">×</button>
+  `;
+  container.appendChild(row);
+  row.querySelector('.row-input').addEventListener('input', e => {
+    const id = parseInt(e.target.dataset.id);
+    const val = parseFloat(e.target.value) || 0;
+    if (e.target.dataset.type === 'income') {
+      const it = incomeItems.find(x => x.id === id);
+      if (it) it.value = val;
+    } else {
+      const it = costItems.find(x => x.id === id);
+      if (it) it.value = val;
+    }
+    renderAll();
+  });
+  row.querySelector('.row-delete').addEventListener('click', e => {
+    const id = parseInt(e.target.dataset.id);
+    if (e.target.dataset.type === 'income') {
+      const idx = incomeItems.findIndex(x => x.id === id);
+      if (idx > -1) incomeItems.splice(idx, 1);
+    } else {
+      const idx = costItems.findIndex(x => x.id === id);
+      if (idx > -1) costItems.splice(idx, 1);
+    }
+    renderAll();
+  });
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(mode) {
+  modalMode = mode;
+  document.getElementById('modalTitle').textContent = mode === 'income' ? '＋ Tambah Sumber Pendapatan' : '＋ Tambah Item Kos';
+  const btn = document.getElementById('modalConfirm');
+  btn.textContent = 'Tambah';
+  btn.className = 'btn btn-primary ' + (mode === 'cost' ? 'cost-btn' : '');
+  document.getElementById('modalName').value = '';
+  document.getElementById('modalAmount').value = '';
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('modalName').focus(), 100);
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalIfOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+function confirmAdd() {
+  const name = document.getElementById('modalName').value.trim() || 'Item Baru';
+  const value = parseFloat(document.getElementById('modalAmount').value) || 0;
+  const item = { id: nextId++, name, value, fixed: false };
+  if (modalMode === 'income') incomeItems.push(item);
+  else costItems.push(item);
+  closeModal();
+  renderAll();
+}
+
+document.getElementById('modalAmount').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdd(); });
+document.getElementById('modalName').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('modalAmount').focus(); });
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
