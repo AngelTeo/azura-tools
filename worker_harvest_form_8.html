@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Harvest Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --g:#2a6430;--g2:#1e4a24;--g3:#d1fae5;--g4:#f0fdf4;
+  --txt:#1a2533;--txt2:#4a5568;--mut:#8a96a8;
+  --sur:#fff;--sur2:#f4f6f4;--bdr:#dde3d8;
+  --red:#a32d2d;
+  --aa:#7a5800;   --aa-bg:#fffadf; --aa-bd:#e8cc50;
+  --aak:#5a6800;  --aak-bg:#f6fadf;--aak-bd:#c8d840;
+  --aap:#006870;  --aap-bg:#e0f8fa;--aap-bd:#50d0d8;
+  --a:#005450;    --a-bg:#e0f4f2;  --a-bd:#50c0b8;
+  --ak:#004080;   --ak-bg:#e0eeff; --ak-bd:#5090e0;
+  --apb:#580070;  --apb-bg:#f4e0ff;--apb-bd:#c060e8;
+  --b:#8a1818;    --b-bg:#fce9e9;  --b-bd:#e88080;
+}
+
+body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);font-size:15px;min-height:100vh;}
+
+/* ── SCREENS ── */
+.scr{display:none;min-height:100vh;flex-direction:column;}
+.scr.on{display:flex;}
+
+/* ── HEADER ── */
+.form-hdr{background:var(--g);padding:13px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.hdr-icon{width:36px;height:36px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.hdr-text h1{font-size:16px;font-weight:700;color:#fff;}
+.hdr-text p{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px;}
+
+/* ── FORM BODY ── */
+.form-body{flex:1;overflow-y:auto;padding:14px 14px 110px;}
+
+/* ── FIELD ── */
+.frow{margin-bottom:14px;}
+.frow>label{font-size:12px;font-weight:700;color:var(--txt2);display:block;margin-bottom:6px;}
+.req{color:var(--red);margin-left:2px;}
+.frow input[type=text]{
+  width:100%;border:1px solid var(--bdr);border-radius:10px;padding:13px 14px;
+  font-family:'DM Sans',sans-serif;font-size:16px;color:var(--txt);background:var(--sur);
+  outline:none;transition:.15s;}
+.frow input[type=text]:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(42,100,48,.1);}
+.frow input::placeholder{color:var(--mut);font-size:14px;}
+.err-msg{font-size:11px;color:var(--red);margin-top:4px;display:none;}
+.err-msg.on{display:block;}
+
+/* ── FARM BUTTONS ── */
+.farm-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.farm-btn{border:1px solid var(--bdr);background:var(--sur);border-radius:10px;
+  padding:14px;font-size:17px;font-weight:700;cursor:pointer;text-align:center;
+  font-family:'DM Sans',sans-serif;color:var(--txt2);transition:.15s;}
+.farm-btn small{display:block;font-size:10px;font-weight:500;color:var(--mut);margin-top:2px;}
+.farm-btn.on{border-color:var(--g);background:var(--g4);color:var(--g);}
+.farm-btn.on small{color:var(--g);}
+
+/* ── SECTION TITLE ── */
+.sec-div{font-size:11px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:.08em;
+  padding:14px 0 8px;border-bottom:1px solid var(--g3);margin-bottom:10px;}
+
+/* ── GRADE CARD ── */
+.grade-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;
+  margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:.15s;}
+.grade-card.has-val{border-color:var(--g);}
+
+.grade-card-hd{display:flex;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;gap:8px;}
+.grade-pill{display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;
+  font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;border:1.5px solid;white-space:nowrap;flex-shrink:0;}
+.grade-pill.aa {background:var(--aa-bg); color:var(--aa); border-color:var(--aa-bd);}
+.grade-pill.aak{background:var(--aak-bg);color:var(--aak);border-color:var(--aak-bd);}
+.grade-pill.aap{background:var(--aap-bg);color:var(--aap);border-color:var(--aap-bd);}
+.grade-pill.a  {background:var(--a-bg);  color:var(--a);  border-color:var(--a-bd);}
+.grade-pill.ak {background:var(--ak-bg); color:var(--ak); border-color:var(--ak-bd);}
+.grade-pill.apb{background:var(--apb-bg);color:var(--apb);border-color:var(--apb-bd);}
+.grade-pill.b  {background:var(--b-bg);  color:var(--b);  border-color:var(--b-bd);}
+
+.grade-summary{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  color:var(--mut);flex:1;text-align:right;padding:0 4px;}
+.grade-summary.has-val{color:var(--g);}
+.chevron{font-size:18px;color:var(--mut);transition:transform .2s;flex-shrink:0;}
+.chevron.open{transform:rotate(180deg);}
+
+/* ── GRADE CARD BODY ── */
+.grade-card-body{display:none;border-top:1px solid var(--bdr);padding:10px 14px 4px;}
+.grade-card-body.open{display:block;}
+
+/* ── EACH WEIGHT+BASKET ROW ── */
+.entry-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--bdr);}
+.entry-row:last-of-type{border-bottom:none;}
+
+.w-pick{display:grid;grid-template-columns:1fr 1fr;gap:5px;width:120px;flex-shrink:0;}
+.w-btn{border:1.5px solid var(--bdr);background:var(--sur2);border-radius:8px;
+  padding:12px 2px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;
+  font-family:'IBM Plex Mono',monospace;color:var(--txt2);transition:.12s;line-height:1;}
+.w-btn.on{border-color:var(--g);background:var(--g4);color:var(--g);}
+
+.bk-row{flex:1;min-width:0;display:flex;align-items:stretch;border:1.5px solid var(--bdr);border-radius:10px;background:var(--sur);overflow:hidden;}
+.bk-row:focus-within{border-color:var(--g);}
+.bk-minus,.bk-plus{width:40px;height:46px;border:none;background:var(--sur2);font-size:20px;
+  cursor:pointer;color:var(--txt2);display:flex;align-items:center;justify-content:center;
+  font-family:'DM Sans',sans-serif;flex-shrink:0;}
+.bk-minus:active,.bk-plus:active{background:var(--bdr);}
+.bk-num{flex:1;min-width:0;border:none;text-align:center;font-size:22px;font-weight:700;
+  font-family:'IBM Plex Mono',monospace;color:var(--txt);padding:0;outline:none;
+  height:46px;background:transparent;-webkit-appearance:none;}
+.bk-num::placeholder{font-size:14px;font-weight:400;color:var(--mut);}
+
+/* ✕ remove row */
+.row-del{flex-shrink:0;width:24px;height:24px;border-radius:50%;
+  background:var(--bdr);border:none;cursor:pointer;font-size:11px;color:var(--txt2);
+  display:flex;align-items:center;justify-content:center;line-height:1;}
+.row-del:active{background:#bbb;}
+.row-del.hidden{visibility:hidden;pointer-events:none;}
+
+/* ＋ Add row button */
+.add-row-wrap{display:flex;justify-content:flex-end;padding:8px 0 4px;}
+.add-row-btn{border:1.5px solid var(--g);background:var(--g4);color:var(--g);
+  border-radius:20px;padding:5px 16px;font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;}
+.add-row-btn:active{background:var(--g3);}
+
+/* ── GENERATE BAR ── */
+.gen-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);
+  border-top:1px solid var(--bdr);padding:12px 14px;z-index:50;}
+.gen-btn{width:100%;background:var(--g);color:#fff;border:none;border-radius:12px;
+  padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.gen-btn:active{background:var(--g2);}
+
+/* ── PREVIEW SCREEN ── */
+.prev-hdr{background:var(--g);display:flex;align-items:center;gap:10px;padding:13px 14px;flex-shrink:0;}
+.back-btn{background:rgba(255,255,255,.18);border:none;border-radius:8px;width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:22px;}
+.back-btn:active{background:rgba(255,255,255,.3);}
+.prev-body{flex:1;overflow-y:auto;padding:14px 14px 110px;}
+.msg-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;
+  padding:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:2.1;
+  white-space:pre-wrap;color:var(--txt);word-break:break-word;}
+.prev-note{font-size:11px;color:var(--mut);text-align:center;margin-top:10px;line-height:1.6;}
+.send-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);
+  border-top:1px solid var(--bdr);padding:12px 14px;display:flex;gap:8px;z-index:50;}
+.wa-btn{flex:1;background:#25D366;color:#fff;border:none;border-radius:12px;padding:14px;
+  font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.wa-btn:active{background:#1da851;}
+.copy-btn{background:var(--sur2);border:1px solid var(--bdr);border-radius:12px;
+  padding:14px 16px;font-size:20px;cursor:pointer;}
+.copy-btn:active{background:var(--bdr);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(8px);
+  background:#1a1e17;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;
+  font-weight:600;opacity:0;transition:all .2s;z-index:999;pointer-events:none;white-space:nowrap;}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ══ FORM ══ -->
+<div class="scr on" id="scr-form">
+  <div class="form-hdr">
+    <div class="hdr-icon">🌿</div>
+    <div class="hdr-text">
+      <h1>Daily Harvest Report</h1>
+      <p>Azura Delta Farm — AD1 &amp; AD2</p>
+    </div>
+  </div>
+
+  <div class="form-body" id="form-body">
+    <!-- DATE -->
+    <div class="frow">
+      <label>Date <span class="req">*</span></label>
+      <input type="text" id="f-date" placeholder="DD/MM" maxlength="5"
+        inputmode="numeric" oninput="autoSlash(this)">
+      <div class="err-msg" id="err-date">Please enter date (DD/MM)</div>
+    </div>
+
+    <!-- FARM -->
+    <div class="frow">
+      <label>Farm <span class="req">*</span></label>
+      <div class="farm-pick">
+        <button class="farm-btn" id="fb-ad1" onclick="pickFarm('AD1')">
+          AD1<small>Farm 1</small>
+        </button>
+        <button class="farm-btn" id="fb-ad2" onclick="pickFarm('AD2')">
+          AD2<small>Farm 2</small>
+        </button>
+      </div>
+      <div class="err-msg" id="err-farm">Please select a farm</div>
+    </div>
+
+    <!-- GRADES -->
+    <div class="sec-div">🏷️ Harvest by Grade</div>
+    <div id="grade-cards"></div>
+  </div>
+
+  <div class="gen-bar">
+    <button class="gen-btn" onclick="generate()">▶ &nbsp;Preview &amp; Send to WhatsApp</button>
+  </div>
+</div>
+
+<!-- ══ PREVIEW ══ -->
+<div class="scr" id="scr-prev">
+  <div class="prev-hdr">
+    <button class="back-btn" onclick="goBack()">‹</button>
+    <div class="hdr-text">
+      <h1 style="color:#fff;">Preview Report</h1>
+      <p>Check before sending</p>
+    </div>
+  </div>
+  <div class="prev-body">
+    <div class="msg-card" id="msg-out"></div>
+    <div class="prev-note">Tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
+  </div>
+  <div class="send-bar">
+    <button class="wa-btn" onclick="sendWA()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Send to WhatsApp
+    </button>
+    <button class="copy-btn" onclick="copyMsg()">📋</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══ CONFIG ══════════════════════════════════
+const GRADES = [
+  { key:'aa',  label:'AA',       cls:'aa'  },
+  { key:'aak', label:'AA Kulit', cls:'aak' },
+  { key:'aap', label:'AA Putih', cls:'aap' },
+  { key:'a',   label:'A',        cls:'a'   },
+  { key:'ak',  label:'A Kulit',  cls:'ak'  },
+  { key:'apb', label:'A Putih',  cls:'apb' },
+  { key:'b',   label:'B',        cls:'b'   },
+];
+
+const WEIGHTS = [
+  { kg:0,  label:'kg',    direct:true  },
+  { kg:30, label:'34/30', direct:false },
+  { kg:27, label:'30/27', direct:false },
+];
+
+// ══ STATE ════════════════════════════════════
+// Each grade = array of rows: [{ weight:30, baskets:0 }, ...]
+const S = { farm:'', grades:{} };
+GRADES.forEach(g => { S.grades[g.key] = [{ weight:0, baskets:0 }]; });
+
+// ══ INIT ═════════════════════════════════════
+function init() {
+  // Pre-fill today's date
+  const t  = new Date();
+  const dd = String(t.getDate()).padStart(2,'0');
+  const mm = String(t.getMonth()+1).padStart(2,'0');
+  document.getElementById('f-date').value = `${dd}/${mm}`;
+  buildAllCards();
+}
+
+// ══ BUILD ALL CARDS ═══════════════════════════
+function buildAllCards() {
+  const wrap = document.getElementById('grade-cards');
+  wrap.innerHTML = GRADES.map(g => `
+    <div class="grade-card" id="gc-${g.key}">
+      <div class="grade-card-hd" onclick="toggleCard('${g.key}')">
+        <span class="grade-pill ${g.cls}">${g.label}</span>
+        <span class="grade-summary" id="gs-${g.key}">—</span>
+        <span class="chevron" id="ch-${g.key}">⌄</span>
+      </div>
+      <div class="grade-card-body" id="gb-${g.key}">
+        <div id="rows-${g.key}"></div>
+        <div class="add-row-wrap">
+          <button class="add-row-btn" onclick="addRow('${g.key}');event.stopPropagation();">
+            ＋ Add
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  GRADES.forEach(g => renderRows(g.key));
+}
+
+// ══ TOGGLE CARD ══════════════════════════════
+function toggleCard(key) {
+  const body = document.getElementById(`gb-${key}`);
+  const ch   = document.getElementById(`ch-${key}`);
+  const open = body.classList.toggle('open');
+  ch.classList.toggle('open', open);
+}
+
+// ══ RENDER ROWS ══════════════════════════════
+function renderRows(key) {
+  const rows = S.grades[key];
+  const wrap = document.getElementById(`rows-${key}`);
+  if (!wrap) return;
+
+  wrap.innerHTML = rows.map((row, i) => {
+    const wBtns = WEIGHTS.map(w =>
+      `<button class="w-btn${row.weight===w.kg?' on':''}"
+        onclick="setW('${key}',${i},${w.kg});event.stopPropagation();">${w.label}</button>`
+    ).join('');
+
+    const isDirect = row.weight === 0;
+    const ph = isDirect ? 'kg' : 'bakul';
+    return `
+      <div class="entry-row">
+        <div class="w-pick">${wBtns}</div>
+        <div class="bk-row">
+          <button class="bk-minus" onclick="adj('${key}',${i},-1);event.stopPropagation();">−</button>
+          <input class="bk-num" type="number" id="bk-${key}-${i}"
+            value="${row.baskets||''}" placeholder="${ph}" min="0" inputmode="decimal"
+            oninput="onInput('${key}',${i})">
+          <button class="bk-plus" onclick="adj('${key}',${i},1);event.stopPropagation();">+</button>
+        </div>
+        <button class="row-del${rows.length === 1 ? ' hidden' : ''}" onclick="delRow('${key}',${i});event.stopPropagation();">✕</button>
+      </div>`;
+  }).join('');
+}
+
+// ══ ADD / DELETE ROW ═════════════════════════
+function addRow(key) {
+  S.grades[key].push({ weight:0, baskets:0 });
+  renderRows(key);
+  refreshSummary(key);
+  // Focus new input
+  const i = S.grades[key].length - 1;
+  setTimeout(() => { const el = document.getElementById(`bk-${key}-${i}`); if(el) el.focus(); }, 60);
+}
+
+function delRow(key, i) {
+  S.grades[key].splice(i, 1);
+  renderRows(key);
+  refreshSummary(key);
+}
+
+// ══ WEIGHT / BASKET ══════════════════════════
+function setW(key, i, kg) {
+  S.grades[key][i].weight = kg;
+  renderRows(key);
+  refreshSummary(key);
+}
+
+function adj(key, i, delta) {
+  const el = document.getElementById(`bk-${key}-${i}`);
+  const nv = Math.max(0, (parseFloat(el.value)||0) + delta);
+  el.value = nv || '';
+  S.grades[key][i].baskets = nv;
+  refreshSummary(key);
+}
+
+function onInput(key, i) {
+  S.grades[key][i].baskets = parseFloat(document.getElementById(`bk-${key}-${i}`).value) || 0;
+  refreshSummary(key);
+}
+
+// ══ SUMMARY (header right side) ══════════════
+function refreshSummary(key) {
+  const rows   = S.grades[key];
+  const gs     = document.getElementById(`gs-${key}`);
+  const gc     = document.getElementById(`gc-${key}`);
+  const filled = rows.filter(r => r.baskets > 0);
+
+  if (!filled.length) {
+    gs.textContent = '—';
+    gs.classList.remove('has-val');
+    gc.classList.remove('has-val');
+  } else {
+    gs.textContent = filled
+      .map(r => r.weight === 0
+        ? `${r.baskets}kg`
+        : `${WEIGHTS.find(w=>w.kg===r.weight)?.label||r.weight}·${r.baskets}`)
+      .join('  ');
+    gs.classList.add('has-val');
+    gc.classList.add('has-val');
+  }
+}
+
+// ══ DATE INPUT ════════════════════════════════
+function autoSlash(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2,4);
+  el.value = v;
+}
+
+// ══ FARM ═════════════════════════════════════
+function pickFarm(farm) {
+  S.farm = farm;
+  document.getElementById('fb-ad1').classList.toggle('on', farm==='AD1');
+  document.getElementById('fb-ad2').classList.toggle('on', farm==='AD2');
+  document.getElementById('err-farm').classList.remove('on');
+}
+
+// ══ VALIDATE ═════════════════════════════════
+function validate() {
+  let ok = true;
+  const date = document.getElementById('f-date').value.trim();
+  if (!date || !/^\d{1,2}\/\d{1,2}$/.test(date)) {
+    document.getElementById('err-date').classList.add('on'); ok = false;
+  } else {
+    document.getElementById('err-date').classList.remove('on');
+  }
+  if (!S.farm) {
+    document.getElementById('err-farm').classList.add('on'); ok = false;
+  }
+  return ok;
+}
+
+// ══ GENERATE ═════════════════════════════════
+function generate() {
+  if (!validate()) {
+    document.getElementById('form-body')?.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+
+  const lines = [];
+  GRADES.forEach(g => {
+    S.grades[g.key].forEach(row => {
+      if (row.baskets > 0) {
+        if (row.weight === 0) {
+          lines.push(`${g.label}: ${row.baskets}kg`);
+        } else {
+          const lbl = WEIGHTS.find(w => w.kg === row.weight)?.label || row.weight;
+          lines.push(`${g.label}: ${lbl} ${row.baskets}`);
+        }
+      }
+    });
+  });
+
+  if (!lines.length) { toast('⚠ Please fill in at least one grade'); return; }
+
+  const date = document.getElementById('f-date').value.trim();
+  const msg  = `Date: ${date}\nFarm: ${S.farm}\n————————————\n${lines.join('\n')}`;
+
+  document.getElementById('msg-out').textContent = msg;
+  document.getElementById('scr-form').classList.remove('on');
+  document.getElementById('scr-prev').classList.add('on');
+}
+
+// ══ SEND / COPY ══════════════════════════════
+function sendWA() {
+  window.open('https://wa.me/?text=' + encodeURIComponent(document.getElementById('msg-out').textContent), '_blank');
+}
+
+function copyMsg() {
+  const txt = document.getElementById('msg-out').textContent;
+  navigator.clipboard.writeText(txt)
+    .then(() => toast('✓ Copied!'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('✓ Copied!');
+    });
+}
+
+function goBack() {
+  document.getElementById('scr-prev').classList.remove('on');
+  document.getElementById('scr-form').classList.add('on');
+}
+
+// ══ TOAST ════════════════════════════════════
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('on'), 2200);
+}
+
+// ══ START ════════════════════════════════════
+init();
+</script>
+</body>
+</html>
