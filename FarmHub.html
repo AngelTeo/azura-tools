@@ -79,7 +79,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 </head>
 <body>
 <header>
-  <div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v3</div></div>
+  <div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v4</div></div>
   <div class="who" id="who"></div>
 </header>
 <main>
@@ -127,7 +127,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <div id="detail"><div class="card" id="dc"></div></div>
 
 <script>
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -183,7 +183,14 @@ async function boot(){
   $('login').style.display='none';
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
   if(e1) return stop('读不到帐号资料', e1.message);
-  if(!me || me.status!=='ACTIVE') return stop('这个 email 没有被邀请', session.user.email + ' 不能使用 FarmHub。请用老板邀请的 email 登入。');
+  if(!me || me.status!=='ACTIVE'){
+    // 没被邀请 / 已停用：自动退出这个登入，回到登入画面（不留任何资料、不加按钮）
+    const em = session.user.email;
+    await sb.auth.signOut();
+    $('who').innerHTML=''; $('pw').value=''; $('em').value='';
+    $('login').style.display='block';
+    return lmsg(em + ' 没有被邀请，不能使用 FarmHub。请用老板邀请的 email 登入。');
+  }
   $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + ' · ' + esc(session.user.email) + '</span>';
   await load();
 }
