@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v12</title>
+<title>Workers v13</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -27,6 +27,8 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 .row{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bg2);cursor:pointer}
 .row:last-child{border-bottom:0}
 .av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.av.cam{position:relative}.av.cam::after{content:'📷';position:absolute;right:-4px;bottom:-4px;font-size:13px;background:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .av.hx{background:var(--ambl);color:var(--amb)}.av.ad{background:var(--grnl);color:var(--grn)}.av.both{background:var(--purl);color:var(--pur)}.av.stop{background:var(--bg2);color:var(--text3)}
 .row .t{flex:1;min-width:0}.row .n{font-weight:600}.row .s{font-size:12px;color:var(--text3);margin-top:2px}
 .chev{color:var(--hint);font-size:20px}
@@ -100,7 +102,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -153,7 +155,7 @@ async function load(){
   const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
   const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path', x => x.is('voided_at', null).order('worker_no')),
     q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
     q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
@@ -167,6 +169,7 @@ async function load(){
   D.co = {}; D.coId = {}; co.forEach(x => { D.co[x.id] = x.code; D.coId[x.code] = x.id; });
   const lr = await sb.from('salary_run').select('month').eq('status', 'LOCKED');
   D.locked = new Set((lr.data || []).map(x => x.month));
+  await loadPhotos();
   render();
 }
 
@@ -178,6 +181,14 @@ function coOf(w){ const c = latestM(D.comps[w.id], THIS_MONTH); return !c ? '' :
 const coName = c => c === 'both' ? 'Both' : (c || '—').toUpperCase();
 function rateOf(w){ return latestM(D.rates[w.id], THIS_MONTH); }
 const rateTxt = r => r ? (r.rate_type === 'MONTHLY' ? 'Monthly ' : 'Daily ') + rm(r.rate) : 'No rate';
+const PHOTO = {};   // photo_path -> signed url
+async function loadPhotos(){
+  const need = D.workers.map(w => w.photo_path).filter(x => x && !PHOTO[x]);
+  if(!need.length) return;
+  const {data} = await sb.storage.from('worker-photos').createSignedUrls(need, 60 * 60 * 6);
+  (data || []).forEach(x => { if(x.signedUrl) PHOTO[x.path] = x.signedUrl; });
+}
+const avInner = w => w.photo_path && PHOTO[w.photo_path] ? '<img src="' + esc(PHOTO[w.photo_path]) + '" alt="">' : esc(initials(w.name));
 const initials = n => (n || '?').split(/\s+/).map(x => x[0]).join('').slice(0, 2);
 
 // ── list ──
@@ -194,7 +205,7 @@ function render(){
   });
   $('cnt').textContent = list.length + ' workers';
   $('list').innerHTML = list.map(w => { const c = isActive(w) ? coOf(w) : 'stop';
-    return '<div class="row" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + esc(initials(w.name)) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
+    return '<div class="row" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + avInner(w) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
       + (isActive(w) ? coName(coOf(w)) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
     || '<div class="empty">No workers</div>';
 }
@@ -211,12 +222,13 @@ async function openWorker(id){
   const act = isActive(w), c = act ? coOf(w) : 'stop', E = CAN_EDIT;
   const it = (k, v, sub, fn) => '<div class="item' + (E && fn ? ' tap" onclick="' + fn : '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (E && fn ? '<span class="chev">›</span>' : '') + '</div>';
   $('det').innerHTML =
-    '<div class="hero"' + (E ? ' onclick="sheetName()"' : '') + '><div class="av ' + (c || 'stop') + '">' + esc(initials(w.name)) + '</div><div><div class="n">' + esc(w.name) + '</div><div class="s">#' + (w.worker_no ?? '') + (w.title ? ' · ' + esc(w.title) : '') + (w.worker_type === 'LOCAL' ? ' · Local' : '') + '</div>'
+    '<div class="hero"><div class="av ' + (c || 'stop') + (E ? ' cam" onclick="pickPhoto()"' : '"') + '>' + avInner(w) + '</div><div' + (E ? ' onclick="sheetName()" style="cursor:pointer;flex:1"' : '') + '><div class="n">' + esc(w.name) + '</div><div class="s">#' + (w.worker_no ?? '') + (w.title ? ' · ' + esc(w.title) : '') + (w.worker_type === 'LOCAL' ? ' · Local' : '') + '</div>'
     + (act ? '<span class="pill on">Active</span>' : '<span class="pill off">Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || '') : '') + '</span>') + '</div></div>'
     + '<div class="grp">Pay</div>'
     + it('Rate', r ? rateTxt(r) : 'Not set', r ? 'since ' + fmtM(r.effective_from) : '', 'sheetRate()')
     + it('Company', coName(coOf(w)), cRow ? 'since ' + fmtM(cRow.effective_from) : '', 'sheetCompany()')
-    + it('Pay to', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) + (p2 ? ' · 2nd: ' + esc(p2.beneficiary_name) : '') : '', 'sheetPayee()')
+    + it('Payee 1', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) : '', 'sheetPayeeEdit(1)')
+    + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
     + '<div class="grp">Details</div>'
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
     + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
@@ -225,12 +237,23 @@ async function openWorker(id){
     + '<div class="item tap" onclick="sheetHistory()"><div class="k">History</div><div class="v" style="color:var(--text3);font-weight:400">All changes</div><span class="chev">›</span></div>'
     + (E ? (act && !w.stop_date ? '<button class="btn-wide red" onclick="sheetStop()">Stop worker</button>'
              : '<button class="btn-wide" onclick="sheetStop()">Change stop date</button><button class="btn-wide" onclick="reactivate()">Reactivate</button>')
-         + '<span id="voidSlot"></span>' : '');
+         + '<button class="btn-wide red" style="margin-bottom:24px" onclick="sheetDelete()">Delete worker</button>' : '');
   show('v-det');
-  if(E && !w.stop_date){
-    const {data:why} = await sb.rpc('hub_worker_records', {p_worker:id});
-    if(OPEN === id && !why && $('voidSlot')) $('voidSlot').innerHTML = '<button class="btn-wide link" onclick="voidWorker()">Remove — added by mistake</button>';
+}
+async function sheetDelete(){
+  const w = cur(); const {data:why, error} = await sb.rpc('hub_worker_records', {p_worker:w.id});
+  if(error) return toast(nice(error), true);
+  if(why){
+    sheet('<h3>Cannot delete ' + esc(w.name) + '</h3><p class="h" style="font-size:14px;color:var(--text2)">This worker has ' + esc(why) + '. Deleting would break past salary records.</p>'
+      + (w.stop_date ? '' : '<p class="h">If the worker has left, use Stop instead.</p><button class="save red" onclick="sheetStop()">Stop worker</button>'));
+    return;
   }
+  sheet('<h3>Delete ' + esc(w.name) + '?</h3><p class="h">Only for a worker added by mistake. The record is kept hidden with the reason.</p>'
+    + '<div class="lbl">Reason</div>' + opts('why', [['Added by mistake', 'Added by mistake'], ['Duplicate', 'Duplicate']], 'Added by mistake', 'dark')
+    + '<button class="save red" id="s-save">Delete worker</button>');
+  $('s-save').onclick = async () => { $('s-save').disabled = true;
+    try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:pick('why')}).eq('id', w.id)); closeSheet(); await load(); backToList(); toast('Deleted ' + w.name); }
+    catch(e){ serr(nice(e)); $('s-save').disabled = false; } };
 }
 const cur = () => D.workers.find(x => x.id === OPEN);
 
@@ -250,7 +273,7 @@ const opts = (g, list, on, cls, cols) => '<div class="' + (cols || 'g' + list.le
 function serr(t){ $('serr').textContent = t; $('serr').style.display = 'block'; return false; }
 async function saveWith(btn, fn, msg){
   btn.disabled = true;
-  try{ const r = await fn(); if(r === false){ btn.disabled = false; return; } closeSheet(); await load(); if(OPEN) openWorker(OPEN); toast(msg || 'Saved'); }
+  try{ const r = await fn(); if(r === false){ btn.disabled = false; return; } closeSheet(); await load(); if(OPEN) openWorker(OPEN); toast(typeof r === 'string' ? r : (msg || 'Saved')); }
   catch(e){ serr(nice(e)); btn.disabled = false; }
 }
 const now = () => new Date().toISOString();
@@ -303,10 +326,11 @@ function sheetPayee(){
 }
 function sheetPayeeEdit(slot){
   const w = cur(), p = slot === 2 ? latestD(D.pay2[w.id], TODAY) : (latestD(D.pay1[w.id], TODAY) || (D.pay1[w.id] || [])[0]);
-  sheet('<h3>' + (slot === 1 ? 'Main payee' : '2nd payee') + '</h3>'
+  sheet('<h3>Payee ' + slot + (slot === 1 ? ' (default)' : '') + '</h3>'
     + '<div class="lbl">Name</div><input class="inp" id="s-bn" value="' + esc(p ? p.beneficiary_name : '') + '" autocapitalize="characters">'
     + '<div class="lbl">Account no.</div><input class="inp" id="s-ac" inputmode="numeric" placeholder="' + (p ? 'Now ' + last4(p.account_no) + ' — type the full number' : '') + '">'
-    + '<button class="save" id="s-save">Save</button>');
+    + '<button class="save" id="s-save">Save</button>'
+    + (slot === 2 && p ? '<button class="cancel" style="color:var(--red)" onclick="removePayee2()">Remove payee 2</button>' : ''));
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
     const bn = $('s-bn').value.trim().toUpperCase(), ac = $('s-ac').value.replace(/\s/g, '');
     if(!bn || !ac) return serr('Name and account no. are needed.');
@@ -330,7 +354,10 @@ function sheetJoin(){
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
     const d = $('s-date').value || null;
     if(d && w.stop_date && w.stop_date < d) return serr('Join date cannot be after the stop date (' + fmtD(w.stop_date) + ').');
+    if(!(await attendanceOk(w, d, w.stop_date))) return false;
     await db(sb.from('hub_worker').update({join_date:d}).eq('id', w.id));
+    const n = await adjustFood(w, w.join_date, d, w.stop_date, w.stop_date);
+    return n ? 'Saved · food sharing updated in ' + n + ' purchase' + (n > 1 ? 's' : '') : 'Saved';
   });
 }
 function sheetText(title, val, type, fn){
@@ -370,13 +397,15 @@ function sheetStop(){
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
     const d = $('s-date').value; if(!d) return serr('Pick the last working day.');
     if(w.join_date && d < w.join_date) return serr('Stop date cannot be before the join date (' + fmtD(w.join_date) + ').');
+    if(!(await attendanceOk(w, w.join_date, d))) return false;
     await db(sb.from('hub_worker').update({stop_date:d, stop_reason:pick('reason'), stop_note:$('s-note').value.trim() || null}).eq('id', w.id));
+    await adjustFood(w, w.join_date, w.join_date, w.stop_date, d);
     if(CAN_SALARY && pick('pay')) await db(sb.from('salary_pay_method').upsert({worker_id:w.id, month:d.slice(0,7), method:pick('pay')}, {onConflict:'worker_id,month'}));
   }, 'Stopped');
 }
 async function reactivate(){
   const w = cur(); if(!confirm('Reactivate ' + w.name + '?')) return;
-  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', w.id)); await load(); openWorker(w.id); toast('Reactivated'); }
+  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', w.id)); await adjustFood(w, w.join_date, w.join_date, w.stop_date, null); await load(); openWorker(w.id); toast('Reactivated'); }
   catch(e){ toast(nice(e), true); }
 }
 async function voidWorker(){
@@ -422,6 +451,51 @@ async function sheetHistory(){
   (py.data || []).forEach(x => rows.push([x.effective_from, (x.slot === 2 ? '2nd payee ' : 'Payee ') + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + (x.voided_at ? ' (removed)' : '')]));
   rows.sort((a, b) => a[0] < b[0] ? 1 : -1);
   sheet('<h3>History · ' + esc(w.name) + '</h3><table class="hist">' + (rows.map(r => '<tr><td style="white-space:nowrap;color:var(--text3)">' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') || '<tr><td>No changes yet</td></tr>') + '</table>');
+}
+// Attendance outside the new working period → ask first
+async function attendanceOk(w, join, stop){
+  if(!CAN_SALARY) return true;
+  const rows = [];
+  if(join){ const {data} = await sb.from('salary_attendance').select('work_date').eq('worker_id', w.id).neq('code', '').lt('work_date', join); rows.push(...(data || [])); }
+  if(stop){ const {data} = await sb.from('salary_attendance').select('work_date').eq('worker_id', w.id).neq('code', '').gt('work_date', stop); rows.push(...(data || [])); }
+  if(!rows.length) return true;
+  return confirm(w.name + ' has ' + rows.length + ' attendance day(s) outside this period (e.g. ' + rows[0].work_date + ').\nThese days will not be counted. Save anyway?');
+}
+// Food sharing: when join/stop date changes, add or remove this worker on purchases in the changed days.
+// Only months that are not locked, and only purchases where the people were picked automatically.
+async function adjustFood(w, oldJoin, newJoin, oldStop, newStop){
+  if(!CAN_SALARY) return 0;
+  const inS = (j, s, d) => (!j || j <= d) && (!s || s >= d);
+  const {data, error} = await sb.from('salary_food').select('id,month,data').is('voided_at', null);
+  if(error || !data) return 0;
+  const upd = [];
+  for(const r of data){
+    const f = r.data || {}; if(!f.date || f.autoSel === false || D.locked.has(r.month)) continue;
+    const was = inS(oldJoin, oldStop, f.date), now_ = inS(newJoin, newStop, f.date);
+    if(was === now_) continue;
+    const ids = (f.workerIds || []).filter(x => x !== w.id); if(now_) ids.push(w.id);
+    upd.push({id:r.id, month:r.month, data:{...f, workerIds:ids}, voided_at:null});
+  }
+  if(upd.length) await db(sb.from('salary_food').upsert(upd, {onConflict:'id'}));
+  return upd.length;
+}
+// Photo: camera or gallery → shrink to 480px → save
+function pickPhoto(){
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+  i.onchange = async () => { const f = i.files && i.files[0]; if(!f) return; const w = cur();
+    try{
+      toast('Saving photo…');
+      const img = await new Promise((ok, bad) => { const x = new Image(); x.onload = () => ok(x); x.onerror = bad; x.src = URL.createObjectURL(f); });
+      const k = 480 / Math.max(img.width, img.height), cw = Math.round(img.width * Math.min(1, k)), ch = Math.round(img.height * Math.min(1, k));
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+      const blob = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.82));
+      const path = w.id + '/' + Date.now() + '.jpg';
+      const {error} = await sb.storage.from('worker-photos').upload(path, blob, {contentType:'image/jpeg'}); if(error) throw error;
+      await db(sb.from('hub_worker').update({photo_path:path}).eq('id', w.id));
+      await load(); openWorker(w.id); toast('Photo saved');
+    }catch(e){ toast(nice(e), true); }
+  };
+  i.click();
 }
 boot();
 </script>
