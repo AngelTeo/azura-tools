@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v71</title>
+<title>Salary v72</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -541,6 +541,8 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const ATT_STATES = ['','hx','ad','both','hx_half','ad_half','split','off'];
 const ATT_LABELS = {'':{lbl:'·',cls:'st-empty'},'hx':{lbl:'H',cls:'st-hx'},'ad':{lbl:'A',cls:'st-ad'},'both':{lbl:'B',cls:'st-both'},'hx_half':{lbl:'½H',cls:'st-hx_half'},'ad_half':{lbl:'½A',cls:'st-ad_half'},'split':{lbl:'S',cls:'st-split'},'off':{lbl:'✕',cls:'st-off'}};
 const ATT_VALUES = {'':{'hx':0,'ad':0},'hx':{'hx':1,'ad':0},'ad':{'hx':0,'ad':1},'both':{'hx':0.5,'ad':0.5},'hx_half':{'hx':0.5,'ad':0},'ad_half':{'hx':0,'ad':0.5},'split':{'hx':0.5,'ad':0.5},'off':{'hx':0,'ad':0}};
+// 9 月（含）以前照 v56 已发的薪水：Both = 1 天 HX + 1 天 AD；10 月起 Both = 各半天（共 1 天）
+function attV(v, mk){ return (v === 'both' && mk && mk < NEW_SYS_START) ? {hx:1, ad:1} : (ATT_VALUES[v] || {hx:0, ad:0}); }
 const BANK_CHARGE = 11;
 function calcRecordCharges(r){
   // RM11 per TRANSACTION (record), regardless of how many workers share it
@@ -576,7 +578,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 71;
+const APP_VERSION = 72;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1297,7 +1299,7 @@ function renderAttendance(){
   workers.forEach(w=>{
     const att=S.attendance[mk][w.id]||{};
     let hxD=0,adD=0;
-    for(let d=1;d<=days;d++){const v=att[d]||'';const vals=ATT_VALUES[v]||{hx:0,ad:0};hxD+=vals.hx;adD+=vals.ad;}
+    for(let d=1;d<=days;d++){const v=att[d]||'';const vals=attV(v,mk);hxD+=vals.hx;adD+=vals.ad;}
     const tot=hxD+adD;
     body+=`<tr><td class="w-name">${w.name}</td>`;
     for(let d=1;d<=days;d++){
@@ -1337,7 +1339,7 @@ function updateAttSummaryRow(wid){
   const days=daysInMonth(y,m);
   const att=S.attendance[mk]?.[wid]||{};
   let hxD=0,adD=0;
-  for(let d=1;d<=days;d++){const v=att[d]||'';const vals=ATT_VALUES[v]||{hx:0,ad:0};hxD+=vals.hx;adD+=vals.ad;}
+  for(let d=1;d<=days;d++){const v=att[d]||'';const vals=attV(v,mk);hxD+=vals.hx;adD+=vals.ad;}
   const tot=hxD+adD;
   // Find the summary cell for this worker row
   const cells=document.querySelectorAll('.att-table tbody tr');
@@ -1363,7 +1365,7 @@ function foodIds(r, mk){ return r.workerIds || workersInMonth(mk).map(w => w.id)
 function foodEach(total, n){ return n > 0 ? (Number(total)||0) / n : 0; }   // 照实，不进位
 function up10(x){ const sen = Math.round(x * 100 * 1000) / 1000; return Math.ceil(sen / 10 - 1e-6) / 10; }
 function foodShare(r, mk){ return foodEach(r.total, foodIds(r, mk).length); }
-function calcFoodDeduct(wid, mk){ return up10((S.food[mk]||[]).reduce((s, r) => s + (foodIds(r, mk).includes(wid) ? foodShare(r, mk) : 0), 0)); }
+function calcFoodDeduct(wid, mk){ const t = (S.food[mk]||[]).reduce((s, r) => s + (foodIds(r, mk).includes(wid) ? foodShare(r, mk) : 0), 0); return mk < NEW_SYS_START ? t : up10(t); }
 function foodTaken(mk){ const ids = new Set(); (S.food[mk]||[]).forEach(r => foodIds(r, mk).forEach(id => ids.add(id))); return r2([...ids].reduce((s, id) => s + calcFoodDeduct(id, mk), 0)); }
 function foodShops(){ return FOOD_SHOPS.filter(x => x.shown).map(x => x.label); }
 const sameShop = (a, b) => (a||'').trim().toUpperCase().replace(/\s+/g,' ') === (b||'').trim().toUpperCase().replace(/\s+/g,' ');
@@ -1391,7 +1393,7 @@ function renderFood(){
   if(FOOD_VIEW === 'worker'){
     const ws = workersInMonth(mk).map(w => { const own = rows.filter(r => foodIds(r, mk).includes(w.id)); return [w, own.length, calcFoodDeduct(w.id, mk), own.reduce((s, r) => s + foodShare(r, mk), 0)]; });
     h += '<div class="ad-fm"><span>EACH WORKER THIS MONTH</span><span>FOOD</span></div><div class="ad-list">'
-      + (ws.map(([w, n, t, exact]) => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(w.name) + '<small>' + (n ? n + ' purchase' + (n>1?'s':'') + ' · ' + exact.toFixed(2) + ' rounded up' : 'No food this month') + '</small></div><div class="fd-amt">' + fmtRM(t) + '</div></div>').join('') || '<div class="ad-row">No workers</div>') + '</div>';
+      + (ws.map(([w, n, t, exact]) => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(w.name) + '<small>' + (n ? n + ' purchase' + (n>1?'s':'') + (mk >= NEW_SYS_START ? ' · ' + exact.toFixed(2) + ' rounded up' : '') : 'No food this month') + '</small></div><div class="fd-amt">' + fmtRM(t) + '</div></div>').join('') || '<div class="ad-row">No workers</div>') + '</div>';
   } else {
     if(!lock) h += '<button class="ad-all" onclick="fdOpen(null)">+ Add purchase</button>';
     const list = rows.slice().sort((a, b) => (a.date||'9') < (b.date||'9') ? -1 : (a.date||'9') > (b.date||'9') ? 1 : 0);
@@ -1832,7 +1834,7 @@ function calcWorkerSummaryLive(w,mk){
   const days=daysInMonth(y,m);
   const att=S.attendance[mk]?.[w.id]||{};
   let hxD=0,adD=0;
-  for(let d=1;d<=days;d++){const v=att[d]||'';const vals=ATT_VALUES[v]||{hx:0,ad:0};hxD+=vals.hx;adD+=vals.ad;}
+  for(let d=1;d<=days;d++){const v=att[d]||'';const vals=attV(v,mk);hxD+=vals.hx;adD+=vals.ad;}
   const totalD=hxD+adD;
   const absentD=days-totalD;
   let gross;
@@ -2139,8 +2141,8 @@ function printReceipt(wid, mk){
   });
 
   if(foodPurchases.length){ const shown = foodPurchases.reduce((t, r) => t + r2(foodShare(r, mk)), 0), rd = r2(calcFoodDeduct(wid, mk) - shown);
-    foodRowsHtml += '<tr style="background:#fff"><td></td><td style="font-style:italic;color:#888">Rounded up to 10 sen</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">' + (rd >= 0 ? '+' : '') + 'RM' + rd.toFixed(2) + '</td><td></td></tr>'
-      + '<tr style="background:#E8F5E8"><td></td><td style="font-weight:700">Food total</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">RM' + calcFoodDeduct(wid, mk).toFixed(2) + '</td><td></td></tr>'; }
+    if(mk >= NEW_SYS_START) foodRowsHtml += '<tr style="background:#fff"><td></td><td style="font-style:italic;color:#888">Rounded up to 10 sen</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">' + (rd >= 0 ? '+' : '') + 'RM' + rd.toFixed(2) + '</td><td></td></tr>';
+    foodRowsHtml += '<tr style="background:#E8F5E8"><td></td><td style="font-weight:700">Food total</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">RM' + calcFoodDeduct(wid, mk).toFixed(2) + '</td><td></td></tr>'; }
   const persItems = (S.personal[mk] && S.personal[mk][wid]) ? S.personal[mk][wid] : [];
   let persRowsHtml = '';
   persItems.forEach(function(p, i){
@@ -3604,7 +3606,7 @@ function renderAttendance(){
   let body = '';
   workers.forEach(w => {
     const att = S.attendance[mk][w.id] || {}; let hxD=0, adD=0;
-    for(let d=1; d<=days; d++){ const vals = ATT_VALUES[att[d]||''] || {hx:0,ad:0}; hxD += vals.hx; adD += vals.ad; }
+    for(let d=1; d<=days; d++){ const vals = attV(att[d]||'', mk); hxD += vals.hx; adD += vals.ad; }
     body += `<tr><td class="w-name" style="cursor:pointer;" title="Click = apply brush to whole month" onclick="attRowAll('${w.id}')">${esc(w.name)} <span style="font-size:9px;color:var(--text3);">${(w.farm||'').toUpperCase()}</span></td>`;
     for(let d=1; d<=days; d++){
       const ok = inServiceOn(w, dayStr(mk, d)), st = att[d] || '', info = ATT_LABELS[st] || {lbl:'·',cls:'st-empty'};
