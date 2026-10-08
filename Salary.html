@@ -232,7 +232,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div class="logo-mark">🌾</div>
     <div>
       <h1>WORKER SALARY</h1>
-      <small>WORKER SALARY SYSTEM · 云端 v58</small>
+      <small>WORKER SALARY SYSTEM · 云端 v59</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
@@ -516,7 +516,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 58;
+const APP_VERSION = 59;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -609,13 +609,18 @@ const now = () => new Date().toISOString();
 async function upsertChunks(table, rows, onConflict){
   for(let i=0;i<rows.length;i+=500){
     const {error} = await sb.from(table).upsert(rows.slice(i,i+500), {onConflict});
-    if(error) throw Object.assign(new Error(table+'：'+error.message), {hard:true});
+    if(error) throw dbErr(table, error);
   }
+}
+function dbErr(table, error){
+  const map = {'23514':'资料不合规则（例：停职日早于入职日）','23505':'同一笔资料重复（例：同一个月已经有一笔）','42501':'没有权限','23503':'找不到对应的工人'};
+  const msg = (map[error.code] ? map[error.code] + '｜' : '') + table + '：' + error.message;
+  return Object.assign(new Error(msg), {hard: !!error.code});
 }
 async function voidIds(table, key, ids){
   if(!ids.length) return;
   const {error} = await sb.from(table).update({voided_at: now()}).in(key, ids);
-  if(error) throw Object.assign(new Error(table+'：'+error.message), {hard:true});
+  if(error) throw dbErr(table, error);
 }
 
 async function syncNow(){
@@ -673,8 +678,9 @@ async function syncNow(){
 }
 
 // ---- 工人：写回 FarmHub 主资料（历史类表只新增；同一生效日先作废旧的再新增） ----
-async function hubCall(p){ const {data, error} = await p; if(error) throw Object.assign(new Error(error.message), {hard:true}); return data; }
+async function hubCall(p){ const {data, error} = await p; if(error) throw dbErr('FarmHub', error); return data; }
 async function voidRow(table, id, reason){ await hubCall(sb.from(table).update({voided_at: now(), void_reason: reason}).eq('id', id)); }
+function effMonth(){ let m = monthKey(), g = 36; while(typeof isLocked==='function' && isLocked(m) && g-- > 0) m = nextMk(m); return m; }
 const coIdOf = farm => farm==='both' ? null : (farm==='ad' ? CO_ID['AD'] : CO_ID['HX']);
 const RT = t => t==='monthly' ? 'MONTHLY' : 'DAILY';
 
@@ -687,18 +693,19 @@ async function syncWorkers(cur){
     const tag = '薪水系统 ' + (w.name||'');
     if(!o){
       // 新工人：v56 给的是临时编号 → 换成资料库 uuid
-      const uuid = crypto.randomUUID();
-      const no = cur.S.workers.some(x => x !== w && Number(x.no) === Number(w.no)) ? nextNo++ : Number(w.no) || nextNo++;
-      await hubCall(sb.from('hub_worker').insert({id:uuid, worker_no:no, name:w.name, title:w.title||null, worker_type:'FOREIGN',
-        join_date:w.joinDate||null, stop_date:w.stopDate||null, stop_reason:w.stopDate ? (w.stopReason||null) : null, phone:w.phone||null}));
-      const from = (w.joinDate||'').slice(0,7) || monthKey();
-      const r = await hubCall(sb.from('hub_worker_rate').insert({worker_id:uuid, rate_type:RT(w.rateType), rate:w.rate||0, effective_from:from}).select('id,worker_id,rate_type,rate,effective_from'));
-      W_RATES[uuid] = r;
-      W_COMP[uuid] = await hubCall(sb.from('hub_worker_company').insert({worker_id:uuid, company_id:coIdOf(w.farm), effective_from:from}).select('id,worker_id,company_id,effective_from'));
-      if(w.bankAccount && w.beneficiary) W_PAY[uuid] = await hubCall(sb.from('hub_worker_payee').insert({worker_id:uuid, beneficiary_name:w.beneficiary, account_no:w.bankAccount, channel:'MERCHANTRADE', effective_from:w.joinDate||TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from'));
-      if(w.passport) W_PP[uuid] = await hubCall(sb.from('hub_worker_passport').insert({worker_id:uuid, passport_no:w.passport, effective_from:w.joinDate||TODAY_KL}).select('id,worker_id,passport_no,effective_from'));
+      const uuid = w._uuid || crypto.randomUUID();
+      if(live) live._uuid = uuid;
+      const no = w._no || (cur.S.workers.some(x => x !== w && Number(x.no) === Number(w.no)) ? nextNo++ : Number(w.no) || nextNo++);
+      if(live) live._no = no;
+      await hubCall(sb.from('hub_worker').upsert({id:uuid, worker_no:no, name:w.name, title:w.title||null, worker_type:'FOREIGN',
+        join_date:w.joinDate||null, stop_date:w.stopDate||null, stop_reason:w.stopDate ? (w.stopReason||null) : null, phone:w.phone||null}, {onConflict:'id'}));
+      const from = (w.joinDate||'').slice(0,7) || effMonth();
+      if(!(W_RATES[uuid]||[]).length) W_RATES[uuid] = await hubCall(sb.from('hub_worker_rate').insert({worker_id:uuid, rate_type:RT(w.rateType), rate:w.rate||0, effective_from:from}).select('id,worker_id,rate_type,rate,effective_from'));
+      if(!(W_COMP[uuid]||[]).length) W_COMP[uuid] = await hubCall(sb.from('hub_worker_company').insert({worker_id:uuid, company_id:coIdOf(w.farm), effective_from:from}).select('id,worker_id,company_id,effective_from'));
+      if(w.bankAccount && w.beneficiary && !(W_PAY[uuid]||[]).length) W_PAY[uuid] = await hubCall(sb.from('hub_worker_payee').insert({worker_id:uuid, beneficiary_name:w.beneficiary, account_no:w.bankAccount, channel:'MERCHANTRADE', effective_from:w.joinDate||TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from'));
+      if(w.passport && !(W_PP[uuid]||[]).length) W_PP[uuid] = await hubCall(sb.from('hub_worker_passport').insert({worker_id:uuid, passport_no:w.passport, effective_from:w.joinDate||TODAY_KL}).select('id,worker_id,passport_no,effective_from'));
       const oldId = w.id;
-      for(const x of [w, live]){ if(!x) continue; x.id = uuid; x.no = no; x.rateHistory = [{from, rate:w.rate||0}]; }
+      for(const x of [w, live]){ if(!x) continue; x.id = uuid; x.no = no; x.rateHistory = [{from, rate:w.rate||0}]; delete x._uuid; delete x._no; }
       SNAP.S.workers.push(clone(w));
       void oldId; continue;
     }
@@ -724,14 +731,14 @@ async function syncWorkers(cur){
     for(const h of (w.rateHistory||[])) if(!oh.includes(key(h))) await addRate(h.from, Number(h.rate)||0, RT(w.rateType));
     if(Number(o.rate)!==Number(w.rate) || o.rateType!==w.rateType){
       // 改了金额或日薪 / 月薪：从画面上选的月份起生效
-      const mk = monthKey();
+      const mk = effMonth();
       await addRate(mk, Number(w.rate)||0, RT(w.rateType));
       for(const x of [w, live]){ if(!x) continue; x.rateHistory = (x.rateHistory||[]).filter(h => h.from!==mk).concat([{from:mk, rate:Number(w.rate)||0}]).sort((a,b)=>a.from<b.from?-1:1); }
       toast('薪资从 ' + mk + ' 起改为 ' + (w.rateType==='monthly'?'月薪':'日薪') + ' RM' + w.rate);
     }
     // 归属公司
     if(o.farm !== w.farm){
-      const mk = monthKey(), crow = W_COMP[w.id] ||= [];
+      const mk = effMonth(), crow = W_COMP[w.id] ||= [];
       const ex = crow.find(r => r.effective_from===mk); if(ex){ await voidRow('hub_worker_company', ex.id, tag+'：同月改归属公司'); crow.splice(crow.indexOf(ex),1); }
       crow.push(...await hubCall(sb.from('hub_worker_company').insert({worker_id:w.id, company_id:coIdOf(w.farm), effective_from:mk}).select('id,worker_id,company_id,effective_from')));
     }
@@ -1017,19 +1024,24 @@ function openWorkerModal(id){
 }
 
 let _editingWorkerId=null;
+let _rhBackup=null;
+function _rhKeep(){ const w=_editingWorkerId?getWorker(_editingWorkerId):null; if(w && !_rhBackup) _rhBackup={id:w.id, hist:JSON.parse(JSON.stringify(w.rateHistory||[]))}; }
 function addRateHist(){
+  _rhKeep();
   const w=_editingWorkerId?getWorker(_editingWorkerId):{};
   if(!w.rateHistory)w.rateHistory=[];
   w.rateHistory.push({from:monthKey(),rate:w.rate||0});
   if(_editingWorkerId)openWorkerModal(_editingWorkerId);
 }
 function removeRateHist(i){
+  _rhKeep();
   const w=_editingWorkerId?getWorker(_editingWorkerId):null;
   if(!w)return;
   w.rateHistory.splice(i,1);
   openWorkerModal(_editingWorkerId);
 }
 function updateRateHist(i,field,val){
+  _rhKeep();
   const w=_editingWorkerId?getWorker(_editingWorkerId):null;
   if(!w||!w.rateHistory)return;
   w.rateHistory[i][field]=val;
@@ -1038,6 +1050,9 @@ function saveWorker(id){
   const name=document.getElementById('wf-name').value.trim().toUpperCase();
   const rate=parseFloat(document.getElementById('wf-rate').value)||0;
   if(!name){toast('⚠ Name is required');return;}
+  { const _j=document.getElementById('wf-join').value, _s=(document.getElementById('wf-stop')||{}).value||'';
+    if(_j && _s && _s < _j){ toast('⚠ 停职日不能早于入职日'); return; } }
+  _rhBackup=null;
   if(id){
     const w=getWorker(id);
     const notesEl=document.getElementById('wf-notes');
@@ -1060,7 +1075,7 @@ function saveWorker(id){
 function openStopModal(id){
   const w=getWorker(id);
   document.getElementById('modal-title').textContent='Stop Worker: '+w.name;
-  const today=new Date().toISOString().split('T')[0];
+  const today=TODAY_KL;
   document.getElementById('modal-body').innerHTML=`
     <div class="form-row"><label>Stop Date *</label>
       <input id="stop-date" type="date" value="${w.stopDate||today}"></div>
@@ -1101,6 +1116,7 @@ function confirmStopWorker(id){
   const w=getWorker(id);
   const d=document.getElementById('stop-date').value;
   if(!d){toast('⚠ Please enter a stop date');return;}
+  if(w.joinDate && d < w.joinDate){toast('⚠ 停职日不能早于入职日');return;}
   const reason=getSelReason();const pay=getSelPay();
   const notes=(document.getElementById('stop-notes')||{}).value||'';
   w.status='stopped';w.stopDate=d;w.stopReason=reason;w.stopNotes=notes;
@@ -1323,6 +1339,7 @@ function toggleFoodWorker(rowId,wid,checked){
   const lbl=document.getElementById('fws-'+wid)?.closest('label');
   if(lbl){lbl.style.background=checked?'var(--accl)':'';lbl.style.borderColor=checked?'var(--acc)':'var(--border)';}
   updateFoodWorkerCount(rowId);
+  saveAll();
 }
 
 function updateFoodWorkerCount(rowId){
@@ -1350,6 +1367,7 @@ function selectAllFoodWorkers(rowId,select){
   });
   row.workerIds=select?ids:[];
   updateFoodWorkerCount(rowId);
+  saveAll();
 }
 
 function updateFoodTotals(){
@@ -2931,7 +2949,7 @@ function renderDashboard(){
 }
 
 // -- MODAL ---------------------------------------------
-function closeModal(){document.getElementById('modal-overlay').classList.remove('on');}
+function closeModal(){ if(_rhBackup){ const w=getWorker(_rhBackup.id); if(w) w.rateHistory=_rhBackup.hist; _rhBackup=null; } document.getElementById('modal-overlay').classList.remove('on');}
 
 // -- INIT ----------------------------------------------
 // -- EXPORT -------------------------------------------------------
@@ -3081,8 +3099,8 @@ function advanceTrack(wid, mk){
   const thisMonth = (mk < a.startMonth) ? 0 : dedFor(mk);
   return {paidBefore: r2(paid), thisMonth};
 }
-function getAdvanceDeduction(wid, mk){ return advanceTrack(wid, mk).thisMonth; }
-function getAdvancePaidUpTo(wid, mk){ return advanceTrack(wid, mk).paidBefore; }
+function getAdvanceDeduction(wid, mk){ return mk < NEW_SYS_START ? getAdvanceDeductionV56(wid, mk) : advanceTrack(wid, mk).thisMonth; }
+function getAdvancePaidUpTo(wid, mk){ return mk < NEW_SYS_START ? getAdvancePaidUpToV56(wid, mk) : advanceTrack(wid, mk).paidBefore; }
 
 // 已锁月份的改动：画面上还原，并提示
 const LOCK_KEYS = {
