@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v73</title>
+<title>Salary v74</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -578,7 +578,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 73;
+const APP_VERSION = 74;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -604,15 +604,24 @@ function saveAll(){
 function savRem(){ saveAll(); }
 window.addEventListener('beforeunload', e => { if(dirty || syncing){ e.preventDefault(); e.returnValue=''; } });
 
+// 读整张表：第一页同时拿总数，其余页一起抓（不排队），快很多
+let LOAD_DONE = 0, LOAD_ALL = 0;
+function loadTick(){ LOAD_DONE++; const g = document.getElementById('gate'); if(g && g.style.display !== 'none' && LOAD_ALL) gate('<p>Loading… ' + Math.min(99, Math.round(LOAD_DONE / LOAD_ALL * 100)) + '%</p>'); }
 async function fetchAll(table, cols, mod){
-  const out = []; const size = 1000;
-  for(let from=0;;from+=size){
-    let q = sb.from(table).select(cols); if(mod) q = mod(q);
-    const {data, error} = await q.range(from, from+size-1);
-    if(error) throw new Error(table + ': ' + error.message);
-    out.push(...data); if(data.length < size) break;
+  const size = 1000, page = (from, count) => { let q = sb.from(table).select(cols, count ? {count:'exact'} : undefined); if(mod) q = mod(q); return q.range(from, from + size - 1); };
+  LOAD_ALL++;
+  const first = await page(0, true);
+  if(first.error) throw new Error(table + ': ' + first.error.message);
+  const out = [...first.data];
+  if(first.data.length < size){ loadTick(); return out; }
+  if(typeof first.count === 'number'){
+    const rest = []; for(let from = size; from < first.count; from += size) rest.push(page(from));
+    LOAD_ALL += rest.length;
+    for(const r of await Promise.all(rest.map(p => p.then(x => { loadTick(); return x; })))){ if(r.error) throw new Error(table + ': ' + r.error.message); out.push(...r.data); }
+  } else {
+    for(let from = size;; from += size){ const r = await page(from); if(r.error) throw new Error(table + ': ' + r.error.message); out.push(...r.data); if(r.data.length < size) break; }
   }
-  return out;
+  loadTick(); return out;
 }
 
 async function loadData(){
@@ -625,13 +634,13 @@ async function loadData(){
     fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_passport','id,worker_id,passport_no,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('salary_worker_note','worker_id,stop_notes'),
-    fetchAll('salary_attendance','worker_id,work_date,code,am_farm,pm_farm', q=>q.neq('code','')),
+    fetchAll('salary_attendance','worker_id,work_date,code,am_farm,pm_farm', q=>q.neq('code','').order('work_date').order('worker_id')),
     fetchAll('salary_gross_override','worker_id,month,amount', q=>q.not('amount','is',null)),
     fetchAll('salary_pay_method','worker_id,month,method', q=>q.neq('method','transfer')),
-    fetchAll('salary_food','id,month,data', q=>notVoid(q).order('created_at')),
-    fetchAll('salary_personal','id,worker_id,month,data', q=>notVoid(q).order('created_at')),
+    fetchAll('salary_food','id,month,data', q=>notVoid(q).order('created_at').order('id')),
+    fetchAll('salary_personal','id,worker_id,month,data', q=>notVoid(q).order('created_at').order('id')),
     fetchAll('salary_advance','worker_id,data', notVoid),
-    fetchAll('salary_remittance','id,data', q=>notVoid(q).order('created_at')),
+    fetchAll('salary_remittance','id,data', q=>notVoid(q).order('created_at').order('id')),
   ]);
   if(!wk.length) throw new Error('No workers found. Please ask the owner to check your access.');
   co.forEach(c => { CO_ID[c.code] = c.id; CO_CODE[c.id] = c.code; });
@@ -981,8 +990,10 @@ function setWorkerFilter(f){
   renderWorkers();
 }
 // Coming back from the Workers system → reload so worker changes show here
+let HIDDEN_AT = 0;
 document.addEventListener('visibilitychange', async () => {
-  if(document.visibilityState !== 'visible' || !CLOUD_OK || dirty || syncing) return;
+  if(document.visibilityState === 'hidden'){ HIDDEN_AT = Date.now(); return; }
+  if(!CLOUD_OK || dirty || syncing || Date.now() - HIDDEN_AT < 120000) return;
   try{ await loadData(); const pg = (document.querySelector('.page.on')||{}).id; if(pg) goPage(pg.replace('page-','')); renderExitRecords(); }catch(e){ console.warn(e); }
 });
 function goPage(p){
