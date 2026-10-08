@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v74</title>
+<title>Salary v75</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -428,12 +428,10 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 
 <!-- PERSONAL -->
 <div class="page" id="page-personal">
-  <div class="card-hdr" style="margin-bottom:10px;">
-    <span class="card-title" style="font-size:14px;font-weight:700;">Personal Purchases</span>
-    <span style="font-size:11px;color:var(--text3);">Click a worker to expand and add entries</span>
-  </div>
-  <div id="personal-list"></div>
+  <div class="card"><div id="personal-list" style="max-width:560px"></div></div>
 </div>
+<div class="ad-dim" id="ps-dim" onclick="psClose()"></div>
+<div class="ad-sheet" id="ps-sheet"></div>
 
 <!-- ADVANCE -->
 <div class="page" id="page-advance">
@@ -578,14 +576,14 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 74;
+const APP_VERSION = 75;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const TODAY_KL = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 let CLOUD_OK = false, CAN_EDIT = false, SNAP = null, syncTimer = null, syncing = false, syncAgain = false, dirty = false;
 let CO_ID = {}, CO_CODE = {}, W_RATES = {}, W_COMP = {}, W_PAY = {}, W_PAY2 = {}, W_PP = {};
-let FARMS = [], FARM_CODE = {}, W_FARM = {}, FOOD_SHOPS = []; // v69: farms [code, 'hx'|'ad'], worker home farm history
+let FARMS = [], FARM_CODE = {}, W_FARM = {}, FOOD_SHOPS = [], PERS_ITEMS = []; // v69: farms [code, 'hx'|'ad'], worker home farm history
 const THIS_MK = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0'); })();
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2,'0');
@@ -685,9 +683,9 @@ async function loadData(){
   const [fm, wf, fs] = await Promise.all([
     fetchAll('hub_farm','id,code,company_id', q=>q.eq('active',true).order('code')),
     fetchAll('hub_worker_farm','worker_id,farm_id,effective_from', q=>q.is('voided_at',null).order('effective_from').order('created_at')),
-    fetchAll('hub_option','id,code,label,sort,shown', q=>q.eq('list_code','FOOD_SHOP').order('sort').order('label')),
+    fetchAll('hub_option','id,list_code,code,label,sort,shown', q=>q.in('list_code',['FOOD_SHOP','PERSONAL_ITEM']).order('sort').order('label')),
   ]);
-  FOOD_SHOPS = fs;
+  FOOD_SHOPS = fs.filter(x => x.list_code === 'FOOD_SHOP'); PERS_ITEMS = fs.filter(x => x.list_code === 'PERSONAL_ITEM');
   FARM_CODE = {}; fm.forEach(f => FARM_CODE[f.id] = f.code);
   FARMS = fm.map(f => [f.code, (CO_CODE[f.company_id]||'').toLowerCase()]).filter(f => f[1]).sort((a,b) => (a[1]===b[1] ? (a[0]<b[0]?-1:1) : a[1]==='hx'?-1:1));
   W_FARM = grp(wf);
@@ -1517,75 +1515,154 @@ function fdClose(){ document.getElementById('fd-dim').style.display = 'none'; do
 // PERSONAL
 // ======================================================
 function ensurePersonal(mk,wid){if(!S.personal[mk])S.personal[mk]={};if(!S.personal[mk][wid])S.personal[mk][wid]=[];}
-
+// ---------- v75 Personal：常买的东西做按钮 · 一次多人 · 只能选当月日期 · 删前先问 ----------
+let PS_VIEW = 'workers', PS = null, PS_MODE = 'form', PS_WID = null;
+const persItems = () => PERS_ITEMS.filter(x => x.shown).map(x => x.label);
+function persPrices(what){ // 这样东西最常用的价钱（最多 4 个）
+  const c = {}; for(const mk in S.personal) for(const w in S.personal[mk]) (S.personal[mk][w]||[]).forEach(p => { if(sameShop(p.description, what) && p.amount > 0) c[p.amount] = (c[p.amount]||0) + 1; });
+  return Object.keys(c).sort((a, b) => c[b] - c[a]).slice(0, 4).map(Number).sort((a, b) => a - b);
+}
+async function addPersItem(name){
+  name = name.trim().replace(/\s+/g, ' ').toUpperCase(); if(!name) return name;
+  const ex = PERS_ITEMS.find(x => x.code === name);
+  if(ex){ if(!ex.shown){ const {error} = await sb.from('hub_option').update({shown:true}).eq('id', ex.id); if(error) throw error; ex.shown = true; } return ex.label; }
+  const sort = PERS_ITEMS.reduce((m, x) => Math.max(m, x.sort||0), 0) + 1;
+  const {data, error} = await sb.from('hub_option').insert({list_code:'PERSONAL_ITEM', code:name, label:name, sort, shown:true}).select('id,code,label,sort,shown');
+  if(error) throw error; PERS_ITEMS.push(...(data||[{code:name, label:name, sort, shown:true}])); return name;
+}
+function calcPersonalDeduct(wid,mk){ return r2((S.personal[mk]?.[wid]||[]).reduce((s,p)=>s+(Number(p.amount)||0),0)); }
 function renderPersonal(){
-  const mk=monthKey();const workers=workersInMonth(mk);
-  const list=document.getElementById('personal-list');
-  list.innerHTML=workers.map(w=>{
-    const items=S.personal[mk]?.[w.id]||[];
-    const total=items.reduce((s,p)=>s+p.amount,0);
-    return `<div class="personal-worker-card" style="${w.status==='stopped'?'opacity:.75;':''}">
-      <div class="personal-worker-hdr" onclick="togglePersonalCard('${w.id}')">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-weight:600;">${w.name}</span>
-          <span class="badge badge-${w.farm||'hx'}">${(w.farm||'HX').toUpperCase()}</span>
-          ${w.status==='stopped'?`<span class="badge badge-stopped" style="font-size:9px;">stopped ${w.stopDate||''}</span>`:''}
-          ${items.length?`<span style="font-size:11px;color:var(--text3);">${items.length} item${items.length>1?'s':''}</span>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <strong style="font-family:'IBM Plex Mono',monospace;${total>0?'color:var(--red);':''}">${fmtRM(total)}</strong>
-          <span style="font-size:12px;color:var(--text3);" id="pa-arrow-${w.id}">&#9654;</span>
-        </div>
-      </div>
-      <div class="personal-worker-body" id="pa-body-${w.id}">
-        ${items.map(p=>`
-          <div class="personal-item-row">
-            <input type="date" value="${p.date||''}" onchange="updatePersonalItem('${w.id}','${p.id}','date',this.value)" style="font-size:11px;">
-            <input type="text" value="${p.description||''}" placeholder="Description" onchange="updatePersonalItem('${w.id}','${p.id}','description',this.value)" style="font-size:11px;">
-            <input type="number" value="${p.amount||''}" placeholder="0.00" step="0.01" onchange="updatePersonalItem('${w.id}','${p.id}','amount',parseFloat(this.value)||0)" style="font-size:11px;">
-            <button class="btn-icon btn-sm" onclick="deletePersonalItem('${w.id}','${p.id}')">✕</button>
-          </div>`).join('')}
-        <button class="btn btn-sm" style="margin-top:8px;" onclick="addPersonalItem('${w.id}')">+ Add Item</button>
-      </div>
-    </div>`;
-  }).join('');
+  const mk = monthKey(), lock = isLocked(mk), [y, m] = mk.split('-').map(Number), all = S.personal[mk] || {};
+  const ws = workersInMonth(mk), items = Object.values(all).reduce((n, a) => n + (a||[]).length, 0);
+  const taken = r2(Object.keys(all).reduce((s, w) => s + calcPersonalDeduct(w, mk), 0)), who = Object.keys(all).filter(w => (all[w]||[]).length).length;
+  let h = '<div class="av-tabs"><button class="' + (PS_VIEW==='workers'?'on':'') + '" onclick="PS_VIEW=\'workers\';renderPersonal()">Workers</button><button class="' + (PS_VIEW==='day'?'on':'') + '" onclick="PS_VIEW=\'day\';renderPersonal()">By day</button></div>';
+  if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
+  h += '<div class="fd-sum"><div>Taken from salary<b>' + fmtRM(taken) + '</b></div><div>This month<b>' + who + ' workers · ' + items + ' items</b></div></div>';
+  if(!lock) h += '<button class="ad-all" onclick="psOpen(null, null)">+ Add purchase</button>';
+  if(PS_VIEW === 'workers'){
+    h += '<div class="ad-fm"><span>WORKERS</span><span>THIS MONTH</span></div><div class="ad-list">' + ws.map(w => {
+      const it = all[w.id] || [], t = calcPersonalDeduct(w.id, mk), names = [...new Set(it.map(p => p.description || '—'))].slice(0, 3).join(', '), miss = it.some(p => !p.description);
+      return '<div class="ad-row"' + (it.length ? '' : ' style="opacity:.55"') + ' onclick="psWorker(\'' + w.id + '\')"><div class="n">' + esc(w.name) + '<small>' + (it.length ? it.length + ' item' + (it.length>1?'s':'') + ' · ' + esc(names) + (miss ? ' <b style="color:var(--red)">· fill in</b>' : '') : 'Nothing this month') + '</small></div><div class="fd-amt">' + (t ? fmtRM(t) : '—') + '</div></div>'; }).join('') + '</div>';
+  } else {
+    const days = {}; for(const wid in all) (all[wid]||[]).forEach(p => { const d = (p.date && p.date.slice(0,7) === mk) ? p.date : ''; const k = (p.description||'—') + '|' + p.amount; ((days[d] ??= {})[k] ??= []).push(wid); });
+    const keys = Object.keys(days).sort((a, b) => !a ? 1 : !b ? -1 : a < b ? -1 : 1);
+    if(!keys.length) h += '<div class="empty"><p>Nothing bought this month yet</p></div>';
+    keys.forEach(d => { const g = days[d], tot = Object.keys(g).reduce((s, k) => s + Number(k.split('|')[1]) * g[k].length, 0);
+      h += '<div class="ad-fm"><span>' + (d ? ['SUN','MON','TUE','WED','THU','FRI','SAT'][new Date(d + 'T00:00').getDay()] + ' ' + Number(d.slice(8)) + ' ' + MONTHS[m-1].slice(0,3).toUpperCase() : 'NO DATE') + '</span><span>' + fmtRM(tot) + '</span></div><div class="ad-list">'
+        + Object.keys(g).map(k => { const [t, a] = k.split('|'), n = g[k].length, nm = g[k].map(id => (getWorker(id)||{}).name || '?');
+          return '<div class="ad-row" style="cursor:default"><div class="n">' + esc(t) + '<small>' + n + ' worker' + (n>1?'s':'') + ' × ' + fmtRM(Number(a)) + ' · ' + esc(nm.slice(0, 4).join(', ')) + (n > 4 ? ' …' : '') + '</small></div><div class="fd-amt">' + fmtRM(Number(a) * n) + '</div></div>'; }).join('') + '</div>'; });
+  }
+  document.getElementById('personal-list').innerHTML = h;
 }
-
-function togglePersonalCard(wid){
-  const body=document.getElementById('pa-body-'+wid);
-  const arr=document.getElementById('pa-arrow-'+wid);
-  const open=body.classList.toggle('open');
-  if(arr)arr.textContent=open?'&#9660;':'&#9654;';
+function psShow(){ document.getElementById('ps-dim').style.display = 'block'; document.getElementById('ps-sheet').style.display = 'block'; }
+function psClose(){ document.getElementById('ps-dim').style.display = 'none'; document.getElementById('ps-sheet').style.display = 'none'; PS = null; renderPersonal(); }
+function psWorker(wid){ // 一个工人这个月买了什么
+  const mk = monthKey(), w = getWorker(wid), it = (S.personal[mk]?.[wid] || []).slice().sort((a, b) => (a.date||'9') < (b.date||'9') ? -1 : 1), lock = isLocked(mk);
+  PS_WID = wid; PS = null;
+  let h = '<div class="ad-grab"></div><h3>' + esc(w.name) + '</h3><p>' + MONTHS[Number(mk.slice(5))-1] + ' · ' + fmtRM(calcPersonalDeduct(wid, mk)) + '</p>';
+  h += it.length ? '<div class="ad-list">' + it.map(p => { const ok = p.date && p.date.slice(0,7) === mk;
+      return '<div class="ad-row" data-edit="' + p.id + '"><div class="fd-d">' + (ok ? MONTHS[Number(mk.slice(5))-1].slice(0,3) : '') + '<b>' + (ok ? Number(p.date.slice(8)) : '—') + '</b></div><div class="n">' + (p.description ? esc(p.description) : '<span style="color:var(--red)">What? (not filled)</span>') + (ok || !p.date ? '' : '<small style="color:var(--red)">Date typed wrong: ' + esc(p.date) + '</small>') + '</div><div class="fd-amt">' + fmtRM(Number(p.amount)||0) + '</div></div>'; }).join('') + '</div>'
+    : '<div class="empty"><p>Nothing this month</p></div>';
+  if(!lock) h += '<button class="fd-save" data-act="addfor">+ Add for ' + esc(w.name) + '</button>';
+  h += '<button class="ad-cancel" data-act="close">Close</button>';
+  document.getElementById('ps-sheet').innerHTML = h; psShow();
 }
-
-function addPersonalItem(wid){
-  const mk=monthKey();ensurePersonal(mk,wid);
-  S.personal[mk][wid].push({id:genId('p'),date:'',description:'',amount:0});
-  saveAll();renderPersonal();
-  // Re-open the card
-  setTimeout(()=>{const b=document.getElementById('pa-body-'+wid);const a=document.getElementById('pa-arrow-'+wid);if(b&&!b.classList.contains('open')){b.classList.add('open');if(a)a.textContent='&#9660;';}},50);
+function psOpen(wid, pid){
+  const mk = monthKey(); if(isLocked(mk)){ toast('This month is locked'); return; }
+  const t = new Date(), today = t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate());
+  if(pid){ const p = (S.personal[mk]?.[wid] || []).find(x => x.id === pid); if(!p) return;
+    PS = {id:pid, wids:[wid], fixed:true, date:(p.date && p.date.slice(0,7) === mk) ? p.date : '', what:p.description||'', amount:p.amount ? String(p.amount) : '', newItem:false}; }
+  else PS = {id:null, wids: wid ? [wid] : [], fixed: !!wid, date: today.slice(0,7) === mk ? today : mk + '-01', what:'', amount:'', newItem:false};
+  if(PS.what && !persItems().some(v => sameShop(v, PS.what))) PS.newItem = true;
+  PS_MODE = 'form'; psDraw(); psShow();
 }
-
-function updatePersonalItem(wid,pid,field,val){
-  const mk=monthKey();
-  const items=S.personal[mk]?.[wid]||[];
-  const item=items.find(p=>p.id===pid);
-  if(item){item[field]=val;saveAll();}
-  // Update total display without full re-render
-  const total=items.reduce((s,p)=>s+p.amount,0);
-  const hdr=document.querySelector(`.personal-worker-card [onclick*="${wid}"] strong`);
-  if(hdr){hdr.textContent=fmtRM(total);hdr.style.color=total>0?'var(--red)':'';}
+function psDraw(){
+  const mk = monthKey(), sh = document.getElementById('ps-sheet'), n = PS.wids.length, amt = parseFloat(PS.amount) || 0;
+  const t = new Date(), td = d => { const x = new Date(t); x.setDate(x.getDate() - d); return x.getFullYear() + '-' + pad2(x.getMonth()+1) + '-' + pad2(x.getDate()); };
+  let h = '<div class="ad-grab"></div>';
+  if(PS_MODE === 'form'){
+    const quick = [['Today', td(0)], ['Yesterday', td(1)]].filter(q => q[1].slice(0,7) === mk), items = persItems(), picked = !PS.newItem && items.find(v => sameShop(v, PS.what));
+    const prices = picked ? persPrices(picked) : [];
+    h += '<h3>' + (PS.id ? 'Edit purchase' : 'Add purchase') + '</h3>' + (PS.fixed ? '<p>' + esc((getWorker(PS.wids[0])||{}).name || '') + '</p>' : '')
+      + '<div class="ad-lbl">Date</div><div class="ad-g" style="grid-template-columns:repeat(' + (quick.length + 1) + ',1fr)">' + quick.map(q => '<button class="ad-opt' + (PS.date===q[1]?' on':'') + '" data-date="' + q[1] + '">' + q[0] + '</button>').join('')
+      + '<input class="fd-in" type="date" id="ps-date" value="' + PS.date + '" min="' + mk + '-01" max="' + mk + '-' + pad2(daysInMonth(...mk.split('-').map(Number))) + '" style="padding:8px"></div>'
+      + '<div class="ad-lbl" style="display:flex;justify-content:space-between">What' + (items.length ? '<span data-act="items" style="color:var(--acc);font-weight:600;cursor:pointer">Edit list</span>' : '') + '</div>'
+      + '<div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + items.map(v => '<button class="ad-opt' + (picked===v?' on':'') + '" data-what="' + esc(v) + '">' + esc(v) + '</button>').join('')
+      + '<button class="ad-opt' + (PS.newItem?' on':'') + '" data-act="newitem" style="border-style:dashed">+ New item</button></div>'
+      + (PS.newItem ? '<input class="fd-in" id="ps-what" style="margin-top:8px" placeholder="What did they buy? — it will be added to the list" value="' + esc(PS.what) + '">' : '')
+      + '<div class="ad-lbl">Price (RM)</div>' + (prices.length ? '<div class="ad-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">' + prices.map(p => '<button class="ad-opt' + (amt===p?' on':'') + '" data-price="' + p + '">' + p + '</button>').join('') + '</div>' : '')
+      + '<input class="fd-in" id="ps-amt" inputmode="decimal" placeholder="' + (prices.length ? 'Other amount' : '0.00') + '" value="' + (prices.includes(amt) ? '' : esc(PS.amount)) + '">';
+    if(!PS.fixed) h += '<div class="ad-lbl">Who</div><div class="fd-who" data-act="who"><div><b>' + (n ? n + ' worker' + (n>1?'s':'') + ' picked' : 'Pick workers') + '</b><small>' + esc(PS.wids.slice(0, 3).map(id => (getWorker(id)||{}).name).join(', ')) + (n > 3 ? ' …' : '') + '</small></div><span>' + (n ? 'Change' : 'Pick') + '</span></div>';
+    h += '<div class="fd-each" id="ps-each">' + (n && amt ? n + ' worker' + (n>1?'s':'') + ' × ' + fmtRM(amt) + ' = ' + fmtRM(n * amt) : 'Pick what, price' + (PS.fixed ? '' : ' and who')) + '</div>'
+      + '<div class="fd-err" id="ps-err"></div><button class="fd-save" data-act="save">Save</button>'
+      + (PS.id ? '<button class="fd-del" data-act="del">Delete</button>' : '') + '<button class="ad-cancel" data-act="cancel">Cancel</button>';
+  } else if(PS_MODE === 'items'){
+    h += '<h3>Items</h3><p>Hide an item that was added by mistake. Past purchases keep their name.</p><div class="ad-list">'
+      + PERS_ITEMS.filter(x => x.shown).map(x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.label) + '</div><button class="ad-opt" style="padding:6px 12px;color:var(--red)" data-hideitem="' + x.id + '">Hide</button></div>').join('') + '</div>'
+      + '<button class="fd-save" data-act="back">Done</button>';
+  } else {
+    const people = foodPeopleOn(mk, PS.date), sel = new Set(PS.wids), groups = {};
+    people.forEach(w => { const f = homeFarm(w, mk) || 'Farm not set'; (groups[f] ??= []).push(w); });
+    const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
+    h += '<h3>Who bought it</h3><p>' + (PS.date ? 'Working on ' + fmtDay(PS.date) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
+    order.forEach(f => { const ws = groups[f], k = ws.filter(w => sel.has(w.id)).length;
+      h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b><span data-farm="' + f + '">' + (k === ws.length ? 'All ' + k + ' ✓' : k ? k + ' of ' + ws.length : 'None') + '</span></div>'
+        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + '</span>').join('') + '</div>'; });
+    h += '<div class="fd-each">' + (n ? n + ' worker' + (n>1?'s':'') + (amt ? ' × ' + fmtRM(amt) + ' = ' + fmtRM(n * amt) : '') : 'Nobody picked') + '</div>'
+      + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="everyone">Everyone</button><button class="ad-opt" data-act="nobody">Nobody</button></div>'
+      + '<button class="fd-save" data-act="back">Done</button>';
+  }
+  sh.innerHTML = h;
 }
-
-function deletePersonalItem(wid,pid){
-  const mk=monthKey();
-  if(S.personal[mk]?.[wid])S.personal[mk][wid]=S.personal[mk][wid].filter(p=>p.id!==pid);
-  saveAll();renderPersonal();
+function psKeep(){ const w = document.getElementById('ps-what'); if(w) PS.what = w.value.trim(); }   // 价钱在打字/点按钮时已经记住
+async function psSave(){
+  psKeep(); const mk = monthKey(), err = m => { document.getElementById('ps-err').textContent = m; };
+  const amount = r2(parseFloat(String(PS.amount).replace(/,/g, '')));
+  if(!PS.date || PS.date.slice(0,7) !== mk) return err('Pick a date in ' + MONTHS[Number(mk.slice(5))-1] + '.');
+  if(!PS.what.trim()) return err('Tap what they bought.');
+  if(!(amount > 0)) return err('Tap or type the price.');
+  if(!PS.wids.length) return err('Pick at least one worker.');
+  let what = PS.what.trim().replace(/\s+/g, ' ').toUpperCase();
+  const known = persItems().find(v => sameShop(v, what));
+  if(known) what = known; else { try{ what = await addPersItem(what); }catch(e){ toast('Item not added to the list: ' + (e.message||e)); } }
+  if(PS.id){ const p = (S.personal[mk]?.[PS.wids[0]] || []).find(x => x.id === PS.id); if(p) Object.assign(p, {date:PS.date, description:what, amount}); }
+  else PS.wids.forEach(wid => { ensurePersonal(mk, wid); S.personal[mk][wid].push({id:genId('p'), date:PS.date, description:what, amount}); });
+  const n = PS.wids.length, back = PS.fixed ? PS.wids[0] : null; saveAll();
+  toast(PS.id ? 'Saved' : 'Saved · ' + n + ' worker' + (n>1?'s':'') + ' × ' + fmtRM(amount));
+  if(back){ renderPersonal(); psWorker(back); } else psClose();
 }
-
-function calcPersonalDeduct(wid,mk){
-  return (S.personal[mk]?.[wid]||[]).reduce((s,p)=>s+p.amount,0);
-}
+document.getElementById('ps-sheet').addEventListener('input', e => {
+  if(e.target.id === 'ps-amt'){ PS.amount = e.target.value; document.querySelectorAll('#ps-sheet [data-price]').forEach(b => b.classList.remove('on')); const n = PS.wids.length, a = parseFloat(e.target.value)||0, el = document.getElementById('ps-each'); if(el && n && a) el.textContent = n + ' worker' + (n>1?'s':'') + ' × ' + fmtRM(a) + ' = ' + fmtRM(n * a); }
+  if(e.target.id === 'ps-what') PS.what = e.target.value;
+});
+document.getElementById('ps-sheet').addEventListener('change', e => { if(e.target.id === 'ps-date'){ psKeep(); PS.date = e.target.value; if(!PS.fixed){ const on = new Set(foodPeopleOn(monthKey(), PS.date).map(w => w.id)); PS.wids = PS.wids.filter(id => on.has(id)); } psDraw(); } });
+document.getElementById('ps-sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-date],[data-what],[data-price],[data-farm],[data-w],[data-edit],[data-hideitem]'); if(!b) return;
+  const mk = monthKey(), a = b.dataset.act;
+  if(b.dataset.edit){ psOpen(PS_WID, b.dataset.edit); return; }
+  if(a === 'close') return psClose();
+  if(a === 'addfor'){ psOpen(PS_WID, null); return; }
+  if(!PS) return;
+  if(b.dataset.date){ psKeep(); PS.date = b.dataset.date; psDraw(); return; }
+  if(b.dataset.what !== undefined){ psKeep(); PS.what = b.dataset.what; PS.newItem = false; const pr = persPrices(PS.what); if(!PS.amount && pr.length === 1) PS.amount = String(pr[0]); psDraw(); return; }
+  if(b.dataset.price){ PS.amount = b.dataset.price; psDraw(); return; }
+  if(b.dataset.w){ const s = new Set(PS.wids); s.has(b.dataset.w) ? s.delete(b.dataset.w) : s.add(b.dataset.w); PS.wids = [...s]; psDraw(); return; }
+  if(b.dataset.farm){ const f = b.dataset.farm, ws = foodPeopleOn(mk, PS.date).filter(w => (homeFarm(w, mk) || 'Farm not set') === f).map(w => w.id), s = new Set(PS.wids);
+    const all = ws.every(id => s.has(id)); ws.forEach(id => all ? s.delete(id) : s.add(id)); PS.wids = [...s]; psDraw(); return; }
+  if(b.dataset.hideitem){ const x = PERS_ITEMS.find(z => z.id === b.dataset.hideitem); if(!x) return;
+    sb.from('hub_option').update({shown:false}).eq('id', x.id).then(({error}) => { if(error){ toast('Could not hide: ' + error.message); return; } x.shown = false; psDraw(); toast(x.label + ' hidden'); }); return; }
+  if(a === 'newitem'){ psKeep(); if(!PS.newItem){ PS.newItem = true; PS.what = ''; } psDraw(); const i = document.getElementById('ps-what'); if(i) i.focus(); return; }
+  if(a === 'items'){ psKeep(); PS_MODE = 'items'; psDraw(); return; }
+  if(a === 'who'){ psKeep(); PS_MODE = 'who'; psDraw(); document.getElementById('ps-sheet').scrollTop = 0; return; }
+  if(a === 'back'){ PS_MODE = 'form'; psDraw(); return; }
+  if(a === 'everyone'){ PS.wids = foodPeopleOn(mk, PS.date).map(w => w.id); psDraw(); return; }
+  if(a === 'nobody'){ PS.wids = []; psDraw(); return; }
+  if(a === 'save') return psSave();
+  if(a === 'cancel'){ const back = PS.fixed ? PS.wids[0] : null; if(back) psWorker(back); else psClose(); return; }
+  if(a === 'del'){ const wid = PS.wids[0], p = (S.personal[mk]?.[wid] || []).find(x => x.id === PS.id); if(!p) return;
+    if(!confirm('Delete this purchase?\n' + (p.description || 'Item') + ' · ' + fmtRM(Number(p.amount)||0))) return;
+    S.personal[mk][wid] = S.personal[mk][wid].filter(x => x.id !== PS.id); saveAll(); toast('Deleted'); renderPersonal(); psWorker(wid); }
+});
 
 // ======================================================
 // ADVANCE (HUTANG)
