@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v70</title>
+<title>Salary v71</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -576,14 +576,14 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 70;
+const APP_VERSION = 71;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const TODAY_KL = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 let CLOUD_OK = false, CAN_EDIT = false, SNAP = null, syncTimer = null, syncing = false, syncAgain = false, dirty = false;
 let CO_ID = {}, CO_CODE = {}, W_RATES = {}, W_COMP = {}, W_PAY = {}, W_PAY2 = {}, W_PP = {};
-let FARMS = [], FARM_CODE = {}, W_FARM = {}; // v69: farms [code, 'hx'|'ad'], worker home farm history
+let FARMS = [], FARM_CODE = {}, W_FARM = {}, FOOD_SHOPS = []; // v69: farms [code, 'hx'|'ad'], worker home farm history
 const THIS_MK = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0'); })();
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2,'0');
@@ -671,10 +671,12 @@ async function loadData(){
   lm.forEach(m => LA(m.worker_id).months[m.month] = {amount:Number(m.amount), note:m.note||''});
   S.cashout = {}; co2.forEach(c => ((S.cashout[c.month] ??= {})[c.worker_id] ??= []).push(c.data));
   S.payeeSlot = {}; pc.forEach(c => (S.payeeSlot[c.month] ??= {})[c.worker_id] = c.slot);
-  const [fm, wf] = await Promise.all([
+  const [fm, wf, fs] = await Promise.all([
     fetchAll('hub_farm','id,code,company_id', q=>q.eq('active',true).order('code')),
     fetchAll('hub_worker_farm','worker_id,farm_id,effective_from', q=>q.is('voided_at',null).order('effective_from').order('created_at')),
+    fetchAll('hub_option','id,code,label,sort,shown', q=>q.eq('list_code','FOOD_SHOP').order('sort').order('label')),
   ]);
+  FOOD_SHOPS = fs;
   FARM_CODE = {}; fm.forEach(f => FARM_CODE[f.id] = f.code);
   FARMS = fm.map(f => [f.code, (CO_CODE[f.company_id]||'').toLowerCase()]).filter(f => f[1]).sort((a,b) => (a[1]===b[1] ? (a[0]<b[0]?-1:1) : a[1]==='hx'?-1:1));
   W_FARM = grp(wf);
@@ -1363,7 +1365,16 @@ function up10(x){ const sen = Math.round(x * 100 * 1000) / 1000; return Math.cei
 function foodShare(r, mk){ return foodEach(r.total, foodIds(r, mk).length); }
 function calcFoodDeduct(wid, mk){ return up10((S.food[mk]||[]).reduce((s, r) => s + (foodIds(r, mk).includes(wid) ? foodShare(r, mk) : 0), 0)); }
 function foodTaken(mk){ const ids = new Set(); (S.food[mk]||[]).forEach(r => foodIds(r, mk).forEach(id => ids.add(id))); return r2([...ids].reduce((s, id) => s + calcFoodDeduct(id, mk), 0)); }
-function foodShops(){ const seen = []; Object.keys(S.food).sort().reverse().forEach(mk => (S.food[mk]||[]).slice().reverse().forEach(r => { const v = (r.vendor||'').trim(); if(v && !seen.includes(v)) seen.push(v); })); return seen.slice(0, 4); }
+function foodShops(){ return FOOD_SHOPS.filter(x => x.shown).map(x => x.label); }
+const sameShop = (a, b) => (a||'').trim().toUpperCase().replace(/\s+/g,' ') === (b||'').trim().toUpperCase().replace(/\s+/g,' ');
+async function addShop(name){ // 新的店自动加进固定名单
+  name = name.trim().replace(/\s+/g, ' '); if(!name) return; const code = name.toUpperCase();
+  const ex = FOOD_SHOPS.find(x => x.code === code);
+  if(ex){ if(!ex.shown){ const {error} = await sb.from('hub_option').update({shown:true}).eq('id', ex.id); if(error) throw error; ex.shown = true; } return; }
+  const sort = FOOD_SHOPS.reduce((m, x) => Math.max(m, x.sort||0), 0) + 1;
+  const {data, error} = await sb.from('hub_option').insert({list_code:'FOOD_SHOP', code, label:name, sort, shown:true}).select('id,code,label,sort,shown');
+  if(error) throw error; FOOD_SHOPS.push(...(data||[{code, label:name, sort, shown:true}]));
+}
 function foodPeopleOn(mk, date){ return workersInMonth(mk).filter(w => !date || inServiceOn(w, date)); }
 function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
@@ -1411,15 +1422,23 @@ function fdDraw(){
     h += '<h3>' + (FD.id ? 'Edit purchase' : 'Add purchase') + '</h3>'
       + '<div class="ad-lbl">Date</div><div class="ad-g" style="grid-template-columns:repeat(' + (quick.length + 1) + ',1fr)">' + quick.map(q => '<button class="ad-opt' + (FD.date===q[1]?' on':'') + '" data-date="' + q[1] + '">' + q[0] + '</button>').join('')
       + '<input class="fd-in" type="date" id="fd-date" value="' + FD.date + '" min="' + mk + '-01" max="' + mk + '-' + pad2(daysInMonth(...mk.split('-').map(Number))) + '" style="padding:8px"></div>';
-    const shops = foodShops();
-    h += '<div class="ad-lbl">Shop</div>' + (shops.length ? '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">' + shops.map(v => '<button class="ad-opt' + (FD.vendor===v?' on':'') + '" data-shop="' + esc(v) + '">' + esc(v) + '</button>').join('') + '</div>' : '')
-      + '<input class="fd-in" id="fd-shop" placeholder="' + (shops.length ? 'Other shop' : 'Shop name') + '" value="' + (shops.includes(FD.vendor) ? '' : esc(FD.vendor)) + '">'
+    const shops = foodShops(), picked = !FD.newShop && shops.find(v => sameShop(v, FD.vendor));
+    if(!picked && FD.vendor && !FD.newShop) FD.newShop = true;
+    const typing = FD.newShop || !shops.length;
+    h += '<div class="ad-lbl" style="display:flex;justify-content:space-between">Shop' + (shops.length ? '<span data-act="shops" style="color:var(--acc);font-weight:600;cursor:pointer">Edit list</span>' : '') + '</div>'
+      + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + shops.map(v => '<button class="ad-opt' + (picked===v?' on':'') + '" data-shop="' + esc(v) + '">' + esc(v) + '</button>').join('')
+      + (shops.length ? '<button class="ad-opt' + (typing?' on':'') + '" data-act="newshop" style="border-style:dashed">+ New shop</button>' : '') + '</div>'
+      + (typing ? '<input class="fd-in" id="fd-shop" style="margin-top:8px" placeholder="New shop name — it will be added to the list" value="' + (picked ? '' : esc(FD.vendor)) + '">' : '')
       + '<div class="ad-lbl">What</div><input class="fd-in" id="fd-what" placeholder="e.g. Rice 10kg x3" value="' + esc(FD.description) + '">'
       + '<div class="ad-lbl">Total (RM)</div><input class="fd-in big" id="fd-total" inputmode="decimal" placeholder="0.00" value="' + esc(FD.total) + '">'
       + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + (FD.autoSel ? 'Everyone working that day' : n + ' people picked') + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>Change</span></div>'
       + '<div class="fd-each" id="fd-each">' + (n ? 'Each pays ' + fmtRM(each) : 'Nobody picked yet') + '</div>'
       + '<div class="fd-err" id="fd-err"></div><button class="fd-save" data-act="save">Save</button>'
       + (FD.id ? '<button class="fd-del" data-act="del">Delete purchase</button>' : '') + '<button class="ad-cancel" data-act="cancel">Cancel</button>';
+  } else if(FD_MODE === 'shops'){
+    h += '<h3>Shops</h3><p>Hide a shop that was added by mistake. Past purchases keep their shop name.</p><div class="ad-list">'
+      + FOOD_SHOPS.filter(x => x.shown).map(x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.label) + '</div><button class="ad-opt" style="padding:6px 12px;color:var(--red)" data-hide="' + x.id + '">Hide</button></div>').join('') + '</div>'
+      + '<button class="fd-save" data-act="back">Done</button>';
   } else {
     const people = foodPeopleOn(mk, FD.date), sel = new Set(FD.workerIds), groups = {};
     people.forEach(w => { const f = homeFarm(w, mk) || ('Farm not set'); (groups[f] ??= []).push(w); });
@@ -1436,32 +1455,38 @@ function fdDraw(){
 }
 function fdKeep(){ // 记住表单里打的字
   const g = id => document.getElementById(id); if(!g('fd-what')) return;
-  FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop').value.trim()) FD.vendor = g('fd-shop').value.trim();
+  FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop')) FD.vendor = g('fd-shop').value.trim();
 }
 function fdSetDate(d){ FD.date = d; if(FD.autoSel) FD.workerIds = foodPeopleOn(monthKey(), d).map(w => w.id); }
-function fdSave(){
+async function fdSave(){
   fdKeep(); const mk = monthKey(), err = m => { document.getElementById('fd-err').textContent = m; };
   const total = r2(parseFloat(String(FD.total).replace(/,/g, '')));
   if(!FD.date || FD.date.slice(0,7) !== mk) return err('Pick a date in ' + MONTHS[Number(mk.slice(5))-1] + '.');
   if(!(total > 0)) return err('Type the total.');
   if(!FD.workerIds.length) return err('Pick at least one person to share.');
+  if(FD.vendor && !foodShops().some(v => sameShop(v, FD.vendor))){ FD.vendor = FD.vendor.trim().replace(/\s+/g, ' '); try{ await addShop(FD.vendor); }catch(e){ toast('Shop not added to the list: ' + (e.message||e)); } }
+  else if(FD.vendor){ FD.vendor = foodShops().find(v => sameShop(v, FD.vendor)); }
   ensureFood(); const data = {date:FD.date, vendor:FD.vendor.trim(), description:FD.description.trim(), qty:1, unitPrice:total, total, workerIds:FD.workerIds.slice(), autoSel:FD.autoSel};
   if(FD.id){ const r = S.food[mk].find(x => x.id === FD.id); Object.assign(r, data); } else S.food[mk].push({id:genId('f'), ...data});
   saveAll(); fdClose(); toast('Saved · each pays ' + fmtRM(foodEach(total, data.workerIds.length)));
 }
 document.getElementById('fd-sheet').addEventListener('input', e => {
   if(e.target.id === 'fd-total'){ const n = FD.workerIds.length, el = document.getElementById('fd-each'); if(el && n) el.textContent = 'Each pays ' + fmtRM(foodEach(parseFloat(e.target.value)||0, n)); }
-  if(e.target.id === 'fd-shop'){ FD.vendor = e.target.value.trim(); document.querySelectorAll('#fd-sheet [data-shop]').forEach(b => b.classList.remove('on')); }
+  if(e.target.id === 'fd-shop'){ FD.vendor = e.target.value.trim(); }
 });
 document.getElementById('fd-sheet').addEventListener('change', e => { if(e.target.id === 'fd-date'){ fdKeep(); fdSetDate(e.target.value); fdDraw(); } });
 document.getElementById('fd-sheet').addEventListener('click', e => {
-  const b = e.target.closest('[data-act],[data-date],[data-shop],[data-farm],[data-w]'); if(!b) return;
+  const b = e.target.closest('[data-act],[data-date],[data-shop],[data-farm],[data-w],[data-hide]'); if(!b) return;
   const mk = monthKey(), a = b.dataset.act;
   if(b.dataset.date){ fdKeep(); fdSetDate(b.dataset.date); fdDraw(); return; }
-  if(b.dataset.shop !== undefined){ fdKeep(); FD.vendor = b.dataset.shop; document.getElementById('fd-shop').value = ''; fdDraw(); return; }
+  if(b.dataset.shop !== undefined){ fdKeep(); FD.vendor = b.dataset.shop; FD.newShop = false; fdDraw(); return; }
   if(b.dataset.w){ const id = b.dataset.w, s = new Set(FD.workerIds); s.has(id) ? s.delete(id) : s.add(id); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
   if(b.dataset.farm){ const f = b.dataset.farm, ws = foodPeopleOn(mk, FD.date).filter(w => (homeFarm(w, mk) || 'Farm not set') === f).map(w => w.id), s = new Set(FD.workerIds);
     const all = ws.every(id => s.has(id)); ws.forEach(id => all ? s.delete(id) : s.add(id)); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
+  if(a === 'newshop'){ fdKeep(); if(!FD.newShop){ FD.newShop = true; FD.vendor = ''; } fdDraw(); const i = document.getElementById('fd-shop'); if(i) i.focus(); return; }
+  if(a === 'shops'){ fdKeep(); FD_MODE = 'shops'; fdDraw(); return; }
+  if(b.dataset.hide){ const x = FOOD_SHOPS.find(z => z.id === b.dataset.hide); if(!x) return;
+    sb.from('hub_option').update({shown:false}).eq('id', x.id).then(({error}) => { if(error){ toast('Could not hide: ' + error.message); return; } x.shown = false; if(sameShop(FD.vendor, x.label)) FD.vendor = ''; fdDraw(); toast(x.label + ' hidden'); }); return; }
   if(a === 'who'){ fdKeep(); FD_MODE = 'who'; fdDraw(); document.getElementById('fd-sheet').scrollTop = 0; return; }
   if(a === 'back'){ FD_MODE = 'form'; fdDraw(); return; }
   if(a === 'everyone'){ FD.workerIds = foodPeopleOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
