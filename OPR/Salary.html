@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v69</title>
+<title>Salary v70</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -129,6 +129,27 @@ tr:hover td{background:#fafaf8;}
 .ad-opt{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:10px 2px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text)}
 .ad-opt.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
 .ad-cancel{width:100%;margin-top:12px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer}
+/* v70 food */
+.fd-sum{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-bottom:8px}
+.fd-sum div{font-size:11px;color:var(--text3)}.fd-sum b{display:block;font-size:18px;color:var(--text)}
+.fd-sum .full{grid-column:1/3;font-size:12px;color:var(--grn);background:var(--grnl);border-radius:8px;padding:6px 10px}
+.fd-sum .full.bad{color:var(--red);background:#fce8e6}
+.fd-d{width:42px;text-align:center;font-size:11px;color:var(--text3);flex:none}.fd-d b{display:block;font-size:17px;color:var(--text)}
+.fd-amt{text-align:right;font-weight:700;white-space:nowrap}.fd-amt small{display:block;font-weight:500;font-size:11px;color:var(--red)}
+.fd-in{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;background:#fff}
+.fd-in.big{font-size:22px;font-weight:700}
+.fd-who{display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer}
+.fd-who b{font-size:14px}.fd-who small{display:block;font-size:12px;color:var(--text3)}.fd-who span{color:var(--acc);font-weight:600;font-size:13px}
+.fd-each{margin-top:8px;background:#fce8e6;color:var(--red);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600}
+.fd-save{width:100%;margin-top:14px;padding:12px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.fd-del{width:100%;margin-top:8px;padding:10px;border:1.5px solid #f0b8b4;border-radius:10px;background:#fff;font-size:14px;font-weight:600;color:var(--red);cursor:pointer}
+.fd-err{color:var(--red);font-size:13px;margin-top:8px;min-height:1px}
+.fd-farm{display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px}
+.fd-farm b{font-size:12px;color:var(--text3);letter-spacing:.06em}
+.fd-farm span{font-size:12px;color:var(--acc);font-weight:600;cursor:pointer}
+.fd-chips{display:flex;flex-wrap:wrap;gap:6px}
+.fd-chip{border:1.5px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;cursor:pointer}
+.fd-chip.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
 .ad-lock{font-size:12px;background:var(--ambl);color:var(--amb);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .att-cell:hover{filter:brightness(.92);transform:scale(1.08);}
 .att-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;align-items:center;}
@@ -400,44 +421,10 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 
 <!-- FOOD -->
 <div class="page" id="page-food">
-  <div class="card">
-    <div class="card-hdr">
-      <span class="card-title">Collective Food Expenses (Daniel)</span>
-      <button class="btn btn-pri" onclick="addFoodRow()">+ Add Purchase</button>
-    </div>
-    <p style="font-size:11px;color:var(--text3);margin-bottom:12px;">Enter each purchase. Set number of workers sharing -- per-person deduction is calculated automatically.</p>
-    <div class="food-scroll"><div class="food-row food-row-hdr">
-      <span>Date</span><span>Vendor</span><span>Description</span><span>Qty</span><span>Unit Price</span><span>Total (RM)</span><span>Workers Sharing</span><span>Per Person</span><span></span>
-    </div>
-    <div id="food-rows"></div></div>
-    <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);">
-      <span style="font-size:11px;color:var(--text3);">Monthly total (Daniel paid)</span>
-      <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;" id="food-total">RM 0.00</span>
-    </div>
-
-    <!-- FOOD EXPENSES VS COLLECTION -->
-    <div id="food-recon" style="margin-top:16px;border-top:2px solid var(--border2);padding-top:14px;display:none;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Food Expenses vs Collection</div>
-      <div class="recon3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div style="background:#f8f8f6;border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Daniel Paid</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-paid">RM 0.00</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">Total purchases</div>
-        </div>
-        <div style="background:#f8f8f6;border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Collected from Workers</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-collected">RM 0.00</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;" id="recon-workers-note">from workers</div>
-        </div>
-        <div style="border-radius:8px;padding:12px 14px;border:2px solid;" id="recon-diff-card">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;" id="recon-diff-lbl">DIFFERENCE</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-diff">RM 0.00</div>
-          <div style="font-size:10px;margin-top:3px;" id="recon-diff-note"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="card"><div id="food-app" style="max-width:560px"></div></div>
 </div>
+<div class="ad-dim" id="fd-dim" onclick="fdClose()"></div>
+<div class="ad-sheet" id="fd-sheet"></div>
 
 <!-- PERSONAL -->
 <div class="page" id="page-personal">
@@ -589,7 +576,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 69;
+const APP_VERSION = 70;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1368,224 +1355,124 @@ function clearAttendance(){if(!confirm('Clear all attendance for this month?'))r
 // FOOD
 // ======================================================
 function ensureFood(){const mk=monthKey();if(!S.food[mk])S.food[mk]=[];}
-
+// ---------- v70 Food：每笔一行 · 那天在职的人分摊 · 每一笔照实算，每个工人整个月加起来才进位到 10 仙 ----------
+let FOOD_VIEW = 'list', FD = null, FD_MODE = 'form';
+function foodIds(r, mk){ return r.workerIds || workersInMonth(mk).map(w => w.id); }
+function foodEach(total, n){ return n > 0 ? (Number(total)||0) / n : 0; }   // 照实，不进位
+function up10(x){ const sen = Math.round(x * 100 * 1000) / 1000; return Math.ceil(sen / 10 - 1e-6) / 10; }
+function foodShare(r, mk){ return foodEach(r.total, foodIds(r, mk).length); }
+function calcFoodDeduct(wid, mk){ return up10((S.food[mk]||[]).reduce((s, r) => s + (foodIds(r, mk).includes(wid) ? foodShare(r, mk) : 0), 0)); }
+function foodTaken(mk){ const ids = new Set(); (S.food[mk]||[]).forEach(r => foodIds(r, mk).forEach(id => ids.add(id))); return r2([...ids].reduce((s, id) => s + calcFoodDeduct(id, mk), 0)); }
+function foodShops(){ const seen = []; Object.keys(S.food).sort().reverse().forEach(mk => (S.food[mk]||[]).slice().reverse().forEach(r => { const v = (r.vendor||'').trim(); if(v && !seen.includes(v)) seen.push(v); })); return seen.slice(0, 4); }
+function foodPeopleOn(mk, date){ return workersInMonth(mk).filter(w => !date || inServiceOn(w, date)); }
+function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
-  ensureFood();const mk=monthKey();
-  const rows=S.food[mk];
-  const container=document.getElementById('food-rows');
-  container.innerHTML=rows.map((r,i)=>foodRowHTML(i,r)).join('');
-  updateFoodTotals();
-}
-
-function foodRowHTML(i,r){
-  const ids = r.workerIds || workersInMonth(monthKey()).map(w=>w.id);
-  const cnt = ids.length;
-  const perPerson = cnt>0?((r.total||0)/cnt):0;
-  return `<div class="food-row" id="fr-${r.id}">
-    <input type="date" value="${r.date||''}" onchange="updateFoodRow('${r.id}','date',this.value)">
-    <input type="text" value="${r.vendor||''}" placeholder="Vendor" onchange="updateFoodRow('${r.id}','vendor',this.value)">
-    <input type="text" value="${r.description||''}" placeholder="Item" onchange="updateFoodRow('${r.id}','description',this.value)">
-    <input type="number" value="${r.qty||1}" min="1" style="text-align:center;" onchange="updateFoodRow('${r.id}','qty',parseFloat(this.value)||1)">
-    <input type="number" value="${r.unitPrice||''}" placeholder="0.00" step="0.01" onchange="updateFoodRow('${r.id}','unitPrice',parseFloat(this.value)||0)">
-    <input type="number" value="${r.total||''}" placeholder="0.00" step="0.01" style="font-weight:600;" onchange="updateFoodRow('${r.id}','total',parseFloat(this.value)||0)">
-    <button class="btn" style="font-size:10px;padding:4px 8px;white-space:nowrap;" onclick="openFoodWorkerSelect('${r.id}')">
-      👥 ${cnt} workers
-    </button>
-    <input type="number" readonly value="${perPerson.toFixed(2)}" style="background:var(--bg);font-weight:600;color:var(--red);" id="fpp-${r.id}">
-    <button class="btn-icon" onclick="deleteFoodRow('${r.id}')">✕</button>
-  </div>`;
-}
-
-function addFoodRow(){
-  ensureFood();const mk=monthKey();
-  const id=genId('f');
-  S.food[mk].push({id,date:'',vendor:'',description:'',qty:1,unitPrice:0,total:0,workerIds:workersInMonth(mk).map(w=>w.id)});
-  saveAll();renderFood();
-}
-
-function updateFoodRow(id,field,val){
-  const mk=monthKey();
-  const row=S.food[mk].find(r=>r.id===id);
-  if(!row)return;
-  row[field]=val;
-  if(field==='date' && val && row.autoSel!==false){ row.workerIds=workersInMonth(mk).filter(w=>inServiceOn(w,val)).map(w=>w.id); setTimeout(renderFood,0); }
-  if(field==='qty'||field==='unitPrice')row.total=row.qty*row.unitPrice;
-  saveAll();
-  const cnt=(row.workerIds||[]).length;
-  const pp=document.getElementById('fpp-'+id);
-  if(pp)pp.value=cnt>0?(row.total/cnt).toFixed(2):'0';
-  updateFoodTotals();
-}
-
-function deleteFoodRow(id){
-  const mk=monthKey();
-  S.food[mk]=S.food[mk].filter(r=>r.id!==id);
-  saveAll();renderFood();
-}
-
-function openFoodWorkerSelect(rowId){
-  const mk=monthKey();
-  const row=S.food[mk].find(r=>r.id===rowId);
-  if(!row)return;
-
-  // -- Build "active in this month" list ------------------------
-  const [yr2,mo2]=mk.split('-').map(Number);
-  const relevantWorkers=workersInMonth(mk);
-
-  // -- If no workerIds stored yet, default to ALL relevant workers --
-  if(!row.workerIds || row.workerIds.length===0){
-    row.workerIds=relevantWorkers.map(w=>w.id);
-  }
-  const selectedIds=new Set(row.workerIds);
-
-  // -- Group by farm ---------------------------------------------
-  const rfg={hx:[],ad:[],both:[]};
-  relevantWorkers.forEach(w=>{
-    const f=w.farm||'hx';
-    if(rfg[f])rfg[f].push(w); else rfg.hx.push(w);
-  });
-
-  document.getElementById('modal-title').textContent='Select Workers Sharing This Purchase';
-
-  function workerLabel(w){
-    const chk=selectedIds.has(w.id);
-    const stopNote=w.status==='stopped'
-      ?`<span style="font-size:9px;color:var(--red);margin-left:3px;">(stopped ${w.stopDate||''})</span>`:'';
-    return`<label style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;cursor:pointer;border:1px solid ${chk?'var(--acc)':'var(--border)'};font-size:12px;background:${chk?'var(--accl)':''};" id="lbl-${w.id}">
-      <input type="checkbox" id="fws-${w.id}" ${chk?'checked':''} onchange="toggleFoodWorker('${rowId}','${w.id}',this.checked)" style="cursor:pointer;">
-      <span>${w.name}${stopNote}</span>
-    </label>`;
-  }
-  function farmSection(label,color,workers){
-    if(!workers.length)return'';
-    return`<div style="margin-bottom:14px;">
-      <div style="font-size:10px;font-weight:700;color:${color};letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${label}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">${workers.map(workerLabel).join('')}</div>
-    </div>`;
-  }
-
-  document.getElementById('modal-body').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <span style="font-size:12px;color:var(--text3);">Workers active during ${MONTHS[mo2-1]} ${yr2}</span>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-sm" onclick="selectAllFoodWorkers('${rowId}',true)">Select All</button>
-        <button class="btn btn-sm" onclick="selectAllFoodWorkers('${rowId}',false)">Clear All</button>
-      </div>
-    </div>
-    ${farmSection('HX Farm','var(--acc)',rfg.hx)}
-    ${farmSection('AD Farm','var(--grn)',rfg.ad)}
-    ${farmSection('Both Farms','var(--pur)',rfg.both)}
-    <div id="food-worker-count" style="margin-top:10px;padding:8px 12px;background:var(--bg2);border-radius:6px;font-size:12px;font-weight:600;"></div>`;
-  updateFoodWorkerCount(rowId);
-  document.getElementById('modal-footer').innerHTML=`<button class="btn btn-pri" onclick="closeModal();renderFood();saveAll();">Done</button>`;
-  document.getElementById('modal-overlay').classList.add('on');
-}
-
-function toggleFoodWorker(rowId,wid,checked){
-  const mk=monthKey();
-  const row=S.food[mk].find(r=>r.id===rowId);
-  if(!row)return;
-  if(!row.workerIds)row.workerIds=workersInMonth(mk).map(w=>w.id);
-  row.autoSel=false;
-  if(checked){if(!row.workerIds.includes(wid))row.workerIds.push(wid);}
-  else{row.workerIds=row.workerIds.filter(id=>id!==wid);}
-  // Update label style
-  const lbl=document.getElementById('fws-'+wid)?.closest('label');
-  if(lbl){lbl.style.background=checked?'var(--accl)':'';lbl.style.borderColor=checked?'var(--acc)':'var(--border)';}
-  updateFoodWorkerCount(rowId);
-  saveAll();
-}
-
-function updateFoodWorkerCount(rowId){
-  const mk=monthKey();
-  const row=S.food[mk].find(r=>r.id===rowId);
-  if(!row)return;
-  const cnt=(row.workerIds||[]).length;
-  const pp=cnt>0?((row.total||0)/cnt):0;
-  const el=document.getElementById('food-worker-count');
-  if(el)el.innerHTML=`<span style="color:var(--acc);">${cnt} workers selected</span> -- Per person deduction: <span style="color:var(--red);font-family:'IBM Plex Mono',monospace;">${fmtRM(pp)}</span>`;
-}
-
-function selectAllFoodWorkers(rowId,select){
-  const mk=monthKey();
-  const row=S.food[mk].find(r=>r.id===rowId);
-  if(!row)return;
-  // Apply to all visible checkboxes in the modal
-  const checkboxes=document.querySelectorAll('[id^="fws-"]');
-  const ids=[];
-  checkboxes.forEach(cb=>{
-    cb.checked=select;
-    const lbl=cb.closest('label');
-    if(lbl){lbl.style.background=select?'var(--accl)':'';lbl.style.borderColor=select?'var(--acc)':'var(--border)';}
-    if(select){const wid=cb.id.replace('fws-','');ids.push(wid);}
-  });
-  row.workerIds=select?ids:[];
-  row.autoSel=false;
-  updateFoodWorkerCount(rowId);
-  saveAll();
-}
-
-function updateFoodTotals(){
-  const mk=monthKey();
-  const rows=S.food[mk]||[];
-  const danielPaid=rows.reduce((s,r)=>s+(r.total||0),0);
-  document.getElementById('food-total').textContent=fmtRM(danielPaid);
-
-  // -- Reconciliation --------------------------------------------
-  const recon=document.getElementById('food-recon');
-  if(!rows.length){recon.style.display='none';return;}
-  recon.style.display='block';
-
-  // Collect all unique worker IDs across all purchases
-  const allWids=new Set();
-  rows.forEach(r=>(r.workerIds||[]).forEach(id=>allWids.add(id)));
-
-  // Sum up each worker's food deduction
-  let collectedTotal=0;
-  allWids.forEach(wid=>{
-    collectedTotal+=calcFoodDeduct(wid,mk);
-  });
-
-  const diff=collectedTotal-danielPaid;
-  const diffAbs=Math.abs(diff);
-  const isOver=diff>0;
-  const isExact=Math.abs(diff)<0.01;
-
-  document.getElementById('recon-paid').textContent=fmtRM(danielPaid);
-  document.getElementById('recon-collected').textContent=fmtRM(collectedTotal);
-  document.getElementById('recon-workers-note').textContent=`from ${allWids.size} workers`;
-  document.getElementById('recon-diff').textContent=(isOver?'+':'')+fmtRM(diff);
-
-  const card=document.getElementById('recon-diff-card');
-  const lbl=document.getElementById('recon-diff-lbl');
-  const note=document.getElementById('recon-diff-note');
-
-  if(isExact){
-    card.style.background='var(--grnl)';card.style.borderColor='#80c8a0';
-    lbl.style.color='var(--grn)';document.getElementById('recon-diff').style.color='var(--grn)';
-    note.textContent='Exact match ✓';note.style.color='var(--grn)';
-  } else if(isOver){
-    card.style.background='var(--grnl)';card.style.borderColor='#80c8a0';
-    lbl.style.color='var(--grn)';document.getElementById('recon-diff').style.color='var(--grn)';
-    note.textContent='Workers pay more than Daniel spent';note.style.color='var(--grn)';
+  ensureFood(); const mk = monthKey(), rows = S.food[mk], lock = isLocked(mk), [y, m] = mk.split('-').map(Number);
+  const paid = r2(rows.reduce((s, r) => s + (Number(r.total)||0), 0));
+  const taken = foodTaken(mk);
+  let h = '<div class="av-tabs"><button class="' + (FOOD_VIEW==='list'?'on':'') + '" onclick="FOOD_VIEW=\'list\';renderFood()">Purchases</button><button class="' + (FOOD_VIEW==='worker'?'on':'') + '" onclick="FOOD_VIEW=\'worker\';renderFood()">Per worker</button></div>';
+  if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
+  h += '<div class="fd-sum"><div>Daniel paid<b>' + fmtRM(paid) + '</b></div><div>Taken from salary<b>' + fmtRM(taken) + '</b></div>';
+  if(rows.length){ const ex = r2(taken - paid);
+    h += ex >= 0 ? '<div class="full">' + (ex > 0 ? 'Each worker\'s month total is rounded up to the next 10 sen — Daniel gets ' + fmtRM(ex) + ' extra' : 'Matches exactly') + '</div>'
+                 : '<div class="full bad">' + fmtRM(-ex) + ' not shared — a purchase has nobody picked</div>'; }
+  h += '</div>';
+  if(FOOD_VIEW === 'worker'){
+    const ws = workersInMonth(mk).map(w => { const own = rows.filter(r => foodIds(r, mk).includes(w.id)); return [w, own.length, calcFoodDeduct(w.id, mk), own.reduce((s, r) => s + foodShare(r, mk), 0)]; });
+    h += '<div class="ad-fm"><span>EACH WORKER THIS MONTH</span><span>FOOD</span></div><div class="ad-list">'
+      + (ws.map(([w, n, t, exact]) => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(w.name) + '<small>' + (n ? n + ' purchase' + (n>1?'s':'') + ' · ' + exact.toFixed(2) + ' rounded up' : 'No food this month') + '</small></div><div class="fd-amt">' + fmtRM(t) + '</div></div>').join('') || '<div class="ad-row">No workers</div>') + '</div>';
   } else {
-    card.style.background='var(--redl)';card.style.borderColor='#f0b8b4';
-    lbl.style.color='var(--red)';document.getElementById('recon-diff').style.color='var(--red)';
-    note.textContent='Daniel paid more than collected';note.style.color='var(--red)';
+    if(!lock) h += '<button class="ad-all" onclick="fdOpen(null)">+ Add purchase</button>';
+    const list = rows.slice().sort((a, b) => (a.date||'9') < (b.date||'9') ? -1 : (a.date||'9') > (b.date||'9') ? 1 : 0);
+    h += '<div class="ad-fm"><span>' + list.length + ' PURCHASE' + (list.length===1?'':'S') + '</span><span>EACH PAYS</span></div>';
+    h += list.length ? '<div class="ad-list">' + list.map(r => { const n = foodIds(r, mk).length, wd = r.date ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(r.date + 'T00:00').getDay()] : '';
+        return '<div class="ad-row" onclick="fdOpen(\'' + r.id + '\')"><div class="fd-d">' + wd + '<b>' + (r.date ? Number(r.date.slice(8)) : '—') + '</b></div>'
+          + '<div class="n">' + esc(r.description || 'Purchase') + '<small>' + (r.vendor ? esc(r.vendor) + ' · ' : '') + n + ' people</small></div>'
+          + '<div class="fd-amt">' + fmtRM(Number(r.total)||0) + '<small>' + foodShare(r, mk).toFixed(2) + ' each</small></div></div>'; }).join('') + '</div>'
+      : '<div class="empty"><p>No food bought this month yet</p></div>';
   }
+  document.getElementById('food-app').innerHTML = h;
 }
-
-function calcFoodDeduct(wid,mk){
-  const rows=S.food[mk]||[];
-  return rows.reduce((s,r)=>{
-    const ids=r.workerIds||[];
-    if(!ids.length||ids.includes(wid)){
-      const cnt=ids.length||workersInMonth(mk).length;
-      return s+(cnt>0?(r.total||0)/cnt:0);
-    }
-    return s;
-  },0);
+function fdOpen(id){
+  const mk = monthKey(); if(isLocked(mk)){ toast('This month is locked'); return; }
+  const r = id ? (S.food[mk]||[]).find(x => x.id === id) : null;
+  const t = new Date(), today = t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate());
+  const date = r ? (r.date||'') : (today.slice(0,7) === mk ? today : mk + '-01');
+  FD = r ? {id:r.id, date, vendor:r.vendor||'', description:r.description||'', total:r.total ? String(r.total) : '', workerIds:foodIds(r, mk).slice(), autoSel:r.autoSel !== false}
+         : {id:null, date, vendor:'', description:'', total:'', workerIds:foodPeopleOn(mk, date).map(w => w.id), autoSel:true};
+  FD_MODE = 'form'; fdDraw(); document.getElementById('fd-dim').style.display = 'block'; document.getElementById('fd-sheet').style.display = 'block';
 }
+function fdDraw(){
+  const mk = monthKey(), sh = document.getElementById('fd-sheet'), n = FD.workerIds.length, each = foodEach(parseFloat(FD.total)||0, n);
+  const t = new Date(), td = d => { const x = new Date(t); x.setDate(x.getDate() - d); return x.getFullYear() + '-' + pad2(x.getMonth()+1) + '-' + pad2(x.getDate()); };
+  let h = '<div class="ad-grab"></div>';
+  if(FD_MODE === 'form'){
+    const quick = [['Today', td(0)], ['Yesterday', td(1)]].filter(q => q[1].slice(0,7) === mk);
+    h += '<h3>' + (FD.id ? 'Edit purchase' : 'Add purchase') + '</h3>'
+      + '<div class="ad-lbl">Date</div><div class="ad-g" style="grid-template-columns:repeat(' + (quick.length + 1) + ',1fr)">' + quick.map(q => '<button class="ad-opt' + (FD.date===q[1]?' on':'') + '" data-date="' + q[1] + '">' + q[0] + '</button>').join('')
+      + '<input class="fd-in" type="date" id="fd-date" value="' + FD.date + '" min="' + mk + '-01" max="' + mk + '-' + pad2(daysInMonth(...mk.split('-').map(Number))) + '" style="padding:8px"></div>';
+    const shops = foodShops();
+    h += '<div class="ad-lbl">Shop</div>' + (shops.length ? '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">' + shops.map(v => '<button class="ad-opt' + (FD.vendor===v?' on':'') + '" data-shop="' + esc(v) + '">' + esc(v) + '</button>').join('') + '</div>' : '')
+      + '<input class="fd-in" id="fd-shop" placeholder="' + (shops.length ? 'Other shop' : 'Shop name') + '" value="' + (shops.includes(FD.vendor) ? '' : esc(FD.vendor)) + '">'
+      + '<div class="ad-lbl">What</div><input class="fd-in" id="fd-what" placeholder="e.g. Rice 10kg x3" value="' + esc(FD.description) + '">'
+      + '<div class="ad-lbl">Total (RM)</div><input class="fd-in big" id="fd-total" inputmode="decimal" placeholder="0.00" value="' + esc(FD.total) + '">'
+      + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + (FD.autoSel ? 'Everyone working that day' : n + ' people picked') + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>Change</span></div>'
+      + '<div class="fd-each" id="fd-each">' + (n ? 'Each pays ' + fmtRM(each) : 'Nobody picked yet') + '</div>'
+      + '<div class="fd-err" id="fd-err"></div><button class="fd-save" data-act="save">Save</button>'
+      + (FD.id ? '<button class="fd-del" data-act="del">Delete purchase</button>' : '') + '<button class="ad-cancel" data-act="cancel">Cancel</button>';
+  } else {
+    const people = foodPeopleOn(mk, FD.date), sel = new Set(FD.workerIds), groups = {};
+    people.forEach(w => { const f = homeFarm(w, mk) || ('Farm not set'); (groups[f] ??= []).push(w); });
+    const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
+    h += '<h3>Who shares</h3><p>' + (FD.date ? 'Working on ' + fmtDay(FD.date) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
+    order.forEach(f => { const ws = groups[f], k = ws.filter(w => sel.has(w.id)).length;
+      h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b><span data-farm="' + f + '">' + (k === ws.length ? 'All ' + k + ' ✓' : k ? k + ' of ' + ws.length : 'None') + '</span></div>'
+        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + '</span>').join('') + '</div>'; });
+    h += '<div class="fd-each">' + (n ? n + ' people · each pays ' + fmtRM(each) : 'Nobody picked') + '</div>'
+      + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="everyone">Everyone</button><button class="ad-opt" data-act="nobody">Nobody</button></div>'
+      + '<button class="fd-save" data-act="back">Done</button>';
+  }
+  sh.innerHTML = h;
+}
+function fdKeep(){ // 记住表单里打的字
+  const g = id => document.getElementById(id); if(!g('fd-what')) return;
+  FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop').value.trim()) FD.vendor = g('fd-shop').value.trim();
+}
+function fdSetDate(d){ FD.date = d; if(FD.autoSel) FD.workerIds = foodPeopleOn(monthKey(), d).map(w => w.id); }
+function fdSave(){
+  fdKeep(); const mk = monthKey(), err = m => { document.getElementById('fd-err').textContent = m; };
+  const total = r2(parseFloat(String(FD.total).replace(/,/g, '')));
+  if(!FD.date || FD.date.slice(0,7) !== mk) return err('Pick a date in ' + MONTHS[Number(mk.slice(5))-1] + '.');
+  if(!(total > 0)) return err('Type the total.');
+  if(!FD.workerIds.length) return err('Pick at least one person to share.');
+  ensureFood(); const data = {date:FD.date, vendor:FD.vendor.trim(), description:FD.description.trim(), qty:1, unitPrice:total, total, workerIds:FD.workerIds.slice(), autoSel:FD.autoSel};
+  if(FD.id){ const r = S.food[mk].find(x => x.id === FD.id); Object.assign(r, data); } else S.food[mk].push({id:genId('f'), ...data});
+  saveAll(); fdClose(); toast('Saved · each pays ' + fmtRM(foodEach(total, data.workerIds.length)));
+}
+document.getElementById('fd-sheet').addEventListener('input', e => {
+  if(e.target.id === 'fd-total'){ const n = FD.workerIds.length, el = document.getElementById('fd-each'); if(el && n) el.textContent = 'Each pays ' + fmtRM(foodEach(parseFloat(e.target.value)||0, n)); }
+  if(e.target.id === 'fd-shop'){ FD.vendor = e.target.value.trim(); document.querySelectorAll('#fd-sheet [data-shop]').forEach(b => b.classList.remove('on')); }
+});
+document.getElementById('fd-sheet').addEventListener('change', e => { if(e.target.id === 'fd-date'){ fdKeep(); fdSetDate(e.target.value); fdDraw(); } });
+document.getElementById('fd-sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-date],[data-shop],[data-farm],[data-w]'); if(!b) return;
+  const mk = monthKey(), a = b.dataset.act;
+  if(b.dataset.date){ fdKeep(); fdSetDate(b.dataset.date); fdDraw(); return; }
+  if(b.dataset.shop !== undefined){ fdKeep(); FD.vendor = b.dataset.shop; document.getElementById('fd-shop').value = ''; fdDraw(); return; }
+  if(b.dataset.w){ const id = b.dataset.w, s = new Set(FD.workerIds); s.has(id) ? s.delete(id) : s.add(id); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
+  if(b.dataset.farm){ const f = b.dataset.farm, ws = foodPeopleOn(mk, FD.date).filter(w => (homeFarm(w, mk) || 'Farm not set') === f).map(w => w.id), s = new Set(FD.workerIds);
+    const all = ws.every(id => s.has(id)); ws.forEach(id => all ? s.delete(id) : s.add(id)); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
+  if(a === 'who'){ fdKeep(); FD_MODE = 'who'; fdDraw(); document.getElementById('fd-sheet').scrollTop = 0; return; }
+  if(a === 'back'){ FD_MODE = 'form'; fdDraw(); return; }
+  if(a === 'everyone'){ FD.workerIds = foodPeopleOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
+  if(a === 'nobody'){ FD.workerIds = []; FD.autoSel = false; fdDraw(); return; }
+  if(a === 'save') return fdSave();
+  if(a === 'cancel') return fdClose();
+  if(a === 'del'){ const r = S.food[mk].find(x => x.id === FD.id); if(!r) return;
+    if(!confirm('Delete this purchase?\n' + (r.description || 'Purchase') + ' · ' + fmtRM(Number(r.total)||0))) return;
+    S.food[mk] = S.food[mk].filter(x => x.id !== FD.id); saveAll(); fdClose(); toast('Purchase deleted'); }
+});
+function fdClose(){ document.getElementById('fd-dim').style.display = 'none'; document.getElementById('fd-sheet').style.display = 'none'; FD = null; renderFood(); }
 
 // ======================================================
 // PERSONAL
@@ -2211,22 +2098,24 @@ function printReceipt(wid, mk){
     : Math.max(0, advanceTrack(wid, mk).balanceAfter);
   const cashList = ((S.cashout||{})[mk]||{})[wid] || [];
 
-  const foodPurchases = (S.food[mk]||[]).filter(r => !r.workerIds || r.workerIds.includes(wid));
+  const foodPurchases = (S.food[mk]||[]).filter(r => foodIds(r, mk).includes(wid));
   let foodRowsHtml = '';
   foodPurchases.forEach(function(r, i){
-    const cnt = (r.workerIds||[]).length || 1;
-    const share = r.total / cnt;
+    const cnt = foodIds(r, mk).length || 1;
+    const share = foodShare(r, mk);
     const ds = r.date ? r.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2') : '';
     const bg = i%2===0 ? '#E8F5E8' : '#fff';
     foodRowsHtml += '<tr style="background:' + bg + '">'
-      + '<td>' + ds + '</td><td>' + r.vendor + ' -- ' + r.description + '</td>'
-      + '<td style="text-align:center">' + r.qty + '</td>'
-      + '<td style="text-align:right">RM' + r.unitPrice.toFixed(2) + '</td>'
+      + '<td>' + ds + '</td><td>' + esc([r.vendor, r.description].filter(Boolean).join(' -- ')) + '</td>'
+      + '<td style="text-align:center">' + cnt + '</td>'
       + '<td style="text-align:right">RM' + r.total.toFixed(2) + '</td>'
       + '<td style="text-align:right;font-weight:700;color:#1a5c1a">RM' + share.toFixed(2) + '</td>'
       + '<td></td></tr>';
   });
 
+  if(foodPurchases.length){ const shown = foodPurchases.reduce((t, r) => t + r2(foodShare(r, mk)), 0), rd = r2(calcFoodDeduct(wid, mk) - shown);
+    foodRowsHtml += '<tr style="background:#fff"><td></td><td style="font-style:italic;color:#888">Rounded up to 10 sen</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">' + (rd >= 0 ? '+' : '') + 'RM' + rd.toFixed(2) + '</td><td></td></tr>'
+      + '<tr style="background:#E8F5E8"><td></td><td style="font-weight:700">Food total</td><td></td><td></td><td style="text-align:right;font-weight:700;color:#1a5c1a">RM' + calcFoodDeduct(wid, mk).toFixed(2) + '</td><td></td></tr>'; }
   const persItems = (S.personal[mk] && S.personal[mk][wid]) ? S.personal[mk][wid] : [];
   let persRowsHtml = '';
   persItems.forEach(function(p, i){
@@ -2245,10 +2134,10 @@ function printReceipt(wid, mk){
   const foodSection = foodRowsHtml
     ? '<div style="height:10px"></div>'
     + '<table><thead>'
-    + '<tr style="background:#1E5C3A;color:#fff"><th colspan="5" style="padding:6px 8px;font-size:11px">FOOD DEDUCTION DETAIL</th>'
+    + '<tr style="background:#1E5C3A;color:#fff"><th colspan="4" style="padding:6px 8px;font-size:11px">FOOD DEDUCTION DETAIL</th>'
     + '<th colspan="2" style="padding:6px 8px;font-size:11px;text-align:right">' + monthLabel + ' -- ' + w.name + '</th></tr>'
     + '<tr style="background:#2a7a4a;color:#fff"><th style="padding:5px 8px">DATE</th><th style="padding:5px 8px;text-align:left">VENDOR / DESCRIPTION</th>'
-    + '<th style="padding:5px 8px;text-align:center">QTY</th><th style="padding:5px 8px;text-align:right">UNIT PRICE</th>'
+    + '<th style="padding:5px 8px;text-align:center">PEOPLE</th>'
     + '<th style="padding:5px 8px;text-align:right">TOTAL (RM)</th><th style="padding:5px 8px;text-align:right">YOUR SHARE (RM)</th>'
     + '<th style="padding:5px 8px">REMARKS</th></tr>'
     + '</thead><tbody>' + foodRowsHtml + '</tbody></table>'
@@ -3803,7 +3692,7 @@ function adSheet(){
     + '<div class="ad-g" style="grid-template-columns:repeat(3,1fr)" data-g="mode">' + [['full','Full day'],['split','AM / PM'],['half','Half day']].map(([v,l]) => '<button class="ad-opt' + (v===AD_MODE?' on':'') + '" data-v="' + v + '">' + l + '</button>').join('') + '</div>';
   if(AD_MODE === 'split') h += '<div class="ad-lbl">Morning</div>' + adChips('am', am, false) + '<div class="ad-lbl">Afternoon</div>' + adChips('pm', pm, false);
   else h += '<div class="ad-lbl">' + (AD_MODE === 'half' ? 'Half day at' : 'Worked at') + '</div>' + adChips('am', am, AD_MODE === 'full');
-  h += '<div class="ad-g" style="grid-template-columns:1fr 1fr;margin-top:12px"><button class="ad-opt' + (x && x.off ? ' on' : '') + '" style="color:var(--red)" data-act="off">Off</button><button class="ad-opt" data-act="clear">Clear</button></div>'
+  h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:12px"><button class="ad-opt' + (x && x.off ? ' on' : '') + '" style="color:var(--red)" data-act="off">Off</button><button class="ad-opt" data-act="clear">Clear</button></div>'
     + '<button class="ad-cancel" onclick="adClose()">Done</button>';
   document.getElementById('ad-sheet').innerHTML = h;
 }
