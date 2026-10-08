@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v75</title>
+<title>Salary v76</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -150,6 +150,11 @@ tr:hover td{background:#fafaf8;}
 .fd-chips{display:flex;flex-wrap:wrap;gap:6px}
 .fd-chip{border:1.5px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;cursor:pointer}
 .fd-chip.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
+.av-alert{background:var(--ambl);border:1.5px solid #e8c77a;border-radius:12px;padding:10px 14px;color:var(--amb);margin-bottom:8px;cursor:pointer}
+.av-alert b{display:block;font-size:14px}.av-alert small{font-size:12px}.av-alert span{float:right;font-weight:700;color:var(--acc)}
+.av-big{font-size:26px;font-weight:700}.av-bar{height:8px;background:#ece9e2;border-radius:4px;overflow:hidden;margin:6px 0}.av-bar i{display:block;height:100%;background:var(--grn)}
+.av-mo{display:flex;gap:6px;flex-wrap:wrap}.av-mo span{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 7px;background:#fff}.av-mo span.now{background:var(--ambl);border-color:#e8c77a}
+.av-pick{border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}.av-pick.on{border-color:var(--acc);background:var(--accl)}.av-pick b{font-size:14px}.av-pick small{display:block;font-size:12px;color:var(--text3)}
 .ad-lock{font-size:12px;background:var(--ambl);color:var(--amb);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .att-cell:hover{filter:brightness(.92);transform:scale(1.08);}
 .att-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;align-items:center;}
@@ -435,14 +440,10 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 
 <!-- ADVANCE -->
 <div class="page" id="page-advance">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <span style="font-size:14px;font-weight:700;">Advance / Hutang Tracker</span>
-    <button class="btn btn-pri" onclick="openAdvanceModal()">+ New Advance</button>
-  </div>
-  <div id="advance-list"></div>
-  <div class="sec" id="adv-settled-sec" style="margin-top:16px;display:none;">Settled Records</div>
-  <div id="adv-settled-list"></div>
+  <div class="card"><div id="advance-list" style="max-width:560px"></div></div>
 </div>
+<div class="ad-dim" id="av-dim" onclick="avClose()"></div>
+<div class="ad-sheet" id="av-sheet"></div>
 
 <!-- SUMMARY -->
 <div class="page" id="page-summary">
@@ -576,7 +577,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 75;
+const APP_VERSION = 76;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3345,6 +3346,8 @@ async function openLockModal(){
   if(!(await waitSynced())){ toast('Changes are still saving. Wait for "Saved", then lock.'); return; }
   const ws = workersInMonthLive(mk);
   if(!ws.length){ toast('No workers this month'); return; }
+  const short = loanShort(mk).filter(x => !x.decided);
+  if(short.length){ goPage('advance'); avDecide(short[0].w.id); toast('Decide the loans first: salary not enough for ' + short.length + ' worker' + (short.length>1?'s':''), 4000); return; }
   const issues = lockChecks(mk);
   let tot = 0; ws.forEach(w => tot += calcWorkerSummaryLive(w, mk).toTx);
   document.getElementById('modal-title').textContent = 'Lock month: ' + mk;
@@ -3486,7 +3489,7 @@ function advanceTrack(wid, mk){
   if(!L) return empty;
   const start = loanStart(L); if(!start) return empty;
   const w = getWorker(wid);
-  let paid = sumBy((L.txn||[]).filter(t => t.kind==='OPENING_REPAID'), t => t.amount);
+  let paid = sumBy((L.txn||[]).filter(t => t.kind==='OPENING_REPAID' || t.kind==='WRITE_OFF'), t => t.amount);
   const dedFor = (m) => {
     if(isLocked(m) && PAYSLIPS[m]) return Number((PAYSLIPS[m][wid]||{}).advD || 0);
     if(m < start || !w || !workerInMonth(w, m)) return 0;
@@ -3507,123 +3510,218 @@ function loanSchedule(wid, fromMk, n){
   return out;
 }
 
+// ---------- v76 Advance：一人一行 · 停工还欠分开 · 每月扣额按钮 · 薪水不够要先决定 · Write off ----------
+let AV = null, AV_SHOW_DONE = false, AV_ALERT_DAY = 25;
+const avOwesBefore = t => r2(t.loaned - t.paidBefore);
+function avLeft(w, mk){ return !!(w && w.stopDate && w.stopDate < mk + '-01'); }   // 这个月之前就停工
+function avAll(mk){
+  return S.workers.filter(w => loanAcc(w.id) && (loanAcc(w.id).txn||[]).some(t => t.kind==='LOAN')).map(w => ({w, t: advanceTrack(w.id, mk)}));
+}
+// 薪水不够扣借款：扣借款前的净薪 < 这个月要扣的
+function loanShort(mk){
+  if(mk < NEW_SYS_START || isLocked(mk)) return [];
+  return avAll(mk).filter(r => r.t.thisMonth > 0 || (loanAcc(r.w.id).months||{})[mk]).map(r => {
+    const s = calcWorkerSummaryLive(r.w, mk), avail = r2(s.net + s.advD), ov = (loanAcc(r.w.id).months||{})[mk];
+    const want = ov ? (loanPlanFor(loanAcc(r.w.id), mk) ?? 0) : r.t.thisMonth;
+    return {w:r.w, t:r.t, avail, want:Math.min(want, avOwesBefore(r.t)), decided: !!ov};
+  }).filter(x => x.avail < x.want);
+}
 function renderAdvance(){
-  const mk = monthKey();
-  const list = document.getElementById('advance-list'), sl = document.getElementById('adv-settled-list'), ss = document.getElementById('adv-settled-sec');
-  const accs = S.workers.filter(w => loanAcc(w.id) && (loanAcc(w.id).txn||[]).some(t => t.kind==='LOAN'));
-  const rows = accs.map(w => ({w, t: advanceTrack(w.id, mk)}));
-  const active = rows.filter(r => r.t.balanceAfter > 0 || r.t.thisMonth > 0), settled = rows.filter(r => !(r.t.balanceAfter > 0 || r.t.thisMonth > 0));
-  const locked = isLocked(mk);
-  const card = ({w, t}) => {
-    const L = loanAcc(w.id);
-    const ov = t.override, ovTxt = ov ? (Number(ov.amount)===0 ? '<span class="badge" style="background:var(--redl);color:var(--red);">Paused this month</span>' : '<span class="badge" style="background:var(--ambl);color:var(--amb);">This month only ' + fmtRM(ov.amount) + '</span>') : '';
-    const sched = loanSchedule(w.id, mk, 24).filter(x => x[1] > 0).slice(0, 12).map(x => '<span style="font-size:10px;background:' + (x[0]===mk?'var(--ambl)':'var(--bg)') + ';border:1px solid var(--border);border-radius:4px;padding:2px 6px;white-space:nowrap;">' + x[0] + '：' + fmtRM(x[1]) + '</span>').join(' ');
-    return '<div class="adv-card active" style="margin-bottom:10px;">'
-      + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
-      + '<div><div style="font-weight:700;">' + esc(w.name) + ' <span style="font-size:10px;color:var(--text3);">#' + (w.no||'') + ' · ' + (w.farm||'').toUpperCase() + '</span></div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">Loaned <b>' + fmtRM(t.loaned) + '</b> · Repaid before <b>' + fmtRM(t.paidBefore) + '</b> · Monthly <b>' + (t.plan==null?'Not set':fmtRM(t.plan)) + '</b></div></div>'
-      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">This month</div><div style="font-weight:700;font-family:monospace;">' + fmtRM(t.thisMonth) + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">Balance after <b>' + fmtRM(t.balanceAfter) + '</b></div></div></div>'
-      + (ovTxt ? '<div style="margin-top:6px;">' + ovTxt + '</div>' : '')
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">' + (sched || '<span style="font-size:11px;color:var(--text3);">No months to deduct</span>') + '</div>'
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">'
-      + '<button class="btn btn-sm btn-pri" onclick="openLoanAdd(\'' + w.id + '\')">Top up</button>'
-      + '<button class="btn btn-sm" onclick="openLoanPlan(\'' + w.id + '\')">Change monthly amount</button>'
-      + (locked ? '' : '<button class="btn btn-sm" onclick="openLoanMonth(\'' + w.id + '\')">Pause / change this month</button>')
-      + '<button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">History</button></div></div>';
-  };
-  list.innerHTML = active.length ? active.map(card).join('') : '<div class="empty"><div class="icon">💳</div><p>No active loans. Press "+ New loan".</p></div>';
-  if(ss) ss.style.display = settled.length ? '' : 'none';
-  if(sl) sl.innerHTML = settled.map(({w,t}) => '<div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;"><span><b>' + esc(w.name) + '</b> · Loaned ' + fmtRM(t.loaned) + ' · Fully repaid</span><span><button class="btn btn-sm" onclick="openLoanAdd(\'' + w.id + '\')">New loan</button> <button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">History</button></span></div>').join('');
-  const hdrBtn = document.querySelector('#page-advance .btn.btn-pri'); if(hdrBtn){ hdrBtn.textContent = '+ New loan'; hdrBtn.setAttribute('onclick', 'openLoanAdd()'); }
+  const mk = monthKey(), lock = isLocked(mk), [y, m] = mk.split('-').map(Number), rows = avAll(mk);
+  const paying = rows.filter(r => !avLeft(r.w, mk) && avOwesBefore(r.t) > 0.004), left = rows.filter(r => avLeft(r.w, mk) && avOwesBefore(r.t) > 0.004), done = rows.filter(r => avOwesBefore(r.t) <= 0.004);
+  const taken = r2(paying.reduce((s, r) => s + r.t.thisMonth, 0)), owed = r2(paying.reduce((s, r) => s + avOwesBefore(r.t), 0));
+  // 月初大家薪水都还是 0，所以 25 号起（或月份已过）才提醒；锁月时一定检查
+  const short = (mk < TODAY_KL.slice(0,7) || Number(TODAY_KL.slice(8,10)) >= AV_ALERT_DAY) ? loanShort(mk).filter(x => !x.decided) : [];
+  let h = '';
+  if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
+  h += '<div class="fd-sum"><div>Taken this month<b>' + fmtRM(taken) + '</b></div><div>Still owed<b>' + fmtRM(owed) + '</b></div></div>';
+  if(short.length) h += '<div class="av-alert" data-act="decide" data-wid="' + short[0].w.id + '"><span>Decide ›</span><b>' + short.length + ' worker' + (short.length>1?'s':'') + ': salary not enough this month</b><small>' + esc(short.map(x => x.w.name).join(', ')) + ' — tap to choose what to do</small></div>';
+  if(!lock) h += '<button class="ad-all" data-act="new">+ New loan</button>';
+  const row = (r, kind) => { const L = loanAcc(r.w.id), plan = loanPlanFor(L, mk), ob = avOwesBefore(r.t), ov = (L.months||{})[mk];
+    if(kind === 'left') return '<div class="ad-row vis" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + '<small style="color:var(--red)">Stopped ' + fmtDay(r.w.stopDate) + ' · not deducted any more</small></div><div class="fd-amt">' + fmtRM(ob) + '</div></div>';
+    if(kind === 'done') return '<div class="ad-row" data-wid="' + r.w.id + '" style="opacity:.6"><div class="n">' + esc(r.w.name) + '<small>Borrowed ' + fmtRM(r.t.loaned) + ((loanAcc(r.w.id).txn||[]).some(x => x.kind==='WRITE_OFF') ? ' · <span style="color:var(--red)">written off</span>' : ' · paid back') + '</small></div><div class="fd-amt">✓</div></div>';
+    const after = r.t.balanceAfter, more = plan ? Math.ceil(after / plan - 1e-9) : 0;
+    return '<div class="ad-row" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + '<small>Owes ' + fmtRM(ob) + ' · ' + (plan == null ? 'monthly not set' : fmtRM(plan) + '/month') + ' · ' + (ov ? (Number(ov.amount)===0 ? '<b style="color:var(--red)">paused this month</b>' : '<b style="color:var(--amb)">this month only ' + fmtRM(ov.amount) + '</b>') : (after <= 0.004 ? 'last month ✓' : 'about ' + more + ' more month' + (more>1?'s':''))) + '</small></div>'
+      + '<div class="fd-amt">' + fmtRM(r.t.thisMonth) + '<small style="color:var(--text3)">left ' + fmtRM(after) + '</small></div></div>'; };
+  h += '<div class="ad-fm"><span>PAYING BACK · ' + paying.length + '</span><span>THIS MONTH</span></div>' + (paying.length ? '<div class="ad-list">' + paying.map(r => row(r, 'pay')).join('') + '</div>' : '<div class="empty"><p>No loans being paid back</p></div>');
+  if(left.length) h += '<div class="ad-fm"><span>LEFT — STILL OWES · ' + left.length + '</span><span>OWES</span></div><div class="ad-list">' + left.map(r => row(r, 'left')).join('') + '</div>';
+  if(done.length) h += '<div class="ad-fm" data-act="showdone" style="cursor:pointer"><span>FULLY REPAID · ' + done.length + '</span><span style="color:var(--acc)">' + (AV_SHOW_DONE ? 'Hide' : 'Show') + '</span></div>' + (AV_SHOW_DONE ? '<div class="ad-list">' + done.map(r => row(r, 'done')).join('') + '</div>' : '');
+  document.getElementById('advance-list').innerHTML = h;
 }
-
-function openLoanAdd(wid){
-  const mk = monthKey();
-  const ws = workersInMonthLive(mk).filter(w => !w.stopDate || w.stopDate.slice(0,7) >= mk);
-  const pre = wid ? getWorker(wid) : null;
-  const t = pre ? advanceTrack(pre.id, mk) : null;
-  document.getElementById('modal-title').textContent = pre ? ('Top up: ' + pre.name) : 'New loan';
-  document.getElementById('modal-body').innerHTML =
-    (pre ? '<div style="font-size:12px;margin-bottom:10px;">Now: loaned ' + fmtRM(t.loaned) + ', balance after this month ' + fmtRM(t.balanceAfter) + ', monthly ' + (t.plan==null?'not set':fmtRM(t.plan)) + '. The top up joins the same loan and is repaid with the same monthly amount.</div>'
-         : '<div class="form-row"><label>Worker *</label><select id="ln-wid" class="inline" style="width:100%;">' + ws.map(w => '<option value="' + w.id + '">' + esc(w.name) + (loanAcc(w.id) ? ' (has a loan — will be combined)' : '') + '</option>').join('') + '</select></div>')
-    + '<div class="form-grid"><div class="form-row"><label>Loan date *</label><input id="ln-date" type="date" value="' + TODAY_KL + '"></div>'
-    + '<div class="form-row"><label>Amount RM *</label><input id="ln-amt" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>Monthly RM' + (pre && t.plan!=null ? ' (blank = keep ' + fmtRM(t.plan) + ')' : ' *') + '</label><input id="ln-mo" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>Start month</label><input id="ln-from" type="month" value="' + effMonth() + '"></div>'
-    + '<div class="form-row" style="grid-column:1/-1;"><label>Note</label><input id="ln-note"></div></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanAdd(\'' + (wid||'') + '\')">Save</button>';
-  document.getElementById('modal-overlay').classList.add('on');
-}
-function saveLoanAdd(wid){
-  wid = wid || (document.getElementById('ln-wid')||{}).value;
-  const d = document.getElementById('ln-date').value, a = r2(parseFloat(document.getElementById('ln-amt').value)||0);
-  const moRaw = document.getElementById('ln-mo').value, from = document.getElementById('ln-from').value;
-  if(!wid || !d || a <= 0){ toast('⚠ Worker, date and amount are required'); return; }
-  S.loans ??= {}; const L = S.loans[wid] ??= {txn:[], plan:[], months:{}};
-  if(moRaw === '' && loanPlanFor(L, from || d.slice(0,7)) == null){ toast('⚠ Enter the monthly amount for a new loan'); return; }
-  if(from && isLocked(from)){ toast('⚠ ' + from + ' is locked. Choose a later start month'); return; }
-  L.txn.push({id:uid(), month:d.slice(0,7), date:d, kind:'LOAN', amount:a, note:(document.getElementById('ln-note').value||'').trim()});
-  if(moRaw !== ''){
-    const f = from || d.slice(0,7), ex = L.plan.find(p => p.from === f);
-    if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed at top up'; L.plan = L.plan.filter(p => p !== ex); }
-    L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(moRaw)||0)});
+function avShow(){ document.getElementById('av-dim').style.display = 'block'; document.getElementById('av-sheet').style.display = 'block'; }
+function avClose(){ document.getElementById('av-dim').style.display = 'none'; document.getElementById('av-sheet').style.display = 'none'; AV = null; renderAdvance(); }
+function avSet(html){ document.getElementById('av-sheet').innerHTML = '<div class="ad-grab"></div>' + html; avShow(); }
+function avMonthChips(L, mk, n){ const out = []; let m = mk;
+  for(let i = 0; i < n; i++){ const t = advanceTrack(AV.wid, m); if(t.thisMonth > 0) out.push('<span class="' + (m===mk?'now':'') + '">' + MONTHS[Number(m.slice(5))-1].slice(0,3) + ' ' + fmtNum(t.thisMonth) + (t.balanceAfter <= 0.004 ? ' ✓ done' : '') + '</span>'); if(t.balanceAfter <= 0.004) break; m = nextMk(m); }
+  return out.join(''); }
+function avWorker(wid){
+  const mk = monthKey(), w = getWorker(wid), L = loanAcc(wid), t = advanceTrack(wid, mk), lock = isLocked(mk), ob = avOwesBefore(t), isLeft = avLeft(w, mk);
+  AV = {wid, mode:'worker'}; const wo = r2(sumBy((L.txn||[]).filter(x => x.kind==='WRITE_OFF'), x => x.amount));
+  const first = (L.txn||[]).filter(x => x.kind==='LOAN').map(x => x.month).sort()[0];
+  const pct = t.loaned > 0 ? Math.min(100, Math.round((t.loaned - ob) / t.loaned * 100)) : 100;
+  let h = '<h3>' + esc(w.name) + '</h3><p>' + esc(homeFarm(w, mk) || '') + (first ? ' · borrowed since ' + MONTHS[Number(first.slice(5))-1].slice(0,3) + ' ' + first.slice(0,4) : '') + (isLeft ? ' · <b style="color:var(--red)">stopped ' + fmtDay(w.stopDate) + '</b>' : '') + '</p>'
+    + '<div style="display:flex;justify-content:space-between;align-items:end"><div><div class="ad-lbl" style="margin:0">Still owes</div><div class="av-big">' + fmtRM(ob) + '</div></div>'
+    + (isLeft ? '' : '<div style="text-align:right"><div class="ad-lbl" style="margin:0">This month</div><b>' + fmtRM(t.thisMonth) + '</b></div>') + '</div>'
+    + '<div class="av-bar"><i style="width:' + pct + '%"></i></div><div class="ad-lbl" style="margin:0 0 8px">Paid back ' + fmtRM(t.loaned - ob - wo) + (wo ? ' · written off ' + fmtRM(wo) : '') + ' of ' + fmtRM(t.loaned) + '</div>';
+  if(!isLeft && ob > 0.004) h += '<div class="av-mo">' + avMonthChips(L, mk, 36) + '</div>';
+  if(isLeft && ob > 0.004) h += '<div class="ad-lock" style="margin-top:8px">He has stopped, so nothing is taken from salary. If he comes back to work, the loan continues by itself.</div>';
+  if(!lock){
+    if(isLeft) h += ob > 0.004 ? '<button class="fd-del" data-act="writeoff">Write off ' + fmtRM(ob) + '</button>' : '';
+    else h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:14px"><button class="ad-opt" data-act="more">+ Borrow more</button><button class="ad-opt" data-act="plan">Change monthly</button>'
+      + (ob > 0.004 && mk >= NEW_SYS_START ? '<button class="ad-opt" data-act="month">Pause / change ' + MONTHS[Number(mk.slice(5))-1].slice(0,3) + '</button>' : '') + '<button class="ad-opt" data-act="hist">History</button></div>';
   }
-  saveAll(); closeModal(); renderAdvance(); toast('✅ Loan saved');
+  if(lock || isLeft) h += '<button class="ad-opt" style="width:100%;margin-top:8px" data-act="hist">History</button>';
+  h += '<button class="ad-cancel" data-act="close">Close</button>';
+  avSet(h);
 }
-function openLoanPlan(wid){
-  const w = getWorker(wid), t = advanceTrack(wid, monthKey());
-  document.getElementById('modal-title').textContent = 'Change monthly amount: ' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">Now ' + (t.plan==null?'not set':fmtRM(t.plan)) + ' per month. The new amount starts from the month you choose.</div>'
-    + '<div class="form-grid"><div class="form-row"><label>Monthly RM *</label><input id="lp-amt" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>From month *</label><input id="lp-from" type="month" value="' + effMonth() + '"></div></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanPlan(\'' + wid + '\')">Save</button>';
-  document.getElementById('modal-overlay').classList.add('on');
+function avLoanForm(wid){ // 新借款 / 加借
+  const mk = monthKey(), t0 = new Date(), today = t0.getFullYear() + '-' + pad2(t0.getMonth()+1) + '-' + pad2(t0.getDate());
+  AV = {mode:'loan', wid: wid || null, amount:'', date: today.slice(0,7) === mk ? today : mk + '-01', monthly:'', from: effMonth(), note:'', pickWho: !wid};
+  avLoanDraw();
 }
-function saveLoanPlan(wid){
-  const a = document.getElementById('lp-amt').value, f = document.getElementById('lp-from').value;
-  if(a === '' || !f){ toast('⚠ Amount and month are required'); return; }
-  if(isLocked(f)){ toast('⚠ ' + f + ' is locked. Choose a later month'); return; }
-  const L = S.loans[wid], ex = L.plan.find(p => p.from === f);
-  if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed in the same month'; L.plan = L.plan.filter(p => p !== ex); }
-  L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(a)||0)});
-  saveAll(); closeModal(); renderAdvance(); toast('✅ From ' + f + ': ' + fmtRM(a) + ' per month');
+function avLoanDraw(){
+  const mk = monthKey(), w = AV.wid ? getWorker(AV.wid) : null, L = AV.wid ? loanAcc(AV.wid) : null, cur = L ? loanPlanFor(L, AV.from) : null;
+  const t = new Date(), td = d => { const x = new Date(t); x.setDate(x.getDate() - d); return x.getFullYear() + '-' + pad2(x.getMonth()+1) + '-' + pad2(x.getDate()); };
+  const quick = [['Today', td(0)], ['Yesterday', td(1)]], mo = parseFloat(AV.monthly) || cur || 0;
+  const owes = L ? avOwesBefore(advanceTrack(AV.wid, AV.from)) : 0;
+  let h = '<h3>' + (L && (L.txn||[]).some(x => x.kind==='LOAN') ? 'Borrow more' : 'New loan') + '</h3>';
+  h += '<div class="ad-lbl">Worker</div>' + (AV.pickWho
+      ? '<div class="fd-who" data-act="who"><div><b>' + (w ? esc(w.name) : 'Pick a worker') + '</b><small>' + (w ? (owes > 0 ? 'owes ' + fmtRM(owes) + ' now — the new amount is added' : 'no loan now') : '') + '</small></div><span>' + (w ? 'Change' : 'Pick') + '</span></div>'
+      : '<div class="fd-who" style="cursor:default"><div><b>' + esc(w.name) + '</b><small>' + (owes > 0 ? 'owes ' + fmtRM(owes) + ' now — the new amount is added' : 'no loan now') + '</small></div></div>');
+  h += '<div class="ad-lbl">Amount (RM)</div><input class="fd-in big" id="av-amt" inputmode="decimal" placeholder="0.00" value="' + esc(AV.amount) + '">'
+    + '<div class="ad-lbl">Date</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + quick.map(q => '<button class="ad-opt' + (AV.date===q[1]?' on':'') + '" data-date="' + q[1] + '">' + q[0] + '</button>').join('') + '<input class="fd-in" type="date" id="av-date" value="' + AV.date + '" style="padding:8px"></div>'
+    + '<div class="ad-lbl">Pay back each month' + (cur ? ' (now ' + fmtRM(cur) + ')' : '') + '</div><div class="ad-g" style="grid-template-columns:repeat(4,1fr)">' + [300, 500, 1000].map(v => '<button class="ad-opt' + (mo===v?' on':'') + '" data-mo="' + v + '">' + v + '</button>').join('')
+    + '<input class="fd-in" id="av-mo" inputmode="decimal" placeholder="Other" value="' + ([300,500,1000].includes(mo) || !AV.monthly ? '' : esc(AV.monthly)) + '" style="padding:8px"></div>'
+    + '<div class="ad-lbl">Start taking from</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [effMonth(), nextMk(effMonth())].map(m => '<button class="ad-opt' + (AV.from===m?' on':'') + '" data-from="' + m + '">' + (m===mk ? 'This month' : m===nextMk(mk) ? 'Next month' : '') + ' (' + MONTHS[Number(m.slice(5))-1].slice(0,3) + ')</button>').join('') + '</div>'
+    + '<div class="fd-each" id="av-line" style="background:var(--grnl);color:var(--grn)">' + avLine() + '</div>'
+    + '<input class="fd-in" id="av-note" style="margin-top:8px" placeholder="Note (optional)" value="' + esc(AV.note) + '">'
+    + '<div class="fd-err" id="av-err"></div><button class="fd-save" data-act="saveloan">Save</button><button class="ad-cancel" data-act="' + (AV.pickWho ? 'close' : 'back') + '">Cancel</button>';
+  avSet(h);
 }
-function openLoanMonth(wid){
-  const mk = monthKey(), w = getWorker(wid), L = loanAcc(wid), ov = (L.months||{})[mk];
-  const cur = ov ? (Number(ov.amount)===0 ? 'stop' : 'amt') : 'plan';
-  document.getElementById('modal-title').textContent = mk + ' deduction: ' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">Only affects ' + mk + '. Next month follows the plan.</div>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="plan" ' + (cur==='plan'?'checked':'') + '> As planned (' + (loanPlanFor(L,mk)==null?'not set':fmtRM(loanPlanFor(L,mk))) + ')</label>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="stop" ' + (cur==='stop'?'checked':'') + '> Pause this month</label>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="amt" ' + (cur==='amt'?'checked':'') + '> This month only RM <input id="lm-amt" type="number" step="0.01" style="width:100px;" value="' + (cur==='amt'?ov.amount:'') + '"></label>'
-    + '<div class="form-row"><label>Reason</label><input id="lm-note" value="' + esc(ov && ov.note || '') + '"></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanMonth(\'' + wid + '\')">Save</button>';
-  document.getElementById('modal-overlay').classList.add('on');
+function avLine(){ // 绿色那行：每月多少 · 几个月还完
+  const L = AV.wid ? loanAcc(AV.wid) : null, cur = L ? loanPlanFor(L, AV.from) : null, amt = parseFloat(AV.amount) || 0, mo = parseFloat(AV.monthly) || cur || 0;
+  const total = r2((L ? avOwesBefore(advanceTrack(AV.wid, AV.from)) : 0) + amt), months = mo > 0 && amt > 0 ? Math.ceil(total / mo - 1e-9) : 0;
+  let end = AV.from; for(let i = 1; i < months; i++) end = nextMk(end);
+  return months ? fmtRM(mo) + ' a month · paid back in ' + months + ' month' + (months>1?'s':'') + ' (' + MONTHS[Number(end.slice(5))-1].slice(0,3) + ' ' + end.slice(0,4) + ')' : 'Type the amount and pick the monthly amount'; }
+function avWho(){ const mk = monthKey(), ws = workersInMonthLive(mk).filter(w => !avLeft(w, mk)), groups = {};
+  ws.forEach(w => { const f = homeFarm(w, mk) || 'Farm not set'; (groups[f] ??= []).push(w); });
+  const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
+  let h = '<h3>Who is borrowing?</h3>';
+  order.forEach(f => { h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b></div><div class="fd-chips">' + groups[f].map(w => '<span class="fd-chip' + (AV.wid===w.id?' on':'') + '" data-pick="' + w.id + '">' + esc(w.name) + (avOwesBefore(advanceTrack(w.id, mk)) > 0.004 ? ' · owes' : '') + '</span>').join('') + '</div>'; });
+  h += '<button class="ad-cancel" data-act="loanback">Back</button>'; avSet(h); }
+function avKeep(){ const g = id => document.getElementById(id); if(g('av-amt')) AV.amount = g('av-amt').value; if(g('av-note')) AV.note = g('av-note').value; if(g('av-mo') && g('av-mo').value) AV.monthly = g('av-mo').value; }
+function avSaveLoan(){
+  avKeep(); const err = m => { document.getElementById('av-err').textContent = m; }, wid = AV.wid, a = r2(parseFloat(String(AV.amount).replace(/,/g,''))), d = AV.date;
+  if(!wid) return err('Pick the worker.'); if(!(a > 0)) return err('Type the amount.'); if(!d) return err('Pick the date.');
+  S.loans ??= {}; const L = S.loans[wid] ??= {txn:[], plan:[], months:{}};
+  const mo = AV.monthly !== '' ? r2(parseFloat(AV.monthly)) : null;
+  if(mo == null && loanPlanFor(L, AV.from) == null) return err('Pick how much to take each month.');
+  if(mo != null && !(mo > 0)) return err('The monthly amount must be more than 0.');
+  if(isLocked(AV.from)) return err(AV.from + ' is locked. Pick a later month.');
+  L.txn.push({id:uid(), month:d.slice(0,7), date:d, kind:'LOAN', amount:a, note:(AV.note||'').trim()});
+  if(mo != null && mo !== loanPlanFor(L, AV.from)){ const ex = L.plan.find(p => p.from === AV.from); if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed when borrowing more'; L.plan = L.plan.filter(p => p !== ex); } L.plan.push({id:uid(), from:AV.from, monthly:mo}); }
+  saveAll(); toast('Loan saved · ' + fmtRM(a)); renderAdvance(); avWorker(wid);
 }
-function saveLoanMonth(wid){
-  const mk = monthKey(), L = S.loans[wid]; L.months ??= {};
-  const v = (document.querySelector('input[name="lm"]:checked')||{}).value, note = (document.getElementById('lm-note').value||'').trim();
-  if(v === 'plan') delete L.months[mk];
-  else if(v === 'stop') L.months[mk] = {amount:0, note};
-  else { const a = parseFloat(document.getElementById('lm-amt').value); if(!(a >= 0)){ toast('⚠ Please enter an amount'); return; } L.months[mk] = {amount:r2(a), note}; }
-  saveAll(); closeModal(); renderAdvance(); toast('✅ ' + mk + ' updated');
-}
-function openLoanHistory(wid){
-  const w = getWorker(wid), L = loanAcc(wid) || {txn:[], plan:[], months:{}}, mk = monthKey();
-  const lockedRows = Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][wid] && Number(PAYSLIPS[m][wid].advD) > 0).sort().map(m => '<tr><td>' + m + '</td><td>Deducted (locked month)</td><td style="text-align:right;">-' + fmtRM(PAYSLIPS[m][wid].advD) + '</td><td></td></tr>');
-  const txRows = (L.txn||[]).slice().sort((a,b) => (a.date||a.month) < (b.date||b.month) ? -1 : 1).map(t => '<tr><td>' + esc(t.date || t.month) + '</td><td>' + (t.kind==='LOAN' ? 'Loan / top up' : 'Repaid in old system (to Sep 2026)') + (t.note ? ' · ' + esc(t.note) : '') + '</td><td style="text-align:right;">' + (t.kind==='LOAN' ? '+' : '-') + fmtRM(t.amount) + '</td><td>'
-      + (t.kind==='LOAN' ? '<button class="btn btn-sm btn-red" onclick="voidLoanTxn(\'' + wid + '\',\'' + t.id + '\')">Void</button>' : '') + '</td></tr>');
-  const planRows = (L.plan||[]).slice().sort((a,b) => a.from < b.from ? -1 : 1).map(p => '<tr><td>' + p.from + ' onwards</td><td>Monthly</td><td style="text-align:right;">' + fmtRM(p.monthly) + '</td><td>' + (isLocked(p.from) ? '' : '<button class="btn btn-sm btn-red" onclick="voidLoanPlan(\'' + wid + '\',\'' + p.id + '\')">Void</button>') + '</td></tr>');
-  const monRows = Object.keys(L.months||{}).sort().map(m => '<tr><td>' + m + '</td><td>' + (Number(L.months[m].amount)===0 ? 'Paused' : 'Only') + (L.months[m].note ? ' · ' + esc(L.months[m].note) : '') + '</td><td style="text-align:right;">' + (Number(L.months[m].amount)===0 ? '--' : fmtRM(L.months[m].amount)) + '</td><td></td></tr>');
-  const t = advanceTrack(wid, mk);
-  const tbl = (title, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + title + '</div><table style="width:100%;font-size:12px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">None</td></tr>') + '</table>';
-  document.getElementById('modal-title').textContent = 'Loan history: ' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;">Loaned <b>' + fmtRM(t.loaned) + '</b> · Balance after ' + mk + ' <b>' + fmtRM(t.balanceAfter) + '</b></div>'
-    + tbl('Loans', txRows) + tbl('Monthly amount', planRows) + tbl('Monthly changes', monRows) + tbl('Deducted in locked months', lockedRows);
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Close</button>';
-  document.getElementById('modal-overlay').classList.add('on');
-}
+function avPlanForm(){ const mk = monthKey(), L = loanAcc(AV.wid), cur = loanPlanFor(L, effMonth());
+  AV = {...AV, mode:'plan', from: effMonth(), monthly:''};
+  let h = '<h3>Change monthly · ' + esc(getWorker(AV.wid).name) + '</h3><p>Now ' + (cur == null ? 'not set' : fmtRM(cur) + ' a month') + '</p>'
+    + '<div class="ad-lbl">New amount each month</div><div class="ad-g" style="grid-template-columns:repeat(4,1fr)">' + [300,500,1000].map(v => '<button class="ad-opt" data-pmo="' + v + '">' + v + '</button>').join('') + '<input class="fd-in" id="av-pmo" inputmode="decimal" placeholder="Other" style="padding:8px"></div>'
+    + '<div class="ad-lbl">From</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [effMonth(), nextMk(effMonth())].map((m, i) => '<button class="ad-opt' + (i===0?' on':'') + '" data-pfrom="' + m + '">' + MONTHS[Number(m.slice(5))-1] + '</button>').join('') + '</div>'
+    + '<div class="fd-err" id="av-err"></div><button class="fd-save" data-act="saveplan">Save</button><button class="ad-cancel" data-act="back">Cancel</button>';
+  avSet(h); }
+function avMonthForm(){ const mk = monthKey(), L = loanAcc(AV.wid), ov = (L.months||{})[mk], plan = loanPlanFor(L, mk);
+  AV = {...AV, mode:'month', choice: ov ? (Number(ov.amount)===0 ? 'stop' : 'amt') : 'plan'};
+  let h = '<h3>' + MONTHS[Number(mk.slice(5))-1] + ' only · ' + esc(getWorker(AV.wid).name) + '</h3><p>Next month goes back to the plan.</p>'
+    + '<div class="av-pick' + (AV.choice==='plan'?' on':'') + '" data-choice="plan"><b>As planned</b><small>' + (plan == null ? 'not set' : fmtRM(plan)) + '</small></div>'
+    + '<div class="av-pick' + (AV.choice==='stop'?' on':'') + '" data-choice="stop"><b>Pause this month</b><small>Take nothing in ' + MONTHS[Number(mk.slice(5))-1] + '</small></div>'
+    + '<div class="av-pick' + (AV.choice==='amt'?' on':'') + '" data-choice="amt"><b>Take a different amount</b><small>Only for ' + MONTHS[Number(mk.slice(5))-1] + '</small></div>'
+    + '<input class="fd-in" id="av-mamt" inputmode="decimal" placeholder="Amount for this month" style="margin-top:8px" value="' + (ov && Number(ov.amount) > 0 ? ov.amount : '') + '">'
+    + '<input class="fd-in" id="av-mnote" placeholder="Reason (optional)" style="margin-top:8px" value="' + esc(ov && ov.note || '') + '">'
+    + '<div class="fd-err" id="av-err"></div><button class="fd-save" data-act="savemonth">Save</button><button class="ad-cancel" data-act="back">Cancel</button>';
+  avSet(h); }
+function avDecide(wid){ // 薪水不够：三选一
+  const mk = monthKey(), x = loanShort(mk).find(z => z.w.id === wid); if(!x){ renderAdvance(); return; }
+  const take = Math.max(0, r2(x.avail)), rest = r2(x.want - take), mn = MONTHS[Number(mk.slice(5))-1];
+  AV = {wid, mode:'decide', choice: take > 0 ? 'part' : 'stop', take, want:x.want};
+  let h = '<h3>Salary not enough · ' + esc(x.w.name) + '</h3><p>' + mn + ': salary after food and personal = ' + fmtRM(Math.max(0, x.avail)) + '. Loan this month = ' + fmtRM(x.want) + '.</p>'
+    + (take > 0 ? '<div class="av-pick' + (AV.choice==='part'?' on':'') + '" data-choice="part"><b>Take ' + fmtRM(take) + ' now, ' + fmtRM(rest) + ' later</b><small>Salary this month becomes RM 0. Recommended.</small></div>' : '')
+    + '<div class="av-pick' + (AV.choice==='stop'?' on':'') + '" data-choice="stop"><b>Pause the loan this month</b><small>Take nothing in ' + mn + '. Next month back to the plan.</small></div>'
+    + '<div class="av-pick" data-choice="full"><b>Take the full ' + fmtRM(x.want) + '</b><small>Salary this month becomes − ' + fmtRM(r2(x.want - x.avail)) + ' (he owes the company).</small></div>'
+    + '<button class="fd-save" data-act="savedecide">Save</button><button class="ad-cancel" data-act="close">Later</button>'
+    + '<p style="margin-top:8px">This shows on Advance and when you press "Check & lock month". The month cannot be locked until it is decided.</p>';
+  avSet(h); }
+function avHistory(){ const w = getWorker(AV.wid), L = loanAcc(AV.wid) || {txn:[], plan:[], months:{}};
+  AV = {...AV, mode:'hist'};
+  const K = {LOAN:'Borrowed', OPENING_REPAID:'Paid back in the old system (to Sep 2026)', WRITE_OFF:'Written off'};
+  const items = [];
+  (L.txn||[]).forEach(t => items.push([t.date || t.month, K[t.kind] + (t.note ? ' · ' + esc(t.note) : ''), (t.kind==='LOAN' ? '+' : '−') + fmtRM(t.amount), t.kind!=='OPENING_REPAID' && t.month >= NEW_SYS_START && !isLocked(t.month) ? 'txn:' + t.id : '']));
+  (L.plan||[]).forEach(p => items.push([p.from, 'Monthly amount from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4), fmtRM(p.monthly), (p.from < NEW_SYS_START || isLocked(p.from)) ? '' : 'plan:' + p.id]));
+  Object.keys(L.months||{}).forEach(m => items.push([m, (Number(L.months[m].amount)===0 ? 'Paused' : 'This month only ' + fmtRM(L.months[m].amount)) + (L.months[m].note ? ' · ' + esc(L.months[m].note) : ''), '', '']));
+  Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][AV.wid] && Number(PAYSLIPS[m][AV.wid].advD) > 0).forEach(m => items.push([m, 'Taken from salary (locked month)', '−' + fmtRM(PAYSLIPS[m][AV.wid].advD), '']));
+  items.sort((a, b) => a[0] < b[0] ? -1 : 1);
+  let h = '<h3>History · ' + esc(w.name) + '</h3><div class="ad-list">' + (items.map(i => '<div class="ad-row" style="cursor:default"><div class="n" style="font-weight:500">' + i[1] + '<small>' + esc(i[0]) + '</small></div><div class="fd-amt">' + i[2] + (i[3] ? '<small><a style="color:var(--red);cursor:pointer" data-void="' + i[3] + '">Void</a></small>' : '') + '</div></div>').join('') || '<div class="ad-row">Nothing yet</div>') + '</div>'
+    + '<button class="ad-cancel" data-act="back">Back</button>';
+  avSet(h); }
+function avReason(title, act, data){ AV = {...AV, mode:'reason', act, data};
+  avSet('<h3>' + title + '</h3><p>Write why. It is kept in the history.</p><input class="fd-in" id="av-reason" placeholder="Reason"><div class="fd-err" id="av-err"></div><button class="fd-del" data-act="doreason">' + title + '</button><button class="ad-cancel" data-act="back">Cancel</button>'); }
+document.getElementById('advance-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-wid]'); if(!b) return;
+  if(b.dataset.act === 'new') return avLoanForm(null);
+  if(b.dataset.act === 'decide') return avDecide(b.dataset.wid);
+  if(b.dataset.act === 'showdone'){ AV_SHOW_DONE = !AV_SHOW_DONE; return renderAdvance(); }
+  if(b.dataset.wid) return avWorker(b.dataset.wid);
+});
+document.getElementById('av-sheet').addEventListener('input', e => {
+  if(!AV) return;
+  if(e.target.id === 'av-mo'){ AV.monthly = e.target.value; }
+  if(e.target.id === 'av-amt'){ AV.amount = e.target.value; }
+  if(e.target.id === 'av-mo'){ document.querySelectorAll('#av-sheet [data-mo]').forEach(x => x.classList.remove('on')); if(!e.target.value) AV.monthly = ''; }
+  if(AV.mode === 'loan' && (e.target.id === 'av-mo' || e.target.id === 'av-amt')) document.getElementById('av-line').textContent = avLine();
+});
+document.getElementById('av-sheet').addEventListener('change', e => { if(AV && e.target.id === 'av-date'){ avKeep(); AV.date = e.target.value; avLoanDraw(); } });
+document.getElementById('av-sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-date],[data-mo],[data-from],[data-pick],[data-pmo],[data-pfrom],[data-choice],[data-void]'); if(!b || !AV) return;
+  const a = b.dataset.act, mk = monthKey();
+  if(a === 'close') return avClose();
+  if(a === 'back') return avWorker(AV.wid);
+  if(a === 'more'){ const w = AV.wid; avLoanForm(w); return; }
+  if(a === 'plan') return avPlanForm();
+  if(a === 'month') return avMonthForm();
+  if(a === 'hist') return avHistory();
+  if(a === 'writeoff'){ const t = advanceTrack(AV.wid, mk); return avReason('Write off ' + fmtRM(avOwesBefore(t)), 'writeoff', avOwesBefore(t)); }
+  if(a === 'who'){ avKeep(); return avWho(); }
+  if(a === 'loanback') return avLoanDraw();
+  if(b.dataset.pick){ AV.wid = b.dataset.pick; return avLoanDraw(); }
+  if(b.dataset.date){ avKeep(); AV.date = b.dataset.date; return avLoanDraw(); }
+  if(b.dataset.mo){ avKeep(); AV.monthly = b.dataset.mo; return avLoanDraw(); }
+  if(b.dataset.from){ avKeep(); AV.from = b.dataset.from; return avLoanDraw(); }
+  if(a === 'saveloan') return avSaveLoan();
+  if(b.dataset.pmo){ document.querySelectorAll('#av-sheet [data-pmo]').forEach(x => x.classList.toggle('on', x === b)); document.getElementById('av-pmo').value = ''; AV.monthly = b.dataset.pmo; return; }
+  if(b.dataset.pfrom){ document.querySelectorAll('#av-sheet [data-pfrom]').forEach(x => x.classList.toggle('on', x === b)); AV.from = b.dataset.pfrom; return; }
+  if(a === 'saveplan'){ const v = document.getElementById('av-pmo').value || AV.monthly, mo = r2(parseFloat(v)); if(!(mo > 0)){ document.getElementById('av-err').textContent = 'Pick or type the amount.'; return; }
+    const L = S.loans[AV.wid], ex = L.plan.find(p => p.from === AV.from); if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed in the same month'; L.plan = L.plan.filter(p => p !== ex); }
+    L.plan.push({id:uid(), from:AV.from, monthly:mo}); saveAll(); toast('From ' + MONTHS[Number(AV.from.slice(5))-1] + ': ' + fmtRM(mo) + ' a month'); renderAdvance(); return avWorker(AV.wid); }
+  if(b.dataset.choice){ AV.choice = b.dataset.choice; document.querySelectorAll('#av-sheet [data-choice]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if(a === 'savemonth'){ const L = S.loans[AV.wid]; L.months ??= {}; const note = (document.getElementById('av-mnote').value || '').trim();
+    if(AV.choice === 'plan') delete L.months[mk];
+    else if(AV.choice === 'stop') L.months[mk] = {amount:0, note};
+    else { const v = parseFloat(document.getElementById('av-mamt').value); if(!(v >= 0)){ document.getElementById('av-err').textContent = 'Type the amount for this month.'; return; } L.months[mk] = {amount:r2(v), note}; }
+    saveAll(); toast('Saved'); renderAdvance(); return avWorker(AV.wid); }
+  if(a === 'savedecide'){ const L = S.loans[AV.wid]; L.months ??= {}; const mn = MONTHS[Number(mk.slice(5))-1];
+    if(AV.choice === 'part') L.months[mk] = {amount:AV.take, note:'Salary not enough in ' + mn + ' — took ' + fmtRM(AV.take) + ', the rest later'};
+    else if(AV.choice === 'stop') L.months[mk] = {amount:0, note:'Salary not enough in ' + mn + ' — paused'};
+    else L.months[mk] = {amount:AV.want, note:'Salary not enough in ' + mn + ' — took the full amount'};
+    saveAll(); const next = loanShort(mk).filter(x => !x.decided && x.w.id !== AV.wid); toast('Saved'); renderAdvance();
+    return next.length ? avDecide(next[0].w.id) : avClose(); }
+  if(b.dataset.void){ const [k, id] = b.dataset.void.split(':'); return avReason('Void this entry', 'void' + k, id); }
+  if(a === 'doreason'){ const r = (document.getElementById('av-reason').value || '').trim(); if(!r){ document.getElementById('av-err').textContent = 'Write the reason.'; return; }
+    const L = S.loans[AV.wid];
+    if(AV.act === 'writeoff'){ L.txn.push({id:uid(), month:mk, date:TODAY_KL, kind:'WRITE_OFF', amount:AV.data, note:r}); toast('Written off'); }
+    if(AV.act === 'voidtxn'){ VOID_REASON[AV.data] = r; L.txn = L.txn.filter(t => t.id !== AV.data); toast('Voided'); }
+    if(AV.act === 'voidplan'){ VOID_REASON[AV.data] = r; L.plan = L.plan.filter(p => p.id !== AV.data); toast('Voided'); }
+    saveAll(); renderAdvance(); return avWorker(AV.wid); }
+});
+
 function askReason(msg){ const r = prompt(msg + '\nReason:'); return r && r.trim() ? r.trim() : null; }
 function voidLoanTxn(wid, id){ const r = askReason('Void this loan entry'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
 function voidLoanPlan(wid, id){ const r = askReason('Void this monthly amount'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.plan = L.plan.filter(p => p.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
