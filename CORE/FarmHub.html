@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v14</title>
+<title>Workers v15</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -102,7 +102,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -155,7 +155,7 @@ async function load(){
   const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
   const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food', x => x.is('voided_at', null).order('worker_no')),
     q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
     q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
@@ -241,6 +241,7 @@ async function openWorker(id){
     + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
     + '<div class="grp">Details</div>'
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
+    + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--text3);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
     + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
     + it('Passport', pas ? last4(pas.passport_no) : 'Not set', '', 'sheetPassport()')
     + (w.stop_note ? it('Stop note', esc(w.stop_note), '', '') : '')
@@ -392,6 +393,16 @@ function sheetText(title, val, type, fn){
   sheet('<h3>' + title + '</h3><input class="inp" id="s-txt" value="' + esc(val || '') + '"' + (type ? ' inputmode="' + type + '"' : '') + '><button class="save" id="s-save">Save</button>');
   $('s-save').onclick = () => saveWith($('s-save'), () => fn($('s-txt').value.trim()));
 }
+function sheetFood(){
+  const w = cur();
+  sheet('<h3>Food sharing</h3><p class="h">When the Admin adds a food purchase, workers who share food are ticked automatically.</p>'
+    + opts('food', [['yes', 'Shares food'], ['no', 'Not shared']], w.shares_food === false ? 'no' : 'yes', '', 'g2')
+    + '<p class="h" style="margin-top:8px">Not shared = left out by default. The Admin can still tick this worker by hand.</p><button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const v = pick('food') !== 'no'; if(v === (w.shares_food !== false)) return 'No change';
+    await db(sb.from('hub_worker').update({shares_food:v}).eq('id', w.id));
+  }, 'Saved');
+}
 function sheetPhone(){ const w = cur(); sheetText('Phone', w.phone, 'tel', v => db(sb.from('hub_worker').update({phone:v || null}).eq('id', w.id))); }
 function sheetPassport(){
   const w = cur(), p = (D.pass[w.id] || []).slice(-1)[0];
@@ -504,7 +515,8 @@ async function adjustFood(w, oldJoin, newJoin, oldStop, newStop){
     const f = r.data || {}; if(!f.date || f.autoSel === false || D.locked.has(r.month)) continue;
     const was = inS(oldJoin, oldStop, f.date), now_ = inS(newJoin, newStop, f.date);
     if(was === now_) continue;
-    const ids = (f.workerIds || []).filter(x => x !== w.id); if(now_) ids.push(w.id);
+    const ids = (f.workerIds || []).filter(x => x !== w.id); if(now_ && w.shares_food !== false) ids.push(w.id);
+    if(now_ && w.shares_food === false && !(f.workerIds || []).includes(w.id)) continue;
     upd.push({id:r.id, month:r.month, data:{...f, workerIds:ids}, voided_at:null});
   }
   if(upd.length) await db(sb.from('salary_food').upsert(upd, {onConflict:'id'}));

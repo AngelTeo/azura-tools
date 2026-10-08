@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v72</title>
+<title>Salary v73</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -578,7 +578,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 72;
+const APP_VERSION = 73;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -619,7 +619,7 @@ async function loadData(){
   const notVoid = q => q.is('voided_at', null);
   const [co, wk, rt, cp, py, pp, nt, at, go, pm, fd, ps, av, rm] = await Promise.all([
     fetchAll('hub_company','id,code'),
-    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,stop_note,phone', q=>q.is('voided_at',null).order('worker_no')),
+    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,stop_note,phone,shares_food', q=>q.is('voided_at',null).order('worker_no')),
     fetchAll('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_company','id,worker_id,company_id,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
@@ -648,7 +648,7 @@ async function loadData(){
       rateHistory: rates.map(r => ({from:r.effective_from, rate:Number(r.rate)})),
       farm, phone:w.phone||'', bankAccount: pay ? pay.account_no : '', beneficiary: pay ? pay.beneficiary_name : '', bankAccount2: pay2 ? pay2.account_no : '', beneficiary2: pay2 ? pay2.beneficiary_name : '',
       passport: pas ? pas.passport_no : '', joinDate:w.join_date||'', stopDate:w.stop_date||'',
-      stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active' };
+      stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active', sharesFood: w.shares_food !== false };
   });
   S.attendance = {}; S.attFarm = {}; at.forEach(r => { const mk = r.work_date.slice(0,7), d = parseInt(r.work_date.slice(8,10));
     ((S.attendance[mk] ??= {})[r.worker_id] ??= {})[d] = r.code;
@@ -1378,6 +1378,7 @@ async function addShop(name){ // 新的店自动加进固定名单
   if(error) throw error; FOOD_SHOPS.push(...(data||[{code, label:name, sort, shown:true}]));
 }
 function foodPeopleOn(mk, date){ return workersInMonth(mk).filter(w => !date || inServiceOn(w, date)); }
+function foodAutoOn(mk, date){ return foodPeopleOn(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
 function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
   ensureFood(); const mk = monthKey(), rows = S.food[mk], lock = isLocked(mk), [y, m] = mk.split('-').map(Number);
@@ -1412,7 +1413,7 @@ function fdOpen(id){
   const t = new Date(), today = t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate());
   const date = r ? (r.date||'') : (today.slice(0,7) === mk ? today : mk + '-01');
   FD = r ? {id:r.id, date, vendor:r.vendor||'', description:r.description||'', total:r.total ? String(r.total) : '', workerIds:foodIds(r, mk).slice(), autoSel:r.autoSel !== false}
-         : {id:null, date, vendor:'', description:'', total:'', workerIds:foodPeopleOn(mk, date).map(w => w.id), autoSel:true};
+         : {id:null, date, vendor:'', description:'', total:'', workerIds:foodAutoOn(mk, date).map(w => w.id), autoSel:true};
   FD_MODE = 'form'; fdDraw(); document.getElementById('fd-dim').style.display = 'block'; document.getElementById('fd-sheet').style.display = 'block';
 }
 function fdDraw(){
@@ -1448,7 +1449,7 @@ function fdDraw(){
     h += '<h3>Who shares</h3><p>' + (FD.date ? 'Working on ' + fmtDay(FD.date) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
     order.forEach(f => { const ws = groups[f], k = ws.filter(w => sel.has(w.id)).length;
       h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b><span data-farm="' + f + '">' + (k === ws.length ? 'All ' + k + ' ✓' : k ? k + ' of ' + ws.length : 'None') + '</span></div>'
-        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + '</span>').join('') + '</div>'; });
+        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + (w.sharesFood === false ? ' <small style="font-weight:500">· by hand</small>' : '') + '</span>').join('') + '</div>'; });
     h += '<div class="fd-each">' + (n ? n + ' people · each pays ' + fmtRM(each) : 'Nobody picked') + '</div>'
       + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="everyone">Everyone</button><button class="ad-opt" data-act="nobody">Nobody</button></div>'
       + '<button class="fd-save" data-act="back">Done</button>';
@@ -1459,7 +1460,7 @@ function fdKeep(){ // 记住表单里打的字
   const g = id => document.getElementById(id); if(!g('fd-what')) return;
   FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop')) FD.vendor = g('fd-shop').value.trim();
 }
-function fdSetDate(d){ FD.date = d; if(FD.autoSel) FD.workerIds = foodPeopleOn(monthKey(), d).map(w => w.id); }
+function fdSetDate(d){ FD.date = d; if(FD.autoSel) FD.workerIds = foodAutoOn(monthKey(), d).map(w => w.id); }
 async function fdSave(){
   fdKeep(); const mk = monthKey(), err = m => { document.getElementById('fd-err').textContent = m; };
   const total = r2(parseFloat(String(FD.total).replace(/,/g, '')));
@@ -1491,7 +1492,7 @@ document.getElementById('fd-sheet').addEventListener('click', e => {
     sb.from('hub_option').update({shown:false}).eq('id', x.id).then(({error}) => { if(error){ toast('Could not hide: ' + error.message); return; } x.shown = false; if(sameShop(FD.vendor, x.label)) FD.vendor = ''; fdDraw(); toast(x.label + ' hidden'); }); return; }
   if(a === 'who'){ fdKeep(); FD_MODE = 'who'; fdDraw(); document.getElementById('fd-sheet').scrollTop = 0; return; }
   if(a === 'back'){ FD_MODE = 'form'; fdDraw(); return; }
-  if(a === 'everyone'){ FD.workerIds = foodPeopleOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
+  if(a === 'everyone'){ FD.workerIds = foodAutoOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
   if(a === 'nobody'){ FD.workerIds = []; FD.autoSel = false; fdDraw(); return; }
   if(a === 'save') return fdSave();
   if(a === 'cancel') return fdClose();
