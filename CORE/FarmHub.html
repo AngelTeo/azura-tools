@@ -3,67 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v10</title>
+<title>Workers v12</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 :root{--bg:#f2f0eb;--bg2:#e8e5de;--white:#fff;--border:#d8d5ce;--hint:#c4c0b8;--text:#1a1916;--text2:#4a4740;--text3:#8a8680;
 --acc:#1A56A0;--accl:#ddeaff;--grn:#0E6B4A;--grnl:#d8f3e8;--red:#A3291F;--redl:#fce8e6;--amb:#7A4A00;--ambl:#fff3d6;--pur:#5C2DA0;--purl:#ede5ff}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:14px;min-height:100vh}
 button,input,select{font-family:inherit}
 .wrap{max-width:560px;margin:0 auto;padding-bottom:90px}
-header{background:var(--text);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+header{background:var(--text);color:#fff;padding:9px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
 header a,header .back{color:#fff;text-decoration:none;font-size:15px;background:none;border:0;cursor:pointer;white-space:nowrap}
-header h1{font-size:17px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header h1{font-size:15px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 header .who{font-size:12px;color:#aaa;white-space:nowrap}
-.search{margin:12px 16px 8px;display:block;width:calc(100% - 32px);padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:#fff}
+.search{margin:10px 14px 6px;display:block;width:calc(100% - 28px);padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:#fff}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 14px;font-size:14px;white-space:nowrap;color:var(--text2);cursor:pointer}
+.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap;color:var(--text2);cursor:pointer}
 .chip.on{background:var(--text);color:#fff;border-color:var(--text)}
 .count{font-size:12px;color:var(--text3);padding:0 16px 6px}
 .list{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bg2);cursor:pointer}
+.row{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bg2);cursor:pointer}
 .row:last-child{border-bottom:0}
-.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
 .av.hx{background:var(--ambl);color:var(--amb)}.av.ad{background:var(--grnl);color:var(--grn)}.av.both{background:var(--purl);color:var(--pur)}.av.stop{background:var(--bg2);color:var(--text3)}
-.row .t{flex:1;min-width:0}.row .n{font-weight:600}.row .s{font-size:13px;color:var(--text3);margin-top:2px}
+.row .t{flex:1;min-width:0}.row .n{font-weight:600}.row .s{font-size:12px;color:var(--text3);margin-top:2px}
 .chev{color:var(--hint);font-size:20px}
 .empty{padding:30px 16px;text-align:center;color:var(--text3)}
-.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:20px;width:56px;height:56px;border-radius:50%;background:var(--acc);color:#fff;font-size:28px;border:0;box-shadow:0 6px 18px rgba(26,86,160,.35);cursor:pointer}
-.hero{padding:18px 16px 14px;display:flex;align-items:center;gap:14px;cursor:pointer}
-.hero .av{width:54px;height:54px;font-size:18px}
-.hero .n{font-size:20px;font-weight:700}.hero .s{font-size:13px;color:var(--text3);margin-top:3px}
-.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;margin-top:6px}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:18px;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;font-size:24px;border:0;box-shadow:0 6px 18px rgba(26,86,160,.35);cursor:pointer}
+.hero{padding:12px 14px 10px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.hero .av{width:42px;height:42px;font-size:15px}
+.hero .n{font-size:17px;font-weight:700}.hero .s{font-size:12px;color:var(--text3);margin-top:3px}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;margin-top:4px}
 .pill.on{background:var(--grnl);color:var(--grn)}.pill.off{background:var(--redl);color:var(--red)}
-.grp{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:14px 16px 6px}
-.item{display:flex;align-items:center;padding:14px 16px;background:#fff;border-bottom:1px solid var(--bg2);gap:10px}
+.grp{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:10px 14px 4px}
+.item{display:flex;align-items:center;padding:9px 14px;background:#fff;border-bottom:1px solid var(--bg2);gap:10px}
 .item.tap{cursor:pointer}
-.item .k{width:96px;color:var(--text3);font-size:14px;flex:none}.item .v{flex:1;font-weight:500;min-width:0}
-.item .v small{display:block;font-weight:400;color:var(--text3);font-size:12px;margin-top:2px}
-.btn-wide{display:block;width:calc(100% - 32px);margin:16px 16px 0;padding:14px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.item .k{width:84px;color:var(--text3);font-size:13px;flex:none}.item .v{flex:1;font-weight:500;min-width:0}
+.item .v small{display:block;font-weight:400;color:var(--text3);font-size:11px;margin-top:1px}
+.btn-wide{display:block;width:calc(100% - 28px);margin:12px 14px 0;padding:10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer}
 .btn-wide.red{border-color:#f0b8b4;color:var(--red)}
 .btn-wide.link{border:0;background:none;color:var(--text3);font-weight:500;font-size:13px;margin-top:6px}
 .dim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:20}
 .sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px 22px;z-index:21;display:none}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
-.sheet h3{font-size:18px;margin-bottom:4px}.sheet p.h{font-size:13px;color:var(--text3);margin-bottom:6px}
-.lbl{font-size:13px;color:var(--text3);margin:14px 0 8px}
+.sheet h3{font-size:16px;margin-bottom:2px}.sheet p.h{font-size:12px;color:var(--text3);margin-bottom:6px}
+.lbl{font-size:12px;color:var(--text3);margin:10px 0 6px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.opt{border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:13px 6px;font-size:15px;font-weight:600;color:var(--text);cursor:pointer}
+.opt{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:9px 6px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer}
 .opt.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
 .opt.dark.on{border-color:var(--text);background:var(--text);color:#fff}
 .opt.red.on{border-color:var(--red);background:var(--redl);color:var(--red)}
 .opt:disabled{opacity:.4;cursor:default}
-.inp{width:100%;margin-top:8px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;background:#fff}
-.save{width:100%;margin-top:18px;padding:15px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.inp{width:100%;margin-top:6px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;background:#fff}
+.save{width:100%;margin-top:14px;padding:11px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .save.red{background:var(--red)}
+.cancel{width:100%;margin-top:8px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer}
 .save:disabled{opacity:.6}
 .err{margin-top:10px;font-size:13px;color:var(--red);display:none}
-.pcard{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pcard{border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .pcard .v{flex:1}.pcard small{display:block;color:var(--text3);font-size:12px}
 .hist td{padding:7px 4px;border-bottom:1px solid var(--bg2);font-size:13px;vertical-align:top}
 .hist{width:100%;border-collapse:collapse}
@@ -99,7 +100,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 10;
+const APP_VERSION = 12;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -234,7 +235,7 @@ async function openWorker(id){
 const cur = () => D.workers.find(x => x.id === OPEN);
 
 // ── bottom sheets ──
-function sheet(html){ $('sheet').innerHTML = '<div class="grab"></div>' + html + '<div class="err" id="serr"></div>'; $('dim').style.display = 'block'; $('sheet').style.display = 'block';
+function sheet(html){ $('sheet').innerHTML = '<div class="grab"></div>' + html + '<div class="err" id="serr"></div><button class="cancel" onclick="closeSheet()">Cancel</button>'; $('dim').style.display = 'block'; $('sheet').style.display = 'block';
 }
 // one tap handler for every option group in the sheet (groups can be redrawn)
 $('sheet').addEventListener('click', e => {
