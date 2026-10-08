@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v8</title>
+<title>Workers v9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -14,8 +14,8 @@
   --red:#a33a2c; --redl:#f8e3df; --amb:#9a6b00;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans SC',system-ui,sans-serif;font-size:14px;line-height:1.45}
-.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.45}
+.mono{font-variant-numeric:tabular-nums}
 header{background:var(--green);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:12px;opacity:.8}
@@ -136,7 +136,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);

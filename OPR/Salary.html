@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v66</title>
+<title>Salary v67</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root{
   --bg:#f2f0eb;--bg2:#e8e5de;--white:#fff;--border:#d8d5ce;--border2:#c4c0b8;
   --text:#1a1916;--text2:#4a4740;--text3:#8a8680;--hint:#c4c0b8;
@@ -17,8 +17,8 @@
   --sh:0 1px 4px rgba(0,0,0,.08);--sh2:0 4px 20px rgba(0,0,0,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;min-height:100vh;}
-input,select,textarea,button{font-family:'DM Sans',sans-serif;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:13px;min-height:100vh;}
+input,select,textarea,button{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;}
 
 /* -- HEADER ------------------- */
 header{background:var(--text);color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.25);}
@@ -26,10 +26,10 @@ header{background:var(--text);color:#fff;padding:0 20px;height:52px;display:flex
 .home-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:7px;padding:6px 12px;text-decoration:none;font-size:13px;white-space:nowrap}
 .logo-mark{width:30px;height:30px;background:var(--acc);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .logo h1{font-size:13px;font-weight:700;color:#fff;letter-spacing:.04em;}
-.logo small{font-size:10px;color:#888;font-family:'IBM Plex Mono',monospace;display:block;letter-spacing:.08em;}
+.logo small{font-size:10px;color:#888;font-variant-numeric:tabular-nums;display:block;letter-spacing:.08em;}
 .nav-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;}
 .nav-tabs::-webkit-scrollbar{display:none;}
-.ntab{border:none;background:none;color:#aaa;padding:6px 11px;font-size:11px;font-weight:500;cursor:pointer;border-radius:5px;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.ntab{border:none;background:none;color:#aaa;padding:6px 11px;font-size:11px;font-weight:500;cursor:pointer;border-radius:5px;white-space:nowrap;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;transition:all .15s;}
 .ntab:hover{background:rgba(255,255,255,.1);color:#fff;}
 .ntab.on{background:var(--acc);color:#fff;}
 .month-bar{display:flex;align-items:center;gap:6px;}
@@ -71,7 +71,7 @@ thead tr{background:var(--bg2);}
 th{padding:8px 12px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;}
 th.num{text-align:right;}
 td{padding:7px 12px;border-bottom:.5px solid var(--border);vertical-align:middle;}
-td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:#fafaf8;}
 .total-row td{background:var(--bg2)!important;font-weight:700;}
@@ -85,8 +85,8 @@ tr:hover td{background:#fafaf8;}
 .att-table th.day-sat{background:#fff3d6;color:var(--amb);}
 .att-table td{padding:1px 1px;border:.5px solid var(--border);}
 .att-table td.w-name{padding:5px 8px;min-width:130px;position:sticky;left:0;background:var(--white);z-index:2;font-weight:500;border-right:2px solid var(--border2);}
-.att-table td.att-sum{padding:4px 6px;background:#f0f6ff;font-family:'IBM Plex Mono',monospace;font-size:10px;white-space:nowrap;text-align:center;border-left:2px solid var(--border2);}
-.att-cell{width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:700;font-family:'IBM Plex Mono',monospace;border:none;display:flex;align-items:center;justify-content:center;margin:1px;transition:all .1s;user-select:none;}
+.att-table td.att-sum{padding:4px 6px;background:#f0f6ff;font-variant-numeric:tabular-nums;font-size:10px;white-space:nowrap;text-align:center;border-left:2px solid var(--border2);}
+.att-cell{width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:9px;font-weight:700;font-variant-numeric:tabular-nums;border:none;display:flex;align-items:center;justify-content:center;margin:1px;transition:all .1s;user-select:none;}
 .att-cell.st-empty{background:#f5f4f0;color:var(--hint);}
 .att-cell.st-hx{background:var(--accl);color:var(--acc);}
 .att-cell.st-ad{background:var(--grnl);color:var(--grn);}
@@ -123,11 +123,11 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 /* -- SUMMARY TABLE ------------- */
 .sum-table th{font-size:10px;padding:6px 8px;}
 .sum-table td{padding:6px 8px;font-size:12px;}
-.sum-gross{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--grn);}
-.sum-deduct{font-family:'IBM Plex Mono',monospace;color:var(--red);font-size:11px;}
-.sum-net{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;}
-.sum-transfer{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;color:var(--acc);}
-.gross-input{border:none;background:transparent;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:12px;width:70px;text-align:right;cursor:pointer;border-bottom:1px dashed var(--border2);}
+.sum-gross{font-variant-numeric:tabular-nums;font-weight:600;color:var(--grn);}
+.sum-deduct{font-variant-numeric:tabular-nums;color:var(--red);font-size:11px;}
+.sum-net{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;}
+.sum-transfer{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--acc);}
+.gross-input{border:none;background:transparent;color:var(--text3);font-variant-numeric:tabular-nums;font-size:12px;width:70px;text-align:right;cursor:pointer;border-bottom:1px dashed var(--border2);}
 .gross-input:focus{outline:none;color:var(--text);border-bottom-color:var(--acc);}
 
 /* -- WORKER STATUS BADGE ------- */
@@ -168,7 +168,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 }
 .stat-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--sh);}
 .stat-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
-.stat-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;}
+.stat-val{font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;}
 .stat-val .u{font-size:11px;font-weight:400;color:var(--text3);}
 
 /* -- MODAL --------------------- */
@@ -201,14 +201,14 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 .rem-table tbody tr{border-bottom:.5px solid var(--border);}
 .rem-table tbody tr:hover td{background:#f8f8f6;}
 .rem-table td{padding:9px 10px;vertical-align:middle;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.rem-table td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;white-space:nowrap;}
-.rem-table td.num-sm{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;}
+.rem-table td.num{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;white-space:nowrap;}
+.rem-table td.num-sm{text-align:right;font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);white-space:nowrap;}
 .worker-pill{display:inline-block;background:var(--accl);color:var(--acc);border:1px solid #c0d8f8;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;margin:1px 2px 1px 0;white-space:nowrap;}
 .rem-subrow td{padding:5px 10px;background:#f8f9fd;font-size:11px;border-bottom:.5px solid #e8eaf5;white-space:nowrap;}
 .rem-subrow:last-child td{border-bottom:1px solid var(--border);}
 .expand-btn{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:0 4px;transition:transform .15s;}
 .expand-btn.open{transform:rotate(90deg);}
-.rem-table .total-row td{background:var(--bg2)!important;font-weight:700;font-family:'IBM Plex Mono',monospace;border-top:2px solid var(--border2);font-size:12px;}
+.rem-table .total-row td{background:var(--bg2)!important;font-weight:700;font-variant-numeric:tabular-nums;border-top:2px solid var(--border2);font-size:12px;}
 .reason-btn{border:1.5px solid var(--border2);background:var(--white);border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s;}
 .reason-btn.on{background:var(--acc);border-color:var(--acc);color:#fff;}
 .reason-btn.on-run{background:var(--redl);border-color:var(--red);color:var(--red);}
@@ -367,7 +367,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div id="food-rows"></div></div>
     <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);">
       <span style="font-size:11px;color:var(--text3);">Monthly total (Daniel paid)</span>
-      <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;" id="food-total">RM 0.00</span>
+      <span style="font-variant-numeric:tabular-nums;font-weight:700;" id="food-total">RM 0.00</span>
     </div>
 
     <!-- FOOD EXPENSES VS COLLECTION -->
@@ -376,17 +376,17 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
       <div class="recon3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <div style="background:#f8f8f6;border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
           <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Daniel Paid</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-paid">RM 0.00</div>
+          <div style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;" id="recon-paid">RM 0.00</div>
           <div style="font-size:10px;color:var(--text3);margin-top:3px;">Total purchases</div>
         </div>
         <div style="background:#f8f8f6;border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
           <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Collected from Workers</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-collected">RM 0.00</div>
+          <div style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;" id="recon-collected">RM 0.00</div>
           <div style="font-size:10px;color:var(--text3);margin-top:3px;" id="recon-workers-note">from workers</div>
         </div>
         <div style="border-radius:8px;padding:12px 14px;border:2px solid;" id="recon-diff-card">
           <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;" id="recon-diff-lbl">DIFFERENCE</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;" id="recon-diff">RM 0.00</div>
+          <div style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;" id="recon-diff">RM 0.00</div>
           <div style="font-size:10px;margin-top:3px;" id="recon-diff-note"></div>
         </div>
       </div>
@@ -437,13 +437,13 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
   <!-- paste panel -->
   <div class="card" style="background:linear-gradient(135deg,#e8f0fb,#eff5ff);border-color:#c0d0ee;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <span style="background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.1em;font-family:'IBM Plex Mono',monospace;">AUTO PARSE</span>
+      <span style="background:var(--acc);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.1em;font-variant-numeric:tabular-nums;">AUTO PARSE</span>
       <div>
         <div style="font-weight:700;font-size:13px;color:var(--acc);">Paste Worker Remittance Info</div>
         <div style="font-size:11px;color:#4a70a0;">Supports single or multiple workers sharing one transfer</div>
       </div>
     </div>
-    <textarea id="rem-paste" rows="5" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid #c0d0ee;border-radius:7px;padding:10px;background:#fff;resize:vertical;line-height:1.7;"
+    <textarea id="rem-paste" rows="5" style="width:100%;font-variant-numeric:tabular-nums;font-size:11px;border:1px solid #c0d0ee;border-radius:7px;padding:10px;background:#fff;resize:vertical;line-height:1.7;"
       placeholder="Paste worker's message here:
 
 Kyaw oo
@@ -544,7 +544,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 66;
+const APP_VERSION = 67;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -993,18 +993,18 @@ function renderWorkers(){
     const stoppedThisMonth=stopMk===mk;
     const effectiveStatus=stoppedThisMonth?'stopped':'active';
     return `<tr class="w-row" style="cursor:pointer;${stoppedThisMonth?'opacity:.7;':''}" onclick="openWorkerCard('${w.id}')">
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--text3);font-size:10px;">${w.no||i+1}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--text3);font-size:10px;">${w.no||i+1}</td>
       <td><strong>${w.name}</strong>${w.title?`<br><span style="font-size:10px;color:var(--text3);">${w.title}</span>`:''}</td>
       <td>
         <span class="badge badge-${effectiveStatus}">${effectiveStatus}</span>
-        ${stoppedThisMonth?`<br><span style="font-size:10px;color:var(--red);font-family:'IBM Plex Mono',monospace;">${w.stopDate}</span>`:''}
+        ${stoppedThisMonth?`<br><span style="font-size:10px;color:var(--red);font-variant-numeric:tabular-nums;">${w.stopDate}</span>`:''}
         ${stoppedThisMonth&&w.stopReason?`<span class="badge-reason-${w.stopReason}" style="display:inline-block;margin-top:2px;">${reasonLabel(w.stopReason)}</span>`:''}
       </td>
-      <td>${w.rateType==='monthly'?'<span style="color:var(--text3);font-size:10px;">Monthly</span> ':'<span style="color:var(--text3);font-size:10px;">Daily</span> '}<strong style="font-family:'IBM Plex Mono',monospace;">${fmtRM(getRateForMonth(w,monthKey()))}</strong>${getRateForMonth(w,monthKey())!==w.rate?'<span style="font-size:9px;color:var(--amb);margin-left:3px;">★</span>':''}</td>
+      <td>${w.rateType==='monthly'?'<span style="color:var(--text3);font-size:10px;">Monthly</span> ':'<span style="color:var(--text3);font-size:10px;">Daily</span> '}<strong style="font-variant-numeric:tabular-nums;">${fmtRM(getRateForMonth(w,monthKey()))}</strong>${getRateForMonth(w,monthKey())!==w.rate?'<span style="font-size:9px;color:var(--amb);margin-left:3px;">★</span>':''}</td>
       <td><span class="badge badge-${w.farm||'hx'}">${(w.farm||'HX').toUpperCase()}</span></td>
-      <td class="m-hide" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${mask4(w.bankAccount)}</td>
+      <td class="m-hide" style="font-variant-numeric:tabular-nums;font-size:11px;">${mask4(w.bankAccount)}</td>
       <td class="m-hide" style="font-size:11px;">${w.beneficiary||'--'}</td>
-      <td class="m-hide" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
+      <td class="m-hide" style="font-variant-numeric:tabular-nums;font-size:11px;">${w.phone||'--'}</td>
       <td class="m-hide" onclick="event.stopPropagation()"><div style="display:flex;gap:4px;">
         <a class="btn btn-sm" style="text-decoration:none;" href="../CORE/FarmHub.html?t=${Date.now()}#w=${w.id}">Edit in Workers ↗</a>
         <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">History</button>
@@ -1448,7 +1448,7 @@ function updateFoodWorkerCount(rowId){
   const cnt=(row.workerIds||[]).length;
   const pp=cnt>0?((row.total||0)/cnt):0;
   const el=document.getElementById('food-worker-count');
-  if(el)el.innerHTML=`<span style="color:var(--acc);">${cnt} workers selected</span> -- Per person deduction: <span style="color:var(--red);font-family:'IBM Plex Mono',monospace;">${fmtRM(pp)}</span>`;
+  if(el)el.innerHTML=`<span style="color:var(--acc);">${cnt} workers selected</span> -- Per person deduction: <span style="color:var(--red);font-variant-numeric:tabular-nums;">${fmtRM(pp)}</span>`;
 }
 
 function selectAllFoodWorkers(rowId,select){
@@ -1552,7 +1552,7 @@ function renderPersonal(){
           ${items.length?`<span style="font-size:11px;color:var(--text3);">${items.length} item${items.length>1?'s':''}</span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <strong style="font-family:'IBM Plex Mono',monospace;${total>0?'color:var(--red);':''}">${fmtRM(total)}</strong>
+          <strong style="font-variant-numeric:tabular-nums;${total>0?'color:var(--red);':''}">${fmtRM(total)}</strong>
           <span style="font-size:12px;color:var(--text3);" id="pa-arrow-${w.id}">&#9654;</span>
         </div>
       </div>
@@ -1660,7 +1660,7 @@ function renderAdvance(){
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <div style="text-align:right;">
-            <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${settled?'var(--grn)':'var(--red)'};">${fmtRM(Math.max(0,balance))}</div>
+            <div style="font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;color:${settled?'var(--grn)':'var(--red)'};">${fmtRM(Math.max(0,balance))}</div>
             <div style="font-size:10px;color:var(--text3);">${settled?'✅ Settled':'Balance'}</div>
           </div>
           <button class="btn btn-sm" onclick="editAdvance('${w.id}')">Edit</button>
@@ -1692,8 +1692,8 @@ function renderAdvance(){
         const months=Math.ceil(adv.totalAmount/adv.monthlyPay);
         return '<tr>'
           +'<td><strong>'+w.name+'</strong></td>'
-          +'<td style="text-align:right;font-family:monospace;">'+fmtRM(adv.totalAmount)+'</td>'
-          +'<td style="text-align:right;font-family:monospace;">'+fmtRM(adv.monthlyPay)+'/mo</td>'
+          +'<td style="text-align:right;font-variant-numeric:tabular-nums;">'+fmtRM(adv.totalAmount)+'</td>'
+          +'<td style="text-align:right;font-variant-numeric:tabular-nums;">'+fmtRM(adv.monthlyPay)+'/mo</td>'
           +'<td style="font-size:11px;">'+(adv.startMonth||'--')+'</td>'
           +'<td style="font-size:11px;text-align:center;color:var(--text3);">'+months+'</td>'
           +'<td style="font-size:11px;color:var(--text3);">'+( adv.notes||'--')+'</td>'
@@ -1942,7 +1942,7 @@ function renderSummary(){
     }
     const grossCell=s.rateType==='monthly'
       ?`<input class="gross-input" type="number" value="${s.gross}" title="Click to edit monthly salary" onchange="setGrossOverride('${w.id}','${mk}',parseFloat(this.value)||0)" placeholder="${w.rate}">`
-      :`<span style="font-family:'IBM Plex Mono',monospace;">${fmtRM(s.gross)}</span>`;
+      :`<span style="font-variant-numeric:tabular-nums;">${fmtRM(s.gross)}</span>`;
     const stopMkS=w.stopDate?w.stopDate.substring(0,7):'';
     const stoppedThisMonthS=stopMkS===mk;
     return `<tr>
@@ -2018,27 +2018,27 @@ function renderSummary(){
             </tr></thead>
             <tbody>
               <tr><td style="padding:6px 10px;">Total Salary</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;">${fmtRM(totHXSal)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;">${fmtRM(totADSal)}</td></tr>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;">${fmtRM(totHXSal)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;">${fmtRM(totADSal)}</td></tr>
               <tr><td style="padding:6px 10px;color:var(--red);">- Advance Deducted</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totHXAdv)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totADAdv)}</td></tr>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(totHXAdv)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(totADAdv)}</td></tr>
                 ${unpaidHX+unpaidAD>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Unpaid (salary)</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidHX)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidAD)}</td></tr>`:''}
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidHX)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidAD)}</td></tr>`:''}
               ${totCash>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Cash out</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashHX)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashAD)}</td></tr>`:''}
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(totCashHX)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--red);">-${fmtRM(totCashAD)}</td></tr>`:''}
               <tr style="background:var(--text);color:#fff;font-weight:700;"><td style="padding:8px 10px;">TO TRANSFER</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(hxToTx)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(adToTx)}</td></tr>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:8px 10px;">${fmtRM(hxToTx)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:8px 10px;">${fmtRM(adToTx)}</td></tr>
               ${unpaidFoodPers>0?`<tr><td style="padding:6px 10px;color:var(--amb);font-weight:600;">+ Owed to Daniel (unpaid workers)</td>
-                <td colspan="2" style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--amb);font-weight:600;">+${fmtRM(unpaidFoodPers)}</td></tr>`:''}
+                <td colspan="2" style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;color:var(--amb);font-weight:600;">+${fmtRM(unpaidFoodPers)}</td></tr>`:''}
             </tbody>
           </table>
           <div style="margin-top:10px;text-align:right;">
             <span style="font-size:11px;color:var(--text3);">Total via Merchantrade: </span>
-            <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;">${fmtRM(merchantTotal+unpaidFoodPers)}</span>
+            <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;">${fmtRM(merchantTotal+unpaidFoodPers)}</span>
           </div>
         </div>
 
@@ -2053,22 +2053,22 @@ function renderSummary(){
             </tr></thead>
             <tbody>
               <tr><td style="padding:6px 10px;font-weight:500;">Worker Salary</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(workerSalary)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;font-weight:700;">${fmtRM(workerSalary)}</td>
                 <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Net pay to all workers</td></tr>
               <tr><td style="padding:6px 10px;font-weight:500;">Food -- Daniel</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(foodDaniel)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;font-weight:700;">${fmtRM(foodDaniel)}</td>
                 <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Food deductions collected</td></tr>
               <tr><td style="padding:6px 10px;font-weight:500;">Personal -- Daniel</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(persDaniel)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px;font-weight:700;">${fmtRM(persDaniel)}</td>
                 <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Personal deductions collected</td></tr>
               <tr style="background:${balanced?'#EBF5EC':'#FCE9E9'};font-weight:700;"><td style="padding:8px 10px;">TO MATCH</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(itemsTotal)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;padding:8px 10px;">${fmtRM(itemsTotal)}</td>
                 <td style="padding:8px 10px;font-size:10px;${balanced?'color:var(--grn);':'color:var(--red);'}">${balanced?'✓ Matches Merchantrade':'✗ Difference: '+fmtRM(merchantTotal-itemsTotal)}</td></tr>
             </tbody>
           </table>
           <div style="margin-top:10px;text-align:right;">
             <span style="font-size:11px;color:var(--text3);">Items total: </span>
-            <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;">${fmtRM(itemsTotal)}</span>
+            <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;">${fmtRM(itemsTotal)}</span>
           </div>
         </div>
 
@@ -2303,10 +2303,10 @@ function printSummary(){
     const stopMk=w.stopDate?w.stopDate.substring(0,7):'';
     const stoppedLabel=stopMk===mk?' (stopped '+w.stopDate+')':'';
     const txStyle=pm==='unpaid'?'text-decoration:line-through;color:#999;':'color:#1A56A0;';
-    rows+=`<tr><td>${w.name}${stoppedLabel}</td><td style="text-align:right;font-family:monospace;">${s.gross.toFixed(2)}</td><td style="text-align:right;font-family:monospace;">${s.totalDed.toFixed(2)}</td><td style="text-align:right;font-family:monospace;font-weight:700;">${s.net.toFixed(2)}</td><td style="text-align:right;font-family:monospace;font-weight:700;${txStyle}">${s.toTx.toFixed(2)}</td></tr>`;
+    rows+=`<tr><td>${w.name}${stoppedLabel}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${s.gross.toFixed(2)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${s.totalDed.toFixed(2)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;">${s.net.toFixed(2)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;${txStyle}">${s.toTx.toFixed(2)}</td></tr>`;
   });
   const w2=window.open('','_blank','width=900,height:1100');
-  w2.document.write(`<!DOCTYPE html><html><head><title>Salary Summary ${MONTHS[m-1]} ${y}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:24px;font-size:11px;}h2{font-size:16px;margin-bottom:4px;}p{color:#666;margin-bottom:16px;}table{width:100%;border-collapse:collapse;}th{background:#f0f0ee;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;border-bottom:2px solid #ddd;}td{padding:6px 10px;border-bottom:1px solid #eee;}tr:hover td{background:#fafaf8;}.tot td{background:#e8e8e6;font-weight:700;}@media print{@page{margin:10mm;}}</style></head><body><h2>Salary Summary -- ${MONTHS[m-1]} ${y}</h2><p>${workers.length} workers · Total to transfer: RM ${totTx.toFixed(2)}</p><table><thead><tr><th>Worker</th><th>Gross (RM)</th><th>Deductions (RM)</th><th>Net Pay (RM)</th><th>To Transfer (RM)</th></tr></thead><tbody>${rows}<tr class="tot"><td colspan="5" style="text-align:right;">TOTAL TO TRANSFER</td><td></td><td style="text-align:right;font-family:monospace;">RM ${totTx.toFixed(2)}</td></tr></tbody></table><script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
+  w2.document.write(`<!DOCTYPE html><html><head><title>Salary Summary ${MONTHS[m-1]} ${y}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:24px;font-size:11px;}h2{font-size:16px;margin-bottom:4px;}p{color:#666;margin-bottom:16px;}table{width:100%;border-collapse:collapse;}th{background:#f0f0ee;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;border-bottom:2px solid #ddd;}td{padding:6px 10px;border-bottom:1px solid #eee;}tr:hover td{background:#fafaf8;}.tot td{background:#e8e8e6;font-weight:700;}@media print{@page{margin:10mm;}}</style></head><body><h2>Salary Summary -- ${MONTHS[m-1]} ${y}</h2><p>${workers.length} workers · Total to transfer: RM ${totTx.toFixed(2)}</p><table><thead><tr><th>Worker</th><th>Gross (RM)</th><th>Deductions (RM)</th><th>Net Pay (RM)</th><th>To Transfer (RM)</th></tr></thead><tbody>${rows}<tr class="tot"><td colspan="5" style="text-align:right;">TOTAL TO TRANSFER</td><td></td><td style="text-align:right;font-variant-numeric:tabular-nums;">RM ${totTx.toFixed(2)}</td></tr></tbody></table><script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
   w2.document.close();
 }
 
@@ -2391,8 +2391,8 @@ function renderRemittance(){
           +"<td style=\"padding:6px 10px\"><span class=\"worker-pill\">"+w.name+"</span>"+bankNote+"</td>"
           +"<td style=\"padding:6px 10px\">"+farmBadge+"</td>"
           +"<td style=\"padding:6px 10px;font-size:11px;color:var(--text3)\">"+(PO(w).beneficiary||"--")+"</td>"
-          +"<td style=\"padding:6px 10px;font-size:10px;font-family:monospace;color:var(--text3)\">"+(PO(w).bankAccount||"--")+"</td>"
-          +"<td style=\"padding:6px 10px;text-align:right;font-family:monospace;font-weight:700;color:var(--grn)\">"+fmtRM(s.toTx)+"</td>"
+          +"<td style=\"padding:6px 10px;font-size:10px;font-variant-numeric:tabular-nums;color:var(--text3)\">"+(PO(w).bankAccount||"--")+"</td>"
+          +"<td style=\"padding:6px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--grn)\">"+fmtRM(s.toTx)+"</td>"
           +"<td style=\"padding:6px 10px;text-align:center;white-space:nowrap;\">"
           +"<button class=\"sum-pay-btn\" title=\"Mark Cash -- paid in cash\""
           +" onclick=\"remMarkCash('"+w.id+"')\" style=\"font-size:18px;margin-right:4px;\">💵</button>"
@@ -2465,8 +2465,8 @@ function renderRemList(records,m,y){
       <td>${r.workers.map(w=>`<span class="worker-pill">${w}</span>`).join('')}</td>
       <td style="color:var(--text3);">${r.beneficiaryFix||'--'}</td>
       <td style="font-weight:500;${beneMismatch}">${r.beneficiary}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--text3);">${r.accountNoFix||'--'}</td>
-      <td style="font-family:monospace;font-size:11px;${acctMismatch}">${r.accountNo}</td>
+      <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);">${r.accountNoFix||'--'}</td>
+      <td style="font-variant-numeric:tabular-nums;font-size:11px;${acctMismatch}">${r.accountNo}</td>
       <td class="num-sm">${liveSal>0?fmtRM(liveSal):'--'}</td>
       <td class="num">${fmtRM(r.transfer)}</td>
       <td class="num" style="color:var(--acc);font-weight:700;">${fmtRM(r.transfer+charges)}</td>
@@ -2493,7 +2493,7 @@ function renderRemList(records,m,y){
           </td>
           <td style="color:var(--text3);">${bFix||'--'}</td>
           <td style="color:var(--text3);">--</td>
-          <td style="font-family:monospace;color:var(--text3);">${aFix||'--'}</td>
+          <td style="font-variant-numeric:tabular-nums;color:var(--text3);">${aFix||'--'}</td>
           <td style="color:var(--text3);">--</td>
           <td class="num" style="color:var(--grn);font-weight:700;">${b.salary>0?fmtRM(b.salary):'--'}</td>
           <td class="num" style="color:var(--text3);">--</td>
@@ -2693,7 +2693,7 @@ function remParseAndPreview(){
       matchHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:.5px solid #d8f0d8;">'
         +'<span style="font-size:11px;"><strong>'+mw.worker.name+'</strong>'
         +' <span style="color:var(--text3);font-size:10px;">'+mw.worker.title+'</span></span>'
-        +'<span style="font-family:monospace;font-size:11px;color:var(--acc);">Salary: <strong>'+fmtRM(mw.salary.toTx)+'</strong></span>'
+        +'<span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--acc);">Salary: <strong>'+fmtRM(mw.salary.toTx)+'</strong></span>'
         +'</div>';
     });
     if(matchedWorkers.length>1){
@@ -2719,9 +2719,9 @@ function remParseAndPreview(){
     +'<div><label style="font-size:10px;font-weight:600;color:#666;display:block;margin-bottom:2px;">BENEFICIARY</label>'
     +'<input id="rp-b" style="'+fld+'" value="'+fillBene+'"></div>'
     +'<div><label style="font-size:10px;font-weight:600;color:#666;display:block;margin-bottom:2px;">ACCOUNT NO</label>'
-    +'<input id="rp-a" style="'+fld+'font-family:monospace;" value="'+fillAcct+'"></div>'
+    +'<input id="rp-a" style="'+fld+'font-variant-numeric:tabular-nums;" value="'+fillAcct+'"></div>'
     +'<div><label style="font-size:10px;font-weight:600;color:#666;display:block;margin-bottom:2px;">TRANSFER (RM) <span style="color:var(--acc);font-size:9px;">&larr; auto-filled from salary</span></label>'
-    +'<input id="rp-t" style="'+fld+'font-family:monospace;font-weight:700;color:var(--acc);" type="number" step="0.01" value="'+fillAmt.toFixed(2)+'"></div>'
+    +'<input id="rp-t" style="'+fld+'font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc);" type="number" step="0.01" value="'+fillAmt.toFixed(2)+'"></div>'
     +'</div>'
     +'<button class="btn btn-grn" style="font-size:11px;" id="confirmBtn" onclick="remConfirmAdd('+m+','+y+')">✅ Confirm add to '+MONTHS[m-1]+' '+y+'</button>'
     +'</div>';
@@ -2860,22 +2860,22 @@ function renderRemGrouped(){
     html+=`<div class="bin-card" style="background:${col.bg};border-color:${col.bd};margin-bottom:12px;">
       <div class="bin-hdr" style="border-bottom:1px solid ${col.bd};">
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="background:${col.lb};color:#fff;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;">TXN ${bi+1}</span>
+          <span style="background:${col.lb};color:#fff;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;">TXN ${bi+1}</span>
           <span style="font-size:13px;font-weight:700;color:${col.tx};">${fmtRM(bin.total)}</span>
           ${bin.over?'<span style="background:#FCE9E9;color:#A32D2D;border:1px solid #E88080;border-radius:4px;padding:1px 6px;font-size:10px;">⚠ EXCEEDS RM5000</span>':''}
           <span style="font-size:11px;color:${col.lb};">${bin.records.length} record${bin.records.length>1?'s':''}</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col.lb};"></div></div>
-          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${col.lb};min-width:32px;">${pct.toFixed(0)}%</span>
+          <span style="font-size:10px;font-variant-numeric:tabular-nums;color:${col.lb};min-width:32px;">${pct.toFixed(0)}%</span>
         </div>
       </div>
       <table class="bin-table">
-        <tbody>${bin.records.map((r,ri)=>`<tr><td style="color:${col.lb};font-family:'IBM Plex Mono',monospace;font-size:10px;width:28px;">${ri+1}</td>
+        <tbody>${bin.records.map((r,ri)=>`<tr><td style="color:${col.lb};font-variant-numeric:tabular-nums;font-size:10px;width:28px;">${ri+1}</td>
           <td>${r.workers.map(w=>`<span class="worker-pill">${w}</span>`).join('')}</td>
           <td style="font-weight:500;color:${col.tx};">${r.beneficiary}</td>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${col.lb};">${r.accountNo}</td>
-          <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:700;color:${col.tx};">${fmtRM(r.transfer)}</td>
+          <td style="font-variant-numeric:tabular-nums;font-size:11px;color:${col.lb};">${r.accountNo}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:${col.tx};">${fmtRM(r.transfer)}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -2888,9 +2888,9 @@ function remPrint(){
   const records=REM.records.filter(r=>r.month===m&&r.year===y).sort((a,b)=>a.addedAt-b.addedAt);
   if(!records.length){toast('No records');return;}
   const total=records.reduce((s,r)=>s+r.transfer,0);
-  const rows=records.map((r,i)=>`<tr><td>${i+1}</td><td>${r.workers.join(' / ')}</td><td style="color:#666;font-size:10px;">${r.beneficiaryFix||'--'}</td><td>${r.beneficiary}</td><td style="font-family:monospace;color:#666;font-size:10px;">${r.accountNoFix||'--'}</td><td style="font-family:monospace;">${r.accountNo}</td><td style="text-align:right;font-family:monospace;color:#666;">${r.salary>0?r.salary.toFixed(2):'--'}</td><td style="text-align:right;font-family:monospace;font-weight:600;">RM ${r.transfer.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>`).join('');
+  const rows=records.map((r,i)=>`<tr><td>${i+1}</td><td>${r.workers.join(' / ')}</td><td style="color:#666;font-size:10px;">${r.beneficiaryFix||'--'}</td><td>${r.beneficiary}</td><td style="font-variant-numeric:tabular-nums;color:#666;font-size:10px;">${r.accountNoFix||'--'}</td><td style="font-variant-numeric:tabular-nums;">${r.accountNo}</td><td style="text-align:right;font-variant-numeric:tabular-nums;color:#666;">${r.salary>0?r.salary.toFixed(2):'--'}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">RM ${r.transfer.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>`).join('');
   const w2=window.open('','_blank','width:860,height:1100');
-  w2.document.write(`<!DOCTYPE html><html><head><title>Remittance ${MONTHS[m-1]} ${y}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:20px;font-size:10px;}table{width:100%;border-collapse:collapse;}.hdr td{background:#1a1916;color:#fff;padding:8px 10px;font-size:14px;font-weight:700;}.sub th{background:#c4c0b8;padding:5px 8px;font-weight:700;font-size:9px;}td{padding:5px 8px;border-bottom:1px solid #eee;}.tot td{background:#e8e8e6;font-weight:700;font-family:monospace;border-top:2px solid #aaa;}.fix{color:#888;}@media print{@page{margin:8mm;size:landscape;}}</style></head><body><table><tr class="hdr"><td colspan="7">Remittance</td><td style="text-align:right;background:#1a1916;color:#fff;padding:8px 10px;font-size:14px;font-weight:700;">${MONTHS[m-1]}&nbsp;&nbsp;${y}</td></tr><tr class="sub"><th>#</th><th>Worker</th><th>Beneficiary (FIX)</th><th>Beneficiary</th><th>Account No (FIX)</th><th>Account No</th><th>Salary (RM)</th><th>Transfer (RM)</th></tr><tbody>${rows}<tr class="tot"><td colspan="7" style="text-align:right;">TOTAL</td><td style="text-align:right;">RM ${total.toLocaleString('en',{minimumFractionDigits:2})}</td></tr></tbody></table><script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
+  w2.document.write(`<!DOCTYPE html><html><head><title>Remittance ${MONTHS[m-1]} ${y}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:20px;font-size:10px;}table{width:100%;border-collapse:collapse;}.hdr td{background:#1a1916;color:#fff;padding:8px 10px;font-size:14px;font-weight:700;}.sub th{background:#c4c0b8;padding:5px 8px;font-weight:700;font-size:9px;}td{padding:5px 8px;border-bottom:1px solid #eee;}.tot td{background:#e8e8e6;font-weight:700;font-variant-numeric:tabular-nums;border-top:2px solid #aaa;}.fix{color:#888;}@media print{@page{margin:8mm;size:landscape;}}</style></head><body><table><tr class="hdr"><td colspan="7">Remittance</td><td style="text-align:right;background:#1a1916;color:#fff;padding:8px 10px;font-size:14px;font-weight:700;">${MONTHS[m-1]}&nbsp;&nbsp;${y}</td></tr><tr class="sub"><th>#</th><th>Worker</th><th>Beneficiary (FIX)</th><th>Beneficiary</th><th>Account No (FIX)</th><th>Account No</th><th>Salary (RM)</th><th>Transfer (RM)</th></tr><tbody>${rows}<tr class="tot"><td colspan="7" style="text-align:right;">TOTAL</td><td style="text-align:right;">RM ${total.toLocaleString('en',{minimumFractionDigits:2})}</td></tr></tbody></table><script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>`);
   w2.document.close();
 }
 
@@ -2907,7 +2907,7 @@ function remPrintGrouped(){
     return `<div style="margin-bottom:18px;border:1.5px solid ${col};border-radius:8px;overflow:hidden;page-break-inside:avoid;">
       <div style="background:${col};color:#fff;padding:7px 14px;display:flex;justify-content:space-between;">
         <span style="font-weight:700;font-size:13px;">TXN ${bi+1}</span>
-        <span style="font-size:10px;opacity:.8;">Balance needed in app: <strong style="font-size:13px;font-family:monospace;">RM ${bin.total.toLocaleString('en',{minimumFractionDigits:2})}</strong></span>
+        <span style="font-size:10px;opacity:.8;">Balance needed in app: <strong style="font-size:13px;font-variant-numeric:tabular-nums;">RM ${bin.total.toLocaleString('en',{minimumFractionDigits:2})}</strong></span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#f5f5f3;">
@@ -2919,8 +2919,8 @@ function remPrintGrouped(){
         <tbody>${bin.records.map((r,ri)=>`<tr style="${ri<bin.records.length-1?'border-bottom:1px solid #ddd':''}">
           <td style="padding:6px 14px;">${r.workers.join(', ')}</td>
           <td style="padding:6px 8px;">${r.beneficiary}</td>
-          <td style="padding:6px 8px;font-family:monospace;">${r.accountNo}</td>
-          <td style="padding:6px 14px;text-align:right;font-family:monospace;font-weight:700;font-size:13px;">RM ${r.transfer.toLocaleString('en',{minimumFractionDigits:2})}</td>
+          <td style="padding:6px 8px;font-variant-numeric:tabular-nums;">${r.accountNo}</td>
+          <td style="padding:6px 14px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;">RM ${r.transfer.toLocaleString('en',{minimumFractionDigits:2})}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -2929,10 +2929,10 @@ function remPrintGrouped(){
   const summary=`<div style="margin-top:24px;border:2px solid #1a1916;border-radius:8px;overflow:hidden;">
     <div style="background:#1a1916;color:#fff;padding:8px 16px;font-weight:700;font-size:13px;">SUMMARY</div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <tr><td style="padding:7px 16px;">Total transfers</td><td style="text-align:right;padding:7px 16px;font-family:monospace;">${records.length} transactions</td></tr>
-      <tr style="background:#f5f5f3;"><td style="padding:7px 16px;">Total transfer amount (enter in app)</td><td style="text-align:right;padding:7px 16px;font-family:monospace;">RM ${totalTransfer.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
-      <tr><td style="padding:7px 16px;">Total service fees (${records.length} × RM${BANK_CHARGE})</td><td style="text-align:right;padding:7px 16px;font-family:monospace;">RM ${totalFees.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
-      <tr style="background:#1a1916;color:#fff;font-weight:700;font-size:14px;"><td style="padding:9px 16px;">TOTAL TO PREPARE IN APP</td><td style="text-align:right;padding:9px 16px;font-family:monospace;">RM ${total.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
+      <tr><td style="padding:7px 16px;">Total transfers</td><td style="text-align:right;padding:7px 16px;font-variant-numeric:tabular-nums;">${records.length} transactions</td></tr>
+      <tr style="background:#f5f5f3;"><td style="padding:7px 16px;">Total transfer amount (enter in app)</td><td style="text-align:right;padding:7px 16px;font-variant-numeric:tabular-nums;">RM ${totalTransfer.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
+      <tr><td style="padding:7px 16px;">Total service fees (${records.length} × RM${BANK_CHARGE})</td><td style="text-align:right;padding:7px 16px;font-variant-numeric:tabular-nums;">RM ${totalFees.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
+      <tr style="background:#1a1916;color:#fff;font-weight:700;font-size:14px;"><td style="padding:9px 16px;">TOTAL TO PREPARE IN APP</td><td style="text-align:right;padding:9px 16px;font-variant-numeric:tabular-nums;">RM ${total.toLocaleString('en',{minimumFractionDigits:2})}</td></tr>
     </table>
   </div>`;
   const w2=window.open('','_blank','width:860,height:1100');
@@ -2985,12 +2985,12 @@ function renderDashboard(){
     var txStyle=pm==="unpaid"?"text-decoration:line-through;color:var(--text3);":pm==="cash"?"color:var(--amb);":"";
     return "<div style='display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:.5px solid var(--border);font-size:12px;'>"
       +"<span>"+w.name+stoppedNote+pmBadge+"</span>"
-      +"<span style='font-family:monospace;font-weight:600;"+txStyle+"'>"+fmtRM(s.toTx)+"</span>"
+      +"<span style='font-variant-numeric:tabular-nums;font-weight:600;"+txStyle+"'>"+fmtRM(s.toTx)+"</span>"
       +"</div>";
   }).join("");
   document.getElementById("db-summary").innerHTML=
     summaryRows
-    +"<div style=\"display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700;border-top:1.5px solid var(--border);margin-top:2px;\">"    +"<span>Total To Transfer</span>"    +"<span style=\"font-family:monospace;color:var(--acc);\">"+fmtRM(totTx)+"</span>"    +"</div>";
+    +"<div style=\"display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700;border-top:1.5px solid var(--border);margin-top:2px;\">"    +"<span>Total To Transfer</span>"    +"<span style=\"font-variant-numeric:tabular-nums;color:var(--acc);\">"+fmtRM(totTx)+"</span>"    +"</div>";
 
   // -- Pending Actions -----------------------------------------
   var actions=[];
@@ -3048,15 +3048,15 @@ function renderDashboard(){
     "<div style=\"margin-top:10px;border-top:1px solid var(--border);padding-top:8px;\">"
     +"<div style=\"font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;\">Bank Charge Summary</div>"
     +"<table style=\"width:100%;font-size:11px;border-collapse:collapse;\">"
-    +"<tr><td style=\"padding:3px 0;color:var(--text2);\">Deducted from workers ("+transferWorkerCount+"×RM"+BANK_CHARGE+")</td><td style=\"text-align:right;font-family:monospace;\">"+fmtRM(totalChgDeducted)+"</td></tr>"
-    +"<tr><td style=\"padding:3px 0;color:var(--text2);\">Actual bank charges ("+remRecordsThisMonth+" txn×RM"+BANK_CHARGE+")</td><td style=\"text-align:right;font-family:monospace;color:var(--red);\">-"+fmtRM(totalChgActual)+"</td></tr>"
-    +"<tr style=\"border-top:1px solid var(--border);\"><td style=\"padding:4px 0;font-weight:700;color:var(--grn);\">💰 Savings (Company Income)</td><td style=\"text-align:right;font-family:monospace;font-weight:700;color:var(--grn);\">"+fmtRM(chgSavings)+"</td></tr>"
+    +"<tr><td style=\"padding:3px 0;color:var(--text2);\">Deducted from workers ("+transferWorkerCount+"×RM"+BANK_CHARGE+")</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;\">"+fmtRM(totalChgDeducted)+"</td></tr>"
+    +"<tr><td style=\"padding:3px 0;color:var(--text2);\">Actual bank charges ("+remRecordsThisMonth+" txn×RM"+BANK_CHARGE+")</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;color:var(--red);\">-"+fmtRM(totalChgActual)+"</td></tr>"
+    +"<tr style=\"border-top:1px solid var(--border);\"><td style=\"padding:4px 0;font-weight:700;color:var(--grn);\">💰 Savings (Company Income)</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--grn);\">"+fmtRM(chgSavings)+"</td></tr>"
     +"</table></div>"
     :"";
 
   var balanced=Math.abs((merchantTotal+unpaidFoodPersD)-itemsTotal)<0.1;
   var bColor=balanced?"var(--grn)":"var(--red)";
-  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+(cashTd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Cash out</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashHXd)+"</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
+  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+(cashTd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Cash out</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashHXd)+"</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-variant-numeric:tabular-nums;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-variant-numeric:tabular-nums;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-variant-numeric:tabular-nums;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
     +chgSavingsHtml
     +"</div></div></div>";
   document.getElementById("db-recon").innerHTML=reconHtml;
@@ -3390,9 +3390,9 @@ function openCashOut(wid, mk){
   document.getElementById('modal-body').innerHTML =
     '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Cash paid during the month is deducted in full from this month\'s net pay and shown on the payslip.</div>'
     + (list.length ? '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">'
-        + list.map(x => '<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px;">' + esc(x.date||'') + '</td><td style="padding:6px;">' + esc(x.note||'') + '</td><td style="padding:6px;text-align:right;font-family:monospace;">' + fmtRM(x.amount) + '</td><td style="padding:6px;width:60px;">'
+        + list.map(x => '<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px;">' + esc(x.date||'') + '</td><td style="padding:6px;">' + esc(x.note||'') + '</td><td style="padding:6px;text-align:right;font-variant-numeric:tabular-nums;">' + fmtRM(x.amount) + '</td><td style="padding:6px;width:60px;">'
           + (locked ? '' : '<button class="btn btn-sm btn-red" onclick="voidCashOut(\'' + wid + '\',\'' + mk + '\',\'' + x.id + '\')">Remove</button>') + '</td></tr>').join('')
-        + '<tr><td colspan="2" style="padding:6px;font-weight:700;">Total</td><td style="padding:6px;text-align:right;font-weight:700;font-family:monospace;">' + fmtRM(cashOutOf(wid,mk)) + '</td><td></td></tr></table>'
+        + '<tr><td colspan="2" style="padding:6px;font-weight:700;">Total</td><td style="padding:6px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">' + fmtRM(cashOutOf(wid,mk)) + '</td><td></td></tr></table>'
       : '<div style="font-size:12px;margin-bottom:10px;">No cash out this month.</div>')
     + (locked ? '<div style="font-size:12px;color:var(--red);">This month is locked.</div>' :
       '<div class="form-grid"><div class="form-row"><label>Date *</label><input id="co-date" type="date" value="' + (TODAY_KL.slice(0,7)===mk ? TODAY_KL : mk + '-01') + '"></div>'
@@ -3462,7 +3462,7 @@ function renderAdvance(){
       + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
       + '<div><div style="font-weight:700;">' + esc(w.name) + ' <span style="font-size:10px;color:var(--text3);">#' + (w.no||'') + ' · ' + (w.farm||'').toUpperCase() + '</span></div>'
       + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">Loaned <b>' + fmtRM(t.loaned) + '</b> · Repaid before <b>' + fmtRM(t.paidBefore) + '</b> · Monthly <b>' + (t.plan==null?'Not set':fmtRM(t.plan)) + '</b></div></div>'
-      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">This month</div><div style="font-weight:700;font-family:monospace;">' + fmtRM(t.thisMonth) + '</div>'
+      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">This month</div><div style="font-weight:700;font-variant-numeric:tabular-nums;">' + fmtRM(t.thisMonth) + '</div>'
       + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">Balance after <b>' + fmtRM(t.balanceAfter) + '</b></div></div></div>'
       + (ovTxt ? '<div style="margin-top:6px;">' + ovTxt + '</div>' : '')
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">' + (sched || '<span style="font-size:11px;color:var(--text3);">No months to deduct</span>') + '</div>'
@@ -3704,7 +3704,7 @@ function printSummary(){
   w2.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Salary Summary ' + MONTHS[m-1] + ' ' + y + '</title><style>'
     + '*{box-sizing:border-box;}body{font-family:Arial,sans-serif;padding:18px;font-size:10px;}h2{font-size:15px;margin:0 0 4px;}p{color:#666;margin:0 0 12px;}'
     + 'table{width:100%;border-collapse:collapse;}th{background:#f0f0ee;padding:6px 6px;text-align:left;font-size:9px;border-bottom:2px solid #ccc;}'
-    + 'td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top;}.num{text-align:right;font-family:monospace;white-space:nowrap;}'
+    + 'td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top;}.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}'
     + '.total-row td{background:#e8e8e6;font-weight:700;border-top:2px solid #999;}@page{size:A4 landscape;margin:8mm;}'
     + '</style></head><body><h2>Salary Summary -- ' + MONTHS[m-1] + ' ' + y + '</h2><p>' + status + ' · Printed ' + new Date().toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</p>'
     + t.outerHTML + '<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>');
