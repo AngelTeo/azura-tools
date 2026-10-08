@@ -232,7 +232,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div class="logo-mark">🌾</div>
     <div>
       <h1>WORKER SALARY</h1>
-      <small>WORKER SALARY SYSTEM · 云端 v57</small>
+      <small>WORKER SALARY SYSTEM · 云端 v58</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
@@ -261,6 +261,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     </div>
   </div>
 </header>
+<div id="lock-strip" style="padding:8px 20px;font-size:12px;"></div>
 
 <!-- DASHBOARD -->
 <div class="page on" id="page-dashboard">
@@ -515,7 +516,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 57;
+const APP_VERSION = 58;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -593,6 +594,7 @@ async function loadData(){
   S.personal = {}; ps.forEach(r => ((S.personal[r.month] ??= {})[r.worker_id] ??= []).push(r.data));
   S.advance = {}; av.forEach(r => S.advance[r.worker_id] = r.data);
   REM.records = rm.map(r => r.data);
+  await loadLocks();
   SNAP = clone({S, REM});
 }
 
@@ -620,6 +622,7 @@ async function syncNow(){
   if(syncing){ syncAgain = true; return; }
   syncing = true; syncAgain = false;
   const cur = clone({S, REM});
+  revertLockedEdits(cur);
   try{
     await syncWorkers(cur);                         // 先工人（新工人要先有 id）
     const A0 = flatAtt(SNAP.S), A1 = flatAtt(cur.S), att = [];
@@ -793,7 +796,8 @@ async function boot(){
   if(error) return gate('<b style="color:#a33a2c">读不到帐号资料</b><p>'+error.message+'</p><p style="color:#888">没有任何资料被改动。</p>');
   if(!me || me.status!=='ACTIVE'){ const em=session.user.email; await sb.auth.signOut();
     return showLogin(em + ' 没有被邀请，不能使用薪水系统。请用老板邀请的 email 登入。'); }
-  const [{data:see},{data:edit}] = await Promise.all([sb.rpc('hub_can',{p_system:'SALARY',p_action:'see'}), sb.rpc('hub_can',{p_system:'SALARY',p_action:'edit'})]);
+  const [{data:see},{data:edit},{data:appr}] = await Promise.all([sb.rpc('hub_can',{p_system:'SALARY',p_action:'see'}), sb.rpc('hub_can',{p_system:'SALARY',p_action:'edit'}), sb.rpc('hub_can',{p_system:'SALARY',p_action:'approve'})]);
+  CAN_APPROVE = !!appr;
   if(!see) return gate('<b style="color:#a33a2c">你没有薪水系统的权限</b><p>请找老板在帐号与权限里开「薪水 · 看」。</p><p style="color:#888">没有任何资料被改动。</p>');
   CAN_EDIT = !!edit;
   gate('<p>读取云端资料中…</p>');
@@ -803,7 +807,7 @@ async function boot(){
   document.getElementById('gate').style.display='none';
   document.getElementById('who-chip').textContent = (me.display_name||'') + ' · ' + (me.position||me.role);
   setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? '已连上云端' : '只能看，不能改');
-  initMonthSel(); renderDashboard(); renderExitRecords();
+  initMonthSel(); renderDashboard(); renderExitRecords(); updateLockStrip();
 }
 
 
@@ -836,7 +840,7 @@ function parseWorkerDate(s){
 }
 
 // Returns workers who were active at ANY point during the given month key
-function workersInMonth(mk){
+function workersInMonthLive(mk){
   // Simple YYYY-MM string comparison -- no Date objects, no timezone issues
   return S.workers.filter(w=>{
     // Join check: worker must have joined on or before this month
@@ -869,6 +873,7 @@ function goPage(p){
   document.querySelectorAll('.ntab')[PAGE_MAP[p]].classList.add('on');
   const renders={dashboard:renderDashboard,workers:renderWorkers,attendance:renderAttendance,food:renderFood,personal:renderPersonal,advance:renderAdvance,summary:renderSummary,remittance:renderRemittance};
   if(renders[p])renders[p]();
+  updateLockStrip();
 }
 
 // -- MONTH SELECTOR -------------------------------------
@@ -1612,7 +1617,9 @@ function saveAdvanceEdit(wid){
   const notes=document.getElementById('adv-notes').value;
   if(!total||!monthly||!start){toast('⚠ Fill all required fields');return;}
   const farm=getAdvFarm();
+  const prevAdv=S.advance[wid]||{};
   S.advance[wid]={totalAmount:total,monthlyPay:monthly,startMonth:start,farm,notes};
+  if(prevAdv.startMonth===start && prevAdv.openingPaid!=null){S.advance[wid].openingPaid=prevAdv.openingPaid;S.advance[wid].openingNote=prevAdv.openingNote||'';}
   saveAll();closeModal();renderAdvance();toast('✅ Advance updated');
 }
 
@@ -1687,7 +1694,7 @@ function saveAdvance(){
 // ======================================================
 // SUMMARY
 // ======================================================
-function getAdvanceDeduction(wid, mk){
+function getAdvanceDeductionV56(wid, mk){
   const adv=S.advance[wid];
   if(!adv||!adv.totalAmount||adv.totalAmount<=0) return 0;
   if(!adv.startMonth) return 0; // safety: no startMonth set, cannot calculate
@@ -1708,7 +1715,7 @@ function getAdvanceDeduction(wid, mk){
   if(remaining<=0) return 0;
   return Math.min(adv.monthlyPay, remaining);
 }
-function getAdvancePaidUpTo(wid, mk){
+function getAdvancePaidUpToV56(wid, mk){
   // Total paid in months BEFORE mk (exclusive)
   const adv=S.advance[wid];
   if(!adv||!adv.totalAmount) return 0;
@@ -1735,7 +1742,7 @@ function getRateForMonth(w, mk){
   const match=sorted.find(h=>h.from<=mk);
   return match?match.rate:w.rate;
 }
-function calcWorkerSummary(w,mk){
+function calcWorkerSummaryLive(w,mk){
   const m=parseInt(mk.split('-')[1]);const y=parseInt(mk.split('-')[0]);
   const days=daysInMonth(y,m);
   const att=S.attendance[mk]?.[w.id]||{};
@@ -1984,6 +1991,7 @@ function renderExitRecords(){
 }
 function pushToRemittance(){
   const mk=monthKey();const m=getMonth();const y=getYear();
+  if(!requireLocked(m,y))return;
   const workers=workersInMonth(mk);
   let pushed=0;
   workers.forEach(w=>{
@@ -2184,6 +2192,7 @@ function remMarkUnpaid(wid){
   renderRemittance();
 }
 function remAddOne(wid,m,y){
+  if(!requireLocked(m,y))return;
   var mk=y+"-"+(m<10?"0":"")+m;
   var w=getWorker(wid);if(!w)return;
   var s=calcWorkerSummary(w,mk);
@@ -2196,6 +2205,7 @@ function remAddOne(wid,m,y){
 }
 function remAddAllPending(){
   var m=getMonth(),y=getYear();
+  if(!requireLocked(m,y))return;
   var mk=y+"-"+(m<10?"0":"")+m;
   var done=new Set();
   REM.records.filter(function(r){return r.month===m&&r.year===y;})
@@ -2646,6 +2656,7 @@ function remGenerateFromSalary(){remAddAllPending();}
 
 function confirmGenerateAll(){
   const mk=monthKey();const m=getMonth();const y=getYear();
+  if(!requireLocked(m,y))return;
   const toAdd=window._remToAdd||[];
   toAdd.forEach(function(item){
     REM.records.push({
@@ -3020,6 +3031,193 @@ function confirmImport(){ alert('云端版不提供汇入。'); return;
   }
 }
 
+
+
+// -- 锁月 + 快照 + 预支只算真的扣到的（v58） ------------------------------
+let LOCKS = {}, PAYSLIPS = {}, CAN_APPROVE = false;
+const NEW_SYS_START = '2026-10';   // 新系统第一个月；之前的预支已扣额 = openingPaid
+const r2 = n => Math.round((Number(n)||0)*100)/100;
+const nextMk = mk => { const [y,m]=mk.split('-').map(Number); return m===12 ? `${y+1}-01` : `${y}-${pad2(m+1)}`; };
+const isLocked = mk => !!(LOCKS[mk] && LOCKS[mk].status==='LOCKED');
+
+async function loadLocks(){
+  const [runs, slips] = await Promise.all([
+    fetchAll('salary_run','month,status,locked_at,locked_by'),
+    fetchAll('salary_payslip','month,worker_id,data', q=>q.is('voided_at',null)),
+  ]);
+  LOCKS = {}; runs.forEach(r => LOCKS[r.month] = r);
+  PAYSLIPS = {}; slips.forEach(p => (PAYSLIPS[p.month] ??= {})[p.worker_id] = p.data);
+}
+
+function workerInMonth(w, mk){
+  if(w.joinDate && w.joinDate.substring(0,7) > mk) return false;
+  if(w.stopDate && w.stopDate.substring(0,7) < mk) return false;
+  return true;
+}
+function workersInMonth(mk){
+  if(isLocked(mk) && PAYSLIPS[mk]) return S.workers.filter(w => PAYSLIPS[mk][w.id]);
+  return workersInMonthLive(mk);
+}
+function calcWorkerSummary(w, mk){
+  if(isLocked(mk) && PAYSLIPS[mk] && PAYSLIPS[mk][w.id]) return PAYSLIPS[mk][w.id];
+  return calcWorkerSummaryLive(w, mk);
+}
+
+// 预支：已锁月份用快照里真的扣到的；没锁的月份，只有工人那个月在职才预计会扣
+function advanceTrack(wid, mk){
+  const a = S.advance[wid];
+  if(!a || !a.totalAmount || a.totalAmount<=0 || !a.startMonth) return {paidBefore:0, thisMonth:0};
+  const w = getWorker(wid);
+  let paid = a.startMonth < NEW_SYS_START ? Number(a.openingPaid||0) : 0;
+  let cur = a.startMonth < NEW_SYS_START ? NEW_SYS_START : a.startMonth;
+  const dedFor = (m) => {
+    if(isLocked(m) && PAYSLIPS[m]) return Number((PAYSLIPS[m][wid]||{}).advD||0);
+    if(!w || !workerInMonth(w, m)) return 0;
+    const rem = r2(a.totalAmount - paid);
+    return rem <= 0 ? 0 : r2(Math.min(a.monthlyPay, rem));
+  };
+  let guard = 240;
+  while(cur < mk && guard-- > 0){ paid = r2(paid + dedFor(cur)); cur = nextMk(cur); }
+  const thisMonth = (mk < a.startMonth) ? 0 : dedFor(mk);
+  return {paidBefore: r2(paid), thisMonth};
+}
+function getAdvanceDeduction(wid, mk){ return advanceTrack(wid, mk).thisMonth; }
+function getAdvancePaidUpTo(wid, mk){ return advanceTrack(wid, mk).paidBefore; }
+
+// 已锁月份的改动：画面上还原，并提示
+const LOCK_KEYS = {
+  attendance: (s) => flatAtt(s), grossOverride: (s) => flat2(s.grossOverride), paymentMethod: (s) => flat2(s.paymentMethod,'transfer'),
+  food: (s) => flatFood(s), personal: (s) => flatPers(s),
+};
+function monthOfKey(cat, k, v){
+  if(cat==='attendance') return k.split('|')[1].slice(0,7);
+  if(cat==='food' || cat==='personal') return v.month;
+  return k.split('|')[1];
+}
+function revertLockedEdits(cur){
+  const hit = new Set();
+  for(const cat in LOCK_KEYS){
+    const A = LOCK_KEYS[cat](SNAP.S), B = LOCK_KEYS[cat](cur.S);
+    for(const k of new Set([...Object.keys(A), ...Object.keys(B)])){
+      if(same(A[k], B[k])) continue;
+      const m = monthOfKey(cat, k, B[k] || A[k]);
+      if(isLocked(m)){ hit.add(m); }
+    }
+  }
+  if(!hit.size) return false;
+  // 只还原已锁月份的部分
+  for(const m of hit){
+    for(const cat of ['attendance','grossOverride','paymentMethod','personal']){
+      if(SNAP.S[cat][m] !== undefined) S[cat][m] = clone(SNAP.S[cat][m]); else delete S[cat][m];
+      if(SNAP.S[cat][m] !== undefined) cur.S[cat][m] = clone(SNAP.S[cat][m]); else delete cur.S[cat][m];
+    }
+    if(SNAP.S.food[m] !== undefined){ S.food[m] = clone(SNAP.S.food[m]); cur.S.food[m] = clone(SNAP.S.food[m]); }
+    else { delete S.food[m]; delete cur.S.food[m]; }
+  }
+  toast('🔒 ' + [...hit].join('、') + ' 已锁月，这次改动没有存。要改请先解锁。', 4000);
+  setTimeout(refreshCurrentPage, 50);
+  return true;
+}
+
+// 锁月前检查
+function lockChecks(mk){
+  const out = [];
+  workersInMonthLive(mk).forEach(w => {
+    const s = calcWorkerSummaryLive(w, mk);
+    const rate = getRateForMonth(w, mk);
+    if(!rate) out.push([w, '没有薪资（金额 0）']);
+    if(w.rateType==='daily' && s.totalD===0) out.push([w, '整个月 0 天出勤']);
+    if(s.net < 0) out.push([w, '净额是负数：' + fmtRM(s.net)]);
+    if(s.gross > 0 && s.totalDed > s.gross*0.5) out.push([w, '扣款超过总薪水一半：扣 ' + fmtRM(s.totalDed) + ' / 薪 ' + fmtRM(s.gross)]);
+    const pm = getPayMethod(w.id, mk);
+    if(pm==='transfer' && s.toTx>0 && (!w.bankAccount || !w.beneficiary)) out.push([w, '要汇款但没有户口资料']);
+  });
+  return out;
+}
+
+async function waitSynced(){
+  if(dirty && !syncing){ clearTimeout(syncTimer); await syncNow(); }
+  let n = 100; while((dirty || syncing) && n-- > 0) await new Promise(r => setTimeout(r, 200));
+  return !(dirty || syncing);
+}
+
+async function openLockModal(){
+  const mk = monthKey();
+  if(!(await waitSynced())){ toast('还有改动没存进云端，等「已存」再锁'); return; }
+  const ws = workersInMonthLive(mk);
+  if(!ws.length){ toast('这个月没有工人'); return; }
+  const issues = lockChecks(mk);
+  let tot = 0; ws.forEach(w => tot += calcWorkerSummaryLive(w, mk).toTx);
+  document.getElementById('modal-title').textContent = '锁月：' + mk;
+  document.getElementById('modal-body').innerHTML =
+    '<div style="font-size:13px;line-height:1.7;margin-bottom:10px;">锁了之后：这个月的出勤、伙食、个人扣款、月薪改额、付款方式都不能再改；薪水结果冻结；预支才算真的扣了；才可以推去汇款。</div>'
+    + '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;">工人 <b>' + ws.length + '</b> 人 · 合计要汇 <b>' + fmtRM(tot) + '</b></div>'
+    + (issues.length
+        ? '<div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;">检查到 ' + issues.length + ' 个要看的地方：</div><div style="max-height:260px;overflow:auto;font-size:12px;border:1px solid var(--border);border-radius:6px;">'
+          + issues.map(([w,t]) => '<div style="padding:6px 10px;border-bottom:1px solid var(--border);"><b>' + w.name + '</b> · ' + t + '</div>').join('') + '</div>'
+        : '<div style="font-size:12px;color:var(--grn);font-weight:700;">检查全部通过。</div>');
+  document.getElementById('modal-footer').innerHTML =
+    '<button class="btn" onclick="closeModal()">取消</button>'
+    + '<button class="btn btn-pri" id="btn-do-lock" onclick="doLockMonth(\'' + mk + '\')">' + (issues.length ? '我看过了，确认锁月' : '确认锁月') + '</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+
+async function doLockMonth(mk){
+  const btn = document.getElementById('btn-do-lock'); if(btn) btn.disabled = true;
+  if(!(await waitSynced())){ toast('还有改动没存进云端'); if(btn) btn.disabled=false; return; }
+  const slips = workersInMonthLive(mk).map(w => {
+    const s = calcWorkerSummaryLive(w, mk);
+    return {worker_id: w.id, data: Object.assign({}, s, {
+      name: w.name, no: w.no, farm: w.farm, rateType: w.rateType, rate: getRateForMonth(w, mk),
+      payMethod: getPayMethod(w.id, mk), beneficiary: w.beneficiary||'', bankAccount: w.bankAccount||'', lockedMonth: mk })};
+  });
+  const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
+  if(error){ alert('锁月失败：' + error.message); if(btn) btn.disabled=false; return; }
+  await loadLocks();
+  closeModal(); refreshCurrentPage(); renderDashboard();
+  toast('🔒 ' + mk + ' 已锁，' + data + ' 张薪资单已冻结');
+}
+
+function openUnlockModal(){
+  const mk = monthKey();
+  document.getElementById('modal-title').textContent = '解锁：' + mk;
+  document.getElementById('modal-body').innerHTML =
+    '<div style="font-size:13px;margin-bottom:10px;">解锁后这个月的快照作废（留纪录），可以再改，改完要重新锁。已经推去汇款的纪录不会自动改，请自己核对。</div>'
+    + '<div class="form-row"><label>解锁原因 *</label><input id="unlock-reason" placeholder="例：AUNG 10/15 出勤打错"></div>';
+  document.getElementById('modal-footer').innerHTML =
+    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-red" onclick="doUnlockMonth(\'' + mk + '\')">确认解锁</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+async function doUnlockMonth(mk){
+  const reason = (document.getElementById('unlock-reason').value||'').trim();
+  if(!reason){ toast('一定要写原因'); return; }
+  const {error} = await sb.rpc('salary_unlock_month', {p_month: mk, p_reason: reason});
+  if(error){ alert('解锁失败：' + error.message); return; }
+  await loadLocks();
+  closeModal(); refreshCurrentPage(); renderDashboard();
+  toast('🔓 ' + mk + ' 已解锁');
+}
+
+function updateLockStrip(){
+  const el = document.getElementById('lock-strip'); if(!el || !CLOUD_OK) return;
+  const mk = monthKey();
+  if(isLocked(mk)){
+    const t = LOCKS[mk].locked_at ? new Date(LOCKS[mk].locked_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    el.style.background = '#e3eee5'; el.style.color = '#2f5d3f';
+    el.innerHTML = '🔒 <b>' + mk + ' 已锁</b>（' + t + '）· 薪水已冻结，可以推去汇款。'
+      + (CAN_APPROVE ? ' <button class="btn btn-sm" style="margin-left:10px;" onclick="openUnlockModal()">解锁</button>' : '');
+  }else{
+    el.style.background = '#fff6e0'; el.style.color = '#7a5600';
+    el.innerHTML = '✏️ <b>' + mk + ' 还没锁</b> · 可以改出勤和扣款；推汇款前要先锁月。'
+      + (CAN_APPROVE ? ' <button class="btn btn-sm btn-pri" style="margin-left:10px;" onclick="openLockModal()">检查并锁月</button>' : '');
+  }
+}
+function requireLocked(m, y){
+  const mk = y + '-' + pad2(m);
+  if(isLocked(mk)) return true;
+  toast('⚠ ' + mk + ' 还没锁月。先按上方「检查并锁月」，才能推去汇款。', 4000);
+  return false;
+}
 
 boot();
 </script>
