@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v76</title>
+<title>Salary v77</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -150,6 +150,17 @@ tr:hover td{background:#fafaf8;}
 .fd-chips{display:flex;flex-wrap:wrap;gap:6px}
 .fd-chip{border:1.5px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;cursor:pointer}
 .fd-chip.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
+.sm-top{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px}.sm-top .l{font-size:11px;color:var(--text3)}.sm-top .b{font-size:24px;font-weight:700}
+.sm-top .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.sm-top .g3 div{font-size:11px;color:var(--text3)}.sm-top .g3 b{display:block;font-size:14px;color:var(--text)}
+.sm-flt{display:flex;gap:6px;overflow:auto;padding:2px 0 8px}.sm-flt span{border:1.5px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;white-space:nowrap;cursor:pointer}.sm-flt span.on{border-color:var(--text);background:var(--text);color:#fff}
+.sm-tag{font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:1px}.sm-tag.c{background:var(--ambl);color:var(--amb)}.sm-tag.u{background:var(--redl);color:var(--red)}.sm-tag.n{background:#ece9e2;color:var(--text3)}
+.sm-ln{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bg2);font-size:14px}.sm-ln.m span:last-child{color:var(--red)}.sm-ln a{color:var(--acc);font-size:12px;cursor:pointer;margin-left:4px}
+.sm-ln.t{font-weight:700;font-size:16px;border-bottom:0;border-top:2px solid var(--text);margin-top:4px;padding-top:8px}
+.sm-ck2{display:grid;grid-template-columns:1fr 1fr;gap:20px}.sm-ck table{width:100%;font-size:13px;border-collapse:collapse}.sm-ck td{padding:6px 4px;border-bottom:1px solid var(--bg2)}.sm-ck td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.sm-ck tr.h td{font-size:11px;font-weight:700}.sm-ck tr.m td{color:var(--red)}.sm-ck tr.t td{font-weight:700;border-top:2px solid var(--text)}
+.sm-badge{font-size:11px;padding:4px 10px;border-radius:6px;font-weight:700}.sm-badge.ok,.sm-res.ok{background:var(--grnl);color:var(--grn)}.sm-badge.no,.sm-res.no{background:var(--redl);color:var(--red)}
+.sm-res{border-radius:8px;padding:8px 10px;font-weight:700;margin-top:10px;font-size:13px}
+@media(max-width:700px){.sm-ck2{grid-template-columns:1fr}.sm-desk{display:none}}
 .av-alert{background:var(--ambl);border:1.5px solid #e8c77a;border-radius:12px;padding:10px 14px;color:var(--amb);margin-bottom:8px;cursor:pointer}
 .av-alert b{display:block;font-size:14px}.av-alert small{font-size:12px}.av-alert span{float:right;font-weight:700;color:var(--acc)}
 .av-big{font-size:26px;font-weight:700}.av-bar{height:8px;background:#ece9e2;border-radius:4px;overflow:hidden;margin:6px 0}.av-bar i{display:block;height:100%;background:var(--grn)}
@@ -448,20 +459,23 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 <!-- SUMMARY -->
 <div class="page" id="page-summary">
   <div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border);">
       <div>
         <span style="font-size:14px;font-weight:700;">Salary Summary</span>
         <span style="font-size:11px;color:var(--text3);margin-left:8px;" id="sum-month-label"></span>
       </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn sm-desk" id="sum-view-btn" onclick="smToggleView()">▦ Full table</button>
         <button class="btn" onclick="printSummary()">🖨 Print</button>
         <button class="btn btn-grn" onclick="pushToRemittance()">💸 Push to Remittance</button>
       </div>
     </div>
-    <div class="tbl-wrap" id="summary-table" style="border:none;border-radius:0;"></div>
+    <div id="summary-table"></div>
   </div>
   <div style="margin-top:12px;" id="summary-totals"></div>
 </div>
+<div class="ad-dim" id="sm-dim" onclick="smClose()"></div>
+<div class="ad-sheet" id="sm-sheet"></div>
 
 <!-- REMITTANCE -->
 <div class="page" id="page-remittance">
@@ -543,6 +557,7 @@ const ATT_VALUES = {'':{'hx':0,'ad':0},'hx':{'hx':1,'ad':0},'ad':{'hx':0,'ad':1}
 // 9 月（含）以前照 v56 已发的薪水：Both = 1 天 HX + 1 天 AD；10 月起 Both = 各半天（共 1 天）
 function attV(v, mk){ return (v === 'both' && mk && mk < NEW_SYS_START) ? {hx:1, ad:1} : (ATT_VALUES[v] || {hx:0, ad:0}); }
 const BANK_CHARGE = 11;
+const FEE_RULE_START = '2026-09';
 function calcRecordCharges(r){
   // RM11 per TRANSACTION (record), regardless of how many workers share it
   if(typeof r.charges === "number") return BANK_CHARGE;
@@ -577,7 +592,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 76;
+const APP_VERSION = 77;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1967,172 +1982,14 @@ function calcWorkerSummaryLive(w,mk){
   const cf=w.farm||'hx';
   const cashHX=cf==='both'?r2(cashOut/2):cf==='hx'?cashOut:0, cashAD=r2(cashOut-cashHX);
   const payable=r2(net-cashOut);
-  const bankChg=BANK_CHARGE; // RM11 for all workers
-  const toTx=Math.max(0,payable-bankChg);
-  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,cashOut,cashHX,cashAD,payable,bankChg,toTx,rateType:w.rateType,rate:getRateForMonth(w,mk)};
-}
-
-function renderSummary(){
-  const mk=monthKey();const m=getMonth();const y=getYear();
-  document.getElementById('sum-month-label').textContent=`${MONTHS[m-1]} ${y}`;
-  const workers=workersInMonth(mk);
-  if(!workers.length){document.getElementById('summary-table').innerHTML='<div class="empty"><div class="icon">📋</div><p>No active workers</p></div>';return;}
-  
-  let totGross=0,totFood=0,totAdv=0,totPers=0,totDed=0,totNet=0,totTx=0;
-  let totHXSal=0,totADSal=0,totHXAdv=0,totADAdv=0;
-  let unpaidHX=0,unpaidAD=0,unpaidFood=0,unpaidPers=0;
-  let totCash=0,totCashHX=0,totCashAD=0;
-  let rows=workers.map(w=>{
-    const s=calcWorkerSummary(w,mk);
-    const pm=getPayMethod(w.id,mk);
-    totGross+=s.gross;
-    // ALL workers go into salary totals for display
-    totHXSal+=s.hxSalary;totADSal+=s.adSalary;totHXAdv+=s.advHX;totADAdv+=s.advAD;
-    // ALL workers' food+personal go to Daniel (Option B)
-    totFood+=s.food;totPers+=s.persD;
-    if(pm==='unpaid'){
-      // Salary not transferred, but food+personal still owed to Daniel
-      unpaidHX+=s.hxSalary-s.advHX;
-      unpaidAD+=s.adSalary-s.advAD;
-      unpaidFood+=s.food;
-      unpaidPers+=s.persD;
-    } else {
-      totAdv+=s.advD;totDed+=s.totalDed;totNet+=s.net;totTx+=s.toTx;totCash+=(s.cashOut||0);totCashHX+=(s.cashHX||0);totCashAD+=(s.cashAD||0);
-    }
-    const grossCell=s.rateType==='monthly'
-      ?`<input class="gross-input" type="number" value="${s.gross}" title="Click to edit monthly salary" onchange="setGrossOverride('${w.id}','${mk}',parseFloat(this.value)||0)" placeholder="${w.rate}">`
-      :`<span style="font-family:'IBM Plex Mono',monospace;">${fmtRM(s.gross)}</span>`;
-    const stopMkS=w.stopDate?w.stopDate.substring(0,7):'';
-    const stoppedThisMonthS=stopMkS===mk;
-    return `<tr>
-      <td><strong>${w.name}</strong>${w.bankAccount2&&w.beneficiary2?` <select data-noprint onchange="setPayeeSlot('${w.id}','${mk}',this.value)" style="font-size:10px;" ${isLocked(mk)?'disabled':''}><option value="1" ${payeeSlot(w.id,mk)===1?'selected':''}>Payee 1</option><option value="2" ${payeeSlot(w.id,mk)===2?'selected':''}>Payee 2</option></select>`:''}${stoppedThisMonthS?`<span style="font-size:9px;color:var(--red);margin-left:4px;">(stopped ${w.stopDate})</span>`:''}<br><span style="font-size:10px;color:var(--text3);">${w.title||''}</span></td>
-      <td class="num sum-gross">${grossCell}</td>
-      <td class="num sum-deduct">-${fmtRM(s.food)}</td>
-      <td class="num sum-deduct">-${fmtRM(s.advD)}</td>
-      <td class="num sum-deduct">-${fmtRM(s.persD)}</td>
-      <td class="num sum-deduct" style="font-weight:700;">-${fmtRM(s.totalDed)}</td>
-      <td class="num sum-net">${fmtRM(s.net)}</td>
-      <td class="num sum-deduct">${(s.cashOut||0)>0?'-'+fmtRM(s.cashOut):'--'} <button class="btn-icon" title="Cash out" onclick="openCashOut('${w.id}','${mk}')">💵</button></td>
-      <td class="num" style="font-size:11px;color:var(--text3);">${s.bankChg?'-'+fmtRM(s.bankChg):'--'}</td>
-      <td class="num sum-transfer" style="${pm==='unpaid'?'text-decoration:line-through;color:var(--text3);':''}">${fmtRM(s.toTx)}</td>
-      <td data-col-noprint style="text-align:center;padding:4px 6px;"><button class="sum-pay-btn ${pm==='unpaid'?'active-unpaid':''}" title="Mark Unpaid / click again to undo" onclick="sumToggleUnpaid('${w.id}','${mk}')">🚫</button></td>
-      <td data-col-noprint><button class="btn-icon" title="Receipt" onclick="printReceipt('${w.id}','${mk}')" style="font-size:16px;">🧾</button></td>
-    </tr>`;
-  }).join('');
-  
-  rows+=`<tr class="total-row">
-    <td><strong>TOTAL</strong></td>
-    <td class="num">${fmtRM(totGross)}</td>
-    <td class="num">${fmtRM(totFood)}</td>
-    <td class="num">${fmtRM(totAdv)}</td>
-    <td class="num">${fmtRM(totPers)}</td>
-    <td class="num">${fmtRM(totDed)}</td>
-    <td class="num">${fmtRM(totNet)}</td>
-    <td class="num">${totCash>0?'-'+fmtRM(totCash):'--'}</td>
-    <td class="num">--</td>
-    <td class="num">${fmtRM(totTx)}</td>
-    <td data-col-noprint></td><td data-col-noprint></td>
-  </tr>`;
-
-  document.getElementById('summary-table').innerHTML=`
-    <table class="sum-table">
-      <thead><tr>
-        <th style="width:180px;">Worker</th>
-        <th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th>
-        <th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash Out</th><th class="num">Bank Charge</th><th class="num">To Transfer</th>
-        <th data-col-noprint style="text-align:center;font-size:10px;">Payment</th><th data-col-noprint style="width:36px;"></th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  
-  // Option B: salary totals exclude unpaid, food+personal totals include ALL
-  const hxToTx=totHXSal-totHXAdv-unpaidHX-totCashHX;
-  const adToTx=totADSal-totADAdv-unpaidAD-totCashAD;
-  const merchantTotal=hxToTx+adToTx;
-  const unpaidFoodPers=unpaidFood+unpaidPers;
-  // itemsTotal includes unpaid workers' food+personal (Daniel collects for everyone)
-  const workerSalary=totNet-totCash;
-  const foodDaniel=totFood;
-  const persDaniel=totPers;
-  const itemsTotal=workerSalary+foodDaniel+persDaniel;
-  // Balance: LEFT = merchantTotal + unpaidFoodPers, RIGHT = itemsTotal
-  const balanced=Math.abs((merchantTotal+unpaidFoodPers)-itemsTotal)<0.1;
-
-  document.getElementById('summary-totals').innerHTML=`
-    <div class="card" style="border-top:3px solid var(--grn);grid-column:1/-1;padding:0;overflow:hidden;">
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-weight:700;font-size:13px;">Bank Transfer Reconciliation</span>
-        <span style="font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;${balanced?'background:var(--grnl);color:var(--grn);':'background:var(--redl);color:var(--red);'}">${balanced?'✓ BALANCED':'✗ CHECK FIGURES'}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-
-        <!-- LEFT: BANK TRANSFER -->
-        <div style="padding:14px 16px;border-right:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;">Bank Transfer (HX vs AD)</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <thead><tr style="background:var(--bg2);">
-              <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);">Item</th>
-              <th style="padding:6px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);">HX</th>
-              <th style="padding:6px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);">AD</th>
-            </tr></thead>
-            <tbody>
-              <tr><td style="padding:6px 10px;">Total Salary</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;">${fmtRM(totHXSal)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;">${fmtRM(totADSal)}</td></tr>
-              <tr><td style="padding:6px 10px;color:var(--red);">- Advance Deducted</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totHXAdv)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totADAdv)}</td></tr>
-                ${unpaidHX+unpaidAD>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Unpaid (salary)</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidHX)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidAD)}</td></tr>`:''}
-              ${totCash>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Cash out</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashHX)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashAD)}</td></tr>`:''}
-              <tr style="background:var(--text);color:#fff;font-weight:700;"><td style="padding:8px 10px;">TO TRANSFER</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(hxToTx)}</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(adToTx)}</td></tr>
-              ${unpaidFoodPers>0?`<tr><td style="padding:6px 10px;color:var(--amb);font-weight:600;">+ Owed to Daniel (unpaid workers)</td>
-                <td colspan="2" style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--amb);font-weight:600;">+${fmtRM(unpaidFoodPers)}</td></tr>`:''}
-            </tbody>
-          </table>
-          <div style="margin-top:10px;text-align:right;">
-            <span style="font-size:11px;color:var(--text3);">Total via Merchantrade: </span>
-            <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;">${fmtRM(merchantTotal+unpaidFoodPers)}</span>
-          </div>
-        </div>
-
-        <!-- RIGHT: MERCHANTRADE ITEMS -->
-        <div style="padding:14px 16px;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;">Merchantrade Breakdown (Items)</div>
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            <thead><tr style="background:var(--bg2);">
-              <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);">Item</th>
-              <th style="padding:6px 10px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);">Amount</th>
-              <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);">Description</th>
-            </tr></thead>
-            <tbody>
-              <tr><td style="padding:6px 10px;font-weight:500;">Worker Salary</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(workerSalary)}</td>
-                <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Net pay to all workers</td></tr>
-              <tr><td style="padding:6px 10px;font-weight:500;">Food -- Daniel</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(foodDaniel)}</td>
-                <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Food deductions collected</td></tr>
-              <tr><td style="padding:6px 10px;font-weight:500;">Personal -- Daniel</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;font-weight:700;">${fmtRM(persDaniel)}</td>
-                <td style="padding:6px 10px;font-size:10px;color:var(--text3);">Personal deductions collected</td></tr>
-              <tr style="background:${balanced?'#EBF5EC':'#FCE9E9'};font-weight:700;"><td style="padding:8px 10px;">TO MATCH</td>
-                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(itemsTotal)}</td>
-                <td style="padding:8px 10px;font-size:10px;${balanced?'color:var(--grn);':'color:var(--red);'}">${balanced?'✓ Matches Merchantrade':'✗ Difference: '+fmtRM(merchantTotal-itemsTotal)}</td></tr>
-            </tbody>
-          </table>
-          <div style="margin-top:10px;text-align:right;">
-            <span style="font-size:11px;color:var(--text3);">Items total: </span>
-            <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;">${fmtRM(itemsTotal)}</span>
-          </div>
-        </div>
-
-      </div>
-    </div>`;
+  // 9 月起：现金付的人、没钱可转的人，不收银行手续费，也不算转账（9 月以前照 v56）
+  const pm=getPayMethod(w.id,mk);
+  let bankChg=BANK_CHARGE, toTx=Math.max(0,payable-bankChg), cashPaid=0;
+  if(mk>=FEE_RULE_START){
+    if(pm==='cash'){bankChg=0;toTx=0;cashPaid=Math.max(0,payable);}
+    else if(payable<=BANK_CHARGE){bankChg=0;toTx=Math.max(0,payable);}
+  }
+  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,cashOut,cashHX,cashAD,payable,bankChg,toTx,cashPaid,pm,rateType:w.rateType,rate:getRateForMonth(w,mk)};
 }
 
 function setGrossOverride(wid,mk,val){
@@ -2183,8 +2040,8 @@ function pushToRemittance(){
   let pushed=0;
   workers.forEach(w=>{
     if(!PO(w).bankAccount||!PO(w).beneficiary)return;
-    const s=calcWorkerSummary(w,mk);
-    if(s.toTx<=0)return;
+    const s=calcWorkerSummary(w,mk), pm=s.pm||getPayMethod(w.id,mk);
+    if(s.toTx<=0||pm==='cash'||pm==='unpaid')return;
     // Check if already exists this month
     const exists=REM.records.some(r=>r.month===m&&r.year===y&&r.workers.includes(w.name));
     if(exists)return;
@@ -3375,9 +3232,10 @@ async function doLockMonth(mk){
   });
   const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
   if(error){ alert('Could not lock: ' + error.message); if(btn) btn.disabled=false; return; }
+  const nMinus = minusToLoans(mk); if(nMinus) await waitSynced();
   await loadLocks();
   closeModal(); refreshCurrentPage(); renderDashboard();
-  toast('🔒 ' + mk + ' locked · ' + data + ' payslips final');
+  toast('🔒 ' + mk + ' locked · ' + data + ' payslips final' + (nMinus ? ' · ' + nMinus + ' minus pay added to loans' : ''), 4000);
 }
 
 function openUnlockModal(){
@@ -3654,7 +3512,7 @@ function avHistory(){ const w = getWorker(AV.wid), L = loanAcc(AV.wid) || {txn:[
   AV = {...AV, mode:'hist'};
   const K = {LOAN:'Borrowed', OPENING_REPAID:'Paid back in the old system (to Sep 2026)', WRITE_OFF:'Written off'};
   const items = [];
-  (L.txn||[]).forEach(t => items.push([t.date || t.month, K[t.kind] + (t.note ? ' · ' + esc(t.note) : ''), (t.kind==='LOAN' ? '+' : '−') + fmtRM(t.amount), t.kind!=='OPENING_REPAID' && t.month >= NEW_SYS_START && !isLocked(t.month) ? 'txn:' + t.id : '']));
+  (L.txn||[]).forEach(t => items.push([t.date || t.month, K[t.kind] + (t.note ? ' · ' + esc(t.note.replace(/^\[minus [\d-]+\] /, '')) : ''), (t.kind==='LOAN' ? '+' : '−') + fmtRM(t.amount), t.kind!=='OPENING_REPAID' && t.month >= NEW_SYS_START && !isLocked(t.month) ? 'txn:' + t.id : '']));
   (L.plan||[]).forEach(p => items.push([p.from, 'Monthly amount from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4), fmtRM(p.monthly), (p.from < NEW_SYS_START || isLocked(p.from)) ? '' : 'plan:' + p.id]));
   Object.keys(L.months||{}).forEach(m => items.push([m, (Number(L.months[m].amount)===0 ? 'Paused' : 'This month only ' + fmtRM(L.months[m].amount)) + (L.months[m].note ? ' · ' + esc(L.months[m].note) : ''), '', '']));
   Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][AV.wid] && Number(PAYSLIPS[m][AV.wid].advD) > 0).forEach(m => items.push([m, 'Taken from salary (locked month)', '−' + fmtRM(PAYSLIPS[m][AV.wid].advD), '']));
@@ -3721,6 +3579,129 @@ document.getElementById('av-sheet').addEventListener('click', e => {
     if(AV.act === 'voidplan'){ VOID_REASON[AV.data] = r; L.plan = L.plan.filter(p => p.id !== AV.data); toast('Voided'); }
     saveAll(); renderAdvance(); return avWorker(AV.wid); }
 });
+
+// ---------- v77 Summary：一人一行 · 点开看明细 · 负数转借款 · 现金不收手续费 · 真对账 ----------
+let SM = {view:'list', filter:'all', wid:null};
+const smRow = (w, mk) => { const s = calcWorkerSummary(w, mk), pm = s.pm || getPayMethod(w.id, mk), net = r2(s.net), minus = net < 0 ? r2(-net) : 0;
+  const cash = r2((s.cashOut||0) + (s.cashPaid||0)), fee = r2(s.bankChg||0), tx = pm === 'unpaid' ? 0 : r2(s.toTx), held = pm === 'unpaid' ? Math.max(0, r2(net - (s.cashOut||0))) : 0;
+  const gets = pm === 'unpaid' ? held : pm === 'cash' ? r2(s.cashPaid||0) : tx;
+  const noBank = pm === 'transfer' && tx > 0 && !(payeeOf(w, mk).bankAccount && payeeOf(w, mk).beneficiary);
+  const diff = r2(r2(s.gross) - r2(s.advD) - (tx + fee + cash + held + r2(s.food) + r2(s.persD) - minus));
+  return {w, s, pm, net, minus, cash, fee, tx, held, gets, noBank, diff}; };
+function smRows(mk){ return workersInMonth(mk).map(w => smRow(w, mk)); }
+function smCheck(rows){ const sum = f => r2(rows.reduce((a, r) => a + f(r), 0));
+  return {
+    hxSal: sum(r => r.s.hxSalary), adSal: sum(r => r.s.adSalary), hxAdv: sum(r => r.s.advHX||0), adAdv: sum(r => r.s.advAD||0),
+    left: sum(r => r2(r.s.gross) - r2(r.s.advD)),
+    tx: sum(r => r.tx), fee: sum(r => r.fee), cash: sum(r => r.cash), held: sum(r => r.held), food: sum(r => r2(r.s.food)), pers: sum(r => r2(r.s.persD)), minus: sum(r => r.minus),
+    bad: rows.filter(r => Math.abs(r.diff) > 0.02) }; }
+function renderSummary(){
+  const mk = monthKey(), [y, m] = mk.split('-').map(Number), lock = isLocked(mk);
+  document.getElementById('sum-month-label').textContent = MONTHS[m-1] + ' ' + y;
+  document.getElementById('sum-view-btn').textContent = SM.view === 'table' ? '☰ List' : '▦ Full table';
+  const rows = smRows(mk);
+  if(!rows.length){ document.getElementById('summary-table').innerHTML = '<div class="empty"><div class="icon">📋</div><p>No workers this month</p></div>'; document.getElementById('summary-totals').innerHTML = ''; return; }
+  const txR = rows.filter(r => r.tx > 0), cashR = rows.filter(r => r.cash > 0), unR = rows.filter(r => r.pm === 'unpaid'), nbR = rows.filter(r => r.noBank), miR = rows.filter(r => r.minus > 0);
+  const sum = (a, f) => r2(a.reduce((t, r) => t + f(r), 0));
+  let h = '';
+  if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
+  h += '<div class="sm-top"><div class="l">To transfer · ' + txR.length + ' worker' + (txR.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(txR, r => r.tx)) + '</div>'
+    + '<div class="g3"><div>Paid in cash<b>' + fmtRM(sum(cashR, r => r.cash)) + '</b></div><div>Not paid<b>' + unR.length + '</b></div><div>Bank fees<b>' + fmtRM(sum(rows, r => r.fee)) + '</b></div></div></div>';
+  if(miR.length) h += '<div class="av-alert" data-f="minus"><span>See ›</span><b>' + miR.length + ' worker' + (miR.length>1?'s':'') + ': salary is minus</b><small>' + esc(miR.map(r => r.w.name + ' −' + fmtRM(r.minus)).join(', ')) + (lock ? '' : ' — when you lock ' + MONTHS[m-1] + ', this becomes a loan, taken from ' + MONTHS[Number(nextMk(mk).slice(5))-1]) + '</small></div>';
+  if(nbR.length) h += '<div class="av-alert" data-f="nobank"><span>See ›</span><b>' + nbR.length + ' worker' + (nbR.length>1?'s':'') + ' have no bank account</b><small>' + esc(nbR.slice(0,4).map(r => r.w.name).join(', ')) + (nbR.length>4?'…':'') + ' — pay cash, or add the bank in Workers</small></div>';
+  const F = [['all','All',rows.length],['transfer','Transfer',txR.length],['cash','Cash',cashR.length],['unpaid','Not paid',unR.length],['nobank','No bank',nbR.length],['minus','Minus',miR.length]].filter(f => f[0]==='all' || f[2]);
+  if(!F.some(f => f[0]===SM.filter)) SM.filter = 'all';
+  if(SM.view === 'list'){
+    h += '<div class="sm-flt">' + F.map(f => '<span class="' + (SM.filter===f[0]?'on':'') + '" data-f="' + f[0] + '">' + f[1] + ' ' + f[2] + '</span>').join('') + '</div>';
+    const show = rows.filter(r => SM.filter==='all' || (SM.filter==='transfer' && r.tx>0) || (SM.filter==='cash' && r.cash>0) || (SM.filter==='unpaid' && r.pm==='unpaid') || (SM.filter==='nobank' && r.noBank) || (SM.filter==='minus' && r.minus>0));
+    h += '<div class="ad-fm"><span>WORKER</span><span>GETS</span></div><div class="ad-list">' + show.map(r => {
+      const tag = (r.pm==='cash' ? '<span class="sm-tag c">CASH</span>' : '') + (r.pm==='unpaid' ? '<span class="sm-tag u">NOT PAID</span>' : '') + (r.noBank ? '<span class="sm-tag n">NO BANK</span>' : '');
+      const sub = esc(homeFarm(r.w, mk) || 'Farm not set') + ' · ' + (r.w.rateType==='monthly' ? 'monthly' : fmtNum(r.s.totalD) + (r.s.totalD === 1 ? ' day' : ' days')) + ' · salary ' + fmtRM(r.s.gross);
+      const right = r.minus ? 'RM 0.00<small style="color:var(--red)">minus ' + fmtRM(r.minus) + ' → loan</small>' : fmtRM(r.gets) + '<small style="color:var(--red)">− ' + fmtRM(r.s.totalDed) + ' deducted</small>';
+      return '<div class="ad-row" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + tag + '<small>' + sub + '</small></div><div class="fd-amt"' + (r.pm==='unpaid'?' style="text-decoration:line-through;color:var(--text3)"':'') + '>' + right + '</div></div>'; }).join('') + '</div>';
+    document.getElementById('summary-table').innerHTML = '<div style="padding:12px 16px;max-width:620px">' + h + '</div>';
+  } else {
+    document.getElementById('summary-table').innerHTML = '<div style="padding:12px 16px">' + h + '</div>' + smFullTable(rows, mk);
+  }
+  // 对账：左边 HX/AD 公司付多少；右边一笔一笔真的钱去哪里
+  const c = smCheck(rows), right = r2(c.tx + c.fee + c.cash + c.held + c.food + c.pers - c.minus), ok = !c.bad.length && Math.abs(c.left - right) <= 0.01 * rows.length;
+  const tr = (a, b, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + a + '</td><td>' + b + '</td></tr>';
+  document.getElementById('summary-totals').innerHTML = '<div class="card sm-ck"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Bank Transfer Reconciliation</b><span class="sm-badge ' + (ok?'ok':'no') + '">' + (ok ? '✓ BALANCED' : '✗ CHECK FIGURES') + '</span></div>'
+    + '<div class="sm-ck2"><div><div class="ad-lbl">Bank Transfer (HX vs AD)</div><table><tr class="h"><td></td><td style="color:var(--acc)">HX</td><td style="color:var(--grn)">AD</td></tr>'
+    + '<tr><td>Total Salary</td><td>' + fmtRM(c.hxSal) + '</td><td>' + fmtRM(c.adSal) + '</td></tr><tr class="m"><td>− Advance Deducted</td><td>−' + fmtRM(c.hxAdv) + '</td><td>−' + fmtRM(c.adAdv) + '</td></tr>'
+    + '<tr class="t"><td>Company pays</td><td colspan="2">' + fmtRM(c.left) + '</td></tr></table></div>'
+    + '<div><div class="ad-lbl">Where the money goes</div><table>' + tr('Bank transfers to workers (' + txR.length + ')', fmtRM(c.tx)) + tr('Bank fees', fmtRM(c.fee)) + (c.cash ? tr('Paid in cash', fmtRM(c.cash)) : '') + (c.held ? tr('Not paid yet (held)', fmtRM(c.held)) : '')
+    + tr('Food -- Daniel', fmtRM(c.food)) + tr('Personal -- Daniel', fmtRM(c.pers)) + (c.minus ? tr('Minus pay → loan', '−' + fmtRM(c.minus), 'm') : '') + tr('Total', fmtRM(right), 't') + '</table></div></div>'
+    + (ok ? '<div class="sm-res ok">✓ Matches — every ringgit is accounted for</div>' : '<div class="sm-res no">✗ Off by ' + fmtRM(r2(c.left - right)) + (c.bad.length ? ' — check: ' + esc(c.bad.map(r => r.w.name + ' (' + fmtRM(r.diff) + ')').join(', ')) : '') + '</div>')
+    + '</div>';
+}
+function smFullTable(rows, mk){
+  const lock = isLocked(mk), sum = f => r2(rows.reduce((a, r) => a + r2(f(r)), 0));
+  const body = rows.map(r => { const s = r.s; return '<tr data-wid="' + r.w.id + '" style="cursor:pointer"><td><strong>' + esc(r.w.name) + '</strong>' + (r.pm==='cash'?' <span class="sm-tag c">CASH</span>':'') + (r.pm==='unpaid'?' <span class="sm-tag u">NOT PAID</span>':'') + '<br><span style="font-size:10px;color:var(--text3)">' + esc(homeFarm(r.w, mk) || r.w.title || '') + '</span></td>'
+    + '<td class="num sum-gross">' + fmtRM(s.gross) + '</td><td class="num sum-deduct">-' + fmtRM(s.food) + '</td><td class="num sum-deduct">-' + fmtRM(s.advD) + '</td><td class="num sum-deduct">-' + fmtRM(s.persD) + '</td><td class="num sum-deduct" style="font-weight:700">-' + fmtRM(s.totalDed) + '</td>'
+    + '<td class="num sum-net"' + (r.minus?' style="color:var(--red)"':'') + '>' + fmtRM(r.net) + '</td><td class="num sum-deduct">' + (r.cash ? '-' + fmtRM(r.cash) : '--') + '</td><td class="num" style="font-size:11px;color:var(--text3)">' + (r.fee ? '-' + fmtRM(r.fee) : '--') + '</td>'
+    + '<td class="num sum-transfer"' + (r.pm==='unpaid'?' style="text-decoration:line-through;color:var(--text3)"':'') + '>' + fmtRM(r.pm==='unpaid' ? s.toTx : r.tx) + '</td></tr>'; }).join('');
+  return '<div class="tbl-wrap" style="border:none;border-radius:0"><table class="sum-table"><thead><tr><th style="width:180px">Worker</th><th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th><th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash</th><th class="num">Bank Charge</th><th class="num">To Transfer</th></tr></thead><tbody>' + body
+    + '<tr class="total-row"><td><strong>TOTAL</strong></td><td class="num">' + fmtRM(sum(r => r.s.gross)) + '</td><td class="num">' + fmtRM(sum(r => r.s.food)) + '</td><td class="num">' + fmtRM(sum(r => r.s.advD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.persD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.totalDed)) + '</td><td class="num">' + fmtRM(sum(r => r.net)) + '</td><td class="num">' + fmtRM(sum(r => r.cash)) + '</td><td class="num">' + fmtRM(sum(r => r.fee)) + '</td><td class="num">' + fmtRM(sum(r => r.tx)) + '</td></tr></tbody></table></div>';
+}
+function smShow(){ document.getElementById('sm-dim').style.display = 'block'; document.getElementById('sm-sheet').style.display = 'block'; }
+function smClose(){ document.getElementById('sm-dim').style.display = 'none'; document.getElementById('sm-sheet').style.display = 'none'; SM.wid = null; renderSummary(); }
+function smWorker(wid, mode){
+  const mk = monthKey(), w = getWorker(wid), r = smRow(w, mk), s = r.s, lock = isLocked(mk) || !CAN_EDIT; SM.wid = wid;
+  const ln = (a, b, cls) => '<div class="sm-ln' + (cls ? ' ' + cls : '') + '"><span>' + a + '</span><span>' + b + '</span></div>';
+  let h = '<div class="ad-grab"></div><h3>' + esc(w.name) + '</h3><p>' + esc(homeFarm(w, mk) || 'Farm not set') + ' · ' + (w.rateType==='monthly' ? 'monthly salary' : fmtNum(s.totalD) + (s.totalD === 1 ? ' day × ' : ' days × ') + fmtRM(getRateForMonth(w, mk))) + '</p>';
+  if(mode === 'gross'){
+    h += '<div class="ad-lbl">' + MONTHS[Number(mk.slice(5))-1] + ' salary (now ' + fmtRM(s.gross) + ')</div><input class="fd-in big" id="sm-gross" inputmode="decimal" value="' + s.gross + '">'
+      + '<p style="margin-top:6px">Only for ' + MONTHS[Number(mk.slice(5))-1] + '. His normal monthly salary is ' + fmtRM(getRateForMonth(w, mk)) + ' (change that in Workers).</p>'
+      + '<div class="fd-err" id="sm-err"></div><button class="fd-save" data-act="savegross">Save</button><button class="ad-cancel" data-act="back">Cancel</button>';
+  } else {
+    h += '<div style="margin-top:8px">' + ln('Salary' + (w.rateType==='monthly' && !lock ? ' <a data-act="gross">Change</a>' : ''), fmtRM(s.gross))
+      + ln('Food', '− ' + fmtRM(s.food), 'm') + ln('Loan', '− ' + fmtRM(s.advD), 'm') + ln('Personal', '− ' + fmtRM(s.persD), 'm')
+      + ln('Net pay', r.minus ? '<b style="color:var(--red)">− ' + fmtRM(r.minus) + '</b>' : fmtRM(r.net));
+    if(r.minus) h += ln('Minus becomes a loan', '<span style="color:var(--grn)">+ ' + fmtRM(r.minus) + '</span>');
+    else h += ln('Cash out', s.cashOut ? '− ' + fmtRM(s.cashOut) : '—', 'm') + (r.pm==='cash' ? ln('Paid in cash', '− ' + fmtRM(s.cashPaid||0), 'm') : '') + ln('Bank fee', r.fee ? '− ' + fmtRM(r.fee) : '—', 'm');
+    h += ln(r.pm==='unpaid' ? 'Held (not paid yet)' : 'He gets', fmtRM(r.gets), 't') + '</div>';
+    if(r.minus) h += '<div class="ad-lock" style="margin-top:8px">Food, loan and personal are more than his salary. ' + (isLocked(mk) ? 'The minus was added to his loan.' : 'When you lock ' + MONTHS[Number(mk.slice(5))-1] + ', ' + fmtRM(r.minus) + ' is added to his loan and taken from his ' + MONTHS[Number(nextMk(mk).slice(5))-1] + ' salary (you can change it in Advance).') + '</div>';
+    if(r.noBank) h += '<div class="ad-lock" style="margin-top:8px">No bank account. Pick Cash, or add the bank in Workers.</div>';
+    h += '<div class="ad-lbl">How is he paid?</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [['transfer','Bank'],['cash','Cash'],['unpaid','Not paid yet']].map(p => '<button class="ad-opt' + (r.pm===p[0]?' on':'') + '" data-pm="' + p[0] + '"' + (lock?' disabled':'') + '>' + p[1] + '</button>').join('') + '</div>';
+    if(w.bankAccount2 && w.beneficiary2) h += '<div class="ad-lbl">Send to</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [1,2].map(n => '<button class="ad-opt' + (payeeSlot(wid, mk)===n?' on':'') + '" data-slot="' + n + '"' + (lock?' disabled':'') + '>' + esc(n===1 ? w.beneficiary : w.beneficiary2) + '</button>').join('') + '</div>';
+    h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="cashout">💵 Cash out part</button><button class="ad-opt" data-act="receipt">🧾 Receipt</button></div><button class="ad-cancel" data-act="close">Close</button>';
+  }
+  document.getElementById('sm-sheet').innerHTML = h; smShow();
+}
+function smToggleView(){ SM.view = SM.view === 'list' ? 'table' : 'list'; renderSummary(); }
+document.getElementById('summary-table').addEventListener('click', e => {
+  const f = e.target.closest('[data-f]'); if(f){ SM.filter = SM.filter === f.dataset.f && f.classList.contains('av-alert') ? 'all' : f.dataset.f; return renderSummary(); }
+  const r = e.target.closest('[data-wid]'); if(r) smWorker(r.dataset.wid);
+});
+document.getElementById('sm-sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-pm],[data-slot]'); if(!b || !SM.wid || b.disabled) return;
+  const mk = monthKey(), wid = SM.wid, a = b.dataset.act;
+  if(a === 'close') return smClose();
+  if(a === 'back') return smWorker(wid);
+  if(a === 'gross') return smWorker(wid, 'gross');
+  if(a === 'savegross'){ const v = r2(parseFloat(document.getElementById('sm-gross').value)); if(!(v >= 0)){ document.getElementById('sm-err').textContent = 'Type the salary.'; return; }
+    setGrossOverride(wid, mk, v); renderSummary(); renderDashboard(); return smWorker(wid); }
+  if(b.dataset.pm){ setPayMethod(wid, mk, b.dataset.pm); toast(getWorker(wid).name + ': ' + {transfer:'Bank', cash:'Cash', unpaid:'Not paid yet'}[b.dataset.pm]); renderSummary(); renderDashboard(); return smWorker(wid); }
+  if(b.dataset.slot){ setPayeeSlot(wid, mk, Number(b.dataset.slot)); return smWorker(wid); }
+  if(a === 'cashout'){ smClose(); return openCashOut(wid, mk); }
+  if(a === 'receipt') return printReceipt(wid, mk);
+});
+// 锁月：净薪负数 → 下个月的借款（同一个月重锁不会重复）
+function minusToLoans(mk){
+  const tag = '[minus ' + mk + ']', nm = nextMk(mk); let n = 0;
+  workersInMonthLive(mk).forEach(w => { const s = calcWorkerSummaryLive(w, mk), amt = s.net < 0 ? r2(-s.net) : 0;
+    S.loans ??= {}; const L = S.loans[w.id] ??= {txn:[], plan:[], months:{}};
+    const ex = L.txn.find(t => t.kind==='LOAN' && (t.note||'').startsWith(tag));
+    if(ex && Math.abs(ex.amount - amt) < 0.005) return;
+    if(ex){ VOID_REASON[ex.id] = 'Minus pay changed after relock'; L.txn = L.txn.filter(t => t !== ex); }
+    if(amt <= 0) return;
+    L.txn.push({id:uid(), month:nm, date:nm + '-01', kind:'LOAN', amount:amt, note:tag + ' Salary minus in ' + MONTHS[Number(mk.slice(5))-1] + ' ' + mk.slice(0,4)});
+    if(loanPlanFor(L, nm) == null) L.plan.push({id:uid(), from:nm, monthly:amt});
+    n++; });
+  if(n) saveAll();
+  return n;
+}
 
 function askReason(msg){ const r = prompt(msg + '\nReason:'); return r && r.trim() ? r.trim() : null; }
 function voidLoanTxn(wid, id){ const r = askReason('Void this loan entry'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
