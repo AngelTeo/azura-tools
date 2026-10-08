@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v65</title>
+<title>Salary v66</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -319,7 +319,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
           <button class="btn btn-sm wf-btn" data-filter="ad" onclick="setWorkerFilter('ad')">AD</button>
           <button class="btn btn-sm wf-btn" data-filter="both" onclick="setWorkerFilter('both')">Both</button>
         </div>
-        <a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html">Add / edit workers in Workers ↗</a>
+        <a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html" onclick="this.href='../CORE/FarmHub.html?t='+Date.now()">Add / edit workers in Workers ↗</a>
       </div>
     </div>
     <div class="tbl-wrap" id="workers-table"></div>
@@ -544,7 +544,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 65;
+const APP_VERSION = 66;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1006,7 +1006,7 @@ function renderWorkers(){
       <td class="m-hide" style="font-size:11px;">${w.beneficiary||'--'}</td>
       <td class="m-hide" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
       <td class="m-hide" onclick="event.stopPropagation()"><div style="display:flex;gap:4px;">
-        <a class="btn btn-sm" style="text-decoration:none;" href="../CORE/FarmHub.html#w=${w.id}">Edit in Workers ↗</a>
+        <a class="btn btn-sm" style="text-decoration:none;" href="../CORE/FarmHub.html?t=${Date.now()}#w=${w.id}">Edit in Workers ↗</a>
         <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">History</button>
       </div></td>
     </tr>`;
@@ -1041,7 +1041,7 @@ function openWorkerCard(id){
   document.getElementById('modal-title').textContent = (w.no ? '#' + w.no + ' · ' : '') + w.name;
   document.getElementById('modal-body').innerHTML =
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
-    + '<a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html#w=' + id + '">Edit in Workers ↗</a>'
+    + '<a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html?t=' + Date.now() + '#w=' + id + '">Edit in Workers ↗</a>'
     + '<button class="btn" onclick="closeModal();openWorkerHistory(\'' + id + '\')">History</button>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--text3);margin:-6px 0 12px;">Worker details are kept in the Workers system. Changes there show here automatically.</div>'

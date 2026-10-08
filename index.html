@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Azura Delta Platform v2</title>
+<title>Azura Delta Platform v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
@@ -77,7 +77,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <footer id="foot"></footer>
 
 <script>
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -162,7 +162,7 @@ async function showApp(){
     const items = live.filter(s => s.layer === code).sort((a,b) => a.sort - b.sort);
     if(!items.length) return;
     html += `<div class="section"><div class="section-hdr"><div class="dot" style="background:${color}"></div><span class="section-title">${title}</span></div><div class="grid">`
-      + items.map(s => `<a class="app-card" style="--c:${s.color||color}" href="${esc(s.href)}" data-name="${esc(s.label)}" data-href="${esc(s.href)}" data-ver="${esc(s.ver||'')}">
+      + items.map(s => `<a class="app-card" style="--c:${s.color||color}" href="${esc(s.href)}?v=${encodeURIComponent(s.ver||Date.now())}" data-name="${esc(s.label)}" data-href="${esc(s.href)}" data-ver="${esc(s.ver||'')}">
           <span class="app-name">${esc(s.label)}</span><span class="app-sub">${s.can_edit ? '' : 'View only'}</span>${s.ver && SHOWVER ? `<span class="app-ver">${esc(s.ver)}</span>` : ''}</a>`).join('')
       + '</div></div>';
   });
