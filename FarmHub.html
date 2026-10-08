@@ -79,7 +79,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 </head>
 <body>
 <header>
-  <div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v4</div></div>
+  <div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v5</div></div>
   <div class="who" id="who"></div>
 </header>
 <main>
@@ -127,7 +127,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <div id="detail"><div class="card" id="dc"></div></div>
 
 <script>
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -198,10 +198,10 @@ async function boot(){
 async function load(){
   const q = (t, cols, f) => { let x=sb.from(t).select(cols); return f?f(x):x; };
   const res = await Promise.all([
-    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,phone', x=>x.order('worker_no')),
+    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,phone', x=>x.is('voided_at',null).order('worker_no')),
     q('hub_worker_rate','worker_id,rate_type,rate,effective_from', x=>x.is('voided_at',null).order('effective_from')),
     q('hub_worker_company','worker_id,company_id,effective_from', x=>x.is('voided_at',null).order('effective_from')),
-    q('hub_worker_payee','worker_id,beneficiary_name,account_no,channel,effective_from', x=>x.is('voided_at',null).order('effective_from')),
+    q('hub_worker_payee','worker_id,beneficiary_name,account_no,channel,effective_from,slot', x=>x.is('voided_at',null).order('effective_from')),
     q('hub_company','id,code,name'),
     q('hub_option','list_code,code,label', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']))
   ]);
@@ -212,7 +212,7 @@ async function load(){
   D.workers=w;
   D.rates={}; r.forEach(x=>(D.rates[x.worker_id]??=[]).push(x));
   D.comps={}; c.forEach(x=>(D.comps[x.worker_id]??=[]).push(x));
-  D.payees={}; p.forEach(x=>(D.payees[x.worker_id]??=[]).push(x));
+  D.payees={}; p.filter(x=>(x.slot||1)===1).forEach(x=>(D.payees[x.worker_id]??=[]).push(x));
   D.company={}; co.forEach(x=>D.company[x.id]=x);
   D.reason={}; D.channel={}; op.forEach(x=>{ if(x.list_code==='STOP_REASON') D.reason[x.code]=x.label; else D.channel[x.code]=x.label; });
   const sel=$('fCo'); sel.innerHTML='<option value="">全部公司</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">两家对半</option>';

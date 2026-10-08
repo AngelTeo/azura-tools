@@ -232,7 +232,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div class="logo-mark">🌾</div>
     <div>
       <h1>WORKER SALARY</h1>
-      <small>WORKER SALARY SYSTEM · 云端 v59</small>
+      <small>WORKER SALARY SYSTEM · 云端 v60</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
@@ -312,8 +312,9 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
         <button class="btn btn-sm btn-red" onclick="clearAttendance()">Clear</button>
       </div>
     </div>
+    <div id="att-toolbar"></div>
     <div class="att-legend">
-      <span style="font-size:10px;font-weight:600;color:var(--text2);">Click cell to cycle:</span>
+      <span style="font-size:10px;font-weight:600;color:var(--text2);">代码：</span>
       <div class="leg-item"><div class="leg-dot att-cell st-empty">·</div><span>Off</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-hx">H</div><span>HX full</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-ad">A</div><span>AD full</span></div>
@@ -516,13 +517,13 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 59;
+const APP_VERSION = 60;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const TODAY_KL = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 let CLOUD_OK = false, CAN_EDIT = false, SNAP = null, syncTimer = null, syncing = false, syncAgain = false, dirty = false;
-let CO_ID = {}, CO_CODE = {}, W_RATES = {}, W_COMP = {}, W_PAY = {}, W_PP = {};
+let CO_ID = {}, CO_CODE = {}, W_RATES = {}, W_COMP = {}, W_PAY = {}, W_PAY2 = {}, W_PP = {};
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2,'0');
 
@@ -555,10 +556,10 @@ async function loadData(){
   const notVoid = q => q.is('voided_at', null);
   const [co, wk, rt, cp, py, pp, nt, at, go, pm, fd, ps, av, rm] = await Promise.all([
     fetchAll('hub_company','id,code'),
-    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,phone', q=>q.order('worker_no')),
+    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,phone', q=>q.is('voided_at',null).order('worker_no')),
     fetchAll('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_company','id,worker_id,company_id,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
-    fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
+    fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_passport','id,worker_id,passport_no,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('salary_worker_note','worker_id,stop_notes'),
     fetchAll('salary_attendance','worker_id,work_date,code', q=>q.neq('code','')),
@@ -572,17 +573,17 @@ async function loadData(){
   if(!wk.length) throw new Error('读到 0 名工人（可能是没有薪水「看」的权限）');
   co.forEach(c => { CO_ID[c.code] = c.id; CO_CODE[c.id] = c.code; });
   const grp = (rows) => { const m = {}; rows.forEach(r => (m[r.worker_id] ??= []).push(r)); return m; };
-  W_RATES = grp(rt); W_COMP = grp(cp); W_PAY = grp(py); W_PP = grp(pp);
+  W_RATES = grp(rt); W_COMP = grp(cp); W_PAY = grp(py.filter(r => (r.slot||1)===1)); W_PAY2 = grp(py.filter(r => r.slot===2)); W_PP = grp(pp);
   const notes = {}; nt.forEach(n => notes[n.worker_id] = n.stop_notes || '');
   S.workers = wk.map(w => {
     const rates = W_RATES[w.id] || [], last = rates[rates.length-1];
     const comp = (W_COMP[w.id] || []).slice(-1)[0];
-    const pay = (W_PAY[w.id] || []).slice(-1)[0], pas = (W_PP[w.id] || []).slice(-1)[0];
+    const pay = (W_PAY[w.id] || []).slice(-1)[0], pay2 = (W_PAY2[w.id] || []).slice(-1)[0], pas = (W_PP[w.id] || []).slice(-1)[0];
     const farm = !comp ? 'hx' : comp.company_id ? (CO_CODE[comp.company_id]==='AD' ? 'ad' : 'hx') : 'both';
     return { id:w.id, no:w.worker_no, name:w.name, title:w.title||'',
       rateType: last && last.rate_type==='MONTHLY' ? 'monthly' : 'daily', rate: last ? Number(last.rate) : 0,
       rateHistory: rates.map(r => ({from:r.effective_from, rate:Number(r.rate)})),
-      farm, phone:w.phone||'', bankAccount: pay ? pay.account_no : '', beneficiary: pay ? pay.beneficiary_name : '',
+      farm, phone:w.phone||'', bankAccount: pay ? pay.account_no : '', beneficiary: pay ? pay.beneficiary_name : '', bankAccount2: pay2 ? pay2.account_no : '', beneficiary2: pay2 ? pay2.beneficiary_name : '',
       passport: pas ? pas.passport_no : '', joinDate:w.join_date||'', stopDate:w.stop_date||'',
       stopReason:w.stop_reason||'', stopNotes:notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active' };
   });
@@ -594,6 +595,20 @@ async function loadData(){
   S.personal = {}; ps.forEach(r => ((S.personal[r.month] ??= {})[r.worker_id] ??= []).push(r.data));
   S.advance = {}; av.forEach(r => S.advance[r.worker_id] = r.data);
   REM.records = rm.map(r => r.data);
+  const [lt, lp, lm, co2, pc] = await Promise.all([
+    fetchAll('salary_loan_txn','id,worker_id,month,txn_date,kind,amount,note', q=>q.is('voided_at',null).order('created_at')),
+    fetchAll('salary_loan_plan','id,worker_id,effective_from,monthly_pay', q=>q.is('voided_at',null).order('effective_from')),
+    fetchAll('salary_loan_month','worker_id,month,amount,note', q=>q.not('amount','is',null)),
+    fetchAll('salary_cashout','id,worker_id,month,data', q=>q.is('voided_at',null).order('created_at')),
+    fetchAll('salary_payee_choice','worker_id,month,slot', q=>q.neq('slot',1)),
+  ]);
+  S.loans = {};
+  const LA = w => S.loans[w] ??= {txn:[], plan:[], months:{}};
+  lt.forEach(t => LA(t.worker_id).txn.push({id:t.id, month:t.month, date:t.txn_date||'', kind:t.kind, amount:Number(t.amount), note:t.note||''}));
+  lp.forEach(p => LA(p.worker_id).plan.push({id:p.id, from:p.effective_from, monthly:Number(p.monthly_pay)}));
+  lm.forEach(m => LA(m.worker_id).months[m.month] = {amount:Number(m.amount), note:m.note||''});
+  S.cashout = {}; co2.forEach(c => ((S.cashout[c.month] ??= {})[c.worker_id] ??= []).push(c.data));
+  S.payeeSlot = {}; pc.forEach(c => (S.payeeSlot[c.month] ??= {})[c.worker_id] = c.slot);
   await loadLocks();
   SNAP = clone({S, REM});
 }
@@ -660,6 +675,7 @@ async function syncNow(){
     await upsertChunks('salary_remittance', Object.keys(M1).filter(k => !same(M0[k],M1[k])).map(k => ({id:k, year:M1[k].year, month:M1[k].month, data:M1[k], voided_at:null})), 'id');
     await voidIds('salary_remittance','id', Object.keys(M0).filter(k => !(k in M1))); SNAP.REM = cur.REM;
 
+    await syncV60(cur);
     dirty = false;
     setSync('ok', '已存 ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   }catch(e){
@@ -675,6 +691,35 @@ async function syncNow(){
     syncing = false;
     if(syncAgain) syncNow();
   }
+}
+
+
+async function syncV60(cur){
+  // 借款帐：借出 / 计划（只新增或作废）、单月例外（upsert）
+  const tx = s => { const o = {}; for(const w in (s.loans||{})) (s.loans[w].txn||[]).forEach(t => o[t.id] = {w, t}); return o; };
+  const pl = s => { const o = {}; for(const w in (s.loans||{})) (s.loans[w].plan||[]).forEach(p => o[p.id] = {w, p}); return o; };
+  const lmo = s => { const o = {}; for(const w in (s.loans||{})) for(const m in (s.loans[w].months||{})) o[w+'|'+m] = s.loans[w].months[m]; return o; };
+  const T0 = tx(SNAP.S), T1 = tx(cur.S), P0 = pl(SNAP.S), P1 = pl(cur.S), M0 = lmo(SNAP.S), M1 = lmo(cur.S);
+  const voidRows = async (table, ids) => { for(const id of ids){ const {error} = await sb.from(table).update({voided_at: now(), void_reason: VOID_REASON[id] || '画面上拿掉'}).eq('id', id); if(error) throw dbErr(table, error); } };
+  await voidRows('salary_loan_plan', Object.keys(P0).filter(k => !(k in P1)));
+  await voidRows('salary_loan_txn', Object.keys(T0).filter(k => !(k in T1)));
+  await upsertChunks('salary_loan_txn', Object.keys(T1).filter(k => !(k in T0)).map(k => { const {w,t} = T1[k]; return {id:t.id, worker_id:w, month:t.month, txn_date:t.date||null, kind:t.kind, amount:t.amount, note:t.note||null}; }), 'id');
+  await upsertChunks('salary_loan_plan', Object.keys(P1).filter(k => !(k in P0)).map(k => { const {w,p} = P1[k]; return {id:p.id, worker_id:w, effective_from:p.from, monthly_pay:p.monthly}; }), 'id');
+  const lmRows = [];
+  for(const k of new Set([...Object.keys(M0), ...Object.keys(M1)])) if(!same(M0[k], M1[k])){ const [w,m] = k.split('|'); lmRows.push({worker_id:w, month:m, amount: M1[k] ? M1[k].amount : null, note: M1[k] ? (M1[k].note||null) : null}); }
+  await upsertChunks('salary_loan_month', lmRows, 'worker_id,month');
+  SNAP.S.loans = cur.S.loans;
+  // 先付现金
+  const fc = s => { const o = {}; for(const m in (s.cashout||{})) for(const w in s.cashout[m]) (s.cashout[m][w]||[]).forEach(x => o[x.id] = {month:m, worker_id:w, data:x}); return o; };
+  const C0 = fc(SNAP.S), C1 = fc(cur.S);
+  await upsertChunks('salary_cashout', Object.keys(C1).filter(k => !same(C0[k], C1[k])).map(k => ({id:k, worker_id:C1[k].worker_id, month:C1[k].month, data:C1[k].data, voided_at:null})), 'id');
+  await voidIds('salary_cashout', 'id', Object.keys(C0).filter(k => !(k in C1)));
+  SNAP.S.cashout = cur.S.cashout;
+  // 这个月汇给哪一组收款人
+  const Q0 = flat2(SNAP.S.payeeSlot||{}), Q1 = flat2(cur.S.payeeSlot||{}), q = [];
+  for(const k of new Set([...Object.keys(Q0), ...Object.keys(Q1)])) if(Q0[k] !== Q1[k]){ const [w,m] = k.split('|'); q.push({worker_id:w, month:m, slot: Q1[k] || 1}); }
+  await upsertChunks('salary_payee_choice', q, 'worker_id,month');
+  SNAP.S.payeeSlot = cur.S.payeeSlot;
 }
 
 // ---- 工人：写回 FarmHub 主资料（历史类表只新增；同一生效日先作废旧的再新增） ----
@@ -749,6 +794,15 @@ async function syncWorkers(cur){
         prow.push(...await hubCall(sb.from('hub_worker_payee').insert({worker_id:w.id, beneficiary_name:w.beneficiary, account_no:w.bankAccount, channel:'MERCHANTRADE', effective_from:TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from')));
       }else{
         for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+'：清空收款资料');
+      }
+    }
+    // 第二组收款人
+    if((o.bankAccount2||'') !== (w.bankAccount2||'') || (o.beneficiary2||'') !== (w.beneficiary2||'')){
+      const prow = W_PAY2[w.id] ||= [];
+      if(w.bankAccount2 && w.beneficiary2){
+        prow.push(...await hubCall(sb.from('hub_worker_payee').insert({worker_id:w.id, slot:2, beneficiary_name:w.beneficiary2, account_no:w.bankAccount2, channel:'MERCHANTRADE', effective_from:TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from,slot')));
+      }else{
+        for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+'：清空第二组收款人');
       }
     }
     // 护照
@@ -941,6 +995,8 @@ function renderWorkers(){
       <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
       <td><div style="display:flex;gap:4px;">
         <button class="btn btn-sm" onclick="openWorkerModal('${w.id}')">Edit</button>
+        <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">纪录</button>
+        ${workerHasRecords(w.id)?'':`<button class="btn btn-sm btn-red" title="只给建错、没有任何纪录的人" onclick="voidWorker('${w.id}')">作废</button>`}
         ${effectiveStatus==='active'
           ?`<button class="btn btn-sm btn-red" onclick="openStopModal('${w.id}')">Stop</button>`
           :`<button class="btn btn-sm" onclick="activateWorker('${w.id}')">Activate</button>`}
@@ -989,7 +1045,9 @@ function openWorkerModal(id){
       </div>
       <div class="form-row"><label>Phone</label><input id="wf-phone" value="${w.phone||''}"></div>
       <div class="form-row"><label>Bank Account No</label><input id="wf-bank" value="${w.bankAccount||''}"></div>
-      <div class="form-row"><label>Beneficiary Name</label><input id="wf-bene" value="${w.beneficiary||''}"></div>
+      <div class="form-row"><label>Beneficiary Name（收款人 1 · 预设）</label><input id="wf-bene" value="${w.beneficiary||''}"></div>
+      <div class="form-row"><label>Bank Account No（收款人 2）</label><input id="wf-bank2" value="${w.bankAccount2||''}"></div>
+      <div class="form-row"><label>Beneficiary Name（收款人 2）</label><input id="wf-bene2" value="${w.beneficiary2||''}"></div>
       <div class="form-row"><label>Passport No</label><input id="wf-pass" value="${w.passport||''}"></div>
       <div class="form-row"><label>Join Date</label><input id="wf-join" type="date" value="${w.joinDate||''}"></div>
       <div class="form-row"><label>Stop Date <span style="color:var(--text3);font-size:10px;">(if applicable)</span></label><input id="wf-stop" type="date" value="${w.stopDate||''}"></div>
@@ -1065,9 +1123,9 @@ function saveWorker(id){
     });
     const newStopDate=document.getElementById('wf-stop').value;
     const newStatus=newStopDate?'stopped':'active';
-    Object.assign(w,{name,title:document.getElementById('wf-title').value.trim(),rateType:document.getElementById('wf-rtype').value,rate,farm:document.getElementById('wf-farm').value,phone:document.getElementById('wf-phone').value.trim(),bankAccount:document.getElementById('wf-bank').value.trim(),beneficiary:document.getElementById('wf-bene').value.trim(),passport:document.getElementById('wf-pass').value.trim(),joinDate:document.getElementById('wf-join').value,stopDate:newStopDate,status:newStatus,stopReason:newStopDate?getSelReason():(w.stopReason||''),stopNotes:notesEl?notesEl.value:(w.stopNotes||''),rateHistory:rateHistory.length?rateHistory:(w.rateHistory||[])});
+    Object.assign(w,{name,title:document.getElementById('wf-title').value.trim(),rateType:document.getElementById('wf-rtype').value,rate,farm:document.getElementById('wf-farm').value,phone:document.getElementById('wf-phone').value.trim(),bankAccount:document.getElementById('wf-bank').value.trim(),beneficiary:document.getElementById('wf-bene').value.trim(),bankAccount2:document.getElementById('wf-bank2').value.trim(),beneficiary2:document.getElementById('wf-bene2').value.trim(),passport:document.getElementById('wf-pass').value.trim(),joinDate:document.getElementById('wf-join').value,stopDate:newStopDate,status:newStatus,stopReason:newStopDate?getSelReason():(w.stopReason||''),stopNotes:notesEl?notesEl.value:(w.stopNotes||''),rateHistory:rateHistory.length?rateHistory:(w.rateHistory||[])});
   } else {
-    S.workers.push({id:genId('w'),no:S.workers.length+1,name,title:document.getElementById('wf-title').value.trim(),rateType:document.getElementById('wf-rtype').value,rate,farm:document.getElementById('wf-farm').value,phone:document.getElementById('wf-phone').value.trim(),bankAccount:document.getElementById('wf-bank').value.trim(),beneficiary:document.getElementById('wf-bene').value.trim(),passport:document.getElementById('wf-pass').value.trim(),joinDate:document.getElementById('wf-join').value,stopDate:'',status:'active'});
+    S.workers.push({id:genId('w'),no:S.workers.length+1,name,title:document.getElementById('wf-title').value.trim(),rateType:document.getElementById('wf-rtype').value,rate,farm:document.getElementById('wf-farm').value,phone:document.getElementById('wf-phone').value.trim(),bankAccount:document.getElementById('wf-bank').value.trim(),beneficiary:document.getElementById('wf-bene').value.trim(),bankAccount2:document.getElementById('wf-bank2').value.trim(),beneficiary2:document.getElementById('wf-bene2').value.trim(),passport:document.getElementById('wf-pass').value.trim(),joinDate:document.getElementById('wf-join').value,stopDate:'',status:'active'});
   }
   saveAll();closeModal();renderWorkers();renderExitRecords();toast('✅ Worker saved');
 }
@@ -1256,6 +1314,7 @@ function updateFoodRow(id,field,val){
   const row=S.food[mk].find(r=>r.id===id);
   if(!row)return;
   row[field]=val;
+  if(field==='date' && val && row.autoSel!==false){ row.workerIds=workersInMonth(mk).filter(w=>inServiceOn(w,val)).map(w=>w.id); setTimeout(renderFood,0); }
   if(field==='qty'||field==='unitPrice')row.total=row.qty*row.unitPrice;
   saveAll();
   const cnt=(row.workerIds||[]).length;
@@ -1333,6 +1392,7 @@ function toggleFoodWorker(rowId,wid,checked){
   const row=S.food[mk].find(r=>r.id===rowId);
   if(!row)return;
   if(!row.workerIds)row.workerIds=workersInMonth(mk).map(w=>w.id);
+  row.autoSel=false;
   if(checked){if(!row.workerIds.includes(wid))row.workerIds.push(wid);}
   else{row.workerIds=row.workerIds.filter(id=>id!==wid);}
   // Update label style
@@ -1366,6 +1426,7 @@ function selectAllFoodWorkers(rowId,select){
     if(select){const wid=cb.id.replace('fws-','');ids.push(wid);}
   });
   row.workerIds=select?ids:[];
+  row.autoSel=false;
   updateFoodWorkerCount(rowId);
   saveAll();
 }
@@ -1794,7 +1855,7 @@ function calcWorkerSummaryLive(w,mk){
   const advD=getAdvanceDeduction(w.id, mk);
   let advHX=0,advAD=0;
   if(advD>0){
-    const advFarm=(S.advance[w.id]?.farm)||w.farm||'hx';
+    const advFarm=(mk<NEW_SYS_START?(S.advance[w.id]?.farm):null)||w.farm||'hx';
     if(advFarm==='both'){advHX=advD/2; advAD=advD/2;}
     else if(advFarm==='ad'){advAD=advD;}
     else{advHX=advD;}
@@ -1804,9 +1865,13 @@ function calcWorkerSummaryLive(w,mk){
   const persD=calcPersonalDeduct(w.id,mk);
   const totalDed=food+advD+persD;
   const net=gross-totalDed;
+  const cashOut=cashOutOf(w.id,mk);
+  const cf=w.farm||'hx';
+  const cashHX=cf==='both'?r2(cashOut/2):cf==='hx'?cashOut:0, cashAD=r2(cashOut-cashHX);
+  const payable=r2(net-cashOut);
   const bankChg=BANK_CHARGE; // RM11 for all workers
-  const toTx=Math.max(0,net-bankChg);
-  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,bankChg,toTx,rateType:w.rateType};
+  const toTx=Math.max(0,payable-bankChg);
+  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,cashOut,cashHX,cashAD,payable,bankChg,toTx,rateType:w.rateType,rate:getRateForMonth(w,mk)};
 }
 
 function renderSummary(){
@@ -1818,6 +1883,7 @@ function renderSummary(){
   let totGross=0,totFood=0,totAdv=0,totPers=0,totDed=0,totNet=0,totTx=0;
   let totHXSal=0,totADSal=0,totHXAdv=0,totADAdv=0;
   let unpaidHX=0,unpaidAD=0,unpaidFood=0,unpaidPers=0;
+  let totCash=0,totCashHX=0,totCashAD=0;
   let rows=workers.map(w=>{
     const s=calcWorkerSummary(w,mk);
     const pm=getPayMethod(w.id,mk);
@@ -1833,7 +1899,7 @@ function renderSummary(){
       unpaidFood+=s.food;
       unpaidPers+=s.persD;
     } else {
-      totAdv+=s.advD;totDed+=s.totalDed;totNet+=s.net;totTx+=s.toTx;
+      totAdv+=s.advD;totDed+=s.totalDed;totNet+=s.net;totTx+=s.toTx;totCash+=(s.cashOut||0);totCashHX+=(s.cashHX||0);totCashAD+=(s.cashAD||0);
     }
     const grossCell=s.rateType==='monthly'
       ?`<input class="gross-input" type="number" value="${s.gross}" title="Click to edit monthly salary" onchange="setGrossOverride('${w.id}','${mk}',parseFloat(this.value)||0)" placeholder="${w.rate}">`
@@ -1841,17 +1907,18 @@ function renderSummary(){
     const stopMkS=w.stopDate?w.stopDate.substring(0,7):'';
     const stoppedThisMonthS=stopMkS===mk;
     return `<tr>
-      <td><strong>${w.name}</strong>${stoppedThisMonthS?`<span style="font-size:9px;color:var(--red);margin-left:4px;">(stopped ${w.stopDate})</span>`:''}<br><span style="font-size:10px;color:var(--text3);">${w.title||''}</span></td>
+      <td><strong>${w.name}</strong>${w.bankAccount2&&w.beneficiary2?` <select data-noprint onchange="setPayeeSlot('${w.id}','${mk}',this.value)" style="font-size:10px;" ${isLocked(mk)?'disabled':''}><option value="1" ${payeeSlot(w.id,mk)===1?'selected':''}>收款人 1</option><option value="2" ${payeeSlot(w.id,mk)===2?'selected':''}>收款人 2</option></select>`:''}${stoppedThisMonthS?`<span style="font-size:9px;color:var(--red);margin-left:4px;">(stopped ${w.stopDate})</span>`:''}<br><span style="font-size:10px;color:var(--text3);">${w.title||''}</span></td>
       <td class="num sum-gross">${grossCell}</td>
       <td class="num sum-deduct">-${fmtRM(s.food)}</td>
       <td class="num sum-deduct">-${fmtRM(s.advD)}</td>
       <td class="num sum-deduct">-${fmtRM(s.persD)}</td>
       <td class="num sum-deduct" style="font-weight:700;">-${fmtRM(s.totalDed)}</td>
       <td class="num sum-net">${fmtRM(s.net)}</td>
+      <td class="num sum-deduct">${(s.cashOut||0)>0?'-'+fmtRM(s.cashOut):'--'} <button class="btn-icon" title="先付现金" onclick="openCashOut('${w.id}','${mk}')">💵</button></td>
       <td class="num" style="font-size:11px;color:var(--text3);">${s.bankChg?'-'+fmtRM(s.bankChg):'--'}</td>
       <td class="num sum-transfer" style="${pm==='unpaid'?'text-decoration:line-through;color:var(--text3);':''}">${fmtRM(s.toTx)}</td>
-      <td style="text-align:center;padding:4px 6px;"><button class="sum-pay-btn ${pm==='unpaid'?'active-unpaid':''}" title="Mark Unpaid / click again to undo" onclick="sumToggleUnpaid('${w.id}','${mk}')">🚫</button></td>
-      <td><button class="btn-icon" title="Receipt" onclick="printReceipt('${w.id}','${mk}')" style="font-size:16px;">🧾</button></td>
+      <td data-col-noprint style="text-align:center;padding:4px 6px;"><button class="sum-pay-btn ${pm==='unpaid'?'active-unpaid':''}" title="Mark Unpaid / click again to undo" onclick="sumToggleUnpaid('${w.id}','${mk}')">🚫</button></td>
+      <td data-col-noprint><button class="btn-icon" title="Receipt" onclick="printReceipt('${w.id}','${mk}')" style="font-size:16px;">🧾</button></td>
     </tr>`;
   }).join('');
   
@@ -1863,9 +1930,10 @@ function renderSummary(){
     <td class="num">${fmtRM(totPers)}</td>
     <td class="num">${fmtRM(totDed)}</td>
     <td class="num">${fmtRM(totNet)}</td>
+    <td class="num">${totCash>0?'-'+fmtRM(totCash):'--'}</td>
     <td class="num">--</td>
     <td class="num">${fmtRM(totTx)}</td>
-    <td></td><td></td>
+    <td data-col-noprint></td><td data-col-noprint></td>
   </tr>`;
 
   document.getElementById('summary-table').innerHTML=`
@@ -1873,19 +1941,19 @@ function renderSummary(){
       <thead><tr>
         <th style="width:180px;">Worker</th>
         <th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th>
-        <th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Bank Charge</th><th class="num">To Transfer</th>
-        <th style="text-align:center;font-size:10px;">Payment</th><th style="width:36px;"></th>
+        <th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash Out 先付现金</th><th class="num">Bank Charge</th><th class="num">To Transfer</th>
+        <th data-col-noprint style="text-align:center;font-size:10px;">Payment</th><th data-col-noprint style="width:36px;"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   
   // Option B: salary totals exclude unpaid, food+personal totals include ALL
-  const hxToTx=totHXSal-totHXAdv-unpaidHX;
-  const adToTx=totADSal-totADAdv-unpaidAD;
+  const hxToTx=totHXSal-totHXAdv-unpaidHX-totCashHX;
+  const adToTx=totADSal-totADAdv-unpaidAD-totCashAD;
   const merchantTotal=hxToTx+adToTx;
   const unpaidFoodPers=unpaidFood+unpaidPers;
   // itemsTotal includes unpaid workers' food+personal (Daniel collects for everyone)
-  const workerSalary=totNet;
+  const workerSalary=totNet-totCash;
   const foodDaniel=totFood;
   const persDaniel=totPers;
   const itemsTotal=workerSalary+foodDaniel+persDaniel;
@@ -1919,6 +1987,9 @@ function renderSummary(){
                 ${unpaidHX+unpaidAD>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Unpaid (salary)</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidHX)}</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidAD)}</td></tr>`:''}
+              ${totCash>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Cash out 先付现金</td>
+                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashHX)}</td>
+                <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashAD)}</td></tr>`:''}
               <tr style="background:var(--text);color:#fff;font-weight:700;"><td style="padding:8px 10px;">TO TRANSFER</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(hxToTx)}</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:8px 10px;">${fmtRM(adToTx)}</td></tr>
@@ -2013,7 +2084,7 @@ function pushToRemittance(){
   const workers=workersInMonth(mk);
   let pushed=0;
   workers.forEach(w=>{
-    if(!w.bankAccount||!w.beneficiary)return;
+    if(!PO(w).bankAccount||!PO(w).beneficiary)return;
     const s=calcWorkerSummary(w,mk);
     if(s.toTx<=0)return;
     // Check if already exists this month
@@ -2021,8 +2092,8 @@ function pushToRemittance(){
     if(exists)return;
     var ch=BANK_CHARGE;
     REM.records.push({id:genId('r'),month:m,year:y,workers:[w.name],
-      beneficiary:w.beneficiary,accountNo:w.bankAccount,
-      beneficiaryFix:w.beneficiary,accountNoFix:w.bankAccount,
+      beneficiary:PO(w).beneficiary,accountNo:PO(w).bankAccount,
+      beneficiaryFix:PO(w).beneficiary,accountNoFix:PO(w).bankAccount,
       salary:s.toTx,charges:ch,transfer:s.toTx,addedAt:Date.now()});
     pushed++;
   });
@@ -2040,9 +2111,11 @@ function printReceipt(wid, mk){
   const monthLabel = MONTHS[mo-1] + ' ' + y;
   const daysInMo = daysInMonth(y, mo);
   const absentD = daysInMo - s.totalD;
-  const advRec = S.advance[wid];
-  const advPaid = advRec ? getAdvancePaidUpTo(wid, mk) + getAdvanceDeduction(wid, mk) : 0;
-  const advBalance = advRec ? Math.max(0, advRec.totalAmount - advPaid) : 0;
+  const advRec = mk < NEW_SYS_START ? S.advance[wid] : loanAcc(wid);
+  const advBalance = mk < NEW_SYS_START
+    ? (advRec ? Math.max(0, advRec.totalAmount - (getAdvancePaidUpTo(wid, mk) + getAdvanceDeduction(wid, mk))) : 0)
+    : Math.max(0, advanceTrack(wid, mk).balanceAfter);
+  const cashList = ((S.cashout||{})[mk]||{})[wid] || [];
 
   const foodPurchases = (S.food[mk]||[]).filter(r => !r.workerIds || r.workerIds.includes(wid));
   let foodRowsHtml = '';
@@ -2141,7 +2214,7 @@ function printReceipt(wid, mk){
 
     + '<table style="margin-bottom:8px;width:auto">'
     + '<tr><td style="font-weight:700;padding:2px 0;width:110px">WORKER NAME:</td><td style="color:#1E5C3A;font-weight:700;font-size:11px">' + w.name + '</td></tr>'
-    + '<tr><td style="font-weight:700;padding:2px 0">WORKING RATE:</td><td style="color:#1E5C3A;font-weight:700">RM' + w.rate.toFixed(2) + (w.rateType==='monthly'?' / month':' / day') + '</td></tr>'
+    + '<tr><td style="font-weight:700;padding:2px 0">WORKING RATE:</td><td style="color:#1E5C3A;font-weight:700">RM' + Number(s.rate!=null?s.rate:getRateForMonth(w,mk)).toFixed(2) + ((s.rateType||w.rateType)==='monthly'?' / month':' / day') + '</td></tr>'
     + '</table>'
 
     + '<table style="margin-bottom:6px">'
@@ -2160,6 +2233,8 @@ function printReceipt(wid, mk){
 
     + '<table style="margin-bottom:6px">'
     + '<tr class="star1"><td style="width:40px;text-align:center">★</td><td style="text-align:right;font-size:11px">NET PAY</td><td style="text-align:right;font-size:11px;width:130px">RM ' + s.net.toFixed(2) + '</td></tr>'
+    + ((s.cashOut||0) > 0 ? cashList.map(x => '<tr class="row-alt"><td></td><td style="text-align:right">Cash out 先付现金 · ' + esc(x.date||'') + (x.note ? ' · ' + esc(x.note) : '') + '</td><td style="text-align:right">- RM ' + Number(x.amount).toFixed(2) + '</td></tr>').join('')
+        + '<tr class="star1"><td style="text-align:center">★</td><td style="text-align:right">BALANCE AFTER CASH OUT 扣先付现金后</td><td style="text-align:right">RM ' + Number(s.payable).toFixed(2) + '</td></tr>' : '')
     + '<tr class="star2"><td style="text-align:center">★</td><td style="text-align:right">BANK CHARGES</td><td style="text-align:right">' + (s.bankChg?'RM '+s.bankChg.toFixed(2):'--') + '</td></tr>'
     + '<tr class="star3"><td style="text-align:center;font-size:13px">★</td><td style="text-align:right;font-size:12px;font-weight:700">AMOUNT TO TRANSFER</td><td style="text-align:right;font-size:13px;font-weight:700">RM ' + s.toTx.toFixed(2) + '</td></tr>'
     + '</table>'
@@ -2216,8 +2291,8 @@ function remAddOne(wid,m,y){
   var s=calcWorkerSummary(w,mk);
   var charges=BANK_CHARGE;
   REM.records.push({id:genId("r"),month:m,year:y,workers:[w.name],
-    beneficiary:w.beneficiary,accountNo:w.bankAccount,
-    beneficiaryFix:w.beneficiary,accountNoFix:w.bankAccount,
+    beneficiary:PO(w).beneficiary,accountNo:PO(w).bankAccount,
+    beneficiaryFix:PO(w).beneficiary,accountNoFix:PO(w).bankAccount,
     salary:s.toTx,charges:charges,transfer:s.toTx,addedAt:Date.now()});
   savRem();renderRemittance();toast("Added: "+w.name);
 }
@@ -2232,11 +2307,11 @@ function remAddAllPending(){
   workersInMonth(mk).forEach(function(w){
     var s=calcWorkerSummary(w,mk);
     var pm=getPayMethod(w.id,mk);
-    if(s.toTx<=0||!w.bankAccount||!w.beneficiary||pm==="unpaid"||pm==="cash")return;
+    if(s.toTx<=0||!PO(w).bankAccount||!PO(w).beneficiary||pm==="unpaid"||pm==="cash")return;
     if(done.has(w.name.toUpperCase()))return;
     REM.records.push({id:genId("r"),month:m,year:y,workers:[w.name],
-      beneficiary:w.beneficiary,accountNo:w.bankAccount,
-      beneficiaryFix:w.beneficiary,accountNoFix:w.bankAccount,
+      beneficiary:PO(w).beneficiary,accountNo:PO(w).bankAccount,
+      beneficiaryFix:PO(w).beneficiary,accountNoFix:PO(w).bankAccount,
     salary:s.toTx,charges:BANK_CHARGE,transfer:s.toTx,addedAt:Date.now()});
     added++;
   });
@@ -2271,13 +2346,13 @@ function renderRemittance(){
         var s=calcWorkerSummary(w,mk);
         var fb="badge-"+(w.farm||"hx");
         var farmBadge="<span class=\"badge "+fb+"\">"+( w.farm||"hx").toUpperCase()+"</span>";
-        var bankNote=!(w.bankAccount&&w.beneficiary)
+        var bankNote=!(PO(w).bankAccount&&PO(w).beneficiary)
           ?"<br><span style=\"font-size:10px;color:var(--text3)\">No bank info</span>":"";
         trows+="<tr>"
           +"<td style=\"padding:6px 10px\"><span class=\"worker-pill\">"+w.name+"</span>"+bankNote+"</td>"
           +"<td style=\"padding:6px 10px\">"+farmBadge+"</td>"
-          +"<td style=\"padding:6px 10px;font-size:11px;color:var(--text3)\">"+(w.beneficiary||"--")+"</td>"
-          +"<td style=\"padding:6px 10px;font-size:10px;font-family:monospace;color:var(--text3)\">"+(w.bankAccount||"--")+"</td>"
+          +"<td style=\"padding:6px 10px;font-size:11px;color:var(--text3)\">"+(PO(w).beneficiary||"--")+"</td>"
+          +"<td style=\"padding:6px 10px;font-size:10px;font-family:monospace;color:var(--text3)\">"+(PO(w).bankAccount||"--")+"</td>"
           +"<td style=\"padding:6px 10px;text-align:right;font-family:monospace;font-weight:700;color:var(--grn)\">"+fmtRM(s.toTx)+"</td>"
           +"<td style=\"padding:6px 10px;text-align:center;white-space:nowrap;\">"
           +"<button class=\"sum-pay-btn\" title=\"Mark Cash -- paid in cash\""
@@ -2680,10 +2755,10 @@ function confirmGenerateAll(){
     REM.records.push({
       id:genId('r'),month:m,year:y,
       workers:[item.worker.name],
-      beneficiary:item.worker.beneficiary,       // parsed (same as FIX when generated)
-      accountNo:item.worker.bankAccount,
-      beneficiaryFix:item.worker.beneficiary,    // FIX from master data
-      accountNoFix:item.worker.bankAccount,
+      beneficiary:PO(item.worker).beneficiary,       // parsed (same as FIX when generated)
+      accountNo:PO(item.worker).bankAccount,
+      beneficiaryFix:PO(item.worker).beneficiary,    // FIX from master data
+      accountNoFix:PO(item.worker).bankAccount,
       salary:item.salary.toTx,
       charges:BANK_CHARGE,
       transfer:item.salary.toTx,
@@ -2894,7 +2969,7 @@ function renderDashboard(){
   // -- Bank Transfer Reconciliation (exclude Unpaid workers) ----
   var totFood=0,totPers=0,totNet=0;
   var totHXSal=0,totADSal=0,totHXAdv=0,totADAdv=0;
-  var unpaidHXd=0,unpaidADd=0,unpaidFoodD=0,unpaidPersD=0;
+  var unpaidHXd=0,unpaidADd=0,unpaidFoodD=0,unpaidPersD=0,cashHXd=0,cashADd=0,cashTd=0;
   allWorkers.forEach(function(w){
     var s=calcWorkerSummary(w,mk);
     var pm=getPayMethod(w.id,mk);
@@ -2909,10 +2984,10 @@ function renderDashboard(){
       unpaidPersD+=s.persD;
       return;
     }
-    totNet+=s.net;
+    totNet+=s.net-(s.cashOut||0);cashHXd+=(s.cashHX||0);cashADd+=(s.cashAD||0);cashTd+=(s.cashOut||0);
   });
-  var hxToTx=totHXSal-totHXAdv-unpaidHXd;
-  var adToTx=totADSal-totADAdv-unpaidADd;
+  var hxToTx=totHXSal-totHXAdv-unpaidHXd-cashHXd;
+  var adToTx=totADSal-totADAdv-unpaidADd-cashADd;
   var merchantTotal=hxToTx+adToTx;
   var unpaidFoodPersD=unpaidFoodD+unpaidPersD;
   var itemsTotal=totNet+totFood+totPers;
@@ -2942,7 +3017,7 @@ function renderDashboard(){
 
   var balanced=Math.abs((merchantTotal+unpaidFoodPersD)-itemsTotal)<0.1;
   var bColor=balanced?"var(--grn)":"var(--red)";
-  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
+  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+(cashTd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Cash out 先付现金</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashHXd)+"</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
     +chgSavingsHtml
     +"</div></div></div>";
   document.getElementById("db-recon").innerHTML=reconHtml;
@@ -3114,6 +3189,12 @@ function monthOfKey(cat, k, v){
 }
 function revertLockedEdits(cur){
   const hit = new Set();
+  // v60：先付现金、收款人选择、借款单月例外
+  for(const m of new Set([...Object.keys(SNAP.S.cashout||{}), ...Object.keys(cur.S.cashout||{})])) if(isLocked(m) && !same((SNAP.S.cashout||{})[m], (cur.S.cashout||{})[m])){ hit.add(m); S.cashout[m] = clone((SNAP.S.cashout||{})[m]||{}); cur.S.cashout[m] = clone(S.cashout[m]); }
+  for(const m of new Set([...Object.keys(SNAP.S.payeeSlot||{}), ...Object.keys(cur.S.payeeSlot||{})])) if(isLocked(m) && !same((SNAP.S.payeeSlot||{})[m], (cur.S.payeeSlot||{})[m])){ hit.add(m); S.payeeSlot[m] = clone((SNAP.S.payeeSlot||{})[m]||{}); cur.S.payeeSlot[m] = clone(S.payeeSlot[m]); }
+  for(const w in (cur.S.loans||{})){ const a = ((SNAP.S.loans||{})[w]||{}).months||{}, b = cur.S.loans[w].months||{};
+    for(const m of new Set([...Object.keys(a), ...Object.keys(b)])) if(isLocked(m) && !same(a[m], b[m])){ hit.add(m);
+      if(a[m]){ S.loans[w].months[m] = clone(a[m]); cur.S.loans[w].months[m] = clone(a[m]); } else { delete S.loans[w].months[m]; delete cur.S.loans[w].months[m]; } } }
   for(const cat in LOCK_KEYS){
     const A = LOCK_KEYS[cat](SNAP.S), B = LOCK_KEYS[cat](cur.S);
     for(const k of new Set([...Object.keys(A), ...Object.keys(B)])){
@@ -3148,7 +3229,8 @@ function lockChecks(mk){
     if(s.net < 0) out.push([w, '净额是负数：' + fmtRM(s.net)]);
     if(s.gross > 0 && s.totalDed > s.gross*0.5) out.push([w, '扣款超过总薪水一半：扣 ' + fmtRM(s.totalDed) + ' / 薪 ' + fmtRM(s.gross)]);
     const pm = getPayMethod(w.id, mk);
-    if(pm==='transfer' && s.toTx>0 && (!w.bankAccount || !w.beneficiary)) out.push([w, '要汇款但没有户口资料']);
+    if(pm==='transfer' && s.toTx>0 && (!payeeOf(w,mk).bankAccount || !payeeOf(w,mk).beneficiary)) out.push([w, '要汇款但没有户口资料']);
+    if((s.cashOut||0) > s.net + 0.001) out.push([w, '先付现金 ' + fmtRM(s.cashOut) + ' 超过实发 ' + fmtRM(s.net)]);
   });
   return out;
 }
@@ -3187,7 +3269,7 @@ async function doLockMonth(mk){
     const s = calcWorkerSummaryLive(w, mk);
     return {worker_id: w.id, data: Object.assign({}, s, {
       name: w.name, no: w.no, farm: w.farm, rateType: w.rateType, rate: getRateForMonth(w, mk),
-      payMethod: getPayMethod(w.id, mk), beneficiary: w.beneficiary||'', bankAccount: w.bankAccount||'', lockedMonth: mk })};
+      payMethod: getPayMethod(w.id, mk), beneficiary: payeeOf(w,mk).beneficiary, bankAccount: payeeOf(w,mk).bankAccount, payeeSlot: payeeOf(w,mk).slot, lockedMonth: mk })};
   });
   const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
   if(error){ alert('锁月失败：' + error.message); if(btn) btn.disabled=false; return; }
@@ -3235,6 +3317,360 @@ function requireLocked(m, y){
   if(isLocked(mk)) return true;
   toast('⚠ ' + mk + ' 还没锁月。先按上方「检查并锁月」，才能推去汇款。', 4000);
   return false;
+}
+
+
+// ===================== v60：借款帐 · 先付现金 · 出勤笔刷 · 工人作废 / 纪录 · 收款人 2 组 · 打印对齐 =====================
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sumBy = (arr, f) => r2((arr||[]).reduce((s,x) => s + Number(f(x)||0), 0));
+const inServiceOn = (w, d) => (!w.joinDate || w.joinDate <= d) && (!w.stopDate || w.stopDate >= d);
+const uid = () => crypto.randomUUID();
+const VOID_REASON = {};   // 作废原因：id → 原因（同步时写进资料库）
+
+// ---------- 收款人（第 1 组预设 / 第 2 组）----------
+function payeeSlot(wid, mk){ return Number(((S.payeeSlot||{})[mk]||{})[wid] || 1); }
+function payeeOf(w, mk){
+  mk = mk || monthKey();
+  if(payeeSlot(w.id, mk) === 2 && w.bankAccount2 && w.beneficiary2) return {beneficiary:w.beneficiary2, bankAccount:w.bankAccount2, slot:2};
+  return {beneficiary:w.beneficiary||'', bankAccount:w.bankAccount||'', slot:1};
+}
+function PO(w){ return payeeOf(w, monthKey()); }
+function setPayeeSlot(wid, mk, slot){
+  S.payeeSlot ??= {}; S.payeeSlot[mk] ??= {};
+  if(Number(slot) === 1) delete S.payeeSlot[mk][wid]; else S.payeeSlot[mk][wid] = 2;
+  saveAll(); toast('这个月汇给第 ' + slot + ' 组收款人');
+}
+
+// ---------- 先付现金 ----------
+function cashOutOf(wid, mk){ return sumBy(((S.cashout||{})[mk]||{})[wid], x => x.amount); }
+function openCashOut(wid, mk){
+  mk = mk || monthKey(); const w = getWorker(wid);
+  const list = ((S.cashout||{})[mk]||{})[wid] || [];
+  const locked = isLocked(mk);
+  document.getElementById('modal-title').textContent = '先付现金 Cash out：' + w.name + ' · ' + mk;
+  document.getElementById('modal-body').innerHTML =
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">月中先拿的现金，月底从这个月实发里全额扣回，薪资单会列出来。</div>'
+    + (list.length ? '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">'
+        + list.map(x => '<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px;">' + esc(x.date||'') + '</td><td style="padding:6px;">' + esc(x.note||'') + '</td><td style="padding:6px;text-align:right;font-family:monospace;">' + fmtRM(x.amount) + '</td><td style="padding:6px;width:60px;">'
+          + (locked ? '' : '<button class="btn btn-sm btn-red" onclick="voidCashOut(\'' + wid + '\',\'' + mk + '\',\'' + x.id + '\')">拿掉</button>') + '</td></tr>').join('')
+        + '<tr><td colspan="2" style="padding:6px;font-weight:700;">合计</td><td style="padding:6px;text-align:right;font-weight:700;font-family:monospace;">' + fmtRM(cashOutOf(wid,mk)) + '</td><td></td></tr></table>'
+      : '<div style="font-size:12px;margin-bottom:10px;">这个月还没有先付现金。</div>')
+    + (locked ? '<div style="font-size:12px;color:var(--red);">这个月已锁，不能再改。</div>' :
+      '<div class="form-grid"><div class="form-row"><label>日期 *</label><input id="co-date" type="date" value="' + (TODAY_KL.slice(0,7)===mk ? TODAY_KL : mk + '-01') + '"></div>'
+      + '<div class="form-row"><label>金额 RM *</label><input id="co-amt" type="number" step="0.01"></div>'
+      + '<div class="form-row" style="grid-column:1/-1;"><label>备注</label><input id="co-note" placeholder="例：回乡急用"></div></div>');
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>'
+    + (locked ? '' : '<button class="btn btn-pri" onclick="addCashOut(\'' + wid + '\',\'' + mk + '\')">加一笔</button>');
+  document.getElementById('modal-overlay').classList.add('on');
+}
+function addCashOut(wid, mk){
+  const d = document.getElementById('co-date').value, a = r2(parseFloat(document.getElementById('co-amt').value)||0);
+  if(!d || a <= 0){ toast('⚠ 日期和金额都要填'); return; }
+  if(d.slice(0,7) !== mk){ toast('⚠ 日期要在 ' + mk + ' 里面'); return; }
+  S.cashout ??= {}; S.cashout[mk] ??= {}; S.cashout[mk][wid] ??= [];
+  S.cashout[mk][wid].push({id:'c_' + uid(), date:d, amount:a, note:(document.getElementById('co-note').value||'').trim()});
+  saveAll(); openCashOut(wid, mk); refreshCurrentPage();
+}
+function voidCashOut(wid, mk, id){
+  if(!confirm('拿掉这笔先付现金？（纪录会保留成作废）')) return;
+  S.cashout[mk][wid] = S.cashout[mk][wid].filter(x => x.id !== id);
+  saveAll(); openCashOut(wid, mk); refreshCurrentPage();
+}
+
+// ---------- 借款帐 ----------
+function loanAcc(wid){ return (S.loans||{})[wid]; }
+function loanPlanFor(L, m){ let a = null, f = ''; (L.plan||[]).forEach(p => { if(p.from <= m && p.from >= f){ f = p.from; a = Number(p.monthly); } }); return a; }
+function loanStart(L){ const ms = [...(L.txn||[]).filter(t => t.kind==='LOAN').map(t => t.month), ...(L.plan||[]).map(p => p.from)].sort(); return ms[0] || null; }
+function loanedBy(L, m){ return sumBy((L.txn||[]).filter(t => t.kind==='LOAN' && t.month <= m), t => t.amount); }
+function advanceTrack(wid, mk){
+  const L = loanAcc(wid); const empty = {paidBefore:0, thisMonth:0, loaned:0, balanceAfter:0, plan:null, override:null};
+  if(!L) return empty;
+  const start = loanStart(L); if(!start) return empty;
+  const w = getWorker(wid);
+  let paid = sumBy((L.txn||[]).filter(t => t.kind==='OPENING_REPAID'), t => t.amount);
+  const dedFor = (m) => {
+    if(isLocked(m) && PAYSLIPS[m]) return Number((PAYSLIPS[m][wid]||{}).advD || 0);
+    if(m < start || !w || !workerInMonth(w, m)) return 0;
+    const rem = r2(loanedBy(L, m) - paid); if(rem <= 0) return 0;
+    const ov = (L.months||{})[m];
+    const amt = (ov && ov.amount != null) ? Number(ov.amount) : (loanPlanFor(L, m) ?? 0);
+    return r2(Math.max(0, Math.min(amt, rem)));
+  };
+  let cur = start < NEW_SYS_START ? NEW_SYS_START : start, guard = 360;
+  while(cur < mk && guard-- > 0){ paid = r2(paid + dedFor(cur)); cur = nextMk(cur); }
+  const thisMonth = mk < NEW_SYS_START ? 0 : dedFor(mk);
+  const loaned = loanedBy(L, mk);
+  return {paidBefore:paid, thisMonth, loaned, balanceAfter:r2(loaned - paid - thisMonth), plan:loanPlanFor(L, mk), override:(L.months||{})[mk] || null};
+}
+function loanSchedule(wid, fromMk, n){
+  const out = []; let m = fromMk;
+  for(let i=0; i<n; i++){ const t = advanceTrack(wid, m); out.push([m, t.thisMonth, t.balanceAfter]); if(t.balanceAfter <= 0 && m >= fromMk && i>0) break; m = nextMk(m); }
+  return out;
+}
+
+function renderAdvance(){
+  const mk = monthKey();
+  const list = document.getElementById('advance-list'), sl = document.getElementById('adv-settled-list'), ss = document.getElementById('adv-settled-sec');
+  const accs = S.workers.filter(w => loanAcc(w.id) && (loanAcc(w.id).txn||[]).some(t => t.kind==='LOAN'));
+  const rows = accs.map(w => ({w, t: advanceTrack(w.id, mk)}));
+  const active = rows.filter(r => r.t.balanceAfter > 0 || r.t.thisMonth > 0), settled = rows.filter(r => !(r.t.balanceAfter > 0 || r.t.thisMonth > 0));
+  const locked = isLocked(mk);
+  const card = ({w, t}) => {
+    const L = loanAcc(w.id);
+    const ov = t.override, ovTxt = ov ? (Number(ov.amount)===0 ? '<span class="badge" style="background:var(--redl);color:var(--red);">这个月停扣</span>' : '<span class="badge" style="background:var(--ambl);color:var(--amb);">这个月只扣 ' + fmtRM(ov.amount) + '</span>') : '';
+    const sched = loanSchedule(w.id, mk, 24).filter(x => x[1] > 0).slice(0, 12).map(x => '<span style="font-size:10px;background:' + (x[0]===mk?'var(--ambl)':'var(--bg)') + ';border:1px solid var(--border);border-radius:4px;padding:2px 6px;white-space:nowrap;">' + x[0] + '：' + fmtRM(x[1]) + '</span>').join(' ');
+    return '<div class="adv-card active" style="margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      + '<div><div style="font-weight:700;">' + esc(w.name) + ' <span style="font-size:10px;color:var(--text3);">#' + (w.no||'') + ' · ' + (w.farm||'').toUpperCase() + ' 出</span></div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">借出合计 <b>' + fmtRM(t.loaned) + '</b> · 之前已扣 <b>' + fmtRM(t.paidBefore) + '</b> · 每月扣 <b>' + (t.plan==null?'未设':fmtRM(t.plan)) + '</b></div></div>'
+      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">这个月扣</div><div style="font-weight:700;font-family:monospace;">' + fmtRM(t.thisMonth) + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">扣完剩 <b>' + fmtRM(t.balanceAfter) + '</b></div></div></div>'
+      + (ovTxt ? '<div style="margin-top:6px;">' + ovTxt + '</div>' : '')
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">' + (sched || '<span style="font-size:11px;color:var(--text3);">没有要扣的月份</span>') + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">'
+      + '<button class="btn btn-sm btn-pri" onclick="openLoanAdd(\'' + w.id + '\')">加借 Top up</button>'
+      + '<button class="btn btn-sm" onclick="openLoanPlan(\'' + w.id + '\')">改每月扣额</button>'
+      + (locked ? '' : '<button class="btn btn-sm" onclick="openLoanMonth(\'' + w.id + '\')">这个月停扣 / 改额</button>')
+      + '<button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">纪录</button></div></div>';
+  };
+  list.innerHTML = active.length ? active.map(card).join('') : '<div class="empty"><div class="icon">💳</div><p>没有还在扣的借款。按右上「+ 新借款」。</p></div>';
+  if(ss) ss.style.display = settled.length ? '' : 'none';
+  if(sl) sl.innerHTML = settled.map(({w,t}) => '<div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;"><span><b>' + esc(w.name) + '</b> · 借出合计 ' + fmtRM(t.loaned) + ' · 已还清</span><span><button class="btn btn-sm" onclick="openLoanAdd(\'' + w.id + '\')">再借</button> <button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">纪录</button></span></div>').join('');
+  const hdrBtn = document.querySelector('#page-advance .btn.btn-pri'); if(hdrBtn){ hdrBtn.textContent = '+ 新借款 New loan'; hdrBtn.setAttribute('onclick', 'openLoanAdd()'); }
+}
+
+function openLoanAdd(wid){
+  const mk = monthKey();
+  const ws = workersInMonthLive(mk).filter(w => !w.stopDate || w.stopDate.slice(0,7) >= mk);
+  const pre = wid ? getWorker(wid) : null;
+  const t = pre ? advanceTrack(pre.id, mk) : null;
+  document.getElementById('modal-title').textContent = pre ? ('加借：' + pre.name) : '新借款';
+  document.getElementById('modal-body').innerHTML =
+    (pre ? '<div style="font-size:12px;margin-bottom:10px;">现在：借出 ' + fmtRM(t.loaned) + '，扣完这个月剩 ' + fmtRM(t.balanceAfter) + '，每月扣 ' + (t.plan==null?'未设':fmtRM(t.plan)) + '。加借后合在同一本帐，用同一个每月扣额扣到归零。</div>'
+         : '<div class="form-row"><label>工人 *</label><select id="ln-wid" class="inline" style="width:100%;">' + ws.map(w => '<option value="' + w.id + '">' + esc(w.name) + (loanAcc(w.id) ? '（已有借款，会合并）' : '') + '</option>').join('') + '</select></div>')
+    + '<div class="form-grid"><div class="form-row"><label>借出日期 *</label><input id="ln-date" type="date" value="' + TODAY_KL + '"></div>'
+    + '<div class="form-row"><label>金额 RM *</label><input id="ln-amt" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>每月扣 RM' + (pre && t.plan!=null ? '（空 = 照旧 ' + fmtRM(t.plan) + '）' : ' *') + '</label><input id="ln-mo" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>从哪个月开始扣</label><input id="ln-from" type="month" value="' + effMonth() + '"></div>'
+    + '<div class="form-row" style="grid-column:1/-1;"><label>备注</label><input id="ln-note" placeholder="例：PINJAM 回乡"></div></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanAdd(\'' + (wid||'') + '\')">存</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+function saveLoanAdd(wid){
+  wid = wid || (document.getElementById('ln-wid')||{}).value;
+  const d = document.getElementById('ln-date').value, a = r2(parseFloat(document.getElementById('ln-amt').value)||0);
+  const moRaw = document.getElementById('ln-mo').value, from = document.getElementById('ln-from').value;
+  if(!wid || !d || a <= 0){ toast('⚠ 工人、日期、金额都要填'); return; }
+  S.loans ??= {}; const L = S.loans[wid] ??= {txn:[], plan:[], months:{}};
+  if(moRaw === '' && loanPlanFor(L, from || d.slice(0,7)) == null){ toast('⚠ 第一次借要填每月扣多少'); return; }
+  if(from && isLocked(from)){ toast('⚠ ' + from + ' 已锁，开始月请选之后的月份'); return; }
+  L.txn.push({id:uid(), month:d.slice(0,7), date:d, kind:'LOAN', amount:a, note:(document.getElementById('ln-note').value||'').trim()});
+  if(moRaw !== ''){
+    const f = from || d.slice(0,7), ex = L.plan.find(p => p.from === f);
+    if(ex){ VOID_REASON[ex.id] = '加借时改每月扣额'; L.plan = L.plan.filter(p => p !== ex); }
+    L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(moRaw)||0)});
+  }
+  saveAll(); closeModal(); renderAdvance(); toast('✅ 已加进借款帐');
+}
+function openLoanPlan(wid){
+  const w = getWorker(wid), t = advanceTrack(wid, monthKey());
+  document.getElementById('modal-title').textContent = '改每月扣额：' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">现在每月扣 ' + (t.plan==null?'未设':fmtRM(t.plan)) + '。新的金额从你选的月份起生效，之前的月份不变。</div>'
+    + '<div class="form-grid"><div class="form-row"><label>每月扣 RM *</label><input id="lp-amt" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>从哪个月起 *</label><input id="lp-from" type="month" value="' + effMonth() + '"></div></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanPlan(\'' + wid + '\')">存</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+function saveLoanPlan(wid){
+  const a = document.getElementById('lp-amt').value, f = document.getElementById('lp-from').value;
+  if(a === '' || !f){ toast('⚠ 金额和月份都要填'); return; }
+  if(isLocked(f)){ toast('⚠ ' + f + ' 已锁，请选之后的月份'); return; }
+  const L = S.loans[wid], ex = L.plan.find(p => p.from === f);
+  if(ex){ VOID_REASON[ex.id] = '同月改每月扣额'; L.plan = L.plan.filter(p => p !== ex); }
+  L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(a)||0)});
+  saveAll(); closeModal(); renderAdvance(); toast('✅ 从 ' + f + ' 起每月扣 ' + fmtRM(a));
+}
+function openLoanMonth(wid){
+  const mk = monthKey(), w = getWorker(wid), L = loanAcc(wid), ov = (L.months||{})[mk];
+  const cur = ov ? (Number(ov.amount)===0 ? 'stop' : 'amt') : 'plan';
+  document.getElementById('modal-title').textContent = mk + ' 扣款：' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">只影响 ' + mk + ' 这一个月，下个月照计划继续扣。</div>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="plan" ' + (cur==='plan'?'checked':'') + '> 照计划（' + (loanPlanFor(L,mk)==null?'未设':fmtRM(loanPlanFor(L,mk))) + '）</label>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="stop" ' + (cur==='stop'?'checked':'') + '> 这个月停扣</label>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="amt" ' + (cur==='amt'?'checked':'') + '> 这个月只扣 RM <input id="lm-amt" type="number" step="0.01" style="width:100px;" value="' + (cur==='amt'?ov.amount:'') + '"></label>'
+    + '<div class="form-row"><label>原因</label><input id="lm-note" value="' + esc(ov && ov.note || '') + '" placeholder="例：工人要求这个月少扣"></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanMonth(\'' + wid + '\')">存</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+function saveLoanMonth(wid){
+  const mk = monthKey(), L = S.loans[wid]; L.months ??= {};
+  const v = (document.querySelector('input[name="lm"]:checked')||{}).value, note = (document.getElementById('lm-note').value||'').trim();
+  if(v === 'plan') delete L.months[mk];
+  else if(v === 'stop') L.months[mk] = {amount:0, note};
+  else { const a = parseFloat(document.getElementById('lm-amt').value); if(!(a >= 0)){ toast('⚠ 请填金额'); return; } L.months[mk] = {amount:r2(a), note}; }
+  saveAll(); closeModal(); renderAdvance(); toast('✅ ' + mk + ' 已更新');
+}
+function openLoanHistory(wid){
+  const w = getWorker(wid), L = loanAcc(wid) || {txn:[], plan:[], months:{}}, mk = monthKey();
+  const lockedRows = Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][wid] && Number(PAYSLIPS[m][wid].advD) > 0).sort().map(m => '<tr><td>' + m + '</td><td>锁月实际扣</td><td style="text-align:right;">-' + fmtRM(PAYSLIPS[m][wid].advD) + '</td><td></td></tr>');
+  const txRows = (L.txn||[]).slice().sort((a,b) => (a.date||a.month) < (b.date||b.month) ? -1 : 1).map(t => '<tr><td>' + esc(t.date || t.month) + '</td><td>' + (t.kind==='LOAN' ? '借出 / 加借' : '旧系统已扣（到 2026-09）') + (t.note ? ' · ' + esc(t.note) : '') + '</td><td style="text-align:right;">' + (t.kind==='LOAN' ? '+' : '-') + fmtRM(t.amount) + '</td><td>'
+      + (t.kind==='LOAN' ? '<button class="btn btn-sm btn-red" onclick="voidLoanTxn(\'' + wid + '\',\'' + t.id + '\')">作废</button>' : '') + '</td></tr>');
+  const planRows = (L.plan||[]).slice().sort((a,b) => a.from < b.from ? -1 : 1).map(p => '<tr><td>' + p.from + ' 起</td><td>每月扣</td><td style="text-align:right;">' + fmtRM(p.monthly) + '</td><td>' + (isLocked(p.from) ? '' : '<button class="btn btn-sm btn-red" onclick="voidLoanPlan(\'' + wid + '\',\'' + p.id + '\')">作废</button>') + '</td></tr>');
+  const monRows = Object.keys(L.months||{}).sort().map(m => '<tr><td>' + m + '</td><td>' + (Number(L.months[m].amount)===0 ? '停扣' : '只扣') + (L.months[m].note ? ' · ' + esc(L.months[m].note) : '') + '</td><td style="text-align:right;">' + (Number(L.months[m].amount)===0 ? '--' : fmtRM(L.months[m].amount)) + '</td><td></td></tr>');
+  const t = advanceTrack(wid, mk);
+  const tbl = (title, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + title + '</div><table style="width:100%;font-size:12px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">没有</td></tr>') + '</table>';
+  document.getElementById('modal-title').textContent = '借款纪录：' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;">借出合计 <b>' + fmtRM(t.loaned) + '</b> · ' + mk + ' 扣完剩 <b>' + fmtRM(t.balanceAfter) + '</b></div>'
+    + tbl('借出与期初', txRows) + tbl('每月扣额计划', planRows) + tbl('单月停扣 / 改额', monRows) + tbl('已锁月份实际扣款（不会再变）', lockedRows)
+    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">打错的不删，只作废，资料库保留作废纪录与原因。</div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+function askReason(msg){ const r = prompt(msg + '\n请写原因：'); return r && r.trim() ? r.trim() : null; }
+function voidLoanTxn(wid, id){ const r = askReason('作废这笔借出'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
+function voidLoanPlan(wid, id){ const r = askReason('作废这笔每月扣额'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.plan = L.plan.filter(p => p.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
+
+// ---------- 出勤：笔刷 · 点日期整天 · 点名字整人 · 按公司筛选 · 只填在职日子 ----------
+let BRUSH = null, ATT_FILTER = 'all', _painting = false;
+const BRUSHES = [['hx','HX 全天'],['ad','AD 全天'],['hx_half','HX 半天'],['ad_half','AD 半天'],['both','两边'],['','清空']];
+function attToolbar(){
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;">'
+    + '<span style="font-size:11px;color:var(--text3);">笔刷：</span>'
+    + '<button class="btn btn-sm ' + (BRUSH===null?'btn-pri':'') + '" onclick="setBrush(null)">轮流点（旧）</button>'
+    + BRUSHES.map(([c,l]) => '<button class="btn btn-sm ' + (BRUSH===c?'btn-pri':'') + '" onclick="setBrush(\'' + c + '\')">' + l + '</button>').join('')
+    + '<span style="font-size:11px;color:var(--text3);margin-left:12px;">公司：</span>'
+    + [['all','全部'],['hx','HX'],['ad','AD'],['both','两边']].map(([c,l]) => '<button class="btn btn-sm ' + (ATT_FILTER===c?'btn-pri':'') + '" onclick="setAttFilter(\'' + c + '\')">' + l + '</button>').join('')
+    + '<span style="font-size:10px;color:var(--text3);margin-left:8px;">选了笔刷后：点格子 / 按住拖过格子；点日期 = 那天全部；点名字 = 那人整月</span></div>';
+}
+function setBrush(b){ BRUSH = b; renderAttendance(); }
+function setAttFilter(f){ ATT_FILTER = f; renderAttendance(); }
+function attWorkers(mk){ return workersInMonth(mk).filter(w => ATT_FILTER==='all' || (w.farm||'hx')===ATT_FILTER); }
+function dayStr(mk, d){ return mk + '-' + pad2(d); }
+function setAtt(wid, d, code){
+  const mk = monthKey(), w = getWorker(wid); if(!w || !inServiceOn(w, dayStr(mk,d))) return false;
+  S.attendance[mk] ??= {}; S.attendance[mk][wid] ??= {};
+  if(code) S.attendance[mk][wid][d] = code; else delete S.attendance[mk][wid][d];
+  return true;
+}
+function attCellClick(wid, d){
+  if(BRUSH === null){ cycleAtt(wid, d); return; }
+  if(setAtt(wid, d, BRUSH)){ saveAll(); paintCell(wid, d); updateAttSummaryRow(wid); }
+}
+function paintCell(wid, d){
+  const cell = document.querySelector(`.att-cell[data-wid="${wid}"][data-day="${d}"]`); if(!cell) return;
+  const v = (((S.attendance[monthKey()]||{})[wid])||{})[d] || ''; const info = ATT_LABELS[v] || {lbl:'·',cls:'st-empty'};
+  cell.textContent = info.lbl; cell.className = 'att-cell ' + info.cls;
+}
+function attDayAll(d){
+  if(BRUSH === null){ toast('先在上面选一个笔刷'); return; }
+  const mk = monthKey(); let n = 0; attWorkers(mk).forEach(w => { if(setAtt(w.id, d, BRUSH)) n++; });
+  saveAll(); renderAttendance(); toast(mk + '-' + pad2(d) + '：' + n + ' 人');
+}
+function attRowAll(wid){
+  if(BRUSH === null){ toast('先在上面选一个笔刷'); return; }
+  const mk = monthKey(), [y,m] = mk.split('-').map(Number), days = daysInMonth(y, m); let n = 0;
+  for(let d=1; d<=days; d++) if(setAtt(wid, d, BRUSH)) n++;
+  saveAll(); renderAttendance(); toast(getWorker(wid).name + '：' + n + ' 天');
+}
+function fillAllHX(){ attFillAll('hx'); }
+function fillAllAD(){ attFillAll('ad'); }
+function attFillAll(code){
+  const mk = monthKey(), [y,m] = mk.split('-').map(Number), days = daysInMonth(y, m);
+  attWorkers(mk).forEach(w => { for(let d=1; d<=days; d++) setAtt(w.id, d, code); });
+  saveAll(); renderAttendance();
+}
+function renderAttendance(){
+  const mk = monthKey(), m = getMonth(), y = getYear(), days = daysInMonth(y, m);
+  const workers = attWorkers(mk);
+  document.getElementById('att-title').textContent = `Attendance -- ${MONTHS[m-1]} ${y}`;
+  const tb = document.getElementById('att-toolbar'); if(tb) tb.innerHTML = attToolbar();
+  if(!workers.length){ document.getElementById('att-grid').innerHTML = '<div class="empty"><div class="icon">👥</div><p>No workers this month</p></div>'; return; }
+  if(!S.attendance[mk]) S.attendance[mk] = {};
+  let hdr = '<tr><th class="w-name">Worker</th>';
+  for(let d=1; d<=days; d++){ const dow = dayOfWeek(y,m,d), cls = dow===0?'day-sun':dow===6?'day-sat':'';
+    hdr += `<th class="${cls}" style="cursor:pointer;" title="点 = 这天全部用笔刷" onclick="attDayAll(${d})">${d}<br><span style="font-size:8px;">${['Su','Mo','Tu','We','Th','Fr','Sa'][dow]}</span></th>`; }
+  hdr += '<th style="min-width:120px;background:#e8f0ff;border-left:2px solid var(--border2);">HX | AD | Total</th></tr>';
+  let body = '';
+  workers.forEach(w => {
+    const att = S.attendance[mk][w.id] || {}; let hxD=0, adD=0;
+    for(let d=1; d<=days; d++){ const vals = ATT_VALUES[att[d]||''] || {hx:0,ad:0}; hxD += vals.hx; adD += vals.ad; }
+    body += `<tr><td class="w-name" style="cursor:pointer;" title="点 = 这人整月用笔刷" onclick="attRowAll('${w.id}')">${esc(w.name)} <span style="font-size:9px;color:var(--text3);">${(w.farm||'').toUpperCase()}</span></td>`;
+    for(let d=1; d<=days; d++){
+      const ok = inServiceOn(w, dayStr(mk, d)), st = att[d] || '', info = ATT_LABELS[st] || {lbl:'·',cls:'st-empty'};
+      body += ok ? `<td><div class="att-cell ${info.cls}" onmousedown="_painting=true;attCellClick('${w.id}',${d})" onmouseenter="if(_painting&&BRUSH!==null)attCellClick('${w.id}',${d})" data-wid="${w.id}" data-day="${d}">${info.lbl}</div></td>`
+                 : `<td><div class="att-cell" style="opacity:.25;cursor:not-allowed;" title="不在职">–</div></td>`;
+    }
+    body += `<td class="att-sum"><span style="color:var(--acc);">${fmtNum(hxD)}</span> | <span style="color:var(--grn);">${fmtNum(adD)}</span> | <strong>${fmtNum(hxD+adD)}</strong></td></tr>`;
+  });
+  document.getElementById('att-grid').innerHTML = `<table class="att-table" style="user-select:none;"><thead>${hdr}</thead><tbody>${body}</tbody></table>`;
+}
+document.addEventListener('mouseup', () => { _painting = false; });
+
+// ---------- 工人：作废（只限建错、没有任何纪录）· 改动纪录 ----------
+function workerHasRecords(wid){
+  for(const mk in S.attendance) if(Object.values((S.attendance[mk]||{})[wid]||{}).some(v => v)) return '有出勤';
+  for(const mk in PAYSLIPS) if(PAYSLIPS[mk][wid]) return '有锁月薪资单';
+  for(const mk in S.personal) if(((S.personal[mk]||{})[wid]||[]).length) return '有个人扣款';
+  for(const mk in (S.cashout||{})) if(((S.cashout[mk]||{})[wid]||[]).length) return '有先付现金';
+  if(loanAcc(wid) && (loanAcc(wid).txn||[]).length) return '有借款';
+  const w = getWorker(wid); if(REM.records.some(r => (r.workers||[]).includes(w.name))) return '有汇款纪录';
+  return '';
+}
+async function voidWorker(wid){
+  const w = getWorker(wid), has = workerHasRecords(wid);
+  if(has){ alert(w.name + ' ' + has + '，不能作废。做过工的请用「Stop 停职」。'); return; }
+  const r = askReason('作废工人 ' + w.name + '（只用在建错的人）'); if(!r) return;
+  const {error} = await sb.from('hub_worker').update({voided_at: now(), void_reason: r}).eq('id', wid);
+  if(error){ alert('作废失败：' + error.message); return; }
+  for(const mk in S.food) if(!isLocked(mk)) (S.food[mk]||[]).forEach(f => { if(f.workerIds) f.workerIds = f.workerIds.filter(x => x !== wid); });
+  S.workers = S.workers.filter(x => x.id !== wid); SNAP.S.workers = SNAP.S.workers.filter(x => x.id !== wid);
+  saveAll(); renderWorkers(); toast('已作废：' + w.name);
+}
+async function openWorkerHistory(wid){
+  const w = getWorker(wid);
+  const [lg, rt, cp, py] = await Promise.all([
+    sb.from('hub_worker_log').select('changed_at,before_data,after_data').eq('worker_id', wid).order('changed_at', {ascending:false}),
+    sb.from('hub_worker_rate').select('rate_type,rate,effective_from,voided_at,void_reason,created_at').eq('worker_id', wid).order('created_at'),
+    sb.from('hub_worker_company').select('company_id,effective_from,voided_at,void_reason,created_at').eq('worker_id', wid).order('created_at'),
+    sb.from('hub_worker_payee').select('slot,beneficiary_name,account_no,effective_from,voided_at,void_reason,created_at').eq('worker_id', wid).order('created_at'),
+  ]);
+  const F = {name:'名字', title:'职位', phone:'电话', join_date:'入职日', stop_date:'停职日', stop_reason:'停职原因', voided_at:'作废', worker_type:'类型'};
+  const logRows = (lg.data||[]).map(x => { const b = x.before_data||{}, a = x.after_data||{};
+    const ch = Object.keys(F).filter(k => (b[k]??null) !== (a[k]??null)).map(k => F[k] + '：' + esc(b[k]??'空') + ' → ' + esc(a[k]??'空'));
+    return '<tr><td style="white-space:nowrap;">' + new Date(x.changed_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</td><td>' + (x.before_data ? (ch.join('<br>') || '（没有基本资料变动）') : '新增') + '</td></tr>'; });
+  const st = x => x.voided_at ? '<span style="color:var(--red);">作废' + (x.void_reason ? '：' + esc(x.void_reason) : '') + '</span>' : '有效';
+  const tbl = (t, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + t + '</div><table style="width:100%;font-size:11px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">没有</td></tr>') + '</table>';
+  document.getElementById('modal-title').textContent = '改动纪录：' + w.name;
+  document.getElementById('modal-body').innerHTML =
+    tbl('基本资料（入职日、停职、名字…）', logRows)
+    + tbl('薪资', (rt.data||[]).map(x => '<tr><td>' + x.effective_from + ' 起</td><td>' + (x.rate_type==='MONTHLY'?'月薪':'日薪') + ' ' + fmtRM(x.rate) + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('归属公司', (cp.data||[]).map(x => '<tr><td>' + x.effective_from + ' 起</td><td>' + (x.company_id ? (CO_CODE[x.company_id]||'?') : '两家对半') + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('收款人', (py.data||[]).map(x => '<tr><td>第 ' + (x.slot||1) + ' 组 · ' + x.effective_from + '</td><td>' + esc(x.beneficiary_name) + ' …' + esc(String(x.account_no).slice(-4)) + '</td><td>' + st(x) + '</td></tr>'));
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
+
+// ---------- 打印 Summary：直接用画面上同一张表 ----------
+function printSummary(){
+  const mk = monthKey(), m = getMonth(), y = getYear();
+  renderSummary();
+  const src = document.querySelector('#summary-table table'); if(!src){ toast('没有资料可印'); return; }
+  const t = src.cloneNode(true);
+  t.querySelectorAll('input').forEach(i => { const s = document.createElement('span'); s.textContent = fmtRM(parseFloat(i.value)||0); i.replaceWith(s); });
+  t.querySelectorAll('select').forEach(sel => { const s = document.createElement('span'); s.textContent = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : ''; sel.replaceWith(s); });
+  t.querySelectorAll('[data-noprint]').forEach(e => e.remove());
+  t.querySelectorAll('tr').forEach(tr => { const c = tr.children; for(let i=c.length-1; i>=0; i--) if(c[i].hasAttribute('data-col-noprint')) c[i].remove(); });
+  t.querySelectorAll('button').forEach(b => b.remove());
+  const status = isLocked(mk) ? '已锁月（快照）' : '还没锁月（预览，数字还会变）';
+  const w2 = window.open('', '_blank', 'width=1100,height=900'); if(!w2){ toast('⚠ 请允许弹出视窗'); return; }
+  w2.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Salary Summary ' + MONTHS[m-1] + ' ' + y + '</title><style>'
+    + '*{box-sizing:border-box;}body{font-family:Arial,sans-serif;padding:18px;font-size:10px;}h2{font-size:15px;margin:0 0 4px;}p{color:#666;margin:0 0 12px;}'
+    + 'table{width:100%;border-collapse:collapse;}th{background:#f0f0ee;padding:6px 6px;text-align:left;font-size:9px;border-bottom:2px solid #ccc;}'
+    + 'td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top;}.num{text-align:right;font-family:monospace;white-space:nowrap;}'
+    + '.total-row td{background:#e8e8e6;font-weight:700;border-top:2px solid #999;}@page{size:A4 landscape;margin:8mm;}'
+    + '</style></head><body><h2>Salary Summary -- ' + MONTHS[m-1] + ' ' + y + '</h2><p>' + status + ' · 印出时间 ' + new Date().toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</p>'
+    + t.outerHTML + '<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>');
+  w2.document.close();
 }
 
 boot();
