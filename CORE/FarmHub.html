@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FarmHub 工人 v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#f4f2ec; --card:#fffdf8; --ink:#1f2a22; --ink2:#55605a; --ink3:#8a948e; --line:#e2ddd2;
+  --green:#2f5d3f; --greenl:#e3eee5; --hx:#8a5a1e; --hxl:#f6ead8; --both:#4b4f8a; --bothl:#e6e7f5;
+  --red:#a33a2c; --redl:#f8e3df; --amb:#9a6b00;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans SC',system-ui,sans-serif;font-size:14px;line-height:1.45}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+header{background:var(--green);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.02em}
+header .sub{font-size:12px;opacity:.8}
+header .who{font-size:12px;text-align:right}
+.home-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:7px;padding:6px 12px;text-decoration:none;font-size:13px;white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+#login{max-width:380px;margin:60px auto;padding:26px}
+#login h2{margin:0 0 4px;font-size:18px}
+#login p{margin:0 0 16px;color:var(--ink2);font-size:13px}
+label{display:block;font-size:12px;color:var(--ink2);margin:10px 0 4px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;color:var(--ink)}
+button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--green);background:var(--green);color:#fff;padding:9px 14px;font-weight:500}
+button.ghost{background:transparent;color:var(--green)}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.msg{margin-top:12px;font-size:13px;padding:9px 11px;border-radius:7px;display:none}
+.msg.err{display:block;background:var(--redl);color:var(--red)}
+.msg.ok{display:block;background:var(--greenl);color:var(--green)}
+.stop{padding:22px;text-align:center}
+.stop b{display:block;font-size:16px;margin-bottom:6px;color:var(--red)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.tile{padding:12px 14px}
+.tile .n{font-size:26px;font-weight:700}
+.tile .l{font-size:12px;color:var(--ink2)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tabs{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.tabs button{border:0;border-radius:0;background:transparent;color:var(--ink2);padding:8px 14px}
+.tabs button.on{background:var(--green);color:#fff}
+.bar input{max-width:240px}
+.bar select{max-width:160px}
+.count{margin-left:auto;font-size:12px;color:var(--ink3)}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:500;color:var(--ink3);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.w{cursor:pointer}
+tr.w:hover td{background:#faf7ef}
+tr.stopped td{color:var(--ink3)}
+.no{color:var(--ink3);width:44px}
+.name{font-weight:500}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500}
+.t-AD{background:var(--greenl);color:var(--green)}
+.t-HX{background:var(--hxl);color:var(--hx)}
+.t-BOTH{background:var(--bothl);color:var(--both)}
+.t-STOP{background:var(--redl);color:var(--red)}
+.t-LOCAL{background:#eee;color:#444}
+.money{white-space:nowrap}
+.dim{color:var(--ink3);font-size:12px}
+#detail{position:fixed;inset:0;background:rgba(20,30,24,.35);display:none;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;z-index:5}
+#detail .card{width:100%;max-width:560px;padding:20px}
+#detail h3{margin:0 0 2px;font-size:18px}
+#detail h4{margin:18px 0 6px;font-size:12px;color:var(--ink3);font-weight:500;letter-spacing:.06em}
+#detail table td,#detail table th{padding:6px 8px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;margin-top:10px}
+.kv div:nth-child(odd){color:var(--ink3);font-size:12px}
+footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:var(--ink3)}
+@media (max-width:720px){
+  .hide-m{display:none}
+  td,th{padding:8px 6px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;gap:12px"><a class="home-btn" href="../index.html">← 首页</a><div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v6</div></div></div>
+  <div class="who" id="who"></div>
+</header>
+<main>
+  <div id="stop" class="card stop" style="display:none"></div>
+
+  <div id="app" style="display:none">
+    <div class="tiles">
+      <div class="card tile"><div class="n" id="kAct">-</div><div class="l">在职</div></div>
+      <div class="card tile"><div class="n" id="kAD">-</div><div class="l">在职 · 归 AD</div></div>
+      <div class="card tile"><div class="n" id="kHX">-</div><div class="l">在职 · 归 HX</div></div>
+      <div class="card tile"><div class="n" id="kBoth">-</div><div class="l">在职 · 两家对半</div></div>
+      <div class="card tile"><div class="n" id="kStop">-</div><div class="l">已停职</div></div>
+    </div>
+    <div class="bar">
+      <div class="tabs" id="tabs">
+        <button data-f="act" class="on">在职</button><button data-f="stop">已停职</button><button data-f="all">全部</button>
+      </div>
+      <select id="fCo"><option value="">全部公司</option></select>
+      <input id="q" placeholder="找姓名 / 职位 / 编号">
+      <span class="count" id="cnt"></span>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>#</th><th>姓名</th><th class="hide-m">职位</th><th>公司</th><th>薪资</th><th class="hide-m">入职</th><th id="thStop">停职</th><th class="hide-m">收款</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer id="foot"></footer>
+
+<div id="detail"><div class="card" id="dc"></div></div>
+
+<script>
+const APP_VERSION = 6;
+const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 今天（马来西亚时间），一律用字串比较，不用 Date 运算
+const TODAY = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
+const THIS_MONTH = TODAY.slice(0,7);
+const D = {workers:[], rates:{}, comps:{}, payees:{}, company:{}, reason:{}, rateType:{DAILY:'日薪', MONTHLY:'月薪'}};
+let filt = 'act';
+
+$('foot').textContent = 'FarmHub v' + APP_VERSION + ' · 资料来源：hub_worker、hub_worker_rate、hub_worker_company、hub_worker_payee、hub_company、hub_option · 今天 ' + TODAY;
+
+function stop(title, body, home){
+  $('app').style.display='none';
+  const s=$('stop'); s.style.display='block';
+  s.innerHTML='<b>'+esc(title)+'</b><div>'+esc(body)+'</div><div class="dim" style="margin-top:8px">没有任何资料被改动。</div>'
+    + (home ? '<div style="margin-top:14px"><a href="../index.html" style="display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">回首页登入</a></div>' : '');
+}
+
+async function boot(){
+  // 登入只在首页（Platform）。这里不登入、不登出。
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session) return stop('请从首页登入', '登入后从首页点「FarmHub 工人主资料」进来。', true);
+  const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
+  if(e1) return stop('读不到帐号资料', e1.message);
+  if(!me || me.status!=='ACTIVE') return stop('这个帐号不能使用', '请回首页，用老板邀请的 email 登入。', true);
+  const {data:see, error:e2} = await sb.rpc('hub_can', {p_system:'FARMHUB', p_action:'see'});
+  if(e2) return stop('读不到权限', e2.message);
+  if(!see) return stop('你没有 FarmHub 的权限', '请找老板在「帐号与权限」开「FarmHub · 看」。', true);
+  $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + ' · ' + esc(session.user.email) + '</span>';
+  await load();
+}
+
+async function load(){
+  const q = (t, cols, f) => { let x=sb.from(t).select(cols); return f?f(x):x; };
+  const res = await Promise.all([
+    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,phone', x=>x.is('voided_at',null).order('worker_no')),
+    q('hub_worker_rate','worker_id,rate_type,rate,effective_from', x=>x.is('voided_at',null).order('effective_from')),
+    q('hub_worker_company','worker_id,company_id,effective_from', x=>x.is('voided_at',null).order('effective_from')),
+    q('hub_worker_payee','worker_id,beneficiary_name,account_no,channel,effective_from,slot', x=>x.is('voided_at',null).order('effective_from')),
+    q('hub_company','id,code,name'),
+    q('hub_option','list_code,code,label', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']))
+  ]);
+  const bad = res.find(r=>r.error);
+  if(bad) return stop('读不到云端资料', bad.error.message);
+  const [w,r,c,p,co,op] = res.map(x=>x.data);
+  if(!w.length) return stop('云端没有工人资料', '读到 0 笔。可能是你的帐号没有 FarmHub 或薪水的「看」权限。');
+  D.workers=w;
+  D.rates={}; r.forEach(x=>(D.rates[x.worker_id]??=[]).push(x));
+  D.comps={}; c.forEach(x=>(D.comps[x.worker_id]??=[]).push(x));
+  D.payees={}; p.filter(x=>(x.slot||1)===1).forEach(x=>(D.payees[x.worker_id]??=[]).push(x));
+  D.company={}; co.forEach(x=>D.company[x.id]=x);
+  D.reason={}; D.channel={}; op.forEach(x=>{ if(x.list_code==='STOP_REASON') D.reason[x.code]=x.label; else D.channel[x.code]=x.label; });
+  const sel=$('fCo'); sel.innerHTML='<option value="">全部公司</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">两家对半</option>';
+  $('app').style.display='block';
+  render();
+}
+
+// 以最新一笔为准：取生效月 <= 本月的最后一笔
+const latestM = (arr, mk) => (arr||[]).filter(x=>x.effective_from<=mk).slice(-1)[0] || null;
+const latestD = (arr, d) => (arr||[]).filter(x=>x.effective_from<=d).slice(-1)[0] || null;
+const isActive = w => !w.stop_date || w.stop_date >= TODAY;
+function coCode(w){ const c=latestM(D.comps[w.id], THIS_MONTH); if(!c) return ''; return c.company_id ? (D.company[c.company_id]?.code||'?') : 'BOTH'; }
+function coTag(code){ if(!code) return '<span class="dim">—</span>'; return '<span class="tag t-'+esc(code)+'">'+(code==='BOTH'?'两家对半':esc(code))+'</span>'; }
+const rm = n => 'RM' + Number(n).toLocaleString('en',{minimumFractionDigits: Number(n)%1?2:0, maximumFractionDigits:2});
+function rateTxt(w){ const r=latestM(D.rates[w.id], THIS_MONTH); return r ? D.rateType[r.rate_type]+' <span class="mono">'+rm(r.rate)+'</span>' : '<span class="dim">—</span>'; }
+const last4 = s => s ? '…' + String(s).slice(-4) : '';
+function payTxt(w){ const p=latestD(D.payees[w.id], TODAY); return p ? esc(p.beneficiary_name)+' <span class="mono dim">'+last4(p.account_no)+'</span>' : '<span class="dim">—</span>'; }
+
+function render(){
+  const act=D.workers.filter(isActive);
+  const cnt = code => act.filter(w=>coCode(w)===code).length;
+  $('kAct').textContent=act.length; $('kAD').textContent=cnt('AD'); $('kHX').textContent=cnt('HX'); $('kBoth').textContent=cnt('BOTH');
+  $('kStop').textContent=D.workers.length-act.length;
+  const qs=$('q').value.trim().toLowerCase(), fc=$('fCo').value;
+  const list=D.workers.filter(w=>{
+    if(filt==='act' && !isActive(w)) return false;
+    if(filt==='stop' && isActive(w)) return false;
+    if(fc && coCode(w)!==fc) return false;
+    if(qs && !((w.name||'')+' '+(w.title||'')+' #'+w.worker_no).toLowerCase().includes(qs)) return false;
+    return true;
+  });
+  $('cnt').textContent=list.length+' 人';
+  $('tb').innerHTML = list.map(w=>{
+    const st = w.stop_date ? '<span class="mono">'+esc(w.stop_date)+'</span>' + (w.stop_reason?' <span class="tag t-STOP">'+esc(D.reason[w.stop_reason]||w.stop_reason)+'</span>':'') : '<span class="dim">—</span>';
+    return '<tr class="w '+(isActive(w)?'':'stopped')+'" data-id="'+w.id+'">'
+      +'<td class="no mono">'+(w.worker_no??'')+'</td>'
+      +'<td class="name">'+esc(w.name)+(w.worker_type==='LOCAL'?' <span class="tag t-LOCAL">本地</span>':'')+'</td>'
+      +'<td class="hide-m">'+esc(w.title||'')+'</td>'
+      +'<td>'+coTag(coCode(w))+'</td>'
+      +'<td class="money">'+rateTxt(w)+'</td>'
+      +'<td class="hide-m mono">'+esc(w.join_date||'—')+'</td>'
+      +'<td>'+st+'</td>'
+      +'<td class="hide-m">'+payTxt(w)+'</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="dim" style="text-align:center;padding:24px">没有符合的工人</td></tr>';
+}
+
+function detail(id){
+  const w=D.workers.find(x=>x.id===id); if(!w) return;
+  const rates=(D.rates[id]||[]).slice().reverse(), comps=(D.comps[id]||[]).slice().reverse(), pays=(D.payees[id]||[]).slice().reverse();
+  $('dc').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="ghost" onclick="closeD()">关</button></div>'
+    +'<div class="kv"><div>状态</div><div>'+(isActive(w)?'在职':'已停职')+'</div>'
+    +'<div>类型</div><div>'+(w.worker_type==='LOCAL'?'本地员工':'外劳')+'</div>'
+    +'<div>入职日</div><div class="mono">'+esc(w.join_date||'—')+'</div>'
+    +'<div>停职日</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+'</div>'
+    +'<div>电话</div><div class="mono">'+esc(w.phone||'—')+'</div></div>'
+    +'<h4>薪资历史（新的在上）</h4><table>'+(rates.map(r=>'<tr><td class="mono">'+esc(r.effective_from)+' 起</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>'
+    +'<h4>归属公司</h4><table>'+(comps.map(c=>'<tr><td class="mono">'+esc(c.effective_from)+' 起</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>'
+    +'<h4>收款资料</h4><table>'+(pays.map(p=>'<tr><td class="mono">'+esc(p.effective_from)+' 起</td><td>'+esc(p.beneficiary_name)+'</td><td class="mono">'+last4(p.account_no)+'</td><td class="dim">'+esc(D.channel[p.channel]||p.channel||'')+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>';
+  $('detail').style.display='flex';
+}
+function closeD(){ $('detail').style.display='none'; }
+$('detail').onclick = e => { if(e.target.id==='detail') closeD(); };
+$('tb').onclick = e => { const tr=e.target.closest('tr.w'); if(tr) detail(tr.dataset.id); };
+$('tabs').onclick = e => { const b=e.target.closest('button'); if(!b) return; filt=b.dataset.f; [...$('tabs').children].forEach(x=>x.classList.toggle('on',x===b)); render(); };
+$('fCo').onchange = render; $('q').oninput = render;
+boot();
+</script>
+</body>
+</html>
