@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>薪水 Salary v61</title>
+<title>Salary v62</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -226,15 +226,15 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 </style>
 </head>
 <body>
-<div id="gate"><div id="gate-box"><p>载入中…</p></div></div>
+<div id="gate"><div id="gate-box"><p>Loading…</p></div></div>
 
 <header>
   <div class="logo">
-    <a class="home-btn" href="../index.html">← 首页</a>
+    <a class="home-btn" href="../index.html">← Home</a>
     <div class="logo-mark">🌾</div>
     <div>
       <h1>WORKER SALARY</h1>
-      <small>WORKER SALARY SYSTEM · 云端 v61</small>
+      <small>WORKER SALARY SYSTEM</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
@@ -259,7 +259,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     </div>
     <div style="display:flex;gap:6px;margin-left:8px;padding-left:10px;border-left:1px solid rgba(255,255,255,.15);">
       <button onclick="exportData()" title="Export all data to file" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;">⬇ Export</button>
-      <span id="sync-chip">连线中…</span><span id="who-chip"></span>
+      <span id="sync-chip">Connecting…</span><span id="who-chip"></span>
     </div>
   </div>
 </header>
@@ -316,7 +316,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     </div>
     <div id="att-toolbar"></div>
     <div class="att-legend">
-      <span style="font-size:10px;font-weight:600;color:var(--text2);">代码：</span>
+      <span style="font-size:10px;font-weight:600;color:var(--text2);">Codes:</span>
       <div class="leg-item"><div class="leg-dot att-cell st-empty">·</div><span>Off</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-hx">H</div><span>HX full</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-ad">A</div><span>AD full</span></div>
@@ -519,7 +519,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 61;
+const APP_VERSION = 62;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -535,9 +535,9 @@ function setSync(kind, text){
   el.style.background = kind==='ok' ? 'rgba(80,200,120,.25)' : kind==='err' ? '#c0392b' : 'rgba(255,255,255,.15)';
 }
 function saveAll(){
-  if(!CLOUD_OK){ setSync('err','没连上云端，这次改动没有存'); return; }
-  if(!CAN_EDIT){ setSync('err','你只有「看」的权限，改动不会存'); return; }
-  dirty = true; setSync('pend','存档中…');
+  if(!CLOUD_OK){ setSync('err','Not connected. This change was not saved.'); return; }
+  if(!CAN_EDIT){ setSync('err','View only. Changes are not saved.'); return; }
+  dirty = true; setSync('pend','Saving…');
   clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 400);
 }
 function savRem(){ saveAll(); }
@@ -548,7 +548,7 @@ async function fetchAll(table, cols, mod){
   for(let from=0;;from+=size){
     let q = sb.from(table).select(cols); if(mod) q = mod(q);
     const {data, error} = await q.range(from, from+size-1);
-    if(error) throw new Error(table + '：' + error.message);
+    if(error) throw new Error(table + ': ' + error.message);
     out.push(...data); if(data.length < size) break;
   }
   return out;
@@ -572,7 +572,7 @@ async function loadData(){
     fetchAll('salary_advance','worker_id,data', notVoid),
     fetchAll('salary_remittance','id,data', q=>notVoid(q).order('created_at')),
   ]);
-  if(!wk.length) throw new Error('读到 0 名工人（可能是没有薪水「看」的权限）');
+  if(!wk.length) throw new Error('No workers found. Please ask the owner to check your access.');
   co.forEach(c => { CO_ID[c.code] = c.id; CO_CODE[c.id] = c.code; });
   const grp = (rows) => { const m = {}; rows.forEach(r => (m[r.worker_id] ??= []).push(r)); return m; };
   W_RATES = grp(rt); W_COMP = grp(cp); W_PAY = grp(py.filter(r => (r.slot||1)===1)); W_PAY2 = grp(py.filter(r => r.slot===2)); W_PP = grp(pp);
@@ -630,8 +630,8 @@ async function upsertChunks(table, rows, onConflict){
   }
 }
 function dbErr(table, error){
-  const map = {'23514':'资料不合规则（例：停职日早于入职日）','23505':'同一笔资料重复（例：同一个月已经有一笔）','42501':'没有权限','23503':'找不到对应的工人'};
-  const msg = (map[error.code] ? map[error.code] + '｜' : '') + table + '：' + error.message;
+  const map = {'23514':'Invalid data (e.g. stop date before join date)','23505':'Duplicate record (e.g. already one for this month)','42501':'No permission','23503':'Worker not found'};
+  const msg = (map[error.code] ? map[error.code] + ' | ' : '') + table + ': ' + error.message;
   return Object.assign(new Error(msg), {hard: !!error.code});
 }
 async function voidIds(table, key, ids){
@@ -679,15 +679,15 @@ async function syncNow(){
 
     await syncV60(cur);
     dirty = false;
-    setSync('ok', '已存 ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+    setSync('ok', 'Saved ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
   }catch(e){
     console.error(e);
     if(e.hard){
-      setSync('err','存档失败');
-      alert('这次改动没存进去：\n' + e.message + '\n\n按确定后会重新载入云端资料（云端没有被改坏）。');
+      setSync('err','Save failed');
+      alert('This change was not saved:\n' + e.message + '\n\nPress OK to reload the latest data. Nothing else was changed.');
       dirty = false; location.reload(); return;
     }
-    setSync('err','网路有问题，10 秒后重试（先别关页面）');
+    setSync('err','Connection problem. Retrying in 10 seconds — keep this page open.');
     setTimeout(syncNow, 10000);
   }finally{
     syncing = false;
@@ -702,7 +702,7 @@ async function syncV60(cur){
   const pl = s => { const o = {}; for(const w in (s.loans||{})) (s.loans[w].plan||[]).forEach(p => o[p.id] = {w, p}); return o; };
   const lmo = s => { const o = {}; for(const w in (s.loans||{})) for(const m in (s.loans[w].months||{})) o[w+'|'+m] = s.loans[w].months[m]; return o; };
   const T0 = tx(SNAP.S), T1 = tx(cur.S), P0 = pl(SNAP.S), P1 = pl(cur.S), M0 = lmo(SNAP.S), M1 = lmo(cur.S);
-  const voidRows = async (table, ids) => { for(const id of ids){ const {error} = await sb.from(table).update({voided_at: now(), void_reason: VOID_REASON[id] || '画面上拿掉'}).eq('id', id); if(error) throw dbErr(table, error); } };
+  const voidRows = async (table, ids) => { for(const id of ids){ const {error} = await sb.from(table).update({voided_at: now(), void_reason: VOID_REASON[id] || 'Removed on screen'}).eq('id', id); if(error) throw dbErr(table, error); } };
   await voidRows('salary_loan_plan', Object.keys(P0).filter(k => !(k in P1)));
   await voidRows('salary_loan_txn', Object.keys(T0).filter(k => !(k in T1)));
   await upsertChunks('salary_loan_txn', Object.keys(T1).filter(k => !(k in T0)).map(k => { const {w,t} = T1[k]; return {id:t.id, worker_id:w, month:t.month, txn_date:t.date||null, kind:t.kind, amount:t.amount, note:t.note||null}; }), 'id');
@@ -737,7 +737,7 @@ async function syncWorkers(cur){
   let nextNo = maxNo + 1;
   for(const w of cur.S.workers){
     const o = old[w.id], live = getWorker(w.id);
-    const tag = '薪水系统 ' + (w.name||'');
+    const tag = 'Salary ' + (w.name||'');
     if(!o){
       // 新工人：v56 给的是临时编号 → 换成资料库 uuid
       const uuid = w._uuid || crypto.randomUUID();
@@ -767,11 +767,11 @@ async function syncWorkers(cur){
     const oh = (o.rateHistory||[]).map(key), nh = (w.rateHistory||[]).map(key);
     const rows = W_RATES[w.id] ||= [];
     for(const h of (o.rateHistory||[])) if(!nh.includes(key(h))){
-      const row = rows.find(r => r.effective_from===h.from); if(row){ await voidRow('hub_worker_rate', row.id, tag+'：移除或改了这笔薪资'); rows.splice(rows.indexOf(row),1); }
+      const row = rows.find(r => r.effective_from===h.from); if(row){ await voidRow('hub_worker_rate', row.id, tag+': rate removed or changed'); rows.splice(rows.indexOf(row),1); }
     }
     const addRate = async (from, rate, type) => {
       const ex = rows.find(r => r.effective_from===from);
-      if(ex){ await voidRow('hub_worker_rate', ex.id, tag+'：同月改成新的薪资'); rows.splice(rows.indexOf(ex),1); }
+      if(ex){ await voidRow('hub_worker_rate', ex.id, tag+': new rate in the same month'); rows.splice(rows.indexOf(ex),1); }
       const r = await hubCall(sb.from('hub_worker_rate').insert({worker_id:w.id, rate_type:type, rate, effective_from:from}).select('id,worker_id,rate_type,rate,effective_from'));
       rows.push(...r);
     };
@@ -781,12 +781,12 @@ async function syncWorkers(cur){
       const mk = effMonth();
       await addRate(mk, Number(w.rate)||0, RT(w.rateType));
       for(const x of [w, live]){ if(!x) continue; x.rateHistory = (x.rateHistory||[]).filter(h => h.from!==mk).concat([{from:mk, rate:Number(w.rate)||0}]).sort((a,b)=>a.from<b.from?-1:1); }
-      toast('薪资从 ' + mk + ' 起改为 ' + (w.rateType==='monthly'?'月薪':'日薪') + ' RM' + w.rate);
+      toast('Rate from ' + mk + ': ' + (w.rateType==='monthly'?'Monthly':'Daily') + ' RM' + w.rate);
     }
     // 归属公司
     if(o.farm !== w.farm){
       const mk = effMonth(), crow = W_COMP[w.id] ||= [];
-      const ex = crow.find(r => r.effective_from===mk); if(ex){ await voidRow('hub_worker_company', ex.id, tag+'：同月改归属公司'); crow.splice(crow.indexOf(ex),1); }
+      const ex = crow.find(r => r.effective_from===mk); if(ex){ await voidRow('hub_worker_company', ex.id, tag+': company changed in the same month'); crow.splice(crow.indexOf(ex),1); }
       crow.push(...await hubCall(sb.from('hub_worker_company').insert({worker_id:w.id, company_id:coIdOf(w.farm), effective_from:mk}).select('id,worker_id,company_id,effective_from')));
     }
     // 收款资料
@@ -795,7 +795,7 @@ async function syncWorkers(cur){
       if(w.bankAccount && w.beneficiary){
         prow.push(...await hubCall(sb.from('hub_worker_payee').insert({worker_id:w.id, beneficiary_name:w.beneficiary, account_no:w.bankAccount, channel:'MERCHANTRADE', effective_from:TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from')));
       }else{
-        for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+'：清空收款资料');
+        for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+': payee cleared');
       }
     }
     // 第二组收款人
@@ -804,16 +804,16 @@ async function syncWorkers(cur){
       if(w.bankAccount2 && w.beneficiary2){
         prow.push(...await hubCall(sb.from('hub_worker_payee').insert({worker_id:w.id, slot:2, beneficiary_name:w.beneficiary2, account_no:w.bankAccount2, channel:'MERCHANTRADE', effective_from:TODAY_KL}).select('id,worker_id,beneficiary_name,account_no,effective_from,slot')));
       }else{
-        for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+'：清空第二组收款人');
+        for(const r of prow.splice(0)) await voidRow('hub_worker_payee', r.id, tag+': payee 2 cleared');
       }
     }
     // 护照
     if((o.passport||'') !== (w.passport||'')){
       const qrow = W_PP[w.id] ||= [];
       const ex = qrow.find(r => r.effective_from===TODAY_KL);
-      if(ex){ await voidRow('hub_worker_passport', ex.id, tag+'：同日改护照'); qrow.splice(qrow.indexOf(ex),1); }
+      if(ex){ await voidRow('hub_worker_passport', ex.id, tag+': passport changed on the same day'); qrow.splice(qrow.indexOf(ex),1); }
       if(w.passport) qrow.push(...await hubCall(sb.from('hub_worker_passport').insert({worker_id:w.id, passport_no:w.passport, effective_from:TODAY_KL}).select('id,worker_id,passport_no,effective_from')));
-      else for(const r of qrow.splice(0)) await voidRow('hub_worker_passport', r.id, tag+'：清空护照');
+      else for(const r of qrow.splice(0)) await voidRow('hub_worker_passport', r.id, tag+': passport cleared');
     }
     // 停职备注
     if((o.stopNotes||'') !== (w.stopNotes||'')) await hubCall(sb.from('salary_worker_note').upsert({worker_id:w.id, stop_notes:w.stopNotes||null}, {onConflict:'worker_id'}));
@@ -827,27 +827,27 @@ function gate(html){ const g=document.getElementById('gate'); g.style.display='f
 function gateMsg(t, ok){ const m=document.getElementById('g-msg'); if(m){ m.textContent=t; m.style.display='block'; m.style.background= ok?'#e3eee5':'#f8e3df'; m.style.color= ok?'#2f5d3f':'#a33a2c'; } }
 // 登入只在首页（Platform）。这里不登入、不登出。
 function needHome(title, body){
-  gate('<b style="color:#a33a2c;font-size:16px">' + title + '</b><p>' + body + '</p><p style="color:#888">没有任何资料被改动。</p>'
-     + '<a href="../index.html" style="display:inline-block;background:#2f5d3f;color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">回首页登入</a>');
+  gate('<b style="color:#a33a2c;font-size:16px">' + title + '</b><p>' + body + '</p>'
+     + '<a href="../index.html" style="display:inline-block;background:#2f5d3f;color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">Go to Home</a>');
 }
 
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session) return needHome('请从首页登入', '登入后从首页点「薪水 Salary」进来。');
+  if(!session) return needHome('Please sign in', 'Sign in from the Home page first.');
   const {data:me, error} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
-  if(error) return gate('<b style="color:#a33a2c">读不到帐号资料</b><p>'+error.message+'</p><p style="color:#888">没有任何资料被改动。</p>');
-  if(!me || me.status!=='ACTIVE') return needHome('这个帐号不能使用', '请回首页，用老板邀请的 email 登入。');
+  if(error) return gate('<b style="color:#a33a2c">Could not load your account</b><p>Please refresh the page.</p>');
+  if(!me || me.status!=='ACTIVE') return needHome('No access', 'This account cannot use the system.');
   const [{data:see},{data:edit},{data:appr}] = await Promise.all([sb.rpc('hub_can',{p_system:'SALARY',p_action:'see'}), sb.rpc('hub_can',{p_system:'SALARY',p_action:'edit'}), sb.rpc('hub_can',{p_system:'SALARY',p_action:'approve'})]);
   CAN_APPROVE = !!appr;
-  if(!see) return needHome('你没有薪水系统的权限', '请找老板在「帐号与权限」开「薪水 · 看」。');
+  if(!see) return needHome('No access', 'Please ask the owner for access to Salary.');
   CAN_EDIT = !!edit;
-  gate('<p>读取云端资料中…</p>');
+  gate('<p>Loading…</p>');
   try{ await loadData(); }
-  catch(e){ return gate('<b style="color:#a33a2c">读不到云端资料</b><p>'+e.message+'</p><p style="color:#888">没有任何资料被改动。重新整理再试一次。</p>'); }
+  catch(e){ return gate('<b style="color:#a33a2c">Could not load data</b><p>'+e.message+'</p><p style="color:#888">Please refresh the page.</p>'); }
   CLOUD_OK = true;
   document.getElementById('gate').style.display='none';
   document.getElementById('who-chip').textContent = (me.display_name||'') + ' · ' + (me.position||me.role);
-  setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? '已连上云端' : '只能看，不能改');
+  setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? 'Connected' : 'View only');
   initMonthSel(); renderDashboard(); renderExitRecords(); updateLockStrip();
 }
 
@@ -975,8 +975,8 @@ function renderWorkers(){
       <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
       <td><div style="display:flex;gap:4px;">
         <button class="btn btn-sm" onclick="openWorkerModal('${w.id}')">Edit</button>
-        <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">纪录</button>
-        ${workerHasRecords(w.id)?'':`<button class="btn btn-sm btn-red" title="只给建错、没有任何纪录的人" onclick="voidWorker('${w.id}')">作废</button>`}
+        <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">History</button>
+        ${workerHasRecords(w.id)?'':`<button class="btn btn-sm btn-red" title="Only for workers added by mistake, with no records" onclick="voidWorker('${w.id}')">Void</button>`}
         ${effectiveStatus==='active'
           ?`<button class="btn btn-sm btn-red" onclick="openStopModal('${w.id}')">Stop</button>`
           :`<button class="btn btn-sm" onclick="activateWorker('${w.id}')">Activate</button>`}
@@ -1025,9 +1025,9 @@ function openWorkerModal(id){
       </div>
       <div class="form-row"><label>Phone</label><input id="wf-phone" value="${w.phone||''}"></div>
       <div class="form-row"><label>Bank Account No</label><input id="wf-bank" value="${w.bankAccount||''}"></div>
-      <div class="form-row"><label>Beneficiary Name（收款人 1 · 预设）</label><input id="wf-bene" value="${w.beneficiary||''}"></div>
-      <div class="form-row"><label>Bank Account No（收款人 2）</label><input id="wf-bank2" value="${w.bankAccount2||''}"></div>
-      <div class="form-row"><label>Beneficiary Name（收款人 2）</label><input id="wf-bene2" value="${w.beneficiary2||''}"></div>
+      <div class="form-row"><label>Beneficiary Name (Payee 1 · default)</label><input id="wf-bene" value="${w.beneficiary||''}"></div>
+      <div class="form-row"><label>Bank Account No (Payee 2)</label><input id="wf-bank2" value="${w.bankAccount2||''}"></div>
+      <div class="form-row"><label>Beneficiary Name (Payee 2)</label><input id="wf-bene2" value="${w.beneficiary2||''}"></div>
       <div class="form-row"><label>Passport No</label><input id="wf-pass" value="${w.passport||''}"></div>
       <div class="form-row"><label>Join Date</label><input id="wf-join" type="date" value="${w.joinDate||''}"></div>
       <div class="form-row"><label>Stop Date <span style="color:var(--text3);font-size:10px;">(if applicable)</span></label><input id="wf-stop" type="date" value="${w.stopDate||''}"></div>
@@ -1089,7 +1089,7 @@ function saveWorker(id){
   const rate=parseFloat(document.getElementById('wf-rate').value)||0;
   if(!name){toast('⚠ Name is required');return;}
   { const _j=document.getElementById('wf-join').value, _s=(document.getElementById('wf-stop')||{}).value||'';
-    if(_j && _s && _s < _j){ toast('⚠ 停职日不能早于入职日'); return; } }
+    if(_j && _s && _s < _j){ toast('⚠ Stop date cannot be before join date'); return; } }
   _rhBackup=null;
   if(id){
     const w=getWorker(id);
@@ -1154,7 +1154,7 @@ function confirmStopWorker(id){
   const w=getWorker(id);
   const d=document.getElementById('stop-date').value;
   if(!d){toast('⚠ Please enter a stop date');return;}
-  if(w.joinDate && d < w.joinDate){toast('⚠ 停职日不能早于入职日');return;}
+  if(w.joinDate && d < w.joinDate){toast('⚠ Stop date cannot be before join date');return;}
   const reason=getSelReason();const pay=getSelPay();
   const notes=(document.getElementById('stop-notes')||{}).value||'';
   w.status='stopped';w.stopDate=d;w.stopReason=reason;w.stopNotes=notes;
@@ -1887,14 +1887,14 @@ function renderSummary(){
     const stopMkS=w.stopDate?w.stopDate.substring(0,7):'';
     const stoppedThisMonthS=stopMkS===mk;
     return `<tr>
-      <td><strong>${w.name}</strong>${w.bankAccount2&&w.beneficiary2?` <select data-noprint onchange="setPayeeSlot('${w.id}','${mk}',this.value)" style="font-size:10px;" ${isLocked(mk)?'disabled':''}><option value="1" ${payeeSlot(w.id,mk)===1?'selected':''}>收款人 1</option><option value="2" ${payeeSlot(w.id,mk)===2?'selected':''}>收款人 2</option></select>`:''}${stoppedThisMonthS?`<span style="font-size:9px;color:var(--red);margin-left:4px;">(stopped ${w.stopDate})</span>`:''}<br><span style="font-size:10px;color:var(--text3);">${w.title||''}</span></td>
+      <td><strong>${w.name}</strong>${w.bankAccount2&&w.beneficiary2?` <select data-noprint onchange="setPayeeSlot('${w.id}','${mk}',this.value)" style="font-size:10px;" ${isLocked(mk)?'disabled':''}><option value="1" ${payeeSlot(w.id,mk)===1?'selected':''}>Payee 1</option><option value="2" ${payeeSlot(w.id,mk)===2?'selected':''}>Payee 2</option></select>`:''}${stoppedThisMonthS?`<span style="font-size:9px;color:var(--red);margin-left:4px;">(stopped ${w.stopDate})</span>`:''}<br><span style="font-size:10px;color:var(--text3);">${w.title||''}</span></td>
       <td class="num sum-gross">${grossCell}</td>
       <td class="num sum-deduct">-${fmtRM(s.food)}</td>
       <td class="num sum-deduct">-${fmtRM(s.advD)}</td>
       <td class="num sum-deduct">-${fmtRM(s.persD)}</td>
       <td class="num sum-deduct" style="font-weight:700;">-${fmtRM(s.totalDed)}</td>
       <td class="num sum-net">${fmtRM(s.net)}</td>
-      <td class="num sum-deduct">${(s.cashOut||0)>0?'-'+fmtRM(s.cashOut):'--'} <button class="btn-icon" title="先付现金" onclick="openCashOut('${w.id}','${mk}')">💵</button></td>
+      <td class="num sum-deduct">${(s.cashOut||0)>0?'-'+fmtRM(s.cashOut):'--'} <button class="btn-icon" title="Cash out" onclick="openCashOut('${w.id}','${mk}')">💵</button></td>
       <td class="num" style="font-size:11px;color:var(--text3);">${s.bankChg?'-'+fmtRM(s.bankChg):'--'}</td>
       <td class="num sum-transfer" style="${pm==='unpaid'?'text-decoration:line-through;color:var(--text3);':''}">${fmtRM(s.toTx)}</td>
       <td data-col-noprint style="text-align:center;padding:4px 6px;"><button class="sum-pay-btn ${pm==='unpaid'?'active-unpaid':''}" title="Mark Unpaid / click again to undo" onclick="sumToggleUnpaid('${w.id}','${mk}')">🚫</button></td>
@@ -1921,7 +1921,7 @@ function renderSummary(){
       <thead><tr>
         <th style="width:180px;">Worker</th>
         <th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th>
-        <th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash Out 先付现金</th><th class="num">Bank Charge</th><th class="num">To Transfer</th>
+        <th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash Out</th><th class="num">Bank Charge</th><th class="num">To Transfer</th>
         <th data-col-noprint style="text-align:center;font-size:10px;">Payment</th><th data-col-noprint style="width:36px;"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -1967,7 +1967,7 @@ function renderSummary(){
                 ${unpaidHX+unpaidAD>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Unpaid (salary)</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidHX)}</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(unpaidAD)}</td></tr>`:''}
-              ${totCash>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Cash out 先付现金</td>
+              ${totCash>0?`<tr><td style="padding:6px 10px;color:var(--red);">- Cash out</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashHX)}</td>
                 <td style="text-align:right;font-family:'IBM Plex Mono',monospace;padding:6px 10px;color:var(--red);">-${fmtRM(totCashAD)}</td></tr>`:''}
               <tr style="background:var(--text);color:#fff;font-weight:700;"><td style="padding:8px 10px;">TO TRANSFER</td>
@@ -2213,8 +2213,8 @@ function printReceipt(wid, mk){
 
     + '<table style="margin-bottom:6px">'
     + '<tr class="star1"><td style="width:40px;text-align:center">★</td><td style="text-align:right;font-size:11px">NET PAY</td><td style="text-align:right;font-size:11px;width:130px">RM ' + s.net.toFixed(2) + '</td></tr>'
-    + ((s.cashOut||0) > 0 ? cashList.map(x => '<tr class="row-alt"><td></td><td style="text-align:right">Cash out 先付现金 · ' + esc(x.date||'') + (x.note ? ' · ' + esc(x.note) : '') + '</td><td style="text-align:right">- RM ' + Number(x.amount).toFixed(2) + '</td></tr>').join('')
-        + '<tr class="star1"><td style="text-align:center">★</td><td style="text-align:right">BALANCE AFTER CASH OUT 扣先付现金后</td><td style="text-align:right">RM ' + Number(s.payable).toFixed(2) + '</td></tr>' : '')
+    + ((s.cashOut||0) > 0 ? cashList.map(x => '<tr class="row-alt"><td></td><td style="text-align:right">Cash out · ' + esc(x.date||'') + (x.note ? ' · ' + esc(x.note) : '') + '</td><td style="text-align:right">- RM ' + Number(x.amount).toFixed(2) + '</td></tr>').join('')
+        + '<tr class="star1"><td style="text-align:center">★</td><td style="text-align:right">BALANCE AFTER CASH OUT</td><td style="text-align:right">RM ' + Number(s.payable).toFixed(2) + '</td></tr>' : '')
     + '<tr class="star2"><td style="text-align:center">★</td><td style="text-align:right">BANK CHARGES</td><td style="text-align:right">' + (s.bankChg?'RM '+s.bankChg.toFixed(2):'--') + '</td></tr>'
     + '<tr class="star3"><td style="text-align:center;font-size:13px">★</td><td style="text-align:right;font-size:12px;font-weight:700">AMOUNT TO TRANSFER</td><td style="text-align:right;font-size:13px;font-weight:700">RM ' + s.toTx.toFixed(2) + '</td></tr>'
     + '</table>'
@@ -2997,7 +2997,7 @@ function renderDashboard(){
 
   var balanced=Math.abs((merchantTotal+unpaidFoodPersD)-itemsTotal)<0.1;
   var bColor=balanced?"var(--grn)":"var(--red)";
-  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+(cashTd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Cash out 先付现金</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashHXd)+"</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
+  var reconHtml="<div class=\"card\" style=\"border-top:3px solid "+bColor+";padding:0;overflow:hidden;\">"+"<div style=\"padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;\">"+"<span style=\"font-weight:700;font-size:13px;\">Bank Transfer Reconciliation</span>"+"<span style=\"font-size:11px;padding:4px 10px;border-radius:6px;font-weight:600;"+(balanced?"background:var(--grnl);color:var(--grn);":"background:var(--redl);color:var(--red);")+"\">"+(balanced?"✓ BALANCED":"✗ CHECK FIGURES")+"</span>"+"</div>"+"<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:0;\">"+"<div style=\"padding:12px 14px;border-right:1px solid var(--border);\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Bank Transfer (HX vs AD)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--acc);border-bottom:1px solid var(--border);\">HX</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--grn);border-bottom:1px solid var(--border);\">AD</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;\">Total Salary</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totHXSal)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;\">"+fmtRM(totADSal)+"</td></tr>"+"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Advance Deducted</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totHXAdv)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(totADAdv)+"</td></tr>"+(unpaidHXd+unpaidADd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Unpaid (salary)</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidHXd)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(unpaidADd)+"</td></tr>":"")+(cashTd>0?"<tr><td style=\"padding:5px 8px;color:var(--red);\">- Cash out</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashHXd)+"</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--red);\">-"+fmtRM(cashADd)+"</td></tr>":"")+"<tr style=\"background:var(--text);color:#fff;font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO TRANSFER</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(hxToTx)+"</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(adToTx)+"</td></tr>"+(unpaidFoodPersD>0?"<tr><td style=\"padding:5px 8px;color:var(--amb);font-weight:600;\">+ Owed to Daniel (unpaid workers)</td>"+"<td colspan=\"2\" style=\"text-align:right;font-family:monospace;padding:5px 8px;color:var(--amb);font-weight:600;\">+"+fmtRM(unpaidFoodPersD)+"</td></tr>":"")+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Total via Merchantrade: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(merchantTotal+unpaidFoodPersD)+"</strong></div>"+"</div>"+"<div style=\"padding:12px 14px;\">"+"<div style=\"font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;\">Merchantrade Breakdown (Items)</div>"+"<table style=\"width:100%;font-size:12px;border-collapse:collapse;\">"+"<thead><tr style=\"background:var(--bg2);\">"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Item</th>"+"<th style=\"padding:5px 8px;text-align:right;font-size:10px;font-weight:700;border-bottom:1px solid var(--border);\">Amount</th>"+"<th style=\"padding:5px 8px;text-align:left;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);\">Description</th>"+"</tr></thead><tbody>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Worker Salary</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totNet)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Net pay to all workers</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Food -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totFood)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Food deductions collected</td></tr>"+"<tr><td style=\"padding:5px 8px;font-weight:500;\">Personal -- Daniel</td><td style=\"text-align:right;font-family:monospace;padding:5px 8px;font-weight:700;\">"+fmtRM(totPers)+"</td><td style=\"padding:5px 8px;font-size:10px;color:var(--text3);\">Personal deductions collected</td></tr>"+"<tr style=\"background:"+(balanced?"#EBF5EC":"#FCE9E9")+";font-weight:700;\">"+"<td style=\"padding:7px 8px;\">TO MATCH</td>"+"<td style=\"text-align:right;font-family:monospace;padding:7px 8px;\">"+fmtRM(itemsTotal)+"</td>"+"<td style=\"padding:7px 8px;font-size:10px;"+(balanced?"color:var(--grn);":"color:var(--red);")+"\">"+(balanced?"✓ Matches Merchantrade":"✗ Difference: "+fmtRM(merchantTotal-itemsTotal))+"</td></tr>"+"</tbody></table>"+"<div style=\"margin-top:8px;text-align:right;font-size:11px;color:var(--text3);\">Items total: <strong style=\"font-family:monospace;font-size:14px;\">"+fmtRM(itemsTotal)+"</strong></div>"
     +chgSavingsHtml
     +"</div></div></div>";
   document.getElementById("db-recon").innerHTML=reconHtml;
@@ -3073,7 +3073,7 @@ function importData(input){
   reader.readAsText(file);
 }
 
-function confirmImport(){ alert('云端版不提供汇入。'); return;
+function confirmImport(){ alert('Import is not available.'); return;
 
   try{
     const payload=window._importPayload;
@@ -3193,7 +3193,7 @@ function revertLockedEdits(cur){
     if(SNAP.S.food[m] !== undefined){ S.food[m] = clone(SNAP.S.food[m]); cur.S.food[m] = clone(SNAP.S.food[m]); }
     else { delete S.food[m]; delete cur.S.food[m]; }
   }
-  toast('🔒 ' + [...hit].join('、') + ' 已锁月，这次改动没有存。要改请先解锁。', 4000);
+  toast('🔒 ' + [...hit].join(', ') + ' is locked. This change was not saved. Unlock the month first.', 4000);
   setTimeout(refreshCurrentPage, 50);
   return true;
 }
@@ -3204,13 +3204,13 @@ function lockChecks(mk){
   workersInMonthLive(mk).forEach(w => {
     const s = calcWorkerSummaryLive(w, mk);
     const rate = getRateForMonth(w, mk);
-    if(!rate) out.push([w, '没有薪资（金额 0）']);
-    if(w.rateType==='daily' && s.totalD===0) out.push([w, '整个月 0 天出勤']);
-    if(s.net < 0) out.push([w, '净额是负数：' + fmtRM(s.net)]);
-    if(s.gross > 0 && s.totalDed > s.gross*0.5) out.push([w, '扣款超过总薪水一半：扣 ' + fmtRM(s.totalDed) + ' / 薪 ' + fmtRM(s.gross)]);
+    if(!rate) out.push([w, 'No rate (RM 0)']);
+    if(w.rateType==='daily' && s.totalD===0) out.push([w, '0 days worked this month']);
+    if(s.net < 0) out.push([w, 'Net pay is negative: ' + fmtRM(s.net)]);
+    if(s.gross > 0 && s.totalDed > s.gross*0.5) out.push([w, 'Deductions over half of gross: ' + fmtRM(s.totalDed) + ' / ' + fmtRM(s.gross)]);
     const pm = getPayMethod(w.id, mk);
-    if(pm==='transfer' && s.toTx>0 && (!payeeOf(w,mk).bankAccount || !payeeOf(w,mk).beneficiary)) out.push([w, '要汇款但没有户口资料']);
-    if((s.cashOut||0) > s.net + 0.001) out.push([w, '先付现金 ' + fmtRM(s.cashOut) + ' 超过实发 ' + fmtRM(s.net)]);
+    if(pm==='transfer' && s.toTx>0 && (!payeeOf(w,mk).bankAccount || !payeeOf(w,mk).beneficiary)) out.push([w, 'Transfer selected but no bank details']);
+    if((s.cashOut||0) > s.net + 0.001) out.push([w, 'Cash out ' + fmtRM(s.cashOut) + ' is more than net pay ' + fmtRM(s.net)]);
   });
   return out;
 }
@@ -3223,28 +3223,28 @@ async function waitSynced(){
 
 async function openLockModal(){
   const mk = monthKey();
-  if(!(await waitSynced())){ toast('还有改动没存进云端，等「已存」再锁'); return; }
+  if(!(await waitSynced())){ toast('Changes are still saving. Wait for "Saved", then lock.'); return; }
   const ws = workersInMonthLive(mk);
-  if(!ws.length){ toast('这个月没有工人'); return; }
+  if(!ws.length){ toast('No workers this month'); return; }
   const issues = lockChecks(mk);
   let tot = 0; ws.forEach(w => tot += calcWorkerSummaryLive(w, mk).toTx);
-  document.getElementById('modal-title').textContent = '锁月：' + mk;
+  document.getElementById('modal-title').textContent = 'Lock month: ' + mk;
   document.getElementById('modal-body').innerHTML =
-    '<div style="font-size:13px;line-height:1.7;margin-bottom:10px;">锁了之后：这个月的出勤、伙食、个人扣款、月薪改额、付款方式都不能再改；薪水结果冻结；预支才算真的扣了；才可以推去汇款。</div>'
-    + '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;">工人 <b>' + ws.length + '</b> 人 · 合计要汇 <b>' + fmtRM(tot) + '</b></div>'
+    '<div style="font-size:13px;line-height:1.7;margin-bottom:10px;">After locking, this month\'s attendance, food, deductions and payment methods cannot be changed. Salaries are final and can be sent to Remittance.</div>'
+    + '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;">Workers <b>' + ws.length + '</b> · Total to transfer <b>' + fmtRM(tot) + '</b></div>'
     + (issues.length
-        ? '<div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;">检查到 ' + issues.length + ' 个要看的地方：</div><div style="max-height:260px;overflow:auto;font-size:12px;border:1px solid var(--border);border-radius:6px;">'
+        ? '<div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;">' + issues.length + ' item(s) to review:</div><div style="max-height:260px;overflow:auto;font-size:12px;border:1px solid var(--border);border-radius:6px;">'
           + issues.map(([w,t]) => '<div style="padding:6px 10px;border-bottom:1px solid var(--border);"><b>' + w.name + '</b> · ' + t + '</div>').join('') + '</div>'
-        : '<div style="font-size:12px;color:var(--grn);font-weight:700;">检查全部通过。</div>');
+        : '<div style="font-size:12px;color:var(--grn);font-weight:700;">All checks passed.</div>');
   document.getElementById('modal-footer').innerHTML =
-    '<button class="btn" onclick="closeModal()">取消</button>'
-    + '<button class="btn btn-pri" id="btn-do-lock" onclick="doLockMonth(\'' + mk + '\')">' + (issues.length ? '我看过了，确认锁月' : '确认锁月') + '</button>';
+    '<button class="btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn btn-pri" id="btn-do-lock" onclick="doLockMonth(\'' + mk + '\')">' + (issues.length ? 'I have reviewed — Lock month' : 'Lock month') + '</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 
 async function doLockMonth(mk){
   const btn = document.getElementById('btn-do-lock'); if(btn) btn.disabled = true;
-  if(!(await waitSynced())){ toast('还有改动没存进云端'); if(btn) btn.disabled=false; return; }
+  if(!(await waitSynced())){ toast('Changes are still saving'); if(btn) btn.disabled=false; return; }
   const slips = workersInMonthLive(mk).map(w => {
     const s = calcWorkerSummaryLive(w, mk);
     return {worker_id: w.id, data: Object.assign({}, s, {
@@ -3252,30 +3252,30 @@ async function doLockMonth(mk){
       payMethod: getPayMethod(w.id, mk), beneficiary: payeeOf(w,mk).beneficiary, bankAccount: payeeOf(w,mk).bankAccount, payeeSlot: payeeOf(w,mk).slot, lockedMonth: mk })};
   });
   const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
-  if(error){ alert('锁月失败：' + error.message); if(btn) btn.disabled=false; return; }
+  if(error){ alert('Could not lock: ' + error.message); if(btn) btn.disabled=false; return; }
   await loadLocks();
   closeModal(); refreshCurrentPage(); renderDashboard();
-  toast('🔒 ' + mk + ' 已锁，' + data + ' 张薪资单已冻结');
+  toast('🔒 ' + mk + ' locked · ' + data + ' payslips final');
 }
 
 function openUnlockModal(){
   const mk = monthKey();
-  document.getElementById('modal-title').textContent = '解锁：' + mk;
+  document.getElementById('modal-title').textContent = 'Unlock month: ' + mk;
   document.getElementById('modal-body').innerHTML =
-    '<div style="font-size:13px;margin-bottom:10px;">解锁后这个月的快照作废（留纪录），可以再改，改完要重新锁。已经推去汇款的纪录不会自动改，请自己核对。</div>'
-    + '<div class="form-row"><label>解锁原因 *</label><input id="unlock-reason" placeholder="例：AUNG 10/15 出勤打错"></div>';
+    '<div style="font-size:13px;margin-bottom:10px;">After unlocking you can edit this month again, then lock it again. Remittance records already sent are not changed — please check them.</div>'
+    + '<div class="form-row"><label>Reason *</label><input id="unlock-reason" placeholder="e.g. AUNG 15 Oct attendance wrong"></div>';
   document.getElementById('modal-footer').innerHTML =
-    '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-red" onclick="doUnlockMonth(\'' + mk + '\')">确认解锁</button>';
+    '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-red" onclick="doUnlockMonth(\'' + mk + '\')">Unlock</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 async function doUnlockMonth(mk){
   const reason = (document.getElementById('unlock-reason').value||'').trim();
-  if(!reason){ toast('一定要写原因'); return; }
+  if(!reason){ toast('Please enter a reason'); return; }
   const {error} = await sb.rpc('salary_unlock_month', {p_month: mk, p_reason: reason});
-  if(error){ alert('解锁失败：' + error.message); return; }
+  if(error){ alert('Could not unlock: ' + error.message); return; }
   await loadLocks();
   closeModal(); refreshCurrentPage(); renderDashboard();
-  toast('🔓 ' + mk + ' 已解锁');
+  toast('🔓 ' + mk + ' unlocked');
 }
 
 function updateLockStrip(){
@@ -3284,18 +3284,18 @@ function updateLockStrip(){
   if(isLocked(mk)){
     const t = LOCKS[mk].locked_at ? new Date(LOCKS[mk].locked_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     el.style.background = '#e3eee5'; el.style.color = '#2f5d3f';
-    el.innerHTML = '🔒 <b>' + mk + ' 已锁</b>（' + t + '）· 薪水已冻结，可以推去汇款。'
-      + (CAN_APPROVE ? ' <button class="btn btn-sm" style="margin-left:10px;" onclick="openUnlockModal()">解锁</button>' : '');
+    el.innerHTML = '🔒 <b>' + mk + ' locked</b> (' + t + ') · Salaries are final and ready for Remittance.'
+      + (CAN_APPROVE ? ' <button class="btn btn-sm" style="margin-left:10px;" onclick="openUnlockModal()">Unlock</button>' : '');
   }else{
     el.style.background = '#fff6e0'; el.style.color = '#7a5600';
-    el.innerHTML = '✏️ <b>' + mk + ' 还没锁</b> · 可以改出勤和扣款；推汇款前要先锁月。'
-      + (CAN_APPROVE ? ' <button class="btn btn-sm btn-pri" style="margin-left:10px;" onclick="openLockModal()">检查并锁月</button>' : '');
+    el.innerHTML = '✏️ <b>' + mk + ' not locked</b> · Lock the month before sending to Remittance.'
+      + (CAN_APPROVE ? ' <button class="btn btn-sm btn-pri" style="margin-left:10px;" onclick="openLockModal()">Check &amp; lock month</button>' : '');
   }
 }
 function requireLocked(m, y){
   const mk = y + '-' + pad2(m);
   if(isLocked(mk)) return true;
-  toast('⚠ ' + mk + ' 还没锁月。先按上方「检查并锁月」，才能推去汇款。', 4000);
+  toast('⚠ ' + mk + ' is not locked. Press "Check & lock month" first.', 4000);
   return false;
 }
 
@@ -3318,7 +3318,7 @@ function PO(w){ return payeeOf(w, monthKey()); }
 function setPayeeSlot(wid, mk, slot){
   S.payeeSlot ??= {}; S.payeeSlot[mk] ??= {};
   if(Number(slot) === 1) delete S.payeeSlot[mk][wid]; else S.payeeSlot[mk][wid] = 2;
-  saveAll(); toast('这个月汇给第 ' + slot + ' 组收款人');
+  saveAll(); toast('This month pays Payee ' + slot);
 }
 
 // ---------- 先付现金 ----------
@@ -3327,32 +3327,32 @@ function openCashOut(wid, mk){
   mk = mk || monthKey(); const w = getWorker(wid);
   const list = ((S.cashout||{})[mk]||{})[wid] || [];
   const locked = isLocked(mk);
-  document.getElementById('modal-title').textContent = '先付现金 Cash out：' + w.name + ' · ' + mk;
+  document.getElementById('modal-title').textContent = 'Cash out: ' + w.name + ' · ' + mk;
   document.getElementById('modal-body').innerHTML =
-    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">月中先拿的现金，月底从这个月实发里全额扣回，薪资单会列出来。</div>'
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Cash paid during the month is deducted in full from this month\'s net pay and shown on the payslip.</div>'
     + (list.length ? '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">'
         + list.map(x => '<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px;">' + esc(x.date||'') + '</td><td style="padding:6px;">' + esc(x.note||'') + '</td><td style="padding:6px;text-align:right;font-family:monospace;">' + fmtRM(x.amount) + '</td><td style="padding:6px;width:60px;">'
-          + (locked ? '' : '<button class="btn btn-sm btn-red" onclick="voidCashOut(\'' + wid + '\',\'' + mk + '\',\'' + x.id + '\')">拿掉</button>') + '</td></tr>').join('')
-        + '<tr><td colspan="2" style="padding:6px;font-weight:700;">合计</td><td style="padding:6px;text-align:right;font-weight:700;font-family:monospace;">' + fmtRM(cashOutOf(wid,mk)) + '</td><td></td></tr></table>'
-      : '<div style="font-size:12px;margin-bottom:10px;">这个月还没有先付现金。</div>')
-    + (locked ? '<div style="font-size:12px;color:var(--red);">这个月已锁，不能再改。</div>' :
-      '<div class="form-grid"><div class="form-row"><label>日期 *</label><input id="co-date" type="date" value="' + (TODAY_KL.slice(0,7)===mk ? TODAY_KL : mk + '-01') + '"></div>'
-      + '<div class="form-row"><label>金额 RM *</label><input id="co-amt" type="number" step="0.01"></div>'
-      + '<div class="form-row" style="grid-column:1/-1;"><label>备注</label><input id="co-note" placeholder="例：回乡急用"></div></div>');
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>'
-    + (locked ? '' : '<button class="btn btn-pri" onclick="addCashOut(\'' + wid + '\',\'' + mk + '\')">加一笔</button>');
+          + (locked ? '' : '<button class="btn btn-sm btn-red" onclick="voidCashOut(\'' + wid + '\',\'' + mk + '\',\'' + x.id + '\')">Remove</button>') + '</td></tr>').join('')
+        + '<tr><td colspan="2" style="padding:6px;font-weight:700;">Total</td><td style="padding:6px;text-align:right;font-weight:700;font-family:monospace;">' + fmtRM(cashOutOf(wid,mk)) + '</td><td></td></tr></table>'
+      : '<div style="font-size:12px;margin-bottom:10px;">No cash out this month.</div>')
+    + (locked ? '<div style="font-size:12px;color:var(--red);">This month is locked.</div>' :
+      '<div class="form-grid"><div class="form-row"><label>Date *</label><input id="co-date" type="date" value="' + (TODAY_KL.slice(0,7)===mk ? TODAY_KL : mk + '-01') + '"></div>'
+      + '<div class="form-row"><label>Amount RM *</label><input id="co-amt" type="number" step="0.01"></div>'
+      + '<div class="form-row" style="grid-column:1/-1;"><label>Note</label><input id="co-note"></div></div>');
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Close</button>'
+    + (locked ? '' : '<button class="btn btn-pri" onclick="addCashOut(\'' + wid + '\',\'' + mk + '\')">Add</button>');
   document.getElementById('modal-overlay').classList.add('on');
 }
 function addCashOut(wid, mk){
   const d = document.getElementById('co-date').value, a = r2(parseFloat(document.getElementById('co-amt').value)||0);
-  if(!d || a <= 0){ toast('⚠ 日期和金额都要填'); return; }
-  if(d.slice(0,7) !== mk){ toast('⚠ 日期要在 ' + mk + ' 里面'); return; }
+  if(!d || a <= 0){ toast('⚠ Date and amount are required'); return; }
+  if(d.slice(0,7) !== mk){ toast('⚠ Date must be in ' + mk); return; }
   S.cashout ??= {}; S.cashout[mk] ??= {}; S.cashout[mk][wid] ??= [];
   S.cashout[mk][wid].push({id:'c_' + uid(), date:d, amount:a, note:(document.getElementById('co-note').value||'').trim()});
   saveAll(); openCashOut(wid, mk); refreshCurrentPage();
 }
 function voidCashOut(wid, mk, id){
-  if(!confirm('拿掉这笔先付现金？（纪录会保留成作废）')) return;
+  if(!confirm('Remove this cash out?')) return;
   S.cashout[mk][wid] = S.cashout[mk][wid].filter(x => x.id !== id);
   saveAll(); openCashOut(wid, mk); refreshCurrentPage();
 }
@@ -3397,26 +3397,26 @@ function renderAdvance(){
   const locked = isLocked(mk);
   const card = ({w, t}) => {
     const L = loanAcc(w.id);
-    const ov = t.override, ovTxt = ov ? (Number(ov.amount)===0 ? '<span class="badge" style="background:var(--redl);color:var(--red);">这个月停扣</span>' : '<span class="badge" style="background:var(--ambl);color:var(--amb);">这个月只扣 ' + fmtRM(ov.amount) + '</span>') : '';
+    const ov = t.override, ovTxt = ov ? (Number(ov.amount)===0 ? '<span class="badge" style="background:var(--redl);color:var(--red);">Paused this month</span>' : '<span class="badge" style="background:var(--ambl);color:var(--amb);">This month only ' + fmtRM(ov.amount) + '</span>') : '';
     const sched = loanSchedule(w.id, mk, 24).filter(x => x[1] > 0).slice(0, 12).map(x => '<span style="font-size:10px;background:' + (x[0]===mk?'var(--ambl)':'var(--bg)') + ';border:1px solid var(--border);border-radius:4px;padding:2px 6px;white-space:nowrap;">' + x[0] + '：' + fmtRM(x[1]) + '</span>').join(' ');
     return '<div class="adv-card active" style="margin-bottom:10px;">'
       + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
-      + '<div><div style="font-weight:700;">' + esc(w.name) + ' <span style="font-size:10px;color:var(--text3);">#' + (w.no||'') + ' · ' + (w.farm||'').toUpperCase() + ' 出</span></div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">借出合计 <b>' + fmtRM(t.loaned) + '</b> · 之前已扣 <b>' + fmtRM(t.paidBefore) + '</b> · 每月扣 <b>' + (t.plan==null?'未设':fmtRM(t.plan)) + '</b></div></div>'
-      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">这个月扣</div><div style="font-weight:700;font-family:monospace;">' + fmtRM(t.thisMonth) + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">扣完剩 <b>' + fmtRM(t.balanceAfter) + '</b></div></div></div>'
+      + '<div><div style="font-weight:700;">' + esc(w.name) + ' <span style="font-size:10px;color:var(--text3);">#' + (w.no||'') + ' · ' + (w.farm||'').toUpperCase() + '</span></div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:3px;">Loaned <b>' + fmtRM(t.loaned) + '</b> · Repaid before <b>' + fmtRM(t.paidBefore) + '</b> · Monthly <b>' + (t.plan==null?'Not set':fmtRM(t.plan)) + '</b></div></div>'
+      + '<div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">This month</div><div style="font-weight:700;font-family:monospace;">' + fmtRM(t.thisMonth) + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">Balance after <b>' + fmtRM(t.balanceAfter) + '</b></div></div></div>'
       + (ovTxt ? '<div style="margin-top:6px;">' + ovTxt + '</div>' : '')
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">' + (sched || '<span style="font-size:11px;color:var(--text3);">没有要扣的月份</span>') + '</div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">' + (sched || '<span style="font-size:11px;color:var(--text3);">No months to deduct</span>') + '</div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">'
-      + '<button class="btn btn-sm btn-pri" onclick="openLoanAdd(\'' + w.id + '\')">加借 Top up</button>'
-      + '<button class="btn btn-sm" onclick="openLoanPlan(\'' + w.id + '\')">改每月扣额</button>'
-      + (locked ? '' : '<button class="btn btn-sm" onclick="openLoanMonth(\'' + w.id + '\')">这个月停扣 / 改额</button>')
-      + '<button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">纪录</button></div></div>';
+      + '<button class="btn btn-sm btn-pri" onclick="openLoanAdd(\'' + w.id + '\')">Top up</button>'
+      + '<button class="btn btn-sm" onclick="openLoanPlan(\'' + w.id + '\')">Change monthly amount</button>'
+      + (locked ? '' : '<button class="btn btn-sm" onclick="openLoanMonth(\'' + w.id + '\')">Pause / change this month</button>')
+      + '<button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">History</button></div></div>';
   };
-  list.innerHTML = active.length ? active.map(card).join('') : '<div class="empty"><div class="icon">💳</div><p>没有还在扣的借款。按右上「+ 新借款」。</p></div>';
+  list.innerHTML = active.length ? active.map(card).join('') : '<div class="empty"><div class="icon">💳</div><p>No active loans. Press "+ New loan".</p></div>';
   if(ss) ss.style.display = settled.length ? '' : 'none';
-  if(sl) sl.innerHTML = settled.map(({w,t}) => '<div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;"><span><b>' + esc(w.name) + '</b> · 借出合计 ' + fmtRM(t.loaned) + ' · 已还清</span><span><button class="btn btn-sm" onclick="openLoanAdd(\'' + w.id + '\')">再借</button> <button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">纪录</button></span></div>').join('');
-  const hdrBtn = document.querySelector('#page-advance .btn.btn-pri'); if(hdrBtn){ hdrBtn.textContent = '+ 新借款 New loan'; hdrBtn.setAttribute('onclick', 'openLoanAdd()'); }
+  if(sl) sl.innerHTML = settled.map(({w,t}) => '<div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;"><span><b>' + esc(w.name) + '</b> · Loaned ' + fmtRM(t.loaned) + ' · Fully repaid</span><span><button class="btn btn-sm" onclick="openLoanAdd(\'' + w.id + '\')">New loan</button> <button class="btn btn-sm" onclick="openLoanHistory(\'' + w.id + '\')">History</button></span></div>').join('');
+  const hdrBtn = document.querySelector('#page-advance .btn.btn-pri'); if(hdrBtn){ hdrBtn.textContent = '+ New loan'; hdrBtn.setAttribute('onclick', 'openLoanAdd()'); }
 }
 
 function openLoanAdd(wid){
@@ -3424,62 +3424,62 @@ function openLoanAdd(wid){
   const ws = workersInMonthLive(mk).filter(w => !w.stopDate || w.stopDate.slice(0,7) >= mk);
   const pre = wid ? getWorker(wid) : null;
   const t = pre ? advanceTrack(pre.id, mk) : null;
-  document.getElementById('modal-title').textContent = pre ? ('加借：' + pre.name) : '新借款';
+  document.getElementById('modal-title').textContent = pre ? ('Top up: ' + pre.name) : 'New loan';
   document.getElementById('modal-body').innerHTML =
-    (pre ? '<div style="font-size:12px;margin-bottom:10px;">现在：借出 ' + fmtRM(t.loaned) + '，扣完这个月剩 ' + fmtRM(t.balanceAfter) + '，每月扣 ' + (t.plan==null?'未设':fmtRM(t.plan)) + '。加借后合在同一本帐，用同一个每月扣额扣到归零。</div>'
-         : '<div class="form-row"><label>工人 *</label><select id="ln-wid" class="inline" style="width:100%;">' + ws.map(w => '<option value="' + w.id + '">' + esc(w.name) + (loanAcc(w.id) ? '（已有借款，会合并）' : '') + '</option>').join('') + '</select></div>')
-    + '<div class="form-grid"><div class="form-row"><label>借出日期 *</label><input id="ln-date" type="date" value="' + TODAY_KL + '"></div>'
-    + '<div class="form-row"><label>金额 RM *</label><input id="ln-amt" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>每月扣 RM' + (pre && t.plan!=null ? '（空 = 照旧 ' + fmtRM(t.plan) + '）' : ' *') + '</label><input id="ln-mo" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>从哪个月开始扣</label><input id="ln-from" type="month" value="' + effMonth() + '"></div>'
-    + '<div class="form-row" style="grid-column:1/-1;"><label>备注</label><input id="ln-note" placeholder="例：PINJAM 回乡"></div></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanAdd(\'' + (wid||'') + '\')">存</button>';
+    (pre ? '<div style="font-size:12px;margin-bottom:10px;">Now: loaned ' + fmtRM(t.loaned) + ', balance after this month ' + fmtRM(t.balanceAfter) + ', monthly ' + (t.plan==null?'not set':fmtRM(t.plan)) + '. The top up joins the same loan and is repaid with the same monthly amount.</div>'
+         : '<div class="form-row"><label>Worker *</label><select id="ln-wid" class="inline" style="width:100%;">' + ws.map(w => '<option value="' + w.id + '">' + esc(w.name) + (loanAcc(w.id) ? ' (has a loan — will be combined)' : '') + '</option>').join('') + '</select></div>')
+    + '<div class="form-grid"><div class="form-row"><label>Loan date *</label><input id="ln-date" type="date" value="' + TODAY_KL + '"></div>'
+    + '<div class="form-row"><label>Amount RM *</label><input id="ln-amt" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>Monthly RM' + (pre && t.plan!=null ? ' (blank = keep ' + fmtRM(t.plan) + ')' : ' *') + '</label><input id="ln-mo" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>Start month</label><input id="ln-from" type="month" value="' + effMonth() + '"></div>'
+    + '<div class="form-row" style="grid-column:1/-1;"><label>Note</label><input id="ln-note"></div></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanAdd(\'' + (wid||'') + '\')">Save</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 function saveLoanAdd(wid){
   wid = wid || (document.getElementById('ln-wid')||{}).value;
   const d = document.getElementById('ln-date').value, a = r2(parseFloat(document.getElementById('ln-amt').value)||0);
   const moRaw = document.getElementById('ln-mo').value, from = document.getElementById('ln-from').value;
-  if(!wid || !d || a <= 0){ toast('⚠ 工人、日期、金额都要填'); return; }
+  if(!wid || !d || a <= 0){ toast('⚠ Worker, date and amount are required'); return; }
   S.loans ??= {}; const L = S.loans[wid] ??= {txn:[], plan:[], months:{}};
-  if(moRaw === '' && loanPlanFor(L, from || d.slice(0,7)) == null){ toast('⚠ 第一次借要填每月扣多少'); return; }
-  if(from && isLocked(from)){ toast('⚠ ' + from + ' 已锁，开始月请选之后的月份'); return; }
+  if(moRaw === '' && loanPlanFor(L, from || d.slice(0,7)) == null){ toast('⚠ Enter the monthly amount for a new loan'); return; }
+  if(from && isLocked(from)){ toast('⚠ ' + from + ' is locked. Choose a later start month'); return; }
   L.txn.push({id:uid(), month:d.slice(0,7), date:d, kind:'LOAN', amount:a, note:(document.getElementById('ln-note').value||'').trim()});
   if(moRaw !== ''){
     const f = from || d.slice(0,7), ex = L.plan.find(p => p.from === f);
-    if(ex){ VOID_REASON[ex.id] = '加借时改每月扣额'; L.plan = L.plan.filter(p => p !== ex); }
+    if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed at top up'; L.plan = L.plan.filter(p => p !== ex); }
     L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(moRaw)||0)});
   }
-  saveAll(); closeModal(); renderAdvance(); toast('✅ 已加进借款帐');
+  saveAll(); closeModal(); renderAdvance(); toast('✅ Loan saved');
 }
 function openLoanPlan(wid){
   const w = getWorker(wid), t = advanceTrack(wid, monthKey());
-  document.getElementById('modal-title').textContent = '改每月扣额：' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">现在每月扣 ' + (t.plan==null?'未设':fmtRM(t.plan)) + '。新的金额从你选的月份起生效，之前的月份不变。</div>'
-    + '<div class="form-grid"><div class="form-row"><label>每月扣 RM *</label><input id="lp-amt" type="number" step="0.01"></div>'
-    + '<div class="form-row"><label>从哪个月起 *</label><input id="lp-from" type="month" value="' + effMonth() + '"></div></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanPlan(\'' + wid + '\')">存</button>';
+  document.getElementById('modal-title').textContent = 'Change monthly amount: ' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">Now ' + (t.plan==null?'not set':fmtRM(t.plan)) + ' per month. The new amount starts from the month you choose.</div>'
+    + '<div class="form-grid"><div class="form-row"><label>Monthly RM *</label><input id="lp-amt" type="number" step="0.01"></div>'
+    + '<div class="form-row"><label>From month *</label><input id="lp-from" type="month" value="' + effMonth() + '"></div></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanPlan(\'' + wid + '\')">Save</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 function saveLoanPlan(wid){
   const a = document.getElementById('lp-amt').value, f = document.getElementById('lp-from').value;
-  if(a === '' || !f){ toast('⚠ 金额和月份都要填'); return; }
-  if(isLocked(f)){ toast('⚠ ' + f + ' 已锁，请选之后的月份'); return; }
+  if(a === '' || !f){ toast('⚠ Amount and month are required'); return; }
+  if(isLocked(f)){ toast('⚠ ' + f + ' is locked. Choose a later month'); return; }
   const L = S.loans[wid], ex = L.plan.find(p => p.from === f);
-  if(ex){ VOID_REASON[ex.id] = '同月改每月扣额'; L.plan = L.plan.filter(p => p !== ex); }
+  if(ex){ VOID_REASON[ex.id] = 'Monthly amount changed in the same month'; L.plan = L.plan.filter(p => p !== ex); }
   L.plan.push({id:uid(), from:f, monthly:r2(parseFloat(a)||0)});
-  saveAll(); closeModal(); renderAdvance(); toast('✅ 从 ' + f + ' 起每月扣 ' + fmtRM(a));
+  saveAll(); closeModal(); renderAdvance(); toast('✅ From ' + f + ': ' + fmtRM(a) + ' per month');
 }
 function openLoanMonth(wid){
   const mk = monthKey(), w = getWorker(wid), L = loanAcc(wid), ov = (L.months||{})[mk];
   const cur = ov ? (Number(ov.amount)===0 ? 'stop' : 'amt') : 'plan';
-  document.getElementById('modal-title').textContent = mk + ' 扣款：' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">只影响 ' + mk + ' 这一个月，下个月照计划继续扣。</div>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="plan" ' + (cur==='plan'?'checked':'') + '> 照计划（' + (loanPlanFor(L,mk)==null?'未设':fmtRM(loanPlanFor(L,mk))) + '）</label>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="stop" ' + (cur==='stop'?'checked':'') + '> 这个月停扣</label>'
-    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="amt" ' + (cur==='amt'?'checked':'') + '> 这个月只扣 RM <input id="lm-amt" type="number" step="0.01" style="width:100px;" value="' + (cur==='amt'?ov.amount:'') + '"></label>'
-    + '<div class="form-row"><label>原因</label><input id="lm-note" value="' + esc(ov && ov.note || '') + '" placeholder="例：工人要求这个月少扣"></div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-pri" onclick="saveLoanMonth(\'' + wid + '\')">存</button>';
+  document.getElementById('modal-title').textContent = mk + ' deduction: ' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;margin-bottom:10px;">Only affects ' + mk + '. Next month follows the plan.</div>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="plan" ' + (cur==='plan'?'checked':'') + '> As planned (' + (loanPlanFor(L,mk)==null?'not set':fmtRM(loanPlanFor(L,mk))) + ')</label>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="stop" ' + (cur==='stop'?'checked':'') + '> Pause this month</label>'
+    + '<label style="display:block;margin:6px 0;"><input type="radio" name="lm" value="amt" ' + (cur==='amt'?'checked':'') + '> This month only RM <input id="lm-amt" type="number" step="0.01" style="width:100px;" value="' + (cur==='amt'?ov.amount:'') + '"></label>'
+    + '<div class="form-row"><label>Reason</label><input id="lm-note" value="' + esc(ov && ov.note || '') + '"></div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveLoanMonth(\'' + wid + '\')">Save</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 function saveLoanMonth(wid){
@@ -3487,40 +3487,39 @@ function saveLoanMonth(wid){
   const v = (document.querySelector('input[name="lm"]:checked')||{}).value, note = (document.getElementById('lm-note').value||'').trim();
   if(v === 'plan') delete L.months[mk];
   else if(v === 'stop') L.months[mk] = {amount:0, note};
-  else { const a = parseFloat(document.getElementById('lm-amt').value); if(!(a >= 0)){ toast('⚠ 请填金额'); return; } L.months[mk] = {amount:r2(a), note}; }
-  saveAll(); closeModal(); renderAdvance(); toast('✅ ' + mk + ' 已更新');
+  else { const a = parseFloat(document.getElementById('lm-amt').value); if(!(a >= 0)){ toast('⚠ Please enter an amount'); return; } L.months[mk] = {amount:r2(a), note}; }
+  saveAll(); closeModal(); renderAdvance(); toast('✅ ' + mk + ' updated');
 }
 function openLoanHistory(wid){
   const w = getWorker(wid), L = loanAcc(wid) || {txn:[], plan:[], months:{}}, mk = monthKey();
-  const lockedRows = Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][wid] && Number(PAYSLIPS[m][wid].advD) > 0).sort().map(m => '<tr><td>' + m + '</td><td>锁月实际扣</td><td style="text-align:right;">-' + fmtRM(PAYSLIPS[m][wid].advD) + '</td><td></td></tr>');
-  const txRows = (L.txn||[]).slice().sort((a,b) => (a.date||a.month) < (b.date||b.month) ? -1 : 1).map(t => '<tr><td>' + esc(t.date || t.month) + '</td><td>' + (t.kind==='LOAN' ? '借出 / 加借' : '旧系统已扣（到 2026-09）') + (t.note ? ' · ' + esc(t.note) : '') + '</td><td style="text-align:right;">' + (t.kind==='LOAN' ? '+' : '-') + fmtRM(t.amount) + '</td><td>'
-      + (t.kind==='LOAN' ? '<button class="btn btn-sm btn-red" onclick="voidLoanTxn(\'' + wid + '\',\'' + t.id + '\')">作废</button>' : '') + '</td></tr>');
-  const planRows = (L.plan||[]).slice().sort((a,b) => a.from < b.from ? -1 : 1).map(p => '<tr><td>' + p.from + ' 起</td><td>每月扣</td><td style="text-align:right;">' + fmtRM(p.monthly) + '</td><td>' + (isLocked(p.from) ? '' : '<button class="btn btn-sm btn-red" onclick="voidLoanPlan(\'' + wid + '\',\'' + p.id + '\')">作废</button>') + '</td></tr>');
-  const monRows = Object.keys(L.months||{}).sort().map(m => '<tr><td>' + m + '</td><td>' + (Number(L.months[m].amount)===0 ? '停扣' : '只扣') + (L.months[m].note ? ' · ' + esc(L.months[m].note) : '') + '</td><td style="text-align:right;">' + (Number(L.months[m].amount)===0 ? '--' : fmtRM(L.months[m].amount)) + '</td><td></td></tr>');
+  const lockedRows = Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][wid] && Number(PAYSLIPS[m][wid].advD) > 0).sort().map(m => '<tr><td>' + m + '</td><td>Deducted (locked month)</td><td style="text-align:right;">-' + fmtRM(PAYSLIPS[m][wid].advD) + '</td><td></td></tr>');
+  const txRows = (L.txn||[]).slice().sort((a,b) => (a.date||a.month) < (b.date||b.month) ? -1 : 1).map(t => '<tr><td>' + esc(t.date || t.month) + '</td><td>' + (t.kind==='LOAN' ? 'Loan / top up' : 'Repaid in old system (to Sep 2026)') + (t.note ? ' · ' + esc(t.note) : '') + '</td><td style="text-align:right;">' + (t.kind==='LOAN' ? '+' : '-') + fmtRM(t.amount) + '</td><td>'
+      + (t.kind==='LOAN' ? '<button class="btn btn-sm btn-red" onclick="voidLoanTxn(\'' + wid + '\',\'' + t.id + '\')">Void</button>' : '') + '</td></tr>');
+  const planRows = (L.plan||[]).slice().sort((a,b) => a.from < b.from ? -1 : 1).map(p => '<tr><td>' + p.from + ' onwards</td><td>Monthly</td><td style="text-align:right;">' + fmtRM(p.monthly) + '</td><td>' + (isLocked(p.from) ? '' : '<button class="btn btn-sm btn-red" onclick="voidLoanPlan(\'' + wid + '\',\'' + p.id + '\')">Void</button>') + '</td></tr>');
+  const monRows = Object.keys(L.months||{}).sort().map(m => '<tr><td>' + m + '</td><td>' + (Number(L.months[m].amount)===0 ? 'Paused' : 'Only') + (L.months[m].note ? ' · ' + esc(L.months[m].note) : '') + '</td><td style="text-align:right;">' + (Number(L.months[m].amount)===0 ? '--' : fmtRM(L.months[m].amount)) + '</td><td></td></tr>');
   const t = advanceTrack(wid, mk);
-  const tbl = (title, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + title + '</div><table style="width:100%;font-size:12px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">没有</td></tr>') + '</table>';
-  document.getElementById('modal-title').textContent = '借款纪录：' + w.name;
-  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;">借出合计 <b>' + fmtRM(t.loaned) + '</b> · ' + mk + ' 扣完剩 <b>' + fmtRM(t.balanceAfter) + '</b></div>'
-    + tbl('借出与期初', txRows) + tbl('每月扣额计划', planRows) + tbl('单月停扣 / 改额', monRows) + tbl('已锁月份实际扣款（不会再变）', lockedRows)
-    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">打错的不删，只作废，资料库保留作废纪录与原因。</div>';
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>';
+  const tbl = (title, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + title + '</div><table style="width:100%;font-size:12px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">None</td></tr>') + '</table>';
+  document.getElementById('modal-title').textContent = 'Loan history: ' + w.name;
+  document.getElementById('modal-body').innerHTML = '<div style="font-size:12px;">Loaned <b>' + fmtRM(t.loaned) + '</b> · Balance after ' + mk + ' <b>' + fmtRM(t.balanceAfter) + '</b></div>'
+    + tbl('Loans', txRows) + tbl('Monthly amount', planRows) + tbl('Monthly changes', monRows) + tbl('Deducted in locked months', lockedRows);
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Close</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
-function askReason(msg){ const r = prompt(msg + '\n请写原因：'); return r && r.trim() ? r.trim() : null; }
-function voidLoanTxn(wid, id){ const r = askReason('作废这笔借出'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
-function voidLoanPlan(wid, id){ const r = askReason('作废这笔每月扣额'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.plan = L.plan.filter(p => p.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
+function askReason(msg){ const r = prompt(msg + '\nReason:'); return r && r.trim() ? r.trim() : null; }
+function voidLoanTxn(wid, id){ const r = askReason('Void this loan entry'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
+function voidLoanPlan(wid, id){ const r = askReason('Void this monthly amount'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.plan = L.plan.filter(p => p.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }
 
 // ---------- 出勤：笔刷 · 点日期整天 · 点名字整人 · 按公司筛选 · 只填在职日子 ----------
 let BRUSH = null, ATT_FILTER = 'all', _painting = false;
-const BRUSHES = [['hx','HX 全天'],['ad','AD 全天'],['hx_half','HX 半天'],['ad_half','AD 半天'],['both','两边'],['','清空']];
+const BRUSHES = [['hx','HX full'],['ad','AD full'],['hx_half','HX half'],['ad_half','AD half'],['both','Both'],['','Clear']];
 function attToolbar(){
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;">'
-    + '<span style="font-size:11px;color:var(--text3);">笔刷：</span>'
-    + '<button class="btn btn-sm ' + (BRUSH===null?'btn-pri':'') + '" onclick="setBrush(null)">轮流点（旧）</button>'
+    + '<span style="font-size:11px;color:var(--text3);">Brush:</span>'
+    + '<button class="btn btn-sm ' + (BRUSH===null?'btn-pri':'') + '" onclick="setBrush(null)">Cycle</button>'
     + BRUSHES.map(([c,l]) => '<button class="btn btn-sm ' + (BRUSH===c?'btn-pri':'') + '" onclick="setBrush(\'' + c + '\')">' + l + '</button>').join('')
-    + '<span style="font-size:11px;color:var(--text3);margin-left:12px;">公司：</span>'
-    + [['all','全部'],['hx','HX'],['ad','AD'],['both','两边']].map(([c,l]) => '<button class="btn btn-sm ' + (ATT_FILTER===c?'btn-pri':'') + '" onclick="setAttFilter(\'' + c + '\')">' + l + '</button>').join('')
-    + '<span style="font-size:10px;color:var(--text3);margin-left:8px;">选了笔刷后：点格子 / 按住拖过格子；点日期 = 那天全部；点名字 = 那人整月</span></div>';
+    + '<span style="font-size:11px;color:var(--text3);margin-left:12px;">Company:</span>'
+    + [['all','All'],['hx','HX'],['ad','AD'],['both','Both']].map(([c,l]) => '<button class="btn btn-sm ' + (ATT_FILTER===c?'btn-pri':'') + '" onclick="setAttFilter(\'' + c + '\')">' + l + '</button>').join('')
+    + '<span style="font-size:10px;color:var(--text3);margin-left:8px;">Pick a brush, then click or drag cells · click a date = whole day · click a name = whole month</span></div>';
 }
 function setBrush(b){ BRUSH = b; renderAttendance(); }
 function setAttFilter(f){ ATT_FILTER = f; renderAttendance(); }
@@ -3542,15 +3541,15 @@ function paintCell(wid, d){
   cell.textContent = info.lbl; cell.className = 'att-cell ' + info.cls;
 }
 function attDayAll(d){
-  if(BRUSH === null){ toast('先在上面选一个笔刷'); return; }
+  if(BRUSH === null){ toast('Pick a brush first'); return; }
   const mk = monthKey(); let n = 0; attWorkers(mk).forEach(w => { if(setAtt(w.id, d, BRUSH)) n++; });
-  saveAll(); renderAttendance(); toast(mk + '-' + pad2(d) + '：' + n + ' 人');
+  saveAll(); renderAttendance(); toast(mk + '-' + pad2(d) + ': ' + n + ' workers');
 }
 function attRowAll(wid){
-  if(BRUSH === null){ toast('先在上面选一个笔刷'); return; }
+  if(BRUSH === null){ toast('Pick a brush first'); return; }
   const mk = monthKey(), [y,m] = mk.split('-').map(Number), days = daysInMonth(y, m); let n = 0;
   for(let d=1; d<=days; d++) if(setAtt(wid, d, BRUSH)) n++;
-  saveAll(); renderAttendance(); toast(getWorker(wid).name + '：' + n + ' 天');
+  saveAll(); renderAttendance(); toast(getWorker(wid).name + ': ' + n + ' days');
 }
 function fillAllHX(){ attFillAll('hx'); }
 function fillAllAD(){ attFillAll('ad'); }
@@ -3568,17 +3567,17 @@ function renderAttendance(){
   if(!S.attendance[mk]) S.attendance[mk] = {};
   let hdr = '<tr><th class="w-name">Worker</th>';
   for(let d=1; d<=days; d++){ const dow = dayOfWeek(y,m,d), cls = dow===0?'day-sun':dow===6?'day-sat':'';
-    hdr += `<th class="${cls}" style="cursor:pointer;" title="点 = 这天全部用笔刷" onclick="attDayAll(${d})">${d}<br><span style="font-size:8px;">${['Su','Mo','Tu','We','Th','Fr','Sa'][dow]}</span></th>`; }
+    hdr += `<th class="${cls}" style="cursor:pointer;" title="Click = apply brush to whole day" onclick="attDayAll(${d})">${d}<br><span style="font-size:8px;">${['Su','Mo','Tu','We','Th','Fr','Sa'][dow]}</span></th>`; }
   hdr += '<th style="min-width:120px;background:#e8f0ff;border-left:2px solid var(--border2);">HX | AD | Total</th></tr>';
   let body = '';
   workers.forEach(w => {
     const att = S.attendance[mk][w.id] || {}; let hxD=0, adD=0;
     for(let d=1; d<=days; d++){ const vals = ATT_VALUES[att[d]||''] || {hx:0,ad:0}; hxD += vals.hx; adD += vals.ad; }
-    body += `<tr><td class="w-name" style="cursor:pointer;" title="点 = 这人整月用笔刷" onclick="attRowAll('${w.id}')">${esc(w.name)} <span style="font-size:9px;color:var(--text3);">${(w.farm||'').toUpperCase()}</span></td>`;
+    body += `<tr><td class="w-name" style="cursor:pointer;" title="Click = apply brush to whole month" onclick="attRowAll('${w.id}')">${esc(w.name)} <span style="font-size:9px;color:var(--text3);">${(w.farm||'').toUpperCase()}</span></td>`;
     for(let d=1; d<=days; d++){
       const ok = inServiceOn(w, dayStr(mk, d)), st = att[d] || '', info = ATT_LABELS[st] || {lbl:'·',cls:'st-empty'};
       body += ok ? `<td><div class="att-cell ${info.cls}" onmousedown="_painting=true;attCellClick('${w.id}',${d})" onmouseenter="if(_painting&&BRUSH!==null)attCellClick('${w.id}',${d})" data-wid="${w.id}" data-day="${d}">${info.lbl}</div></td>`
-                 : `<td><div class="att-cell" style="opacity:.25;cursor:not-allowed;" title="不在职">–</div></td>`;
+                 : `<td><div class="att-cell" style="opacity:.25;cursor:not-allowed;" title="Not employed">–</div></td>`;
     }
     body += `<td class="att-sum"><span style="color:var(--acc);">${fmtNum(hxD)}</span> | <span style="color:var(--grn);">${fmtNum(adD)}</span> | <strong>${fmtNum(hxD+adD)}</strong></td></tr>`;
   });
@@ -3588,23 +3587,23 @@ document.addEventListener('mouseup', () => { _painting = false; });
 
 // ---------- 工人：作废（只限建错、没有任何纪录）· 改动纪录 ----------
 function workerHasRecords(wid){
-  for(const mk in S.attendance) if(Object.values((S.attendance[mk]||{})[wid]||{}).some(v => v)) return '有出勤';
-  for(const mk in PAYSLIPS) if(PAYSLIPS[mk][wid]) return '有锁月薪资单';
-  for(const mk in S.personal) if(((S.personal[mk]||{})[wid]||[]).length) return '有个人扣款';
-  for(const mk in (S.cashout||{})) if(((S.cashout[mk]||{})[wid]||[]).length) return '有先付现金';
-  if(loanAcc(wid) && (loanAcc(wid).txn||[]).length) return '有借款';
-  const w = getWorker(wid); if(REM.records.some(r => (r.workers||[]).includes(w.name))) return '有汇款纪录';
+  for(const mk in S.attendance) if(Object.values((S.attendance[mk]||{})[wid]||{}).some(v => v)) return 'has attendance';
+  for(const mk in PAYSLIPS) if(PAYSLIPS[mk][wid]) return 'has a locked payslip';
+  for(const mk in S.personal) if(((S.personal[mk]||{})[wid]||[]).length) return 'has deductions';
+  for(const mk in (S.cashout||{})) if(((S.cashout[mk]||{})[wid]||[]).length) return 'has cash out';
+  if(loanAcc(wid) && (loanAcc(wid).txn||[]).length) return 'has a loan';
+  const w = getWorker(wid); if(REM.records.some(r => (r.workers||[]).includes(w.name))) return 'has remittance records';
   return '';
 }
 async function voidWorker(wid){
   const w = getWorker(wid), has = workerHasRecords(wid);
-  if(has){ alert(w.name + ' ' + has + '，不能作废。做过工的请用「Stop 停职」。'); return; }
-  const r = askReason('作废工人 ' + w.name + '（只用在建错的人）'); if(!r) return;
+  if(has){ alert(w.name + ' ' + has + ' and cannot be voided. Use "Stop" for workers who have worked.'); return; }
+  const r = askReason('Void worker ' + w.name + ' (only for workers added by mistake)'); if(!r) return;
   const {error} = await sb.from('hub_worker').update({voided_at: now(), void_reason: r}).eq('id', wid);
-  if(error){ alert('作废失败：' + error.message); return; }
+  if(error){ alert('Could not void: ' + error.message); return; }
   for(const mk in S.food) if(!isLocked(mk)) (S.food[mk]||[]).forEach(f => { if(f.workerIds) f.workerIds = f.workerIds.filter(x => x !== wid); });
   S.workers = S.workers.filter(x => x.id !== wid); SNAP.S.workers = SNAP.S.workers.filter(x => x.id !== wid);
-  saveAll(); renderWorkers(); toast('已作废：' + w.name);
+  saveAll(); renderWorkers(); toast('Voided: ' + w.name);
 }
 async function openWorkerHistory(wid){
   const w = getWorker(wid);
@@ -3614,19 +3613,19 @@ async function openWorkerHistory(wid){
     sb.from('hub_worker_company').select('company_id,effective_from,voided_at,void_reason,created_at').eq('worker_id', wid).order('created_at'),
     sb.from('hub_worker_payee').select('slot,beneficiary_name,account_no,effective_from,voided_at,void_reason,created_at').eq('worker_id', wid).order('created_at'),
   ]);
-  const F = {name:'名字', title:'职位', phone:'电话', join_date:'入职日', stop_date:'停职日', stop_reason:'停职原因', voided_at:'作废', worker_type:'类型'};
+  const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Join date', stop_date:'Stop date', stop_reason:'Stop reason', voided_at:'Voided', worker_type:'Type'};
   const logRows = (lg.data||[]).map(x => { const b = x.before_data||{}, a = x.after_data||{};
-    const ch = Object.keys(F).filter(k => (b[k]??null) !== (a[k]??null)).map(k => F[k] + '：' + esc(b[k]??'空') + ' → ' + esc(a[k]??'空'));
-    return '<tr><td style="white-space:nowrap;">' + new Date(x.changed_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</td><td>' + (x.before_data ? (ch.join('<br>') || '（没有基本资料变动）') : '新增') + '</td></tr>'; });
-  const st = x => x.voided_at ? '<span style="color:var(--red);">作废' + (x.void_reason ? '：' + esc(x.void_reason) : '') + '</span>' : '有效';
-  const tbl = (t, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + t + '</div><table style="width:100%;font-size:11px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">没有</td></tr>') + '</table>';
-  document.getElementById('modal-title').textContent = '改动纪录：' + w.name;
+    const ch = Object.keys(F).filter(k => (b[k]??null) !== (a[k]??null)).map(k => F[k] + ': ' + esc(b[k]??'—') + ' → ' + esc(a[k]??'—'));
+    return '<tr><td style="white-space:nowrap;">' + new Date(x.changed_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</td><td>' + (x.before_data ? (ch.join('<br>') || '(no change)') : 'Created') + '</td></tr>'; });
+  const st = x => x.voided_at ? '<span style="color:var(--red);">Voided' + (x.void_reason ? ': ' + esc(x.void_reason) : '') + '</span>' : 'Active';
+  const tbl = (t, rows) => '<div style="font-size:11px;font-weight:700;margin:10px 0 4px;">' + t + '</div><table style="width:100%;font-size:11px;border-collapse:collapse;">' + (rows.join('') || '<tr><td style="color:var(--text3);">None</td></tr>') + '</table>';
+  document.getElementById('modal-title').textContent = 'History: ' + w.name;
   document.getElementById('modal-body').innerHTML =
-    tbl('基本资料（入职日、停职、名字…）', logRows)
-    + tbl('薪资', (rt.data||[]).map(x => '<tr><td>' + x.effective_from + ' 起</td><td>' + (x.rate_type==='MONTHLY'?'月薪':'日薪') + ' ' + fmtRM(x.rate) + '</td><td>' + st(x) + '</td></tr>'))
-    + tbl('归属公司', (cp.data||[]).map(x => '<tr><td>' + x.effective_from + ' 起</td><td>' + (x.company_id ? (CO_CODE[x.company_id]||'?') : '两家对半') + '</td><td>' + st(x) + '</td></tr>'))
-    + tbl('收款人', (py.data||[]).map(x => '<tr><td>第 ' + (x.slot||1) + ' 组 · ' + x.effective_from + '</td><td>' + esc(x.beneficiary_name) + ' …' + esc(String(x.account_no).slice(-4)) + '</td><td>' + st(x) + '</td></tr>'));
-  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">关闭</button>';
+    tbl('Details', logRows)
+    + tbl('Rate', (rt.data||[]).map(x => '<tr><td>' + x.effective_from + ' onwards</td><td>' + (x.rate_type==='MONTHLY'?'Monthly':'Daily') + ' ' + fmtRM(x.rate) + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('Company', (cp.data||[]).map(x => '<tr><td>' + x.effective_from + ' onwards</td><td>' + (x.company_id ? (CO_CODE[x.company_id]||'?') : 'Shared') + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('Payee', (py.data||[]).map(x => '<tr><td>Payee ' + (x.slot||1) + ' · ' + x.effective_from + '</td><td>' + esc(x.beneficiary_name) + ' …' + esc(String(x.account_no).slice(-4)) + '</td><td>' + st(x) + '</td></tr>'));
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Close</button>';
   document.getElementById('modal-overlay').classList.add('on');
 }
 
@@ -3634,21 +3633,21 @@ async function openWorkerHistory(wid){
 function printSummary(){
   const mk = monthKey(), m = getMonth(), y = getYear();
   renderSummary();
-  const src = document.querySelector('#summary-table table'); if(!src){ toast('没有资料可印'); return; }
+  const src = document.querySelector('#summary-table table'); if(!src){ toast('Nothing to print'); return; }
   const t = src.cloneNode(true);
   t.querySelectorAll('input').forEach(i => { const s = document.createElement('span'); s.textContent = fmtRM(parseFloat(i.value)||0); i.replaceWith(s); });
   t.querySelectorAll('select').forEach(sel => { const s = document.createElement('span'); s.textContent = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : ''; sel.replaceWith(s); });
   t.querySelectorAll('[data-noprint]').forEach(e => e.remove());
   t.querySelectorAll('tr').forEach(tr => { const c = tr.children; for(let i=c.length-1; i>=0; i--) if(c[i].hasAttribute('data-col-noprint')) c[i].remove(); });
   t.querySelectorAll('button').forEach(b => b.remove());
-  const status = isLocked(mk) ? '已锁月（快照）' : '还没锁月（预览，数字还会变）';
-  const w2 = window.open('', '_blank', 'width=1100,height=900'); if(!w2){ toast('⚠ 请允许弹出视窗'); return; }
+  const status = isLocked(mk) ? 'Locked (final)' : 'Not locked (preview — figures may change)';
+  const w2 = window.open('', '_blank', 'width=1100,height=900'); if(!w2){ toast('⚠ Please allow pop-ups'); return; }
   w2.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Salary Summary ' + MONTHS[m-1] + ' ' + y + '</title><style>'
     + '*{box-sizing:border-box;}body{font-family:Arial,sans-serif;padding:18px;font-size:10px;}h2{font-size:15px;margin:0 0 4px;}p{color:#666;margin:0 0 12px;}'
     + 'table{width:100%;border-collapse:collapse;}th{background:#f0f0ee;padding:6px 6px;text-align:left;font-size:9px;border-bottom:2px solid #ccc;}'
     + 'td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top;}.num{text-align:right;font-family:monospace;white-space:nowrap;}'
     + '.total-row td{background:#e8e8e6;font-weight:700;border-top:2px solid #999;}@page{size:A4 landscape;margin:8mm;}'
-    + '</style></head><body><h2>Salary Summary -- ' + MONTHS[m-1] + ' ' + y + '</h2><p>' + status + ' · 印出时间 ' + new Date().toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</p>'
+    + '</style></head><body><h2>Salary Summary -- ' + MONTHS[m-1] + ' ' + y + '</h2><p>' + status + ' · Printed ' + new Date().toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</p>'
     + t.outerHTML + '<script>window.print();window.onafterprint=()=>window.close();<\/script></body></html>');
   w2.document.close();
 }

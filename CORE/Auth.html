@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>帐号与权限 Auth v1</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<title>Users &amp; Access v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{--bg:#f4f2ec;--card:#fffdf8;--ink:#1f2a22;--ink2:#55605a;--ink3:#8a948e;--line:#e2ddd2;--brand:#5C1010;--green:#2f5d3f;--greenl:#e3eee5;--red:#a33a2c;--redl:#f8e3df;--amb:#9a6b00;--ambl:#fff6e0}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans SC',system-ui,sans-serif;font-size:14px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px}
 header{background:var(--brand);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 header h1{margin:0;font-size:17px}
 header .sub{font-size:12px;opacity:.8}
@@ -52,18 +52,18 @@ input,select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--
 </head>
 <body>
 <header>
-  <a class="home" href="../index.html">← 首页</a>
-  <div><h1>帐号与权限</h1><div class="sub">谁能登入、能进哪个系统、能做什么</div></div>
+  <a class="home" href="../index.html">← Home</a>
+  <div><h1>Users &amp; Access</h1></div>
   <div id="who"></div>
 </header>
 <main>
   <div id="gate" class="card" style="display:none"></div>
   <div id="app" style="display:none">
     <div class="tabs">
-      <button class="tab on" data-t="people" onclick="tab('people')">人员</button>
-      <button class="tab" data-t="invite" onclick="tab('invite')">邀请</button>
-      <button class="tab" data-t="matrix" onclick="tab('matrix')">角色权限</button>
-      <button class="tab" data-t="override" onclick="tab('override')">个人例外</button>
+      <button class="tab on" data-t="people" onclick="tab('people')">Staff</button>
+      <button class="tab" data-t="invite" onclick="tab('invite')">Invitations</button>
+      <button class="tab" data-t="matrix" onclick="tab('matrix')">Role Access</button>
+      <button class="tab" data-t="override" onclick="tab('override')">Individual Access</button>
     </div>
     <div id="v-people"></div>
     <div id="v-invite" hidden></div>
@@ -75,23 +75,22 @@ input,select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// 角色固定 5 个（跟 hub_option ROLE 同一份；读不到时用这份）
-const ROLES_FALLBACK = [['OWNER','老板'],['ADMIN','行政'],['MANAGER','经理'],['SUPERVISOR','场主管'],['CLERK','文员']];
-const STATUS = {ACTIVE:['在用','p-ok'], SUSPENDED:['暂停','p-amb'], TERMINATED:['离职','p-bad']};
-const ACTS = [['can_see','看'],['can_edit','改'],['can_approve','批']];
+const ROLES_FALLBACK = [['OWNER','Owner'],['ADMIN','Admin'],['MANAGER','Manager'],['SUPERVISOR','Supervisor'],['CLERK','Clerk']];
+const STATUS = {ACTIVE:['Active','p-ok'], SUSPENDED:['Suspended','p-amb'], TERMINATED:['Left','p-bad']};
+const ACTS = [['can_see','View'],['can_edit','Edit'],['can_approve','Approve']];
 let ME = null, MYROLE = '', CAN_EDIT = false, ROLES = ROLES_FALLBACK, SYS = [], USERS = [], INV = [], RA = [], OV = [];
 
 function toast(t, bad){ const x = $('toast'); x.textContent = t; x.className = bad ? 'err' : ''; x.style.display = 'block'; clearTimeout(x._t); x._t = setTimeout(() => x.style.display = 'none', bad ? 6000 : 2500); }
 function dbErr(e){ if(!e) return false; let m = e.message || String(e);
-  if(/Failed to fetch|NetworkError/i.test(m)) m = '网络断了，没有存到。请检查网络再按一次。';
-  else if(/row-level security|permission denied/i.test(m)) m = '你没有权限做这个动作。';
-  else if(/hub_pending_invite_open_uq|duplicate key/i.test(m)) m = '这个 email 已经有一个还没接受的邀请。';
+  if(/Failed to fetch|NetworkError/i.test(m)) m = 'No connection. Nothing was saved. Please try again.';
+  else if(/row-level security|permission denied/i.test(m)) m = 'You do not have permission to do this.';
+  else if(/hub_pending_invite_open_uq|duplicate key/i.test(m)) m = 'This email already has an open invitation.';
   toast(m, true); return true; }
 const roleLabel = c => (ROLES.find(r => r[0] === c) || [c, c])[1];
 const ownerLocked = role => role === 'OWNER' && MYROLE !== 'OWNER';
@@ -102,19 +101,19 @@ $('mbg').addEventListener('click', e => { if(e.target.id === 'mbg') closeModal()
 
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session) return gate('还没登入', '请从首页登入，再从首页点进来。');
+  if(!session) return gate('Please sign in', 'Sign in from the Home page first.');
   const {data:me} = await sb.from('hub_app_user').select('id,display_name,role,status').eq('id', session.user.id).maybeSingle();
-  if(!me || me.status !== 'ACTIVE') return gate('这个帐号不能使用', '请回首页，用老板邀请的 email 登入。');
+  if(!me || me.status !== 'ACTIVE') return gate('No access', 'This account cannot use the system.');
   const {data:acc, error} = await sb.rpc('hub_can_access', {p_system:'AUTH'});
   const a = (acc && acc[0]) || {};
-  if(error || !a.can_see) return gate('你没有「帐号与权限」的权限', '需要的话请找老板开。');
+  if(error || !a.can_see) return gate('No access', 'Please ask the owner for access.');
   ME = me; MYROLE = me.role; CAN_EDIT = !!a.can_edit;
-  $('who').textContent = me.display_name + ' · ' + roleLabel(me.role) + (CAN_EDIT ? '' : ' · 只能看');
+  $('who').textContent = me.display_name + ' · ' + roleLabel(me.role) + (CAN_EDIT ? '' : ' · View only');
   $('gate').style.display = 'none'; $('app').style.display = 'block';
   await loadAll();
 }
 function gate(title, body){ $('app').style.display = 'none'; const g = $('gate'); g.style.display = 'block';
-  g.innerHTML = '<h3>' + esc(title) + '</h3><p class="hint">' + esc(body) + '</p><a class="btn pri" style="text-decoration:none;display:inline-block;padding:8px 16px" href="../index.html">回首页</a>'; }
+  g.innerHTML = '<h3>' + esc(title) + '</h3><p class="hint">' + esc(body) + '</p><a class="btn pri" style="text-decoration:none;display:inline-block;padding:8px 16px" href="../index.html">Go to Home</a>'; }
 
 async function loadAll(){
   const [r1, r2, r3, r4, r5, r6] = await Promise.all([
@@ -131,89 +130,84 @@ async function loadAll(){
   renderPeople(); renderInvite(); renderMatrix(); renderOverride();
 }
 
-// ── 人员 ───────────────────────────────────────────────
 function renderPeople(){
   const rows = USERS.map(u => { const [sl, sc] = STATUS[u.status] || [u.status, 'p-grey']; const lock = !CAN_EDIT || ownerLocked(u.role); const self = u.id === ME.id;
-    return `<tr><td><b>${esc(u.display_name)}</b>${self ? ' <span class="pill p-grey">我</span>' : ''}</td><td>${esc(u.email || '')}</td><td>${esc(roleLabel(u.role))}</td><td>${esc(u.position || '')}</td>
+    return `<tr><td><b>${esc(u.display_name)}</b>${self ? ' <span class="pill p-grey">You</span>' : ''}</td><td>${esc(u.email || '')}</td><td>${esc(roleLabel(u.role))}</td><td>${esc(u.position || '')}</td>
       <td><span class="pill ${sc}">${sl}</span>${u.status_reason ? `<div class="hint" style="margin:2px 0 0">${esc(u.status_reason)}</div>` : ''}</td>
-      <td><button class="btn" ${lock ? 'disabled' : ''} onclick="editUser('${u.id}')">改资料</button>
+      <td><button class="btn" ${lock ? 'disabled' : ''} onclick="editUser('${u.id}')">Edit</button>
       ${u.status === 'ACTIVE'
-        ? `<button class="btn red" ${lock || self ? 'disabled' : ''} onclick="setStatus('${u.id}','SUSPENDED')">暂停</button> <button class="btn red" ${lock || self ? 'disabled' : ''} onclick="setStatus('${u.id}','TERMINATED')">离职</button>`
-        : `<button class="btn" ${lock ? 'disabled' : ''} onclick="setStatus('${u.id}','ACTIVE')">恢复</button>`}</td></tr>`; }).join('');
+        ? `<button class="btn red" ${lock || self ? 'disabled' : ''} onclick="setStatus('${u.id}','SUSPENDED')">Suspend</button> <button class="btn red" ${lock || self ? 'disabled' : ''} onclick="setStatus('${u.id}','TERMINATED')">Left company</button>`
+        : `<button class="btn" ${lock ? 'disabled' : ''} onclick="setStatus('${u.id}','ACTIVE')">Reactivate</button>`}</td></tr>`; }).join('');
   const n = s => USERS.filter(u => u.status === s).length;
-  $('v-people').innerHTML = `<div class="card"><h3>人员（在用 ${n('ACTIVE')} · 暂停 ${n('SUSPENDED')} · 离职 ${n('TERMINATED')}）</h3>
-    <p class="hint">帐号不能删除。不用的人按「暂停」或「离职」，要写原因；他会马上被登出，进不了任何系统。跟老板有关的帐号只有老板能改。</p>
-    <table><tr><th>名字</th><th>Email</th><th>角色</th><th>职位</th><th>状态</th><th></th></tr>${rows || '<tr><td colspan="6" class="hint">还没有人</td></tr>'}</table></div>`;
+  $('v-people').innerHTML = `<div class="card"><h3>Staff (Active ${n('ACTIVE')} · Suspended ${n('SUSPENDED')} · Left ${n('TERMINATED')})</h3>
+    <table><tr><th>Name</th><th>Email</th><th>Role</th><th>Position</th><th>Status</th><th></th></tr>${rows || '<tr><td colspan="6" class="hint">No staff yet</td></tr>'}</table></div>`;
 }
 function roleOptions(sel){ return ROLES.filter(r => r[0] !== 'OWNER' || MYROLE === 'OWNER').map(r => `<option value="${r[0]}" ${r[0] === sel ? 'selected' : ''}>${esc(r[1])}</option>`).join(''); }
 function editUser(id){
   const u = USERS.find(x => x.id === id); const self = u.id === ME.id;
-  modal(`<h3>改资料 · ${esc(u.display_name)}</h3><div class="form">
-    <div><label>名字</label><input id="m-name" value="${esc(u.display_name)}"></div>
-    <div><label>角色</label><select id="m-role" ${self && u.role === 'OWNER' ? 'disabled' : ''}>${roleOptions(u.role)}</select></div>
-    <div><label>职位</label><input id="m-pos" value="${esc(u.position || '')}"></div></div>
-    <p class="hint" style="margin-top:8px">改角色 = 他能进的系统跟着改（照「角色权限」那一页）。</p>
-    <div class="row"><button class="btn" onclick="closeModal()">取消</button><button class="btn pri" onclick="saveUser('${id}')">存</button></div>`);
+  modal(`<h3>Edit · ${esc(u.display_name)}</h3><div class="form">
+    <div><label>Name</label><input id="m-name" value="${esc(u.display_name)}"></div>
+    <div><label>Role</label><select id="m-role" ${self && u.role === 'OWNER' ? 'disabled' : ''}>${roleOptions(u.role)}</select></div>
+    <div><label>Position</label><input id="m-pos" value="${esc(u.position || '')}"></div></div>
+    <div class="row"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn pri" onclick="saveUser('${id}')">Save</button></div>`);
 }
 async function saveUser(id){
   const name = $('m-name').value.trim(), role = $('m-role').value, pos = $('m-pos').value.trim();
-  if(!name) return toast('名字不能空', true);
+  if(!name) return toast('Name is required.', true);
   const {error} = await sb.from('hub_app_user').update({display_name:name, role, position:pos || null}).eq('id', id);
-  if(dbErr(error)) return; closeModal(); toast('已存'); await loadAll();
+  if(dbErr(error)) return; closeModal(); toast('Saved'); await loadAll();
 }
 function setStatus(id, st){
-  const u = USERS.find(x => x.id === id); const word = {ACTIVE:'恢复', SUSPENDED:'暂停', TERMINATED:'离职'}[st];
+  const u = USERS.find(x => x.id === id); const word = {ACTIVE:'Reactivate', SUSPENDED:'Suspend', TERMINATED:'Left company'}[st];
   modal(`<h3>${word} · ${esc(u.display_name)}</h3>
-    ${st === 'ACTIVE' ? '<p class="hint">恢复后他可以用原本的 email 和密码再登入。</p>' : '<p class="hint">他会马上被登出，进不了任何系统。资料都保留。</p>'}
-    <div class="form"><div><label>原因（一定要写）</label><input id="m-why" placeholder="例：合约结束 / 暂时不用"></div></div>
-    <div class="row"><button class="btn" onclick="closeModal()">取消</button><button class="btn ${st === 'ACTIVE' ? 'pri' : 'red'}" onclick="doStatus('${id}','${st}')">确定${word}</button></div>`);
+    ${st === 'ACTIVE' ? '' : '<p class="hint">They will be signed out immediately.</p>'}
+    <div class="form"><div><label>Reason (required)</label><input id="m-why"></div></div>
+    <div class="row"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn ${st === 'ACTIVE' ? 'pri' : 'red'}" onclick="doStatus('${id}','${st}')">${word}</button></div>`);
 }
 async function doStatus(id, st){
-  const why = $('m-why').value.trim(); if(!why) return toast('请写原因', true);
+  const why = $('m-why').value.trim(); if(!why) return toast('Please enter a reason.', true);
   const {error} = await sb.from('hub_app_user').update({status:st, status_reason:why}).eq('id', id);
-  if(dbErr(error)) return; closeModal(); toast('已更新'); await loadAll();
+  if(dbErr(error)) return; closeModal(); toast('Updated'); await loadAll();
 }
 
-// ── 邀请 ───────────────────────────────────────────────
 function renderInvite(){
-  const st = i => i.cancelled_at ? ['已取消','p-grey'] : i.accepted_at ? ['已开通','p-ok'] : ['等他登入','p-amb'];
+  const st = i => i.cancelled_at ? ['Cancelled','p-grey'] : i.accepted_at ? ['Joined','p-ok'] : ['Waiting','p-amb'];
   const rows = INV.map(i => { const [l, c] = st(i); const open = !i.cancelled_at && !i.accepted_at;
     return `<tr><td>${esc(i.email)}</td><td>${esc(i.display_name || '')}</td><td>${esc(roleLabel(i.role))}</td><td>${esc(i.position || '')}</td>
       <td>${new Date(i.invited_at).toLocaleDateString('en-GB')}</td><td><span class="pill ${c}">${l}</span></td>
-      <td>${open ? `<button class="btn red" ${!CAN_EDIT || ownerLocked(i.role) ? 'disabled' : ''} onclick="cancelInvite('${i.id}')">取消邀请</button>` : ''}</td></tr>`; }).join('');
-  $('v-invite').innerHTML = (CAN_EDIT ? `<div class="card"><h3>邀请新的人</h3>
-    <p class="hint">只有被邀请的 email 能用。邀请后告诉他：开首页 → 输入这个 email 和想要的密码 → 按「第一次设密码」→ 开信箱按确认。</p>
-    <div class="form"><div><label>Email</label><input id="i-em" type="email"></div><div><label>名字</label><input id="i-name"></div>
-      <div><label>角色</label><select id="i-role">${roleOptions('CLERK')}</select></div><div><label>职位</label><input id="i-pos"></div>
-      <div><button class="btn pri" style="padding:7px 14px" onclick="doInvite()">邀请</button></div></div></div>` : '')
-    + `<div class="card"><h3>邀请纪录</h3><p class="hint">邀请不能删除，只能取消。取消后他就算注册了也进不来。</p>
-    <table><tr><th>Email</th><th>名字</th><th>角色</th><th>职位</th><th>邀请日</th><th>状态</th><th></th></tr>${rows || '<tr><td colspan="7" class="hint">还没有邀请</td></tr>'}</table></div>`;
+      <td>${open ? `<button class="btn red" ${!CAN_EDIT || ownerLocked(i.role) ? 'disabled' : ''} onclick="cancelInvite('${i.id}')">Cancel</button>` : ''}</td></tr>`; }).join('');
+  $('v-invite').innerHTML = (CAN_EDIT ? `<div class="card"><h3>Invite staff</h3>
+    <p class="hint">Then tell them to open the Home page and press "First time? Set password".</p>
+    <div class="form"><div><label>Email</label><input id="i-em" type="email"></div><div><label>Name</label><input id="i-name"></div>
+      <div><label>Role</label><select id="i-role">${roleOptions('CLERK')}</select></div><div><label>Position</label><input id="i-pos"></div>
+      <div><button class="btn pri" style="padding:7px 14px" onclick="doInvite()">Invite</button></div></div></div>` : '')
+    + `<div class="card"><h3>Invitations</h3>
+    <table><tr><th>Email</th><th>Name</th><th>Role</th><th>Position</th><th>Invited</th><th>Status</th><th></th></tr>${rows || '<tr><td colspan="7" class="hint">No invitations yet</td></tr>'}</table></div>`;
 }
 async function doInvite(){
   const email = $('i-em').value.trim().toLowerCase(), name = $('i-name').value.trim(), role = $('i-role').value, pos = $('i-pos').value.trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Email 格式不对', true);
-  if(USERS.some(u => (u.email || '').toLowerCase() === email)) return toast('这个 email 已经是人员了，去「人员」改就好', true);
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Please enter a valid email.', true);
+  if(USERS.some(u => (u.email || '').toLowerCase() === email)) return toast('This email is already on the Staff list.', true);
   const {error} = await sb.from('hub_pending_invite').insert({email, display_name:name || null, role, position:pos || null, invited_by:ME.id});
-  if(dbErr(error)) return; toast('已邀请 ' + email); await loadAll();
+  if(dbErr(error)) return; toast('Invited ' + email); await loadAll();
 }
 async function cancelInvite(id){
   const i = INV.find(x => x.id === id);
-  if(!confirm('取消给 ' + i.email + ' 的邀请？\n取消后他就算注册了也进不来。')) return;
+  if(!confirm('Cancel the invitation for ' + i.email + '?')) return;
   const {error} = await sb.from('hub_pending_invite').update({cancelled_at:new Date().toISOString()}).eq('id', id);
-  if(dbErr(error)) return; toast('已取消'); await loadAll();
+  if(dbErr(error)) return; toast('Cancelled'); await loadAll();
 }
 
-// ── 角色权限（系统 × 角色）─────────────────────────────
-const LAYER_NAME = {CORE:'权限', HUB:'主资料', OPR:'营运', BIZ:'卖货', RPT:'分析'};
+const LAYER_NAME = {CORE:'Admin', HUB:'Master Data', OPR:'Operations', BIZ:'Sales', RPT:'Reports'};
 function raOf(sys, role){ return RA.find(r => r.system_code === sys && r.role === role) || {can_see:false, can_edit:false, can_approve:false}; }
 function renderMatrix(){
-  const head = '<tr><th>系统</th>' + ROLES.map(r => `<th style="text-align:center">${esc(r[1])}</th>`).join('') + '</tr>';
-  const body = SYS.map(s => '<tr><td>' + esc(s.label) + `<span class="layer">${esc(LAYER_NAME[s.layer] || s.layer || '')}</span>` + (s.href ? '' : ' <span class="pend">Pending</span>') + '</td>'
+  const head = '<tr><th>System</th>' + ROLES.map(r => `<th style="text-align:center">${esc(r[1])}</th>`).join('') + '</tr>';
+  const body = SYS.map(s => '<tr><td>' + esc(s.label) + `<span class="layer">${esc(LAYER_NAME[s.layer] || s.layer || '')}</span>` + (s.href ? '' : ' <span class="pend">Coming soon</span>') + '</td>'
     + ROLES.map(([role]) => { const a = raOf(s.code, role);
         const fixed = role === 'OWNER' && s.code === 'AUTH'; const lock = !CAN_EDIT || ownerLocked(role) || fixed;
-        return '<td><span class="cell">' + ACTS.map(([k, l]) => `<label class="${a[k] || fixed ? 'on' : ''}" title="${fixed ? '老板永远可以管帐号与权限' : ''}"><input type="checkbox" ${a[k] || fixed ? 'checked' : ''} ${lock ? 'disabled' : ''} onchange="setRA('${s.code}','${role}','${k}',this.checked)">${l}</label>`).join('') + '</span></td>'; }).join('') + '</tr>').join('');
-  $('v-matrix').innerHTML = `<div class="card mx"><h3>角色权限</h3>
-    <p class="hint">看 = 能进去看 · 改 = 能输入 / 修改 · 批 = 能锁月、批准。勾「改」会自动勾「看」；拿掉「看」会一起拿掉「改」「批」。按了就存。老板那一栏只有老板能改。</p>
+        return '<td><span class="cell">' + ACTS.map(([k, l]) => `<label class="${a[k] || fixed ? 'on' : ''}" title="${fixed ? 'The owner always has access' : ''}"><input type="checkbox" ${a[k] || fixed ? 'checked' : ''} ${lock ? 'disabled' : ''} onchange="setRA('${s.code}','${role}','${k}',this.checked)">${l}</label>`).join('') + '</span></td>'; }).join('') + '</tr>').join('');
+  $('v-matrix').innerHTML = `<div class="card mx"><h3>Role Access</h3>
+    <p class="hint">Changes save immediately.</p>
     <table>${head}${body}</table></div>`;
 }
 async function setRA(sys, role, key, val){
@@ -226,10 +220,9 @@ async function setRA(sys, role, key, val){
   const {error} = await sb.from('hub_role_access').upsert(row, {onConflict:'system_code,role'});
   if(dbErr(error)){ renderMatrix(); return; }
   const i = RA.findIndex(r => r.system_code === sys && r.role === role); if(i >= 0) RA[i] = row; else RA.push(row);
-  renderMatrix(); renderOverride(); toast('已存：' + (SYS.find(s => s.code === sys) || {}).label + ' · ' + roleLabel(role));
+  renderMatrix(); renderOverride(); toast('Saved: ' + (SYS.find(s => s.code === sys) || {}).label + ' · ' + roleLabel(role));
 }
 
-// ── 个人例外（盖过角色）────────────────────────────────
 let OV_USER = '';
 function renderOverride(){
   const people = USERS.filter(u => u.status === 'ACTIVE');
@@ -238,18 +231,18 @@ function renderOverride(){
   const sel = `<select onchange="OV_USER=this.value;renderOverride()">${people.map(p => `<option value="${p.id}" ${p.id === OV_USER ? 'selected' : ''}>${esc(p.display_name)} · ${esc(roleLabel(p.role))}</option>`).join('')}</select>`;
   let table = '';
   if(u){ const lock = !CAN_EDIT || ownerLocked(u.role);
-    table = '<table><tr><th>系统</th>' + ACTS.map(a => `<th>${a[1]}</th>`).join('') + '<th>结果</th></tr>' + SYS.map(s => {
+    table = '<table><tr><th>System</th>' + ACTS.map(a => `<th>${a[1]}</th>`).join('') + '<th>Result</th></tr>' + SYS.map(s => {
       const o = OV.find(x => x.user_id === u.id && x.system_code === s.code) || {}; const ra = raOf(s.code, u.role);
       const eff = k => (u.role === 'OWNER' && s.code === 'AUTH') || (o[k] ?? ra[k]);
-      return '<tr><td>' + esc(s.label) + (s.href ? '' : ' <span class="pend">Pending</span>') + '</td>' + ACTS.map(([k]) => {
+      return '<tr><td>' + esc(s.label) + (s.href ? '' : ' <span class="pend">Coming soon</span>') + '</td>' + ACTS.map(([k]) => {
         const v = o[k] === true ? '1' : o[k] === false ? '0' : '';
         return `<td><select ${lock ? 'disabled' : ''} onchange="setOV('${u.id}','${s.code}','${k}',this.value)">
-          <option value="" ${v === '' ? 'selected' : ''}>照角色（${ra[k] ? '有' : '没有'}）</option><option value="1" ${v === '1' ? 'selected' : ''}>开</option><option value="0" ${v === '0' ? 'selected' : ''}>关</option></select></td>`; }).join('')
-        + '<td>' + (eff('can_see') ? (eff('can_edit') ? (eff('can_approve') ? '看 · 改 · 批' : '看 · 改') : '只能看') : '<span class="hint">进不去</span>') + '</td></tr>'; }).join('') + '</table>';
+          <option value="" ${v === '' ? 'selected' : ''}>Same as role (${ra[k] ? 'Yes' : 'No'})</option><option value="1" ${v === '1' ? 'selected' : ''}>Yes</option><option value="0" ${v === '0' ? 'selected' : ''}>No</option></select></td>`; }).join('')
+        + '<td>' + (eff('can_see') ? (eff('can_edit') ? (eff('can_approve') ? 'View · Edit · Approve' : 'View · Edit') : 'View only') : '<span class="hint">No access</span>') + '</td></tr>'; }).join('') + '</table>';
   }
-  $('v-override').innerHTML = `<div class="card"><h3>个人例外</h3>
-    <p class="hint">平常照角色就好。只有某个人要跟同角色的人不一样时才设。选「照角色」= 拿掉例外。</p>
-    <div style="margin-bottom:10px">人员：${sel}</div>${table || '<p class="hint">没有在用的人员</p>'}</div>`;
+  $('v-override').innerHTML = `<div class="card"><h3>Individual Access</h3>
+    <p class="hint">Only needed when one person should differ from their role.</p>
+    <div style="margin-bottom:10px">Staff: ${sel}</div>${table || '<p class="hint">No active staff</p>'}</div>`;
 }
 async function setOV(uid, sys, key, v){
   const cur = OV.find(x => x.user_id === uid && x.system_code === sys) || {user_id:uid, system_code:sys, can_see:null, can_edit:null, can_approve:null};
@@ -258,7 +251,7 @@ async function setOV(uid, sys, key, v){
   const {error} = await sb.from('hub_user_override').upsert(row, {onConflict:'user_id,system_code'});
   if(dbErr(error)){ renderOverride(); return; }
   const i = OV.findIndex(x => x.user_id === uid && x.system_code === sys); if(i >= 0) OV[i] = row; else OV.push(row);
-  renderOverride(); toast('已存');
+  renderOverride(); toast('Saved');
 }
 boot();
 </script>

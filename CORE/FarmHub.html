@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FarmHub 工人 v6</title>
+<title>Workers v7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -80,7 +80,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 </head>
 <body>
 <header>
-  <div style="display:flex;align-items:center;gap:12px"><a class="home-btn" href="../index.html">← 首页</a><div><h1>FarmHub · 工人</h1><div class="sub">Azura Delta 农场主资料 · 只读 v6</div></div></div>
+  <div style="display:flex;align-items:center;gap:12px"><a class="home-btn" href="../index.html">← Home</a><div><h1>Workers</h1><div class="sub">Azura Delta</div></div></div>
   <div class="who" id="who"></div>
 </header>
 <main>
@@ -88,23 +88,23 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 
   <div id="app" style="display:none">
     <div class="tiles">
-      <div class="card tile"><div class="n" id="kAct">-</div><div class="l">在职</div></div>
-      <div class="card tile"><div class="n" id="kAD">-</div><div class="l">在职 · 归 AD</div></div>
-      <div class="card tile"><div class="n" id="kHX">-</div><div class="l">在职 · 归 HX</div></div>
-      <div class="card tile"><div class="n" id="kBoth">-</div><div class="l">在职 · 两家对半</div></div>
-      <div class="card tile"><div class="n" id="kStop">-</div><div class="l">已停职</div></div>
+      <div class="card tile"><div class="n" id="kAct">-</div><div class="l">Active</div></div>
+      <div class="card tile"><div class="n" id="kAD">-</div><div class="l">Active · AD</div></div>
+      <div class="card tile"><div class="n" id="kHX">-</div><div class="l">Active · HX</div></div>
+      <div class="card tile"><div class="n" id="kBoth">-</div><div class="l">Active · Shared</div></div>
+      <div class="card tile"><div class="n" id="kStop">-</div><div class="l">Stopped</div></div>
     </div>
     <div class="bar">
       <div class="tabs" id="tabs">
-        <button data-f="act" class="on">在职</button><button data-f="stop">已停职</button><button data-f="all">全部</button>
+        <button data-f="act" class="on">Active</button><button data-f="stop">Stopped</button><button data-f="all">All</button>
       </div>
-      <select id="fCo"><option value="">全部公司</option></select>
-      <input id="q" placeholder="找姓名 / 职位 / 编号">
+      <select id="fCo"><option value="">All companies</option></select>
+      <input id="q" placeholder="Search name / position / no.">
       <span class="count" id="cnt"></span>
     </div>
     <div class="card" style="overflow-x:auto">
       <table>
-        <thead><tr><th>#</th><th>姓名</th><th class="hide-m">职位</th><th>公司</th><th>薪资</th><th class="hide-m">入职</th><th id="thStop">停职</th><th class="hide-m">收款</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th class="hide-m">Position</th><th>Company</th><th>Rate</th><th class="hide-m">Joined</th><th id="thStop">Stopped</th><th class="hide-m">Payee</th></tr></thead>
         <tbody id="tb"></tbody>
       </table>
     </div>
@@ -115,7 +115,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <div id="detail"><div class="card" id="dc"></div></div>
 
 <script>
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -124,28 +124,27 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // 今天（马来西亚时间），一律用字串比较，不用 Date 运算
 const TODAY = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 const THIS_MONTH = TODAY.slice(0,7);
-const D = {workers:[], rates:{}, comps:{}, payees:{}, company:{}, reason:{}, rateType:{DAILY:'日薪', MONTHLY:'月薪'}};
+const D = {workers:[], rates:{}, comps:{}, payees:{}, company:{}, reason:{}, rateType:{DAILY:'Daily', MONTHLY:'Monthly'}};
 let filt = 'act';
 
-$('foot').textContent = 'FarmHub v' + APP_VERSION + ' · 资料来源：hub_worker、hub_worker_rate、hub_worker_company、hub_worker_payee、hub_company、hub_option · 今天 ' + TODAY;
+$('foot').textContent = '';
 
 function stop(title, body, home){
   $('app').style.display='none';
   const s=$('stop'); s.style.display='block';
-  s.innerHTML='<b>'+esc(title)+'</b><div>'+esc(body)+'</div><div class="dim" style="margin-top:8px">没有任何资料被改动。</div>'
-    + (home ? '<div style="margin-top:14px"><a href="../index.html" style="display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">回首页登入</a></div>' : '');
+  s.innerHTML='<b>'+esc(title)+'</b><div>'+esc(body)+'</div>'
+    + (home ? '<div style="margin-top:14px"><a href="../index.html" style="display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">Go to Home</a></div>' : '');
 }
 
 async function boot(){
-  // 登入只在首页（Platform）。这里不登入、不登出。
-  const {data:{session}} = await sb.auth.getSession();
-  if(!session) return stop('请从首页登入', '登入后从首页点「FarmHub 工人主资料」进来。', true);
+    const {data:{session}} = await sb.auth.getSession();
+  if(!session) return stop('Please sign in', 'Sign in from the Home page first.', true);
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
-  if(e1) return stop('读不到帐号资料', e1.message);
-  if(!me || me.status!=='ACTIVE') return stop('这个帐号不能使用', '请回首页，用老板邀请的 email 登入。', true);
+  if(e1) return stop('Could not load your account', 'Please refresh the page.');
+  if(!me || me.status!=='ACTIVE') return stop('No access', 'This account cannot use the system.', true);
   const {data:see, error:e2} = await sb.rpc('hub_can', {p_system:'FARMHUB', p_action:'see'});
-  if(e2) return stop('读不到权限', e2.message);
-  if(!see) return stop('你没有 FarmHub 的权限', '请找老板在「帐号与权限」开「FarmHub · 看」。', true);
+  if(e2) return stop('Could not check access', 'Please refresh the page.');
+  if(!see) return stop('No access', 'Please ask the owner for access to Workers.', true);
   $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + ' · ' + esc(session.user.email) + '</span>';
   await load();
 }
@@ -161,16 +160,16 @@ async function load(){
     q('hub_option','list_code,code,label', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']))
   ]);
   const bad = res.find(r=>r.error);
-  if(bad) return stop('读不到云端资料', bad.error.message);
+  if(bad) return stop('Could not load data', 'Please refresh the page.');
   const [w,r,c,p,co,op] = res.map(x=>x.data);
-  if(!w.length) return stop('云端没有工人资料', '读到 0 笔。可能是你的帐号没有 FarmHub 或薪水的「看」权限。');
+  if(!w.length) return stop('No workers found', 'Please ask the owner to check your access.');
   D.workers=w;
   D.rates={}; r.forEach(x=>(D.rates[x.worker_id]??=[]).push(x));
   D.comps={}; c.forEach(x=>(D.comps[x.worker_id]??=[]).push(x));
   D.payees={}; p.filter(x=>(x.slot||1)===1).forEach(x=>(D.payees[x.worker_id]??=[]).push(x));
   D.company={}; co.forEach(x=>D.company[x.id]=x);
   D.reason={}; D.channel={}; op.forEach(x=>{ if(x.list_code==='STOP_REASON') D.reason[x.code]=x.label; else D.channel[x.code]=x.label; });
-  const sel=$('fCo'); sel.innerHTML='<option value="">全部公司</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">两家对半</option>';
+  const sel=$('fCo'); sel.innerHTML='<option value="">All companies</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">Shared</option>';
   $('app').style.display='block';
   render();
 }
@@ -180,7 +179,7 @@ const latestM = (arr, mk) => (arr||[]).filter(x=>x.effective_from<=mk).slice(-1)
 const latestD = (arr, d) => (arr||[]).filter(x=>x.effective_from<=d).slice(-1)[0] || null;
 const isActive = w => !w.stop_date || w.stop_date >= TODAY;
 function coCode(w){ const c=latestM(D.comps[w.id], THIS_MONTH); if(!c) return ''; return c.company_id ? (D.company[c.company_id]?.code||'?') : 'BOTH'; }
-function coTag(code){ if(!code) return '<span class="dim">—</span>'; return '<span class="tag t-'+esc(code)+'">'+(code==='BOTH'?'两家对半':esc(code))+'</span>'; }
+function coTag(code){ if(!code) return '<span class="dim">—</span>'; return '<span class="tag t-'+esc(code)+'">'+(code==='BOTH'?'Shared':esc(code))+'</span>'; }
 const rm = n => 'RM' + Number(n).toLocaleString('en',{minimumFractionDigits: Number(n)%1?2:0, maximumFractionDigits:2});
 function rateTxt(w){ const r=latestM(D.rates[w.id], THIS_MONTH); return r ? D.rateType[r.rate_type]+' <span class="mono">'+rm(r.rate)+'</span>' : '<span class="dim">—</span>'; }
 const last4 = s => s ? '…' + String(s).slice(-4) : '';
@@ -199,34 +198,34 @@ function render(){
     if(qs && !((w.name||'')+' '+(w.title||'')+' #'+w.worker_no).toLowerCase().includes(qs)) return false;
     return true;
   });
-  $('cnt').textContent=list.length+' 人';
+  $('cnt').textContent=list.length+' workers';
   $('tb').innerHTML = list.map(w=>{
     const st = w.stop_date ? '<span class="mono">'+esc(w.stop_date)+'</span>' + (w.stop_reason?' <span class="tag t-STOP">'+esc(D.reason[w.stop_reason]||w.stop_reason)+'</span>':'') : '<span class="dim">—</span>';
     return '<tr class="w '+(isActive(w)?'':'stopped')+'" data-id="'+w.id+'">'
       +'<td class="no mono">'+(w.worker_no??'')+'</td>'
-      +'<td class="name">'+esc(w.name)+(w.worker_type==='LOCAL'?' <span class="tag t-LOCAL">本地</span>':'')+'</td>'
+      +'<td class="name">'+esc(w.name)+(w.worker_type==='LOCAL'?' <span class="tag t-LOCAL">Local</span>':'')+'</td>'
       +'<td class="hide-m">'+esc(w.title||'')+'</td>'
       +'<td>'+coTag(coCode(w))+'</td>'
       +'<td class="money">'+rateTxt(w)+'</td>'
       +'<td class="hide-m mono">'+esc(w.join_date||'—')+'</td>'
       +'<td>'+st+'</td>'
       +'<td class="hide-m">'+payTxt(w)+'</td></tr>';
-  }).join('') || '<tr><td colspan="8" class="dim" style="text-align:center;padding:24px">没有符合的工人</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="dim" style="text-align:center;padding:24px">No matching workers</td></tr>';
 }
 
 function detail(id){
   const w=D.workers.find(x=>x.id===id); if(!w) return;
   const rates=(D.rates[id]||[]).slice().reverse(), comps=(D.comps[id]||[]).slice().reverse(), pays=(D.payees[id]||[]).slice().reverse();
   $('dc').innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="ghost" onclick="closeD()">关</button></div>'
-    +'<div class="kv"><div>状态</div><div>'+(isActive(w)?'在职':'已停职')+'</div>'
-    +'<div>类型</div><div>'+(w.worker_type==='LOCAL'?'本地员工':'外劳')+'</div>'
-    +'<div>入职日</div><div class="mono">'+esc(w.join_date||'—')+'</div>'
-    +'<div>停职日</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+'</div>'
-    +'<div>电话</div><div class="mono">'+esc(w.phone||'—')+'</div></div>'
-    +'<h4>薪资历史（新的在上）</h4><table>'+(rates.map(r=>'<tr><td class="mono">'+esc(r.effective_from)+' 起</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>'
-    +'<h4>归属公司</h4><table>'+(comps.map(c=>'<tr><td class="mono">'+esc(c.effective_from)+' 起</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>'
-    +'<h4>收款资料</h4><table>'+(pays.map(p=>'<tr><td class="mono">'+esc(p.effective_from)+' 起</td><td>'+esc(p.beneficiary_name)+'</td><td class="mono">'+last4(p.account_no)+'</td><td class="dim">'+esc(D.channel[p.channel]||p.channel||'')+'</td></tr>').join('')||'<tr><td class="dim">没有</td></tr>')+'</table>';
+    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="ghost" onclick="closeD()">Close</button></div>'
+    +'<div class="kv"><div>Status</div><div>'+(isActive(w)?'Active':'Stopped')+'</div>'
+    +'<div>Type</div><div>'+(w.worker_type==='LOCAL'?'Local':'Foreign')+'</div>'
+    +'<div>Joined</div><div class="mono">'+esc(w.join_date||'—')+'</div>'
+    +'<div>Stopped</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+'</div>'
+    +'<div>Phone</div><div class="mono">'+esc(w.phone||'—')+'</div></div>'
+    +'<h4>Rate history</h4><table>'+(rates.map(r=>'<tr><td class="mono">'+esc(r.effective_from)+' from</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
+    +'<h4>Company</h4><table>'+(comps.map(c=>'<tr><td class="mono">'+esc(c.effective_from)+' from</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
+    +'<h4>Payee</h4><table>'+(pays.map(p=>'<tr><td class="mono">'+esc(p.effective_from)+' from</td><td>'+esc(p.beneficiary_name)+'</td><td class="mono">'+last4(p.account_no)+'</td><td class="dim">'+esc(D.channel[p.channel]||p.channel||'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>';
   $('detail').style.display='flex';
 }
 function closeD(){ $('detail').style.display='none'; }

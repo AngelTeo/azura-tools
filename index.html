@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Azura Delta Platform v1</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<title>Azura Delta Platform v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{--bg:#f4f2ec;--card:#fffdf8;--ink:#1f2a22;--ink2:#55605a;--ink3:#8a948e;--line:#e2ddd2;--green:#2f5d3f;--red:#a33a2c;--redl:#f8e3df;--greenl:#e3eee5;--amb:#9a6b00;--ambl:#fff6e0}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans SC',system-ui,sans-serif;font-size:14px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px}
 header{background:var(--green);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{margin:0;font-size:18px;letter-spacing:.02em}
 header .sub{font-size:12px;opacity:.8}
@@ -51,24 +51,23 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 </head>
 <body>
 <header>
-  <div><h1>Azura Delta Platform</h1><div class="sub">FarmHub SSOT · 所有系统从这里进</div></div>
+  <div><h1>Azura Delta</h1><div class="sub">Staff Portal</div></div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <div id="meta"></div>
-    <button class="hbtn" id="btn-vercheck" hidden onclick="runVerCheck()">版本核对</button>
-    <button class="hbtn" id="btn-logout" hidden onclick="doLogout()">登出</button>
+    <button class="hbtn" id="btn-vercheck" hidden onclick="runVerCheck()">Check versions</button>
+    <button class="hbtn" id="btn-logout" hidden onclick="doLogout()">Sign out</button>
   </div>
 </header>
 <main>
   <div id="auth" class="card" style="display:none">
-    <h2>登入</h2>
-    <p><b>只限老板邀请的 email。</b>用其他 email 注册也看不到任何资料。</p>
-    <p style="font-size:12px;color:var(--ink3)">第一次用：输入被邀请的 email 和想要的密码，按「第一次设密码」。</p>
+    <h2>Sign in</h2>
+    <p>For invited staff only.</p>
     <label for="em">Email</label><input id="em" type="email" autocomplete="username">
-    <label for="pw">密码</label><input id="pw" type="password" autocomplete="current-password">
+    <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
     <div class="row">
-      <button class="btn" id="b-in" onclick="doLogin()">登入</button>
-      <button class="btn ghost" onclick="doSignUp()">第一次设密码</button>
-      <button class="btn ghost" onclick="doMagicLink()">寄登入连结</button>
+      <button class="btn" id="b-in" onclick="doLogin()">Sign in</button>
+      <button class="btn ghost" onclick="doSignUp()">First time? Set password</button>
+      <button class="btn ghost" onclick="doMagicLink()">Email me a sign-in link</button>
     </div>
     <div id="amsg" class="msg"></div>
   </div>
@@ -78,65 +77,63 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <footer id="foot"></footer>
 
 <script>
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// 分组顺序：只有这里列到的 layer 会显示（跟 Academee GROUP_ORDER 一样）。资料库里的 layer 不在这里 → 主控台会报错，不会静默消失。
 const GROUPS = [
-  ['CORE','CORE — 权限 Permissions','#5C1010'],
-  ['HUB','FarmHub — 主资料 Master Data','#2F5D3F'],
-  ['OPR','OPR — 营运 Operations','#8B6C2A'],
-  ['BIZ','BIZ — 卖货 Sales','#C04E28'],
-  ['RPT','RPT — 分析 Reports','#5A6470'],
+  ['CORE','Administration','#5C1010'],
+  ['HUB','Master Data','#2F5D3F'],
+  ['OPR','Operations','#8B6C2A'],
+  ['BIZ','Sales','#C04E28'],
+  ['RPT','Reports','#5A6470'],
 ];
-// Pending：还在一步一步做、还没接上 FarmHub 资料库的系统。资料只在各自电脑的浏览器里。
+// Not yet on the new system. Old versions still open; the rest are coming.
 const PENDING = [
-  {name:'收成 Harvest（旧版）', href:'worker_harvest_form_11.html', note:'旧版，资料只存在本机'},
-  {name:'Daily MISC（旧版）', href:'Daily_MISC_System_41.html', note:'旧版，资料只存在本机'},
-  {name:'运输计算器', href:'transport_calculator.html', note:'旧版，资料只存在本机'},
-  {name:'卖货 Revenue', href:'', note:'目前用 Excel，还没做成网页'},
-  {name:'种植监测 Monitoring', href:'', note:'还没上线'},
-  {name:'成本分析 / 产量对比', href:'', note:'还没做'},
+  {name:'Harvest', href:'worker_harvest_form_11.html', note:'Old version'},
+  {name:'Daily MISC', href:'Daily_MISC_System_41.html', note:'Old version'},
+  {name:'Transport Calculator', href:'transport_calculator.html', note:'Old version'},
+  {name:'Revenue', href:'', note:'Coming soon'},
+  {name:'Crop Monitoring', href:'', note:'Coming soon'},
+  {name:'Cost & Yield Analysis', href:'', note:'Coming soon'},
 ];
 const VERCHECK_ROLES = ['OWNER','ADMIN'];
-let WHO = '', ROLE = '';
+let WHO = '', ROLE = '', SHOWVER = false;
 
-$('foot').textContent = 'Azura Delta Platform v' + APP_VERSION + ' · 资料来源：hub_system、hub_my_systems()、hub_app_user · 登出只在这一页';
+$('foot').textContent = '';
 
 function amsg(t, ok){ const m = $('amsg'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
 const REDIR = () => location.href.split('#')[0].split('?')[0];
 async function doLogin(){
   const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
-  if(!email || !password) return amsg('请输入 email 和密码');
+  if(!email || !password) return amsg('Please enter your email and password.');
   $('b-in').disabled = true;
   const {error} = await sb.auth.signInWithPassword({email, password});
   $('b-in').disabled = false;
-  if(error) return amsg(/confirm/i.test(error.message) ? '这个 email 还没确认，请先开信箱按确认连结。' : '登入失败：' + error.message);
+  if(error) return amsg(/confirm/i.test(error.message) ? 'Please confirm your email first (check your inbox).' : /invalid/i.test(error.message) ? 'Wrong email or password.' : 'Sign-in failed: ' + error.message);
   showApp();
 }
 async function doSignUp(){
   const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
-  if(!email || password.length < 8) return amsg('请输入 email，密码至少 8 个字');
+  if(!email || password.length < 8) return amsg('Enter your email and a password of at least 8 characters.');
   const {data, error} = await sb.auth.signUp({email, password, options:{emailRedirectTo: REDIR()}});
-  if(error) return amsg('设定失败：' + error.message);
+  if(error) return amsg('Could not set password: ' + error.message);
   if(data.session) return showApp();
-  amsg('已寄确认信到 ' + email + '。开信箱按连结确认，再回来用密码登入。', true);
+  amsg('We sent a confirmation email to ' + email + '. Open it, click the link, then sign in here.', true);
 }
 async function doMagicLink(){
   const email = $('em').value.trim().toLowerCase();
-  if(!email) return amsg('请输入 email');
+  if(!email) return amsg('Please enter your email.');
   const {error} = await sb.auth.signInWithOtp({email, options:{shouldCreateUser:true, emailRedirectTo: REDIR()}});
-  if(error) return amsg('寄不出去：' + error.message);
-  amsg('登入连结已寄到 ' + email + '，在这台装置开信按连结。', true);
+  if(error) return amsg('Could not send: ' + error.message);
+  amsg('Sign-in link sent to ' + email + '. Open it on this device.', true);
 }
-// 平台层登出 —— 全 Azura 唯一的出口。登出后所有系统都要重新登入，所以先问一句。
 async function doLogout(){
-  if(!confirm('登出后，Azura Delta 的所有系统都要重新登入。\n\n确定要登出吗？')) return;
-  $('btn-logout').disabled = true; $('btn-logout').textContent = '登出中…';
+  if(!confirm('Sign out of all Azura Delta systems?')) return;
+  $('btn-logout').disabled = true; $('btn-logout').textContent = 'Signing out…';
   try{ await sb.auth.signOut(); }catch(e){ console.warn(e); }
   location.reload();
 }
@@ -145,53 +142,52 @@ async function showApp(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session){ $('auth').style.display = 'block'; return; }
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
-  if(e1){ $('app').style.display='block'; $('app').innerHTML = '<div class="card empty">读不到帐号资料：' + esc(e1.message) + '</div>'; return; }
+  if(e1){ $('app').style.display='block'; $('app').innerHTML = '<div class="card empty">Could not load your account. Please refresh.</div>'; return; }
   if(!me || me.status !== 'ACTIVE'){
     const em = session.user.email; await sb.auth.signOut();
-    $('auth').style.display = 'block'; return amsg(em + ' 没有被邀请，或已停用，不能使用。请用老板邀请的 email 登入。');
+    $('auth').style.display = 'block'; return amsg(em + ' does not have access. Please use your invited email.');
   }
   WHO = me.display_name || session.user.email; ROLE = me.role;
   $('auth').style.display = 'none'; $('app').style.display = 'block'; $('btn-logout').hidden = false;
-  if(VERCHECK_ROLES.includes(ROLE)) $('btn-vercheck').hidden = false;
+  SHOWVER = VERCHECK_ROLES.includes(ROLE); if(SHOWVER) $('btn-vercheck').hidden = false;
   updateClock();
   const {data:systems, error} = await sb.rpc('hub_my_systems');
-  if(error){ $('app').innerHTML = '<div class="card empty">读不到系统清单：' + esc(error.message) + '</div>'; return; }
+  if(error){ $('app').innerHTML = '<div class="card empty">Could not load your systems. Please refresh.</div>'; return; }
   const live = (systems||[]).filter(s => s.href);
   const known = new Set(GROUPS.map(g => g[0]));
   const orphan = live.filter(s => !known.has(s.layer)).map(s => s.code);
-  if(orphan.length) console.error('[platform] 这些系统的 layer 不在 GROUPS 里，卡片不会显示：', orphan);
+  if(orphan.length) console.error('[platform] layer not in GROUPS:', orphan);
   let html = '';
   GROUPS.forEach(([code, title, color]) => {
     const items = live.filter(s => s.layer === code).sort((a,b) => a.sort - b.sort);
     if(!items.length) return;
-    html += `<div class="section"><div class="section-hdr"><div class="dot" style="background:${color}"></div><span class="section-title">${title}</span><span class="section-count">${items.length} 个系统</span></div><div class="grid">`
+    html += `<div class="section"><div class="section-hdr"><div class="dot" style="background:${color}"></div><span class="section-title">${title}</span></div><div class="grid">`
       + items.map(s => `<a class="app-card" style="--c:${s.color||color}" href="${esc(s.href)}" data-name="${esc(s.label)}" data-href="${esc(s.href)}" data-ver="${esc(s.ver||'')}">
-          <span class="app-name">${esc(s.label)}</span><span class="app-sub">${s.can_edit ? (s.can_approve ? '看 · 改 · 批准' : '看 · 改') : '只能看'}</span>${s.ver ? `<span class="app-ver">${esc(s.ver)}</span>` : ''}</a>`).join('')
+          <span class="app-name">${esc(s.label)}</span><span class="app-sub">${s.can_edit ? '' : 'View only'}</span>${s.ver && SHOWVER ? `<span class="app-ver">${esc(s.ver)}</span>` : ''}</a>`).join('')
       + '</div></div>';
   });
-  if(!html) html = '<div class="card empty">你的角色目前没有可用的系统。请找老板开权限。</div>';
-  html += `<div class="section pending"><div class="section-hdr"><div class="dot" style="background:#bbb"></div><span class="section-title">Pending — 还在制作中</span><span class="section-count">还没接上 FarmHub 资料库</span></div><div class="grid">`
+  if(!html) html = '<div class="card empty">No systems are open to you yet. Please ask the owner for access.</div>';
+  html += `<div class="section pending"><div class="section-hdr"><div class="dot" style="background:#bbb"></div><span class="section-title">Coming Soon</span></div><div class="grid">`
     + PENDING.map(p => p.href
-        ? `<a class="app-card" href="${esc(p.href)}"><span class="app-name">${esc(p.name)}</span><span class="pend-tag">PENDING</span><span class="app-sub">${esc(p.note)}</span></a>`
-        : `<div class="app-card" style="cursor:default"><span class="app-name">${esc(p.name)}</span><span class="pend-tag">PENDING</span><span class="app-sub">${esc(p.note)}</span></div>`).join('')
+        ? `<a class="app-card" href="${esc(p.href)}"><span class="app-name">${esc(p.name)}</span><span class="pend-tag">${esc(p.note)}</span></a>`
+        : `<div class="app-card" style="cursor:default"><span class="app-name">${esc(p.name)}</span><span class="pend-tag">${esc(p.note)}</span></div>`).join('')
     + '</div></div>';
   $('app').innerHTML = html;
 }
 
-// 版本核对：抓线上档读 APP_VERSION，跟卡片（资料库 hub_system.ver）比。按了才查。
 function vcRead(t){ let m = t.match(/APP_VERSION\s*[:=]\s*['"]?v?(\d+)/i); if(m) return +m[1]; m = t.match(/<title>[^<]*?\bv(\d+)[^<]*<\/title>/i); return m ? +m[1] : null; }
 async function runVerCheck(){
   const cards = [...document.querySelectorAll('.app-card[data-href]')], box = $('ver-report'); let ok=0, bad=0, notes=[];
   $('btn-vercheck').disabled = true;
   for(const c of cards){
     const cardV = parseInt((c.dataset.ver||'').replace(/^v/i,''),10) || null; let live = null, err = null;
-    try{ const r = await fetch(c.dataset.href + '?vc=' + Date.now(), {cache:'no-store'}); if(!r.ok) err = 'HTTP ' + r.status; else live = vcRead(await r.text()); }catch(e){ err = '抓不到'; }
+    try{ const r = await fetch(c.dataset.href + '?vc=' + Date.now(), {cache:'no-store'}); if(!r.ok) err = 'HTTP ' + r.status; else live = vcRead(await r.text()); }catch(e){ err = 'unreachable'; }
     let b = c.querySelector('.app-ver'); if(!b){ b = document.createElement('span'); b.className='app-ver'; c.appendChild(b); }
-    if(err){ bad++; b.className='app-ver v-bad'; notes.push(c.dataset.name + '：线上读不到（' + err + '）'); }
+    if(err){ bad++; b.className='app-ver v-bad'; notes.push(c.dataset.name + ': cannot read live file (' + err + ')'); }
     else if(live === cardV){ ok++; b.className='app-ver v-ok'; b.textContent='v'+live; }
-    else { bad++; b.className='app-ver v-bad'; b.textContent='v'+(cardV??'?')+' → 线上 v'+(live??'?'); notes.push(c.dataset.name + '：卡片 v' + (cardV??'?') + '，线上 v' + (live??'?')); }
+    else { bad++; b.className='app-ver v-bad'; b.textContent='v'+(cardV??'?')+' → live v'+(live??'?'); notes.push(c.dataset.name + ': expected v' + (cardV??'?') + ', live v' + (live??'?')); }
   }
-  box.innerHTML = '<div class="ver-box"><b>版本核对完成</b> · 一致 ' + ok + ' · 不一致 ' + bad + (notes.length ? notes.map(n => '<div style="color:var(--red)">' + esc(n) + '</div>').join('') : '<div style="color:var(--green)">全部对得上。</div>') + '</div>';
+  box.innerHTML = '<div class="ver-box"><b>Version check</b> · match ' + ok + ' · mismatch ' + bad + (notes.length ? notes.map(n => '<div style="color:var(--red)">' + esc(n) + '</div>').join('') : '<div style="color:var(--green)">All systems are up to date.</div>') + '</div>';
   $('btn-vercheck').disabled = false;
 }
 function updateClock(){
