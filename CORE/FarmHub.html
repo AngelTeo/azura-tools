@@ -3,488 +3,424 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v9</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Workers v10</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-:root{
-  --bg:#f4f2ec; --card:#fffdf8; --ink:#1f2a22; --ink2:#55605a; --ink3:#8a948e; --line:#e2ddd2;
-  --green:#2f5d3f; --greenl:#e3eee5; --hx:#8a5a1e; --hxl:#f6ead8; --both:#4b4f8a; --bothl:#e6e7f5;
-  --red:#a33a2c; --redl:#f8e3df; --amb:#9a6b00;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.45}
-.mono{font-variant-numeric:tabular-nums}
-header{background:var(--green);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.02em}
-header .sub{font-size:12px;opacity:.8}
-header .who{font-size:12px;text-align:right}
-.home-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:7px;padding:6px 12px;text-decoration:none;font-size:13px;white-space:nowrap}
-main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px}
-#login{max-width:380px;margin:60px auto;padding:26px}
-#login h2{margin:0 0 4px;font-size:18px}
-#login p{margin:0 0 16px;color:var(--ink2);font-size:13px}
-label{display:block;font-size:12px;color:var(--ink2);margin:10px 0 4px}
-input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;color:var(--ink)}
-button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--green);background:var(--green);color:#fff;padding:9px 14px;font-weight:500}
-button.ghost{background:transparent;color:var(--green)}
-button:disabled{opacity:.5;cursor:default}
-.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.msg{margin-top:12px;font-size:13px;padding:9px 11px;border-radius:7px;display:none}
-.msg.err{display:block;background:var(--redl);color:var(--red)}
-.msg.ok{display:block;background:var(--greenl);color:var(--green)}
-.stop{padding:22px;text-align:center}
-.stop b{display:block;font-size:16px;margin-bottom:6px;color:var(--red)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
-.tile{padding:12px 14px}
-.tile .n{font-size:26px;font-weight:700}
-.tile .l{font-size:12px;color:var(--ink2)}
-.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.tabs{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
-.tabs button{border:0;border-radius:0;background:transparent;color:var(--ink2);padding:8px 14px}
-.tabs button.on{background:var(--green);color:#fff}
-.bar input{max-width:240px}
-.bar select{max-width:160px}
-.count{margin-left:auto;font-size:12px;color:var(--ink3)}
-table{width:100%;border-collapse:collapse}
-th{font-size:11px;font-weight:500;color:var(--ink3);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-tr.w{cursor:pointer}
-tr.w:hover td{background:#faf7ef}
-tr.stopped td{color:var(--ink3)}
-.no{color:var(--ink3);width:44px}
-.name{font-weight:500}
-.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500}
-.t-AD{background:var(--greenl);color:var(--green)}
-.t-HX{background:var(--hxl);color:var(--hx)}
-.t-BOTH{background:var(--bothl);color:var(--both)}
-.t-STOP{background:var(--redl);color:var(--red)}
-.t-LOCAL{background:#eee;color:#444}
-.money{white-space:nowrap}
-.dim{color:var(--ink3);font-size:12px}
-#detail{position:fixed;inset:0;background:rgba(20,30,24,.35);display:none;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;z-index:5}
-#detail .card{width:100%;max-width:560px;padding:20px}
-#detail h3{margin:0 0 2px;font-size:18px}
-#detail h4{margin:18px 0 6px;font-size:12px;color:var(--ink3);font-weight:500;letter-spacing:.06em}
-#detail table td,#detail table th{padding:6px 8px}
-.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;margin-top:10px}
-.kv div:nth-child(odd){color:var(--ink3);font-size:12px}
-footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:var(--ink3)}
-@media (max-width:720px){
-  .hide-m{display:none}
-  td,th{padding:8px 6px}
-}
-.btn{font:inherit;font-size:13px;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;font-weight:500}
-.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
-.btn.red{color:var(--red);border-color:#e6b9b1;background:#fff}
-.btn.sm{font-size:12px;padding:4px 9px}
-.acts{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px}
-.sec-h{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:18px 0 6px}
-.sec-h h4{margin:0 !important}
-#fm{position:fixed;inset:0;background:rgba(20,30,24,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;z-index:8}
-#fm .card{width:100%;max-width:460px;padding:20px}
-#fm h3{margin:0 0 6px;font-size:17px}
-#fm table td{padding:6px 8px}
-.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
-.fgrid .full{grid-column:1/-1}
-.req{color:var(--red)}
-.hint{font-size:12px;color:var(--ink3);margin:8px 0 0}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:20;max-width:90vw}
-#toast.err{background:var(--red)}
-@media (max-width:560px){.fgrid{grid-template-columns:1fr}#detail,#fm{padding:12px 8px}}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+:root{--bg:#f2f0eb;--bg2:#e8e5de;--white:#fff;--border:#d8d5ce;--hint:#c4c0b8;--text:#1a1916;--text2:#4a4740;--text3:#8a8680;
+--acc:#1A56A0;--accl:#ddeaff;--grn:#0E6B4A;--grnl:#d8f3e8;--red:#A3291F;--redl:#fce8e6;--amb:#7A4A00;--ambl:#fff3d6;--pur:#5C2DA0;--purl:#ede5ff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;min-height:100vh}
+button,input,select{font-family:inherit}
+.wrap{max-width:560px;margin:0 auto;padding-bottom:90px}
+header{background:var(--text);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+header a,header .back{color:#fff;text-decoration:none;font-size:15px;background:none;border:0;cursor:pointer;white-space:nowrap}
+header h1{font-size:17px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header .who{font-size:12px;color:#aaa;white-space:nowrap}
+.search{margin:12px 16px 8px;display:block;width:calc(100% - 32px);padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 14px;font-size:14px;white-space:nowrap;color:var(--text2);cursor:pointer}
+.chip.on{background:var(--text);color:#fff;border-color:var(--text)}
+.count{font-size:12px;color:var(--text3);padding:0 16px 6px}
+.list{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bg2);cursor:pointer}
+.row:last-child{border-bottom:0}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+.av.hx{background:var(--ambl);color:var(--amb)}.av.ad{background:var(--grnl);color:var(--grn)}.av.both{background:var(--purl);color:var(--pur)}.av.stop{background:var(--bg2);color:var(--text3)}
+.row .t{flex:1;min-width:0}.row .n{font-weight:600}.row .s{font-size:13px;color:var(--text3);margin-top:2px}
+.chev{color:var(--hint);font-size:20px}
+.empty{padding:30px 16px;text-align:center;color:var(--text3)}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:20px;width:56px;height:56px;border-radius:50%;background:var(--acc);color:#fff;font-size:28px;border:0;box-shadow:0 6px 18px rgba(26,86,160,.35);cursor:pointer}
+.hero{padding:18px 16px 14px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.hero .av{width:54px;height:54px;font-size:18px}
+.hero .n{font-size:20px;font-weight:700}.hero .s{font-size:13px;color:var(--text3);margin-top:3px}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;margin-top:6px}
+.pill.on{background:var(--grnl);color:var(--grn)}.pill.off{background:var(--redl);color:var(--red)}
+.grp{font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:14px 16px 6px}
+.item{display:flex;align-items:center;padding:14px 16px;background:#fff;border-bottom:1px solid var(--bg2);gap:10px}
+.item.tap{cursor:pointer}
+.item .k{width:96px;color:var(--text3);font-size:14px;flex:none}.item .v{flex:1;font-weight:500;min-width:0}
+.item .v small{display:block;font-weight:400;color:var(--text3);font-size:12px;margin-top:2px}
+.btn-wide{display:block;width:calc(100% - 32px);margin:16px 16px 0;padding:14px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.btn-wide.red{border-color:#f0b8b4;color:var(--red)}
+.btn-wide.link{border:0;background:none;color:var(--text3);font-weight:500;font-size:13px;margin-top:6px}
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:20}
+.sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px 22px;z-index:21;display:none}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+.sheet h3{font-size:18px;margin-bottom:4px}.sheet p.h{font-size:13px;color:var(--text3);margin-bottom:6px}
+.lbl{font-size:13px;color:var(--text3);margin:14px 0 8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.opt{border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:13px 6px;font-size:15px;font-weight:600;color:var(--text);cursor:pointer}
+.opt.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
+.opt.dark.on{border-color:var(--text);background:var(--text);color:#fff}
+.opt.red.on{border-color:var(--red);background:var(--redl);color:var(--red)}
+.opt:disabled{opacity:.4;cursor:default}
+.inp{width:100%;margin-top:8px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;background:#fff}
+.save{width:100%;margin-top:18px;padding:15px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.save.red{background:var(--red)}
+.save:disabled{opacity:.6}
+.err{margin-top:10px;font-size:13px;color:var(--red);display:none}
+.pcard{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pcard .v{flex:1}.pcard small{display:block;color:var(--text3);font-size:12px}
+.hist td{padding:7px 4px;border-bottom:1px solid var(--bg2);font-size:13px;vertical-align:top}
+.hist{width:100%;border-collapse:collapse}
+#toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;display:none;z-index:30;max-width:90vw}
+#toast.bad{background:var(--red)}
+#gate{padding:60px 20px;text-align:center;display:none}
+#gate b{display:block;font-size:17px;margin-bottom:8px;color:var(--red)}
+#gate a{display:inline-block;margin-top:16px;background:var(--acc);color:#fff;border-radius:10px;padding:10px 18px;text-decoration:none}
+.view{display:none}.view.on{display:block}
 </style>
 </head>
 <body>
-<header>
-  <div style="display:flex;align-items:center;gap:12px"><a class="home-btn" href="../index.html">← Home</a><div><h1>Workers</h1><div class="sub">Azura Delta</div></div></div>
-  <div class="who" id="who"></div>
-</header>
-<main>
-  <div id="stop" class="card stop" style="display:none"></div>
+<div class="wrap">
+  <div id="gate"></div>
 
-  <div id="app" style="display:none">
-    <div class="tiles">
-      <div class="card tile"><div class="n" id="kAct">-</div><div class="l">Active</div></div>
-      <div class="card tile"><div class="n" id="kAD">-</div><div class="l">Active · AD</div></div>
-      <div class="card tile"><div class="n" id="kHX">-</div><div class="l">Active · HX</div></div>
-      <div class="card tile"><div class="n" id="kBoth">-</div><div class="l">Active · Shared</div></div>
-      <div class="card tile"><div class="n" id="kStop">-</div><div class="l">Stopped</div></div>
-    </div>
-    <div class="bar">
-      <div class="tabs" id="tabs">
-        <button data-f="act" class="on">Active</button><button data-f="stop">Stopped</button><button data-f="all">All</button>
-      </div>
-      <select id="fCo"><option value="">All companies</option></select>
-      <input id="q" placeholder="Search name / position / no.">
-      <span class="count" id="cnt"></span>
-      <button class="btn pri" id="btnAdd" hidden onclick="formAdd()">+ Add worker</button>
-    </div>
-    <div class="card" style="overflow-x:auto">
-      <table>
-        <thead><tr><th>#</th><th>Name</th><th class="hide-m">Position</th><th>Company</th><th>Rate</th><th class="hide-m">Joined</th><th id="thStop">Stopped</th><th class="hide-m">Payee</th></tr></thead>
-        <tbody id="tb"></tbody>
-      </table>
-    </div>
+  <div class="view" id="v-list">
+    <header><a href="../index.html">← Home</a><h1>Workers</h1><span class="who" id="who"></span></header>
+    <input class="search" id="q" placeholder="Search name" autocomplete="off">
+    <div class="chips" id="fchips"></div>
+    <div class="count" id="cnt"></div>
+    <div class="list" id="list"></div>
+    <button class="fab" id="fab" hidden onclick="sheetAdd()">+</button>
   </div>
-</main>
-<footer id="foot"></footer>
 
-<div id="detail"><div class="card" id="dc"></div></div>
-<div id="fm"><div class="card" id="fc"></div></div>
+  <div class="view" id="v-det">
+    <header><button class="back" onclick="backToList()">← Workers</button><h1></h1></header>
+    <div id="det"></div>
+  </div>
+</div>
+
+<div class="dim" id="dim" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// Malaysia time; compare dates as strings
 const TODAY = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 const THIS_MONTH = TODAY.slice(0,7);
-const D = {workers:[], rates:{}, comps:{}, payees:{}, payees2:{}, passports:{}, company:{}, reason:{}, channel:{}, locked:new Set(), rateType:{DAILY:'Daily', MONTHLY:'Monthly'}};
-let filt = 'act', CAN_EDIT = false, OPEN_ID = null;
+const addDays = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0,10); };
+const nextMonth = mk => { let [y,m] = mk.split('-').map(Number); m++; if(m > 12){ m = 1; y++; } return y + '-' + String(m).padStart(2,'0'); };
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtM = mk => mk ? MON[+mk.slice(5,7)-1] + ' ' + mk.slice(0,4) : '';
+const fmtD = d => d ? (+d.slice(8,10)) + ' ' + MON[+d.slice(5,7)-1] + ' ' + d.slice(0,4) : '';
+const rm = n => 'RM ' + Number(n).toLocaleString('en', {minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2});
+const last4 = s => s ? '••' + String(s).slice(-4) : '';
+const REASON = {run:'RUN', chase:'CHASE', resign:'RESIGN'};
 
-$('foot').textContent = '';
+const D = {workers:[], rates:{}, comps:{}, pay1:{}, pay2:{}, pass:{}, co:{}, coId:{}, locked:new Set()};
+let CAN_EDIT = false, CAN_SALARY = false, FILTER = 'active', OPEN = null;
 
-function stop(title, body, home){
-  $('app').style.display='none';
-  const s=$('stop'); s.style.display='block';
-  s.innerHTML='<b>'+esc(title)+'</b><div>'+esc(body)+'</div>'
-    + (home ? '<div style="margin-top:14px"><a href="../index.html" style="display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">Go to Home</a></div>' : '');
-}
-function toast(t, bad){ const x=$('toast'); x.textContent=t; x.className=bad?'err':''; x.style.display='block'; clearTimeout(x._t); x._t=setTimeout(()=>x.style.display='none', bad?6000:2500); }
+function toast(t, bad){ const x = $('toast'); x.textContent = t; x.className = bad ? 'bad' : ''; x.style.display = 'block'; clearTimeout(x._t); x._t = setTimeout(() => x.style.display = 'none', bad ? 6000 : 2200); }
 function nice(e){
-  const m = (e && (e.message||String(e))) || '';
+  const m = (e && (e.message || String(e))) || '';
   if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection. Nothing was saved. Please try again.';
-  if(/row-level security|permission denied/i.test(m)) return 'You do not have permission to change worker data.';
-  if(/hub_worker_check|stop.*join/i.test(m)) return 'Stop date cannot be before the join date.';
-  if(/duplicate key/i.test(m)) return 'This entry already exists. Please refresh and try again.';
+  if(/row-level security|permission denied/i.test(m)) return 'You do not have permission to do this.';
+  if(/hub_worker_check/i.test(m)) return 'Stop date cannot be before the join date.';
+  if(/duplicate key/i.test(m)) return 'Already saved. Please refresh.';
   return m;
 }
 async function db(p){ const {data, error} = await p; if(error) throw error; return data; }
+function gate(title, body, home){ $('gate').style.display = 'block'; $('gate').innerHTML = '<b>' + esc(title) + '</b><div>' + esc(body) + '</div>' + (home ? '<a href="../index.html">Go to Home</a>' : ''); }
 
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session) return stop('Please sign in', 'Sign in from the Home page first.', true);
+  if(!session) return gate('Please sign in', 'Sign in from the Home page first.', true);
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
-  if(e1) return stop('Could not load your account', 'Please refresh the page.');
-  if(!me || me.status!=='ACTIVE') return stop('No access', 'This account cannot use the system.', true);
-  const {data:acc, error:e2} = await sb.rpc('hub_can_access', {p_system:'FARMHUB'});
-  const a = (acc && acc[0]) || {};
-  if(e2) return stop('Could not check access', 'Please refresh the page.');
-  if(!a.can_see) return stop('No access', 'Please ask the owner for access to Workers.', true);
-  CAN_EDIT = !!a.can_edit;
-  $('btnAdd').hidden = !CAN_EDIT;
-  $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + (CAN_EDIT ? '' : ' · View only') + '</span>';
+  if(e1) return gate('Could not load your account', 'Please refresh the page.');
+  if(!me || me.status !== 'ACTIVE') return gate('No access', 'This account cannot use the system.', true);
+  const [{data:a1}, {data:a2}] = await Promise.all([sb.rpc('hub_can_access', {p_system:'FARMHUB'}), sb.rpc('hub_can_access', {p_system:'SALARY'})]);
+  const a = (a1 && a1[0]) || {};
+  if(!a.can_see) return gate('No access', 'Please ask the owner for access to Workers.', true);
+  CAN_EDIT = !!a.can_edit; CAN_SALARY = !!((a2 && a2[0]) || {}).can_edit;
+  $('who').textContent = me.display_name || '';
+  $('fab').hidden = !CAN_EDIT;
   await load();
-  const m = location.hash.match(/w=([0-9a-f-]{36})/); if(m) detail(m[1]);
+  const m = location.hash.match(/w=([0-9a-f-]{36})/);
+  if(m && D.workers.some(w => w.id === m[1])) openWorker(m[1]); else show('v-list');
 }
 
 async function load(){
-  const q = (t, cols, f) => { let x=sb.from(t).select(cols); return f?f(x):x; };
-  const ord = x => x.is('voided_at',null).order('effective_from').order('created_at');
+  const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
+  const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone', x=>x.is('voided_at',null).order('worker_no')),
-    q('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', ord),
-    q('hub_worker_company','id,worker_id,company_id,effective_from', ord),
-    q('hub_worker_payee','id,worker_id,beneficiary_name,account_no,channel,effective_from,slot', ord),
-    q('hub_worker_passport','id,worker_id,passport_no,effective_from', ord),
-    q('hub_company','id,code,name'),
-    q('hub_option','list_code,code,label,sort', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']).order('sort')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
+    q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
+    q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
+    q('hub_worker_passport', 'id,worker_id,passport_no,effective_from', ord),
+    q('hub_company', 'id,code'),
   ]);
-  const bad = res.find(r=>r.error);
-  if(bad) return stop('Could not load data', 'Please refresh the page.');
-  const [w,r,c,p,pp,co,op] = res.map(x=>x.data);
-  if(!w.length) return stop('No workers found', 'Please ask the owner to check your access.');
-  const grp = rows => { const m={}; rows.forEach(x=>(m[x.worker_id]??=[]).push(x)); return m; };
-  D.workers=w; D.rates=grp(r); D.comps=grp(c);
-  D.payees=grp(p.filter(x=>(x.slot||1)===1)); D.payees2=grp(p.filter(x=>x.slot===2)); D.passports=grp(pp);
-  D.company={}; co.forEach(x=>D.company[x.id]=x);
-  D.reason={}; D.channel={}; D.reasonList=[]; op.forEach(x=>{ if(x.list_code==='STOP_REASON'){ D.reason[x.code]=x.label; D.reasonList.push(x); } else D.channel[x.code]=x.label; });
-  // Salary months that are already locked (rate / company changes must start after them)
-  const lr = await sb.from('salary_run').select('month,status').eq('status','LOCKED');
-  D.locked = new Set((lr.data||[]).map(x=>x.month));
-  if(!$('fCo').dataset.done){ $('fCo').innerHTML='<option value="">All companies</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">Shared</option>'; $('fCo').dataset.done=1; }
-  $('app').style.display='block';
+  const bad = res.find(r => r.error); if(bad){ gate('Could not load data', 'Please refresh the page.'); throw bad.error; }
+  const [w, r, c, p, pp, co] = res.map(x => x.data);
+  const grp = rows => { const m = {}; rows.forEach(x => (m[x.worker_id] ??= []).push(x)); return m; };
+  D.workers = w; D.rates = grp(r); D.comps = grp(c); D.pay1 = grp(p.filter(x => (x.slot || 1) === 1)); D.pay2 = grp(p.filter(x => x.slot === 2)); D.pass = grp(pp);
+  D.co = {}; D.coId = {}; co.forEach(x => { D.co[x.id] = x.code; D.coId[x.code] = x.id; });
+  const lr = await sb.from('salary_run').select('month').eq('status', 'LOCKED');
+  D.locked = new Set((lr.data || []).map(x => x.month));
   render();
 }
 
-// Latest entry that has started (by month / by date)
-const latestM = (arr, mk) => (arr||[]).filter(x=>x.effective_from<=mk).slice(-1)[0] || null;
-const latestD = (arr, d) => (arr||[]).filter(x=>x.effective_from<=d).slice(-1)[0] || null;
+// current values
+const latestM = (arr, mk) => (arr || []).filter(x => x.effective_from <= mk).slice(-1)[0] || (arr || [])[0] || null;
+const latestD = (arr, d) => (arr || []).filter(x => x.effective_from <= d).slice(-1)[0] || null;
 const isActive = w => !w.stop_date || w.stop_date >= TODAY;
-function coCode(w){ const c=latestM(D.comps[w.id], THIS_MONTH); if(!c) return ''; return c.company_id ? (D.company[c.company_id]?.code||'?') : 'BOTH'; }
-function coTag(code){ if(!code) return '<span class="dim">—</span>'; return '<span class="tag t-'+esc(code)+'">'+(code==='BOTH'?'Shared':esc(code))+'</span>'; }
-const rm = n => 'RM' + Number(n).toLocaleString('en',{minimumFractionDigits: Number(n)%1?2:0, maximumFractionDigits:2});
-function rateTxt(w){ const r=latestM(D.rates[w.id], THIS_MONTH); return r ? D.rateType[r.rate_type]+' <span class="mono">'+rm(r.rate)+'</span>' : '<span class="dim">—</span>'; }
-const last4 = s => s ? '••••' + String(s).slice(-4) : '';
-function payTxt(w){ const p=latestD(D.payees[w.id], TODAY); return p ? esc(p.beneficiary_name)+' <span class="mono dim">'+last4(p.account_no)+'</span>' : '<span class="dim">—</span>'; }
+function coOf(w){ const c = latestM(D.comps[w.id], THIS_MONTH); return !c ? '' : c.company_id ? (D.co[c.company_id] || '').toLowerCase() : 'both'; }
+const coName = c => c === 'both' ? 'Both' : (c || '—').toUpperCase();
+function rateOf(w){ return latestM(D.rates[w.id], THIS_MONTH); }
+const rateTxt = r => r ? (r.rate_type === 'MONTHLY' ? 'Monthly ' : 'Daily ') + rm(r.rate) : 'No rate';
+const initials = n => (n || '?').split(/\s+/).map(x => x[0]).join('').slice(0, 2);
 
+// ── list ──
 function render(){
-  const act=D.workers.filter(isActive);
-  const cnt = code => act.filter(w=>coCode(w)===code).length;
-  $('kAct').textContent=act.length; $('kAD').textContent=cnt('AD'); $('kHX').textContent=cnt('HX'); $('kBoth').textContent=cnt('BOTH');
-  $('kStop').textContent=D.workers.length-act.length;
-  const qs=$('q').value.trim().toLowerCase(), fc=$('fCo').value;
-  const list=D.workers.filter(w=>{
-    if(filt==='act' && !isActive(w)) return false;
-    if(filt==='stop' && isActive(w)) return false;
-    if(fc && coCode(w)!==fc) return false;
-    if(qs && !((w.name||'')+' '+(w.title||'')+' #'+w.worker_no).toLowerCase().includes(qs)) return false;
+  const act = D.workers.filter(isActive), cnt = c => act.filter(w => coOf(w) === c).length;
+  const F = [['active', 'Active ' + act.length], ['hx', 'HX ' + cnt('hx')], ['ad', 'AD ' + cnt('ad')], ['both', 'Both ' + cnt('both')], ['stopped', 'Stopped ' + (D.workers.length - act.length)]];
+  $('fchips').innerHTML = F.map(([k, l]) => '<button class="chip' + (FILTER === k ? ' on' : '') + '" onclick="setFilter(\'' + k + '\')">' + l + '</button>').join('');
+  const qs = $('q').value.trim().toLowerCase();
+  const list = D.workers.filter(w => {
+    if(FILTER === 'stopped' ? isActive(w) : !isActive(w)) return false;
+    if(['hx','ad','both'].includes(FILTER) && coOf(w) !== FILTER) return false;
+    if(qs && !(w.name || '').toLowerCase().includes(qs)) return false;
     return true;
   });
-  $('cnt').textContent=list.length+' workers';
-  $('tb').innerHTML = list.map(w=>{
-    const st = w.stop_date ? '<span class="mono">'+esc(w.stop_date)+'</span>' + (w.stop_reason?' <span class="tag t-STOP">'+esc(D.reason[w.stop_reason]||w.stop_reason)+'</span>':'') : '<span class="dim">—</span>';
-    return '<tr class="w '+(isActive(w)?'':'stopped')+'" data-id="'+w.id+'">'
-      +'<td class="no mono">'+(w.worker_no??'')+'</td>'
-      +'<td class="name">'+esc(w.name)+(w.worker_type==='LOCAL'?' <span class="tag t-LOCAL">Local</span>':'')+'</td>'
-      +'<td class="hide-m">'+esc(w.title||'')+'</td>'
-      +'<td>'+coTag(coCode(w))+'</td>'
-      +'<td class="money">'+rateTxt(w)+'</td>'
-      +'<td class="hide-m mono">'+esc(w.join_date||'—')+'</td>'
-      +'<td>'+st+'</td>'
-      +'<td class="hide-m">'+payTxt(w)+'</td></tr>';
-  }).join('') || '<tr><td colspan="8" class="dim" style="text-align:center;padding:24px">No matching workers</td></tr>';
+  $('cnt').textContent = list.length + ' workers';
+  $('list').innerHTML = list.map(w => { const c = isActive(w) ? coOf(w) : 'stop';
+    return '<div class="row" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + esc(initials(w.name)) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
+      + (isActive(w) ? coName(coOf(w)) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
+    || '<div class="empty">No workers</div>';
 }
+function setFilter(k){ FILTER = k; render(); }
+$('q').oninput = render;
+function show(id){ document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); scrollTo(0, 0); }
+function backToList(){ OPEN = null; history.replaceState(null, '', location.pathname); render(); show('v-list'); }
 
-// ── Worker card ─────────────────────────────────────────
-async function detail(id){
-  const w=D.workers.find(x=>x.id===id); if(!w) return; OPEN_ID = id;
+// ── worker page ──
+async function openWorker(id){
+  const w = D.workers.find(x => x.id === id); if(!w) return; OPEN = id;
   history.replaceState(null, '', '#w=' + id);
-  const rates=(D.rates[id]||[]).slice().reverse(), comps=(D.comps[id]||[]).slice().reverse();
-  const pay1=latestD(D.payees[id], TODAY), pay2=latestD(D.payees2[id], TODAY), pas=(D.passports[id]||[]).slice(-1)[0];
-  const E = CAN_EDIT;
-  const sec = (title, btn) => '<div class="sec-h"><h4>'+title+'</h4>'+(E && btn ? btn : '')+'</div>';
-  const vbtn = (tbl, rid) => E ? '<button class="btn sm red" onclick="voidRow(\''+tbl+'\',\''+rid+'\')">Void</button>' : '';
-  $('dc').innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="btn" onclick="closeD()">Close</button></div>'
-    +(E ? '<div class="acts"><button class="btn pri" onclick="formEdit(\''+id+'\')">Edit details</button>'
-        + (isActive(w) && !w.stop_date ? '<button class="btn red" onclick="formStop(\''+id+'\')">Stop</button>' : '<button class="btn" onclick="formStop(\''+id+'\')">'+(w.stop_date ? 'Change stop / Reactivate' : 'Stop')+'</button>')
-        + '<button class="btn" onclick="showLog(\''+id+'\')">History</button>'
-        + '<span id="voidSlot"></span></div>'
-      : '<div class="acts"><button class="btn" onclick="showLog(\''+id+'\')">History</button></div>')
-    +'<div class="kv"><div>Status</div><div>'+(isActive(w)?'Active':'Stopped')+'</div>'
-    +'<div>Type</div><div>'+(w.worker_type==='LOCAL'?'Local':'Foreign')+'</div>'
-    +'<div>Joined</div><div class="mono">'+esc(w.join_date||'—')+'</div>'
-    +'<div>Stopped</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+(w.stop_note?' · '+esc(w.stop_note):'')+'</div>'
-    +'<div>Phone</div><div class="mono">'+esc(w.phone||'—')+'</div>'
-    +'<div>Passport</div><div class="mono">'+(pas?last4(pas.passport_no):'—')+(E?' <button class="btn sm" onclick="formPassport(\''+id+'\')">Change</button>':'')+'</div></div>'
-    + sec('Rate', '<button class="btn sm" onclick="formRate(\''+id+'\')">+ Change rate</button>')
-    +'<table>'+(rates.map(r=>'<tr><td class="mono">from '+esc(r.effective_from)+'</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td><td style="text-align:right">'+(rates.length>1?vbtn('hub_worker_rate', r.id):'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
-    + sec('Company', '<button class="btn sm" onclick="formCompany(\''+id+'\')">+ Change company</button>')
-    +'<table>'+(comps.map(c=>'<tr><td class="mono">from '+esc(c.effective_from)+'</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td><td style="text-align:right">'+(comps.length>1?vbtn('hub_worker_company', c.id):'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
-    + sec('Payee 1 (default)', '<button class="btn sm" onclick="formPayee(\''+id+'\',1)">Change</button>')
-    +'<div>'+(pay1 ? esc(pay1.beneficiary_name)+' · <span class="mono">'+last4(pay1.account_no)+'</span> <span class="dim">from '+esc(pay1.effective_from)+'</span>' : '<span class="dim">None</span>')+'</div>'
-    + sec('Payee 2', '<button class="btn sm" onclick="formPayee(\''+id+'\',2)">'+(pay2?'Change':'+ Add')+'</button>'+(pay2?' <button class="btn sm red" onclick="removePayee2(\''+id+'\')">Remove</button>':''))
-    +'<div>'+(pay2 ? esc(pay2.beneficiary_name)+' · <span class="mono">'+last4(pay2.account_no)+'</span> <span class="dim">from '+esc(pay2.effective_from)+'</span>' : '<span class="dim">None</span>')+'</div>';
-  $('detail').style.display='flex';
+  const r = rateOf(w), cRow = latestM(D.comps[id], THIS_MONTH), p1 = latestD(D.pay1[id], TODAY) || (D.pay1[id] || [])[0], p2 = latestD(D.pay2[id], TODAY), pas = (D.pass[id] || []).slice(-1)[0];
+  const act = isActive(w), c = act ? coOf(w) : 'stop', E = CAN_EDIT;
+  const it = (k, v, sub, fn) => '<div class="item' + (E && fn ? ' tap" onclick="' + fn : '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (E && fn ? '<span class="chev">›</span>' : '') + '</div>';
+  $('det').innerHTML =
+    '<div class="hero"' + (E ? ' onclick="sheetName()"' : '') + '><div class="av ' + (c || 'stop') + '">' + esc(initials(w.name)) + '</div><div><div class="n">' + esc(w.name) + '</div><div class="s">#' + (w.worker_no ?? '') + (w.title ? ' · ' + esc(w.title) : '') + (w.worker_type === 'LOCAL' ? ' · Local' : '') + '</div>'
+    + (act ? '<span class="pill on">Active</span>' : '<span class="pill off">Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || '') : '') + '</span>') + '</div></div>'
+    + '<div class="grp">Pay</div>'
+    + it('Rate', r ? rateTxt(r) : 'Not set', r ? 'since ' + fmtM(r.effective_from) : '', 'sheetRate()')
+    + it('Company', coName(coOf(w)), cRow ? 'since ' + fmtM(cRow.effective_from) : '', 'sheetCompany()')
+    + it('Pay to', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) + (p2 ? ' · 2nd: ' + esc(p2.beneficiary_name) : '') : '', 'sheetPayee()')
+    + '<div class="grp">Details</div>'
+    + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
+    + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
+    + it('Passport', pas ? last4(pas.passport_no) : 'Not set', '', 'sheetPassport()')
+    + (w.stop_note ? it('Stop note', esc(w.stop_note), '', '') : '')
+    + '<div class="item tap" onclick="sheetHistory()"><div class="k">History</div><div class="v" style="color:var(--text3);font-weight:400">All changes</div><span class="chev">›</span></div>'
+    + (E ? (act && !w.stop_date ? '<button class="btn-wide red" onclick="sheetStop()">Stop worker</button>'
+             : '<button class="btn-wide" onclick="sheetStop()">Change stop date</button><button class="btn-wide" onclick="reactivate()">Reactivate</button>')
+         + '<span id="voidSlot"></span>' : '');
+  show('v-det');
   if(E && !w.stop_date){
     const {data:why} = await sb.rpc('hub_worker_records', {p_worker:id});
-    const slot = $('voidSlot'); if(slot && OPEN_ID===id) slot.innerHTML = why ? '' : '<button class="btn red" onclick="voidWorker(\''+id+'\')">Void (added by mistake)</button>';
+    if(OPEN === id && !why && $('voidSlot')) $('voidSlot').innerHTML = '<button class="btn-wide link" onclick="voidWorker()">Remove — added by mistake</button>';
   }
 }
-function closeD(){ $('detail').style.display='none'; OPEN_ID=null; history.replaceState(null, '', location.pathname); }
-$('detail').onclick = e => { if(e.target.id==='detail') closeD(); };
-$('tb').onclick = e => { const tr=e.target.closest('tr.w'); if(tr) detail(tr.dataset.id); };
-$('tabs').onclick = e => { const b=e.target.closest('button'); if(!b) return; filt=b.dataset.f; [...$('tabs').children].forEach(x=>x.classList.toggle('on',x===b)); render(); };
-$('fCo').onchange = render; $('q').oninput = render;
+const cur = () => D.workers.find(x => x.id === OPEN);
 
-// ── Forms ───────────────────────────────────────────────
-function form(title, body, onSave, saveLabel){
-  $('fc').innerHTML = '<h3>'+esc(title)+'</h3>' + body
-    + '<div id="ferr" class="msg"></div><div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeF()">Cancel</button><button class="btn pri" id="fsave">'+(saveLabel||'Save')+'</button></div>';
-  $('fsave').onclick = async () => {
-    $('fsave').disabled = true; $('ferr').className='msg';
-    try{ const msg = await onSave(); if(msg === false){ $('fsave').disabled=false; return; } closeF(); await load(); if(OPEN_ID) detail(OPEN_ID); toast(msg || 'Saved'); }
-    catch(e){ $('ferr').textContent = nice(e); $('ferr').className='msg err'; $('fsave').disabled=false; }
-  };
-  $('fm').style.display='flex';
-  const first = $('fc').querySelector('input,select'); if(first) first.focus();
+// ── bottom sheets ──
+function sheet(html){ $('sheet').innerHTML = '<div class="grab"></div>' + html + '<div class="err" id="serr"></div>'; $('dim').style.display = 'block'; $('sheet').style.display = 'block';
 }
-function closeF(){ $('fm').style.display='none'; }
-function ferr(t){ $('ferr').textContent=t; $('ferr').className='msg err'; return false; }
-$('fm').onclick = e => { if(e.target.id==='fm') closeF(); };
-const v = id => ($(id).value||'').trim();
-const field = (label, html, full, req) => '<div class="frow'+(full?' full':'')+'"><label>'+label+(req?' <span class="req">*</span>':'')+'</label>'+html+'</div>';
-const coSel = cur => '<select id="f-co">' + Object.values(D.company).sort((a,b)=>a.code<b.code?-1:1).map(c=>'<option value="'+c.id+'" '+(cur===c.id?'selected':'')+'>'+esc(c.code)+' · '+esc(c.name)+'</option>').join('') + '<option value="" '+(cur===null?'selected':'')+'>Shared (both companies)</option></select>';
-const rtSel = cur => '<select id="f-rt"><option value="DAILY" '+(cur!=='MONTHLY'?'selected':'')+'>Daily (RM per day)</option><option value="MONTHLY" '+(cur==='MONTHLY'?'selected':'')+'>Monthly (RM per month)</option></select>';
-function lockedMsg(mk){ return D.locked.has(mk) ? 'Salary for ' + mk + ' is already locked. Choose a later month, or unlock that month in Salary first.' : ''; }
+// one tap handler for every option group in the sheet (groups can be redrawn)
+$('sheet').addEventListener('click', e => {
+  const b = e.target.closest('button.opt'); if(!b || b.disabled) return; const g = b.closest('[data-g]'); if(!g) return;
+  g.querySelectorAll('button.opt').forEach(x => x.classList.toggle('on', x === b));
+  if(g.dataset.g === 'amt' && $('s-other')) $('s-other').value = '';
+  if(g.dataset.on) window[g.dataset.on](b.dataset.v);
+});
+function closeSheet(){ $('dim').style.display = 'none'; $('sheet').style.display = 'none'; }
+const pick = g => { const b = $('sheet').querySelector('[data-g="' + g + '"] button.opt.on'); return b ? b.dataset.v : null; };
+const opts = (g, list, on, cls, cols) => '<div class="' + (cols || 'g' + list.length) + '" data-g="' + g + '">' + list.map(([v, l, dis]) => '<button class="opt ' + (cls || '') + (v === on ? ' on' : '') + '" data-v="' + esc(v) + '"' + (dis ? ' disabled' : '') + '>' + l + '</button>').join('') + '</div>';
+function serr(t){ $('serr').textContent = t; $('serr').style.display = 'block'; return false; }
+async function saveWith(btn, fn, msg){
+  btn.disabled = true;
+  try{ const r = await fn(); if(r === false){ btn.disabled = false; return; } closeSheet(); await load(); if(OPEN) openWorker(OPEN); toast(msg || 'Saved'); }
+  catch(e){ serr(nice(e)); btn.disabled = false; }
+}
+const now = () => new Date().toISOString();
+function monthOpts(){ // This month / Next month — skip months whose salary is locked
+  let a = THIS_MONTH; while(D.locked.has(a)) a = nextMonth(a); const b = nextMonth(a);
+  return [[a, (a === THIS_MONTH ? 'This month' : fmtM(a)) + ' (' + MON[+a.slice(5,7)-1] + ')'], [b, 'Next month (' + MON[+b.slice(5,7)-1] + ')']];
+}
+function commonRates(type){ // the 4 most used rates of this type
+  const n = {}; Object.values(D.rates).forEach(arr => { const r = arr.slice(-1)[0]; if(r && r.rate_type === type && Number.isInteger(+r.rate) && (type === 'MONTHLY' ? +r.rate >= 500 : +r.rate < 500)) n[r.rate] = (n[r.rate] || 0) + 1; });
+  const top = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 4).map(Number).sort((a, b) => a - b);
+  const def = type === 'MONTHLY' ? [1500, 1800, 1900, 2500] : [55, 60, 65, 70];
+  return (top.length >= 2 ? top : def);
+}
+function amtHtml(type, sel){ return opts('amt', commonRates(type).map(v => [String(v), String(v)]), sel != null ? String(sel) : null, '', 'g4') + '<input class="inp" id="s-other" inputmode="decimal" placeholder="Other amount" oninput="clearAmt()">'; }
+function clearAmt(){ $('sheet').querySelectorAll('[data-g="amt"] .opt').forEach(x => x.classList.remove('on')); }
+function amtVal(){ const o = ($('s-other') || {}).value; if(o && o.trim()) return parseFloat(o); const p = pick('amt'); return p == null ? NaN : parseFloat(p); }
+function onRateType(t){ const box = $('amtbox'); if(box) box.innerHTML = amtHtml(t, null); }
 
-function formAdd(){
-  const hx = Object.values(D.company).find(c=>c.code==='HX');
-  form('Add worker',
-    '<div class="fgrid">'
-    + field('Name', '<input id="f-name">', true, 1)
-    + field('Position', '<input id="f-title">')
-    + field('Type', '<select id="f-type"><option value="FOREIGN">Foreign</option><option value="LOCAL">Local</option></select>')
-    + field('Join date', '<input id="f-join" type="date" value="'+TODAY+'">', false, 1)
-    + field('Phone', '<input id="f-phone" inputmode="tel">')
-    + field('Company', coSel(hx ? hx.id : null), true, 1)
-    + field('Rate type', rtSel('DAILY'), false, 1)
-    + field('Rate (RM)', '<input id="f-rate" type="number" step="0.01" min="0">', false, 1)
-    + field('Passport no.', '<input id="f-pass">', true)
-    + field('Payee name', '<input id="f-bn">')
-    + field('Account no.', '<input id="f-ac" inputmode="numeric">')
-    + '</div><p class="hint">Rate and company start from the join month.</p>',
-    async () => {
-      const name=v('f-name').toUpperCase(), join=v('f-join'), rate=parseFloat(v('f-rate')), bn=v('f-bn').toUpperCase(), ac=v('f-ac').replace(/\s/g,'');
-      if(!name || !join || !(rate>=0) || v('f-rate')==='') return ferr('Name, join date and rate are required.');
-      if((bn && !ac) || (!bn && ac)) return ferr('Enter both payee name and account no., or leave both empty.');
-      if(D.workers.some(w=>w.name.toUpperCase()===name) && !confirm('A worker named ' + name + ' already exists. Add another one?')) return false;
-      const top = await db(sb.from('hub_worker').select('worker_no').not('worker_no','is',null).order('worker_no',{ascending:false}).limit(1));
-      const no = ((top[0]||{}).worker_no || 0) + 1, id = crypto.randomUUID(), mk = join.slice(0,7);
-      await db(sb.from('hub_worker').insert({id, worker_no:no, name, title:v('f-title')||null, worker_type:$('f-type').value, join_date:join, phone:v('f-phone')||null}));
-      await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:$('f-rt').value, rate, effective_from:mk}));
-      await db(sb.from('hub_worker_company').insert({worker_id:id, company_id:$('f-co').value||null, effective_from:mk}));
-      if(bn) await db(sb.from('hub_worker_payee').insert({worker_id:id, slot:1, beneficiary_name:bn, account_no:ac, channel:'MERCHANTRADE', effective_from:join}));
-      if(v('f-pass')) await db(sb.from('hub_worker_passport').insert({worker_id:id, passport_no:v('f-pass').toUpperCase(), effective_from:join}));
-      OPEN_ID = id; return 'Added #' + no + ' ' + name;
-    }, 'Add worker');
+function sheetRate(){
+  const w = cur(), r = rateOf(w), t = r ? r.rate_type : 'DAILY', mo = monthOpts();
+  sheet('<h3>Change rate</h3><p class="h">Now: ' + rateTxt(r) + '</p>'
+    + opts('type', [['DAILY', 'Daily'], ['MONTHLY', 'Monthly']], t, 'dark').replace('data-g="type"', 'data-g="type" data-on="onRateType"')
+    + '<div class="lbl">New rate (RM)</div><div id="amtbox">' + amtHtml(t, null) + '</div>'
+    + '<div class="lbl">Starts from</div>' + opts('from', mo, mo[0][0], 'dark')
+    + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const rate = amtVal(), from = pick('from'), type = pick('type');
+    if(!(rate >= 0)) return serr('Tap an amount or type one.');
+    const ex = (D.rates[w.id] || []).find(x => x.effective_from === from);
+    if(ex) await db(sb.from('hub_worker_rate').update({voided_at:now(), void_reason:'Replaced by a new rate for the same month'}).eq('id', ex.id));
+    await db(sb.from('hub_worker_rate').insert({worker_id:w.id, rate_type:type, rate, effective_from:from}));
+  }, 'Rate saved');
 }
-function formEdit(id){
-  const w = D.workers.find(x=>x.id===id);
-  form('Edit details · ' + w.name,
-    '<div class="fgrid">'
-    + field('Name', '<input id="f-name" value="'+esc(w.name)+'">', true, 1)
-    + field('Position', '<input id="f-title" value="'+esc(w.title||'')+'">')
-    + field('Type', '<select id="f-type"><option value="FOREIGN" '+(w.worker_type!=='LOCAL'?'selected':'')+'>Foreign</option><option value="LOCAL" '+(w.worker_type==='LOCAL'?'selected':'')+'>Local</option></select>')
-    + field('Join date', '<input id="f-join" type="date" value="'+esc(w.join_date||'')+'">')
-    + field('Phone', '<input id="f-phone" inputmode="tel" value="'+esc(w.phone||'')+'">')
-    + '</div><p class="hint">The join date decides from which day the worker is counted (attendance, food sharing).</p>',
-    async () => {
-      const name=v('f-name').toUpperCase(), join=v('f-join')||null;
-      if(!name) return ferr('Name is required.');
-      if(join && w.stop_date && w.stop_date < join) return ferr('Join date cannot be after the stop date (' + w.stop_date + ').');
-      await db(sb.from('hub_worker').update({name, title:v('f-title')||null, worker_type:$('f-type').value, join_date:join, phone:v('f-phone')||null}).eq('id', id));
-    });
+function sheetCompany(){
+  const w = cur(), mo = monthOpts();
+  sheet('<h3>Company</h3><p class="h">Who pays this worker</p>' + opts('co', [['hx', 'HX'], ['ad', 'AD'], ['both', 'Both']], coOf(w))
+    + '<div class="lbl">Starts from</div>' + opts('from', mo, mo[0][0], 'dark') + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const c = pick('co'), from = pick('from'); if(!c) return serr('Tap a company.');
+    const ex = (D.comps[w.id] || []).find(x => x.effective_from === from);
+    if(ex) await db(sb.from('hub_worker_company').update({voided_at:now(), void_reason:'Replaced by a new company for the same month'}).eq('id', ex.id));
+    await db(sb.from('hub_worker_company').insert({worker_id:w.id, company_id: c === 'both' ? null : D.coId[c.toUpperCase()], effective_from:from}));
+  }, 'Company saved');
 }
-function formStop(id){
-  const w = D.workers.find(x=>x.id===id);
-  const opts = (D.reasonList||[]).map(o=>'<option value="'+esc(o.code)+'" '+(w.stop_reason===o.code?'selected':'')+'>'+esc(o.label)+'</option>').join('');
-  form((w.stop_date ? 'Stop date · ' : 'Stop · ') + w.name,
-    '<div class="fgrid">'
-    + field('Last working day', '<input id="f-stop" type="date" value="'+esc(w.stop_date||TODAY)+'">', false, 1)
-    + field('Reason', '<select id="f-reason">'+opts+'</select>', false, 1)
-    + field('Note', '<input id="f-note" value="'+esc(w.stop_note||'')+'">', true)
-    + '</div>' + (w.stop_date ? '<p class="hint">To bring this worker back, press Reactivate.</p><div class="row"><button class="btn" onclick="reactivate(\''+id+'\')">Reactivate</button></div>' : ''),
-    async () => {
-      const d = v('f-stop'); if(!d) return ferr('Please choose the last working day.');
-      if(w.join_date && d < w.join_date) return ferr('Stop date cannot be before the join date (' + w.join_date + ').');
-      await db(sb.from('hub_worker').update({stop_date:d, stop_reason:$('f-reason').value||null, stop_note:v('f-note')||null}).eq('id', id));
-      return 'Stopped from ' + d;
-    }, w.stop_date ? 'Save' : 'Stop worker');
+function sheetPayee(){
+  const w = cur(), p1 = latestD(D.pay1[w.id], TODAY) || (D.pay1[w.id] || [])[0], p2 = latestD(D.pay2[w.id], TODAY);
+  const card = (slot, p) => '<div class="pcard" onclick="sheetPayeeEdit(' + slot + ')"><div class="v"><b>' + (p ? esc(p.beneficiary_name) : (slot === 1 ? '+ Add payee' : '+ Add 2nd payee')) + '</b><small>' + (slot === 1 ? 'Main payee' : '2nd payee') + (p ? ' · Account ' + last4(p.account_no) : '') + '</small></div><span class="chev">›</span></div>';
+  sheet('<h3>Pay to</h3><p class="h">Tap to change. Salary picks the 2nd payee month by month.</p>' + card(1, p1) + card(2, p2)
+    + (p2 ? '<button class="btn-wide link" style="width:100%;margin:10px 0 0" onclick="removePayee2()">Remove 2nd payee</button>' : ''));
 }
-async function reactivate(id){
-  const w = D.workers.find(x=>x.id===id);
-  if(!confirm('Reactivate ' + w.name + '? The stop date will be cleared.')) return;
-  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', id)); closeF(); await load(); detail(id); toast('Reactivated'); }
+function sheetPayeeEdit(slot){
+  const w = cur(), p = slot === 2 ? latestD(D.pay2[w.id], TODAY) : (latestD(D.pay1[w.id], TODAY) || (D.pay1[w.id] || [])[0]);
+  sheet('<h3>' + (slot === 1 ? 'Main payee' : '2nd payee') + '</h3>'
+    + '<div class="lbl">Name</div><input class="inp" id="s-bn" value="' + esc(p ? p.beneficiary_name : '') + '" autocapitalize="characters">'
+    + '<div class="lbl">Account no.</div><input class="inp" id="s-ac" inputmode="numeric" placeholder="' + (p ? 'Now ' + last4(p.account_no) + ' — type the full number' : '') + '">'
+    + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const bn = $('s-bn').value.trim().toUpperCase(), ac = $('s-ac').value.replace(/\s/g, '');
+    if(!bn || !ac) return serr('Name and account no. are needed.');
+    await db(sb.from('hub_worker_payee').insert({worker_id:w.id, slot, beneficiary_name:bn, account_no:ac, channel:'MERCHANTRADE', effective_from:TODAY}));
+  }, 'Payee saved');
+}
+async function removePayee2(){
+  const w = cur(); if(!confirm('Remove the 2nd payee?')) return;
+  try{ for(const p of (D.pay2[w.id] || [])) await db(sb.from('hub_worker_payee').update({voided_at:now(), void_reason:'2nd payee removed'}).eq('id', p.id)); closeSheet(); await load(); openWorker(w.id); toast('Removed'); }
   catch(e){ toast(nice(e), true); }
 }
-function formRate(id){
-  const w = D.workers.find(x=>x.id===id), cur = latestM(D.rates[id], THIS_MONTH);
-  form('Change rate · ' + w.name,
-    '<div class="fgrid">'
-    + field('From month', '<input id="f-from" type="month" value="'+THIS_MONTH+'">', true, 1)
-    + field('Rate type', rtSel(cur && cur.rate_type), false, 1)
-    + field('Rate (RM)', '<input id="f-rate" type="number" step="0.01" min="0">', false, 1)
-    + '</div><p class="hint">Now: '+(cur ? D.rateType[cur.rate_type]+' '+rm(cur.rate) : 'none')+'. Earlier months keep their old rate.</p>',
-    async () => {
-      const mk=v('f-from'), rate=parseFloat(v('f-rate'));
-      if(!mk || v('f-rate')==='' || !(rate>=0)) return ferr('Month and rate are required.');
-      if(lockedMsg(mk)) return ferr(lockedMsg(mk));
-      const ex = (D.rates[id]||[]).find(r=>r.effective_from===mk);
-      if(ex) await db(sb.from('hub_worker_rate').update({voided_at:new Date().toISOString(), void_reason:'Replaced by a new rate for the same month'}).eq('id', ex.id));
-      await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:$('f-rt').value, rate, effective_from:mk}));
-      return 'Rate from ' + mk + ': ' + rm(rate);
-    });
+function dayPicker(g, val){
+  const y = addDays(TODAY, -1), on = val === TODAY ? TODAY : val === y ? y : null;
+  return opts(g, [[TODAY, 'Today'], [y, 'Yesterday']], on, 'dark').replace('data-g="' + g + '"', 'data-g="' + g + '" data-on="dayPicked"') + '<input class="inp" type="date" id="s-date" value="' + esc(val || '') + '" oninput="clearDay()">';
 }
-function formCompany(id){
-  const w = D.workers.find(x=>x.id===id), cur = latestM(D.comps[id], THIS_MONTH);
-  form('Change company · ' + w.name,
-    '<div class="fgrid">'
-    + field('From month', '<input id="f-from" type="month" value="'+THIS_MONTH+'">', true, 1)
-    + field('Company', coSel(cur ? cur.company_id : undefined), true, 1)
-    + '</div>',
-    async () => {
-      const mk=v('f-from'); if(!mk) return ferr('Month is required.');
-      if(lockedMsg(mk)) return ferr(lockedMsg(mk));
-      const ex = (D.comps[id]||[]).find(r=>r.effective_from===mk);
-      if(ex) await db(sb.from('hub_worker_company').update({voided_at:new Date().toISOString(), void_reason:'Replaced by a new company for the same month'}).eq('id', ex.id));
-      await db(sb.from('hub_worker_company').insert({worker_id:id, company_id:$('f-co').value||null, effective_from:mk}));
-      return 'Company changed from ' + mk;
-    });
+function dayPicked(v){ $('s-date').value = v; }
+function clearDay(){ $('sheet').querySelectorAll('[data-g="day"] .opt').forEach(x => x.classList.toggle('on', x.dataset.v === $('s-date').value)); }
+function sheetJoin(){
+  const w = cur();
+  sheet('<h3>Join date</h3>' + dayPicker('day', w.join_date || '') + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const d = $('s-date').value || null;
+    if(d && w.stop_date && w.stop_date < d) return serr('Join date cannot be after the stop date (' + fmtD(w.stop_date) + ').');
+    await db(sb.from('hub_worker').update({join_date:d}).eq('id', w.id));
+  });
 }
-function formPayee(id, slot){
-  const w = D.workers.find(x=>x.id===id), cur = latestD(slot===2 ? D.payees2[id] : D.payees[id], TODAY);
-  form('Payee ' + slot + ' · ' + w.name,
-    '<div class="fgrid">'
-    + field('Payee name', '<input id="f-bn" value="'+esc(cur ? cur.beneficiary_name : '')+'">', true, 1)
-    + field('Account no.', '<input id="f-ac" inputmode="numeric" placeholder="'+(cur ? 'now '+last4(cur.account_no)+' — enter the full number' : '')+'">', true, 1)
-    + field('From date', '<input id="f-from" type="date" value="'+TODAY+'">', true, 1)
-    + '</div>',
-    async () => {
-      const bn=v('f-bn').toUpperCase(), ac=v('f-ac').replace(/\s/g,''), d=v('f-from');
-      if(!bn || !ac || !d) return ferr('Payee name, account no. and date are required.');
-      await db(sb.from('hub_worker_payee').insert({worker_id:id, slot, beneficiary_name:bn, account_no:ac, channel:'MERCHANTRADE', effective_from:d}));
-      return 'Payee ' + slot + ' saved';
-    });
+function sheetText(title, val, type, fn){
+  sheet('<h3>' + title + '</h3><input class="inp" id="s-txt" value="' + esc(val || '') + '"' + (type ? ' inputmode="' + type + '"' : '') + '><button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), () => fn($('s-txt').value.trim()));
 }
-async function removePayee2(id){
-  const r = prompt('Remove payee 2 — reason:'); if(!r || !r.trim()) return;
-  try{ for(const p of (D.payees2[id]||[])) await db(sb.from('hub_worker_payee').update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', p.id));
-    await load(); detail(id); toast('Payee 2 removed'); }
+function sheetPhone(){ const w = cur(); sheetText('Phone', w.phone, 'tel', v => db(sb.from('hub_worker').update({phone:v || null}).eq('id', w.id))); }
+function sheetPassport(){
+  const w = cur(), p = (D.pass[w.id] || []).slice(-1)[0];
+  sheet('<h3>Passport</h3><input class="inp" id="s-txt" placeholder="' + (p ? 'Now ' + last4(p.passport_no) + ' — type the new number' : 'Passport no.') + '" autocapitalize="characters"><button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const v = $('s-txt').value.trim().toUpperCase(); if(!v) return serr('Type the passport no.');
+    const ex = (D.pass[w.id] || []).find(x => x.effective_from === TODAY);
+    if(ex) await db(sb.from('hub_worker_passport').update({voided_at:now(), void_reason:'Replaced on the same day'}).eq('id', ex.id));
+    await db(sb.from('hub_worker_passport').insert({worker_id:w.id, passport_no:v, effective_from:TODAY}));
+  });
+}
+function sheetName(){
+  const w = cur();
+  sheet('<h3>Name &amp; position</h3><div class="lbl">Name</div><input class="inp" id="s-name" value="' + esc(w.name) + '" autocapitalize="characters">'
+    + '<div class="lbl">Position</div><input class="inp" id="s-title" value="' + esc(w.title || '') + '">'
+    + '<div class="lbl">Type</div>' + opts('type', [['FOREIGN', 'Foreign'], ['LOCAL', 'Local']], w.worker_type || 'FOREIGN', 'dark')
+    + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const n = $('s-name').value.trim().toUpperCase(); if(!n) return serr('Name is needed.');
+    await db(sb.from('hub_worker').update({name:n, title:$('s-title').value.trim() || null, worker_type:pick('type')}).eq('id', w.id));
+  });
+}
+function sheetStop(){
+  const w = cur();
+  sheet('<h3>' + (w.stop_date ? 'Change stop date' : 'Stop worker') + '</h3>'
+    + '<div class="lbl">Last working day</div>' + dayPicker('day', w.stop_date || TODAY)
+    + '<div class="lbl">Reason</div>' + opts('reason', [['run', 'RUN'], ['chase', 'CHASE'], ['resign', 'RESIGN']], w.stop_reason || 'run', 'red')
+    + (CAN_SALARY ? '<div class="lbl">Final payment</div>' + opts('pay', [['cash', 'Cash'], ['transfer', 'Transfer'], ['unpaid', 'Unpaid']], 'cash') : '')
+    + '<div class="lbl">Note (optional)</div><input class="inp" id="s-note" value="' + esc(w.stop_note || '') + '">'
+    + '<button class="save red" id="s-save">' + (w.stop_date ? 'Save' : 'Stop worker') + '</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const d = $('s-date').value; if(!d) return serr('Pick the last working day.');
+    if(w.join_date && d < w.join_date) return serr('Stop date cannot be before the join date (' + fmtD(w.join_date) + ').');
+    await db(sb.from('hub_worker').update({stop_date:d, stop_reason:pick('reason'), stop_note:$('s-note').value.trim() || null}).eq('id', w.id));
+    if(CAN_SALARY && pick('pay')) await db(sb.from('salary_pay_method').upsert({worker_id:w.id, month:d.slice(0,7), method:pick('pay')}, {onConflict:'worker_id,month'}));
+  }, 'Stopped');
+}
+async function reactivate(){
+  const w = cur(); if(!confirm('Reactivate ' + w.name + '?')) return;
+  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', w.id)); await load(); openWorker(w.id); toast('Reactivated'); }
   catch(e){ toast(nice(e), true); }
 }
-function formPassport(id){
-  const w = D.workers.find(x=>x.id===id), cur = (D.passports[id]||[]).slice(-1)[0];
-  form('Passport · ' + w.name,
-    field('Passport no.', '<input id="f-pass" placeholder="'+(cur ? 'now '+last4(cur.passport_no) : '')+'">', true, 1),
-    async () => {
-      const no = v('f-pass').toUpperCase(); if(!no) return ferr('Passport no. is required.');
-      const ex = (D.passports[id]||[]).find(r=>r.effective_from===TODAY);
-      if(ex) await db(sb.from('hub_worker_passport').update({voided_at:new Date().toISOString(), void_reason:'Replaced on the same day'}).eq('id', ex.id));
-      await db(sb.from('hub_worker_passport').insert({worker_id:id, passport_no:no, effective_from:TODAY}));
-      return 'Passport saved';
-    });
-}
-async function voidRow(table, rid){
-  const r = prompt('Void this entry — reason:'); if(!r || !r.trim()) return;
-  try{ await db(sb.from(table).update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', rid)); await load(); if(OPEN_ID) detail(OPEN_ID); toast('Voided'); }
+async function voidWorker(){
+  const w = cur(); const r = prompt('Remove ' + w.name + '? Only for a worker added by mistake.\nReason:'); if(!r || !r.trim()) return;
+  try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:r.trim()}).eq('id', w.id)); await load(); backToList(); toast('Removed'); }
   catch(e){ toast(nice(e), true); }
 }
-async function voidWorker(id){
-  const w = D.workers.find(x=>x.id===id);
-  const r = prompt('Void ' + w.name + '? Only for a worker added by mistake.\nReason:'); if(!r || !r.trim()) return;
-  try{ await db(sb.from('hub_worker').update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', id)); closeD(); await load(); toast('Voided: ' + w.name); }
-  catch(e){ toast(nice(e), true); }
+function sheetAdd(){
+  const hx = 'hx';
+  sheet('<h3>Add worker</h3><input class="inp" id="s-name" placeholder="Name" autocapitalize="characters">'
+    + '<div class="lbl">Company</div>' + opts('co', [['hx', 'HX'], ['ad', 'AD'], ['both', 'Both']], hx)
+    + '<div class="lbl">Rate</div>' + opts('type', [['DAILY', 'Daily'], ['MONTHLY', 'Monthly']], 'DAILY', 'dark').replace('data-g="type"', 'data-g="type" data-on="onRateType"')
+    + '<div id="amtbox" style="margin-top:8px">' + amtHtml('DAILY', null) + '</div>'
+    + '<div class="lbl">Joined</div>' + dayPicker('day', TODAY)
+    + '<button class="save" id="s-save">Add worker</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const name = $('s-name').value.trim().toUpperCase(), rate = amtVal(), join = $('s-date').value, c = pick('co');
+    if(!name) return serr('Type the name.'); if(!(rate >= 0)) return serr('Tap a rate or type one.'); if(!join) return serr('Pick the join date.');
+    if(D.workers.some(x => x.name === name) && !confirm(name + ' already exists. Add another?')) return false;
+    const top = await db(sb.from('hub_worker').select('worker_no').not('worker_no', 'is', null).order('worker_no', {ascending:false}).limit(1));
+    const id = crypto.randomUUID(), no = ((top[0] || {}).worker_no || 0) + 1, mk = join.slice(0, 7);
+    await db(sb.from('hub_worker').insert({id, worker_no:no, name, worker_type:'FOREIGN', join_date:join}));
+    await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:pick('type'), rate, effective_from:mk}));
+    await db(sb.from('hub_worker_company').insert({worker_id:id, company_id: c === 'both' ? null : D.coId[c.toUpperCase()], effective_from:mk}));
+    OPEN = id;
+  }, 'Worker added');
 }
-async function showLog(id){
-  const w = D.workers.find(x=>x.id===id);
+async function sheetHistory(){
+  const w = cur();
   const [lg, rt, cp, py] = await Promise.all([
-    sb.from('hub_worker_log').select('changed_at,before_data,after_data').eq('worker_id', id).order('changed_at', {ascending:false}),
-    sb.from('hub_worker_rate').select('effective_from,rate_type,rate,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
-    sb.from('hub_worker_company').select('effective_from,company_id,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
-    sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
+    sb.from('hub_worker_log').select('changed_at,before_data,after_data').eq('worker_id', w.id).order('changed_at', {ascending:false}),
+    sb.from('hub_worker_rate').select('effective_from,rate_type,rate,voided_at').eq('worker_id', w.id).order('effective_from'),
+    sb.from('hub_worker_company').select('effective_from,company_id,voided_at').eq('worker_id', w.id).order('effective_from'),
+    sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at').eq('worker_id', w.id).order('effective_from'),
   ]);
-  const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Join date', stop_date:'Stop date', stop_reason:'Stop reason', stop_note:'Stop note', voided_at:'Voided', worker_type:'Type'};
-  const logRows = (lg.data||[]).map(x => { const b = x.before_data||{}, a = x.after_data||{};
-    const ch = Object.keys(F).filter(k => (b[k]??null) !== (a[k]??null)).map(k => F[k] + ': ' + esc(b[k]??'—') + ' → ' + esc(a[k]??'—'));
-    return '<tr><td class="mono" style="white-space:nowrap">' + new Date(x.changed_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</td><td>' + (x.before_data ? (ch.join('<br>') || '(no change)') : 'Created') + '</td></tr>'; });
-  const st = x => x.voided_at ? '<span style="color:var(--red)">Voided' + (x.void_reason ? ': ' + esc(x.void_reason) : '') + '</span>' : 'Active';
-  const tbl = (t, rows) => '<h4>' + t + '</h4><table>' + (rows.join('') || '<tr><td class="dim">None</td></tr>') + '</table>';
-  $('fc').innerHTML = '<h3>History · ' + esc(w.name) + '</h3>'
-    + tbl('Details', logRows)
-    + tbl('Rate', (rt.data||[]).map(x => '<tr><td class="mono">from ' + x.effective_from + '</td><td>' + D.rateType[x.rate_type] + ' ' + rm(x.rate) + '</td><td>' + st(x) + '</td></tr>'))
-    + tbl('Company', (cp.data||[]).map(x => '<tr><td class="mono">from ' + x.effective_from + '</td><td>' + coTag(x.company_id ? (D.company[x.company_id]||{}).code : 'BOTH') + '</td><td>' + st(x) + '</td></tr>'))
-    + tbl('Payee', (py.data||[]).map(x => '<tr><td>Payee ' + (x.slot||1) + ' · from ' + x.effective_from + '</td><td>' + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + '</td><td>' + st(x) + '</td></tr>'))
-    + '<div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeF()">Close</button></div>';
-  $('fc').querySelectorAll('h4').forEach(h => h.style.cssText = 'margin:16px 0 6px;font-size:12px;color:var(--ink3);font-weight:500');
-  $('fm').style.display='flex';
+  const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
+  const rows = [];
+  (lg.data || []).forEach(x => { const b = x.before_data || {}, a = x.after_data || {};
+    const ch = Object.keys(F).filter(k => (b[k] ?? null) !== (a[k] ?? null)).map(k => F[k] + ': ' + esc(b[k] ?? '—') + ' → ' + esc(a[k] ?? '—'));
+    rows.push([x.changed_at.slice(0, 10), x.before_data ? (ch.join('<br>') || '—') : 'Added']); });
+  (rt.data || []).forEach(x => rows.push([x.effective_from, 'Rate ' + rateTxt(x) + (x.voided_at ? ' (cancelled)' : '')]));
+  (cp.data || []).forEach(x => rows.push([x.effective_from, 'Company ' + coName(x.company_id ? (D.co[x.company_id] || '').toLowerCase() : 'both') + (x.voided_at ? ' (cancelled)' : '')]));
+  (py.data || []).forEach(x => rows.push([x.effective_from, (x.slot === 2 ? '2nd payee ' : 'Payee ') + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + (x.voided_at ? ' (removed)' : '')]));
+  rows.sort((a, b) => a[0] < b[0] ? 1 : -1);
+  sheet('<h3>History · ' + esc(w.name) + '</h3><table class="hist">' + (rows.map(r => '<tr><td style="white-space:nowrap;color:var(--text3)">' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') || '<tr><td>No changes yet</td></tr>') + '</table>');
 }
 boot();
 </script>
