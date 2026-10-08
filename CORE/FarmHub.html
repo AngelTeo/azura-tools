@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v7</title>
+<title>Workers v8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -76,6 +76,24 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
   .hide-m{display:none}
   td,th{padding:8px 6px}
 }
+.btn{font:inherit;font-size:13px;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;font-weight:500}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.red{color:var(--red);border-color:#e6b9b1;background:#fff}
+.btn.sm{font-size:12px;padding:4px 9px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:18px 0 6px}
+.sec-h h4{margin:0 !important}
+#fm{position:fixed;inset:0;background:rgba(20,30,24,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;z-index:8}
+#fm .card{width:100%;max-width:460px;padding:20px}
+#fm h3{margin:0 0 6px;font-size:17px}
+#fm table td{padding:6px 8px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.fgrid .full{grid-column:1/-1}
+.req{color:var(--red)}
+.hint{font-size:12px;color:var(--ink3);margin:8px 0 0}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:20;max-width:90vw}
+#toast.err{background:var(--red)}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}#detail,#fm{padding:12px 8px}}
 </style>
 </head>
 <body>
@@ -101,6 +119,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
       <select id="fCo"><option value="">All companies</option></select>
       <input id="q" placeholder="Search name / position / no.">
       <span class="count" id="cnt"></span>
+      <button class="btn pri" id="btnAdd" hidden onclick="formAdd()">+ Add worker</button>
     </div>
     <div class="card" style="overflow-x:auto">
       <table>
@@ -113,19 +132,21 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <footer id="foot"></footer>
 
 <div id="detail"><div class="card" id="dc"></div></div>
+<div id="fm"><div class="card" id="fc"></div></div>
+<div id="toast"></div>
 
 <script>
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// 今天（马来西亚时间），一律用字串比较，不用 Date 运算
+// Malaysia time; compare dates as strings
 const TODAY = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 const THIS_MONTH = TODAY.slice(0,7);
-const D = {workers:[], rates:{}, comps:{}, payees:{}, company:{}, reason:{}, rateType:{DAILY:'Daily', MONTHLY:'Monthly'}};
-let filt = 'act';
+const D = {workers:[], rates:{}, comps:{}, payees:{}, payees2:{}, passports:{}, company:{}, reason:{}, channel:{}, locked:new Set(), rateType:{DAILY:'Daily', MONTHLY:'Monthly'}};
+let filt = 'act', CAN_EDIT = false, OPEN_ID = null;
 
 $('foot').textContent = '';
 
@@ -135,46 +156,64 @@ function stop(title, body, home){
   s.innerHTML='<b>'+esc(title)+'</b><div>'+esc(body)+'</div>'
     + (home ? '<div style="margin-top:14px"><a href="../index.html" style="display:inline-block;background:var(--green);color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">Go to Home</a></div>' : '');
 }
+function toast(t, bad){ const x=$('toast'); x.textContent=t; x.className=bad?'err':''; x.style.display='block'; clearTimeout(x._t); x._t=setTimeout(()=>x.style.display='none', bad?6000:2500); }
+function nice(e){
+  const m = (e && (e.message||String(e))) || '';
+  if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection. Nothing was saved. Please try again.';
+  if(/row-level security|permission denied/i.test(m)) return 'You do not have permission to change worker data.';
+  if(/hub_worker_check|stop.*join/i.test(m)) return 'Stop date cannot be before the join date.';
+  if(/duplicate key/i.test(m)) return 'This entry already exists. Please refresh and try again.';
+  return m;
+}
+async function db(p){ const {data, error} = await p; if(error) throw error; return data; }
 
 async function boot(){
-    const {data:{session}} = await sb.auth.getSession();
+  const {data:{session}} = await sb.auth.getSession();
   if(!session) return stop('Please sign in', 'Sign in from the Home page first.', true);
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
   if(e1) return stop('Could not load your account', 'Please refresh the page.');
   if(!me || me.status!=='ACTIVE') return stop('No access', 'This account cannot use the system.', true);
-  const {data:see, error:e2} = await sb.rpc('hub_can', {p_system:'FARMHUB', p_action:'see'});
+  const {data:acc, error:e2} = await sb.rpc('hub_can_access', {p_system:'FARMHUB'});
+  const a = (acc && acc[0]) || {};
   if(e2) return stop('Could not check access', 'Please refresh the page.');
-  if(!see) return stop('No access', 'Please ask the owner for access to Workers.', true);
-  $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + ' · ' + esc(session.user.email) + '</span>';
+  if(!a.can_see) return stop('No access', 'Please ask the owner for access to Workers.', true);
+  CAN_EDIT = !!a.can_edit;
+  $('btnAdd').hidden = !CAN_EDIT;
+  $('who').innerHTML = esc(me.display_name) + '<br><span style="opacity:.8">' + esc(me.position||me.role) + (CAN_EDIT ? '' : ' · View only') + '</span>';
   await load();
+  const m = location.hash.match(/w=([0-9a-f-]{36})/); if(m) detail(m[1]);
 }
 
 async function load(){
   const q = (t, cols, f) => { let x=sb.from(t).select(cols); return f?f(x):x; };
+  const ord = x => x.is('voided_at',null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,phone', x=>x.is('voided_at',null).order('worker_no')),
-    q('hub_worker_rate','worker_id,rate_type,rate,effective_from', x=>x.is('voided_at',null).order('effective_from')),
-    q('hub_worker_company','worker_id,company_id,effective_from', x=>x.is('voided_at',null).order('effective_from')),
-    q('hub_worker_payee','worker_id,beneficiary_name,account_no,channel,effective_from,slot', x=>x.is('voided_at',null).order('effective_from')),
+    q('hub_worker','id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone', x=>x.is('voided_at',null).order('worker_no')),
+    q('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', ord),
+    q('hub_worker_company','id,worker_id,company_id,effective_from', ord),
+    q('hub_worker_payee','id,worker_id,beneficiary_name,account_no,channel,effective_from,slot', ord),
+    q('hub_worker_passport','id,worker_id,passport_no,effective_from', ord),
     q('hub_company','id,code,name'),
-    q('hub_option','list_code,code,label', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']))
+    q('hub_option','list_code,code,label,sort', x=>x.in('list_code',['STOP_REASON','PAY_CHANNEL']).order('sort')),
   ]);
   const bad = res.find(r=>r.error);
   if(bad) return stop('Could not load data', 'Please refresh the page.');
-  const [w,r,c,p,co,op] = res.map(x=>x.data);
+  const [w,r,c,p,pp,co,op] = res.map(x=>x.data);
   if(!w.length) return stop('No workers found', 'Please ask the owner to check your access.');
-  D.workers=w;
-  D.rates={}; r.forEach(x=>(D.rates[x.worker_id]??=[]).push(x));
-  D.comps={}; c.forEach(x=>(D.comps[x.worker_id]??=[]).push(x));
-  D.payees={}; p.filter(x=>(x.slot||1)===1).forEach(x=>(D.payees[x.worker_id]??=[]).push(x));
+  const grp = rows => { const m={}; rows.forEach(x=>(m[x.worker_id]??=[]).push(x)); return m; };
+  D.workers=w; D.rates=grp(r); D.comps=grp(c);
+  D.payees=grp(p.filter(x=>(x.slot||1)===1)); D.payees2=grp(p.filter(x=>x.slot===2)); D.passports=grp(pp);
   D.company={}; co.forEach(x=>D.company[x.id]=x);
-  D.reason={}; D.channel={}; op.forEach(x=>{ if(x.list_code==='STOP_REASON') D.reason[x.code]=x.label; else D.channel[x.code]=x.label; });
-  const sel=$('fCo'); sel.innerHTML='<option value="">All companies</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">Shared</option>';
+  D.reason={}; D.channel={}; D.reasonList=[]; op.forEach(x=>{ if(x.list_code==='STOP_REASON'){ D.reason[x.code]=x.label; D.reasonList.push(x); } else D.channel[x.code]=x.label; });
+  // Salary months that are already locked (rate / company changes must start after them)
+  const lr = await sb.from('salary_run').select('month,status').eq('status','LOCKED');
+  D.locked = new Set((lr.data||[]).map(x=>x.month));
+  if(!$('fCo').dataset.done){ $('fCo').innerHTML='<option value="">All companies</option>' + co.map(x=>'<option value="'+esc(x.code)+'">'+esc(x.code)+'</option>').join('') + '<option value="BOTH">Shared</option>'; $('fCo').dataset.done=1; }
   $('app').style.display='block';
   render();
 }
 
-// 以最新一笔为准：取生效月 <= 本月的最后一笔
+// Latest entry that has started (by month / by date)
 const latestM = (arr, mk) => (arr||[]).filter(x=>x.effective_from<=mk).slice(-1)[0] || null;
 const latestD = (arr, d) => (arr||[]).filter(x=>x.effective_from<=d).slice(-1)[0] || null;
 const isActive = w => !w.stop_date || w.stop_date >= TODAY;
@@ -182,7 +221,7 @@ function coCode(w){ const c=latestM(D.comps[w.id], THIS_MONTH); if(!c) return ''
 function coTag(code){ if(!code) return '<span class="dim">—</span>'; return '<span class="tag t-'+esc(code)+'">'+(code==='BOTH'?'Shared':esc(code))+'</span>'; }
 const rm = n => 'RM' + Number(n).toLocaleString('en',{minimumFractionDigits: Number(n)%1?2:0, maximumFractionDigits:2});
 function rateTxt(w){ const r=latestM(D.rates[w.id], THIS_MONTH); return r ? D.rateType[r.rate_type]+' <span class="mono">'+rm(r.rate)+'</span>' : '<span class="dim">—</span>'; }
-const last4 = s => s ? '…' + String(s).slice(-4) : '';
+const last4 = s => s ? '••••' + String(s).slice(-4) : '';
 function payTxt(w){ const p=latestD(D.payees[w.id], TODAY); return p ? esc(p.beneficiary_name)+' <span class="mono dim">'+last4(p.account_no)+'</span>' : '<span class="dim">—</span>'; }
 
 function render(){
@@ -213,26 +252,240 @@ function render(){
   }).join('') || '<tr><td colspan="8" class="dim" style="text-align:center;padding:24px">No matching workers</td></tr>';
 }
 
-function detail(id){
-  const w=D.workers.find(x=>x.id===id); if(!w) return;
-  const rates=(D.rates[id]||[]).slice().reverse(), comps=(D.comps[id]||[]).slice().reverse(), pays=(D.payees[id]||[]).slice().reverse();
+// ── Worker card ─────────────────────────────────────────
+async function detail(id){
+  const w=D.workers.find(x=>x.id===id); if(!w) return; OPEN_ID = id;
+  history.replaceState(null, '', '#w=' + id);
+  const rates=(D.rates[id]||[]).slice().reverse(), comps=(D.comps[id]||[]).slice().reverse();
+  const pay1=latestD(D.payees[id], TODAY), pay2=latestD(D.payees2[id], TODAY), pas=(D.passports[id]||[]).slice(-1)[0];
+  const E = CAN_EDIT;
+  const sec = (title, btn) => '<div class="sec-h"><h4>'+title+'</h4>'+(E && btn ? btn : '')+'</div>';
+  const vbtn = (tbl, rid) => E ? '<button class="btn sm red" onclick="voidRow(\''+tbl+'\',\''+rid+'\')">Void</button>' : '';
   $('dc').innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="ghost" onclick="closeD()">Close</button></div>'
+    '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px"><div><h3>'+esc(w.name)+'</h3><div class="dim">#'+(w.worker_no??'')+' · '+esc(w.title||'')+'</div></div><button class="btn" onclick="closeD()">Close</button></div>'
+    +(E ? '<div class="acts"><button class="btn pri" onclick="formEdit(\''+id+'\')">Edit details</button>'
+        + (isActive(w) && !w.stop_date ? '<button class="btn red" onclick="formStop(\''+id+'\')">Stop</button>' : '<button class="btn" onclick="formStop(\''+id+'\')">'+(w.stop_date ? 'Change stop / Reactivate' : 'Stop')+'</button>')
+        + '<button class="btn" onclick="showLog(\''+id+'\')">History</button>'
+        + '<span id="voidSlot"></span></div>'
+      : '<div class="acts"><button class="btn" onclick="showLog(\''+id+'\')">History</button></div>')
     +'<div class="kv"><div>Status</div><div>'+(isActive(w)?'Active':'Stopped')+'</div>'
     +'<div>Type</div><div>'+(w.worker_type==='LOCAL'?'Local':'Foreign')+'</div>'
     +'<div>Joined</div><div class="mono">'+esc(w.join_date||'—')+'</div>'
-    +'<div>Stopped</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+'</div>'
-    +'<div>Phone</div><div class="mono">'+esc(w.phone||'—')+'</div></div>'
-    +'<h4>Rate history</h4><table>'+(rates.map(r=>'<tr><td class="mono">'+esc(r.effective_from)+' from</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
-    +'<h4>Company</h4><table>'+(comps.map(c=>'<tr><td class="mono">'+esc(c.effective_from)+' from</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
-    +'<h4>Payee</h4><table>'+(pays.map(p=>'<tr><td class="mono">'+esc(p.effective_from)+' from</td><td>'+esc(p.beneficiary_name)+'</td><td class="mono">'+last4(p.account_no)+'</td><td class="dim">'+esc(D.channel[p.channel]||p.channel||'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>';
+    +'<div>Stopped</div><div class="mono">'+esc(w.stop_date||'—')+(w.stop_reason?' · '+esc(D.reason[w.stop_reason]||w.stop_reason):'')+(w.stop_note?' · '+esc(w.stop_note):'')+'</div>'
+    +'<div>Phone</div><div class="mono">'+esc(w.phone||'—')+'</div>'
+    +'<div>Passport</div><div class="mono">'+(pas?last4(pas.passport_no):'—')+(E?' <button class="btn sm" onclick="formPassport(\''+id+'\')">Change</button>':'')+'</div></div>'
+    + sec('Rate', '<button class="btn sm" onclick="formRate(\''+id+'\')">+ Change rate</button>')
+    +'<table>'+(rates.map(r=>'<tr><td class="mono">from '+esc(r.effective_from)+'</td><td>'+D.rateType[r.rate_type]+'</td><td class="mono">'+rm(r.rate)+'</td><td style="text-align:right">'+(rates.length>1?vbtn('hub_worker_rate', r.id):'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
+    + sec('Company', '<button class="btn sm" onclick="formCompany(\''+id+'\')">+ Change company</button>')
+    +'<table>'+(comps.map(c=>'<tr><td class="mono">from '+esc(c.effective_from)+'</td><td>'+coTag(c.company_id?(D.company[c.company_id]?.code):'BOTH')+'</td><td style="text-align:right">'+(comps.length>1?vbtn('hub_worker_company', c.id):'')+'</td></tr>').join('')||'<tr><td class="dim">None</td></tr>')+'</table>'
+    + sec('Payee 1 (default)', '<button class="btn sm" onclick="formPayee(\''+id+'\',1)">Change</button>')
+    +'<div>'+(pay1 ? esc(pay1.beneficiary_name)+' · <span class="mono">'+last4(pay1.account_no)+'</span> <span class="dim">from '+esc(pay1.effective_from)+'</span>' : '<span class="dim">None</span>')+'</div>'
+    + sec('Payee 2', '<button class="btn sm" onclick="formPayee(\''+id+'\',2)">'+(pay2?'Change':'+ Add')+'</button>'+(pay2?' <button class="btn sm red" onclick="removePayee2(\''+id+'\')">Remove</button>':''))
+    +'<div>'+(pay2 ? esc(pay2.beneficiary_name)+' · <span class="mono">'+last4(pay2.account_no)+'</span> <span class="dim">from '+esc(pay2.effective_from)+'</span>' : '<span class="dim">None</span>')+'</div>';
   $('detail').style.display='flex';
+  if(E && !w.stop_date){
+    const {data:why} = await sb.rpc('hub_worker_records', {p_worker:id});
+    const slot = $('voidSlot'); if(slot && OPEN_ID===id) slot.innerHTML = why ? '' : '<button class="btn red" onclick="voidWorker(\''+id+'\')">Void (added by mistake)</button>';
+  }
 }
-function closeD(){ $('detail').style.display='none'; }
+function closeD(){ $('detail').style.display='none'; OPEN_ID=null; history.replaceState(null, '', location.pathname); }
 $('detail').onclick = e => { if(e.target.id==='detail') closeD(); };
 $('tb').onclick = e => { const tr=e.target.closest('tr.w'); if(tr) detail(tr.dataset.id); };
 $('tabs').onclick = e => { const b=e.target.closest('button'); if(!b) return; filt=b.dataset.f; [...$('tabs').children].forEach(x=>x.classList.toggle('on',x===b)); render(); };
 $('fCo').onchange = render; $('q').oninput = render;
+
+// ── Forms ───────────────────────────────────────────────
+function form(title, body, onSave, saveLabel){
+  $('fc').innerHTML = '<h3>'+esc(title)+'</h3>' + body
+    + '<div id="ferr" class="msg"></div><div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeF()">Cancel</button><button class="btn pri" id="fsave">'+(saveLabel||'Save')+'</button></div>';
+  $('fsave').onclick = async () => {
+    $('fsave').disabled = true; $('ferr').className='msg';
+    try{ const msg = await onSave(); if(msg === false){ $('fsave').disabled=false; return; } closeF(); await load(); if(OPEN_ID) detail(OPEN_ID); toast(msg || 'Saved'); }
+    catch(e){ $('ferr').textContent = nice(e); $('ferr').className='msg err'; $('fsave').disabled=false; }
+  };
+  $('fm').style.display='flex';
+  const first = $('fc').querySelector('input,select'); if(first) first.focus();
+}
+function closeF(){ $('fm').style.display='none'; }
+function ferr(t){ $('ferr').textContent=t; $('ferr').className='msg err'; return false; }
+$('fm').onclick = e => { if(e.target.id==='fm') closeF(); };
+const v = id => ($(id).value||'').trim();
+const field = (label, html, full, req) => '<div class="frow'+(full?' full':'')+'"><label>'+label+(req?' <span class="req">*</span>':'')+'</label>'+html+'</div>';
+const coSel = cur => '<select id="f-co">' + Object.values(D.company).sort((a,b)=>a.code<b.code?-1:1).map(c=>'<option value="'+c.id+'" '+(cur===c.id?'selected':'')+'>'+esc(c.code)+' · '+esc(c.name)+'</option>').join('') + '<option value="" '+(cur===null?'selected':'')+'>Shared (both companies)</option></select>';
+const rtSel = cur => '<select id="f-rt"><option value="DAILY" '+(cur!=='MONTHLY'?'selected':'')+'>Daily (RM per day)</option><option value="MONTHLY" '+(cur==='MONTHLY'?'selected':'')+'>Monthly (RM per month)</option></select>';
+function lockedMsg(mk){ return D.locked.has(mk) ? 'Salary for ' + mk + ' is already locked. Choose a later month, or unlock that month in Salary first.' : ''; }
+
+function formAdd(){
+  const hx = Object.values(D.company).find(c=>c.code==='HX');
+  form('Add worker',
+    '<div class="fgrid">'
+    + field('Name', '<input id="f-name">', true, 1)
+    + field('Position', '<input id="f-title">')
+    + field('Type', '<select id="f-type"><option value="FOREIGN">Foreign</option><option value="LOCAL">Local</option></select>')
+    + field('Join date', '<input id="f-join" type="date" value="'+TODAY+'">', false, 1)
+    + field('Phone', '<input id="f-phone" inputmode="tel">')
+    + field('Company', coSel(hx ? hx.id : null), true, 1)
+    + field('Rate type', rtSel('DAILY'), false, 1)
+    + field('Rate (RM)', '<input id="f-rate" type="number" step="0.01" min="0">', false, 1)
+    + field('Passport no.', '<input id="f-pass">', true)
+    + field('Payee name', '<input id="f-bn">')
+    + field('Account no.', '<input id="f-ac" inputmode="numeric">')
+    + '</div><p class="hint">Rate and company start from the join month.</p>',
+    async () => {
+      const name=v('f-name').toUpperCase(), join=v('f-join'), rate=parseFloat(v('f-rate')), bn=v('f-bn').toUpperCase(), ac=v('f-ac').replace(/\s/g,'');
+      if(!name || !join || !(rate>=0) || v('f-rate')==='') return ferr('Name, join date and rate are required.');
+      if((bn && !ac) || (!bn && ac)) return ferr('Enter both payee name and account no., or leave both empty.');
+      if(D.workers.some(w=>w.name.toUpperCase()===name) && !confirm('A worker named ' + name + ' already exists. Add another one?')) return false;
+      const top = await db(sb.from('hub_worker').select('worker_no').not('worker_no','is',null).order('worker_no',{ascending:false}).limit(1));
+      const no = ((top[0]||{}).worker_no || 0) + 1, id = crypto.randomUUID(), mk = join.slice(0,7);
+      await db(sb.from('hub_worker').insert({id, worker_no:no, name, title:v('f-title')||null, worker_type:$('f-type').value, join_date:join, phone:v('f-phone')||null}));
+      await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:$('f-rt').value, rate, effective_from:mk}));
+      await db(sb.from('hub_worker_company').insert({worker_id:id, company_id:$('f-co').value||null, effective_from:mk}));
+      if(bn) await db(sb.from('hub_worker_payee').insert({worker_id:id, slot:1, beneficiary_name:bn, account_no:ac, channel:'MERCHANTRADE', effective_from:join}));
+      if(v('f-pass')) await db(sb.from('hub_worker_passport').insert({worker_id:id, passport_no:v('f-pass').toUpperCase(), effective_from:join}));
+      OPEN_ID = id; return 'Added #' + no + ' ' + name;
+    }, 'Add worker');
+}
+function formEdit(id){
+  const w = D.workers.find(x=>x.id===id);
+  form('Edit details · ' + w.name,
+    '<div class="fgrid">'
+    + field('Name', '<input id="f-name" value="'+esc(w.name)+'">', true, 1)
+    + field('Position', '<input id="f-title" value="'+esc(w.title||'')+'">')
+    + field('Type', '<select id="f-type"><option value="FOREIGN" '+(w.worker_type!=='LOCAL'?'selected':'')+'>Foreign</option><option value="LOCAL" '+(w.worker_type==='LOCAL'?'selected':'')+'>Local</option></select>')
+    + field('Join date', '<input id="f-join" type="date" value="'+esc(w.join_date||'')+'">')
+    + field('Phone', '<input id="f-phone" inputmode="tel" value="'+esc(w.phone||'')+'">')
+    + '</div><p class="hint">The join date decides from which day the worker is counted (attendance, food sharing).</p>',
+    async () => {
+      const name=v('f-name').toUpperCase(), join=v('f-join')||null;
+      if(!name) return ferr('Name is required.');
+      if(join && w.stop_date && w.stop_date < join) return ferr('Join date cannot be after the stop date (' + w.stop_date + ').');
+      await db(sb.from('hub_worker').update({name, title:v('f-title')||null, worker_type:$('f-type').value, join_date:join, phone:v('f-phone')||null}).eq('id', id));
+    });
+}
+function formStop(id){
+  const w = D.workers.find(x=>x.id===id);
+  const opts = (D.reasonList||[]).map(o=>'<option value="'+esc(o.code)+'" '+(w.stop_reason===o.code?'selected':'')+'>'+esc(o.label)+'</option>').join('');
+  form((w.stop_date ? 'Stop date · ' : 'Stop · ') + w.name,
+    '<div class="fgrid">'
+    + field('Last working day', '<input id="f-stop" type="date" value="'+esc(w.stop_date||TODAY)+'">', false, 1)
+    + field('Reason', '<select id="f-reason">'+opts+'</select>', false, 1)
+    + field('Note', '<input id="f-note" value="'+esc(w.stop_note||'')+'">', true)
+    + '</div>' + (w.stop_date ? '<p class="hint">To bring this worker back, press Reactivate.</p><div class="row"><button class="btn" onclick="reactivate(\''+id+'\')">Reactivate</button></div>' : ''),
+    async () => {
+      const d = v('f-stop'); if(!d) return ferr('Please choose the last working day.');
+      if(w.join_date && d < w.join_date) return ferr('Stop date cannot be before the join date (' + w.join_date + ').');
+      await db(sb.from('hub_worker').update({stop_date:d, stop_reason:$('f-reason').value||null, stop_note:v('f-note')||null}).eq('id', id));
+      return 'Stopped from ' + d;
+    }, w.stop_date ? 'Save' : 'Stop worker');
+}
+async function reactivate(id){
+  const w = D.workers.find(x=>x.id===id);
+  if(!confirm('Reactivate ' + w.name + '? The stop date will be cleared.')) return;
+  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', id)); closeF(); await load(); detail(id); toast('Reactivated'); }
+  catch(e){ toast(nice(e), true); }
+}
+function formRate(id){
+  const w = D.workers.find(x=>x.id===id), cur = latestM(D.rates[id], THIS_MONTH);
+  form('Change rate · ' + w.name,
+    '<div class="fgrid">'
+    + field('From month', '<input id="f-from" type="month" value="'+THIS_MONTH+'">', true, 1)
+    + field('Rate type', rtSel(cur && cur.rate_type), false, 1)
+    + field('Rate (RM)', '<input id="f-rate" type="number" step="0.01" min="0">', false, 1)
+    + '</div><p class="hint">Now: '+(cur ? D.rateType[cur.rate_type]+' '+rm(cur.rate) : 'none')+'. Earlier months keep their old rate.</p>',
+    async () => {
+      const mk=v('f-from'), rate=parseFloat(v('f-rate'));
+      if(!mk || v('f-rate')==='' || !(rate>=0)) return ferr('Month and rate are required.');
+      if(lockedMsg(mk)) return ferr(lockedMsg(mk));
+      const ex = (D.rates[id]||[]).find(r=>r.effective_from===mk);
+      if(ex) await db(sb.from('hub_worker_rate').update({voided_at:new Date().toISOString(), void_reason:'Replaced by a new rate for the same month'}).eq('id', ex.id));
+      await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:$('f-rt').value, rate, effective_from:mk}));
+      return 'Rate from ' + mk + ': ' + rm(rate);
+    });
+}
+function formCompany(id){
+  const w = D.workers.find(x=>x.id===id), cur = latestM(D.comps[id], THIS_MONTH);
+  form('Change company · ' + w.name,
+    '<div class="fgrid">'
+    + field('From month', '<input id="f-from" type="month" value="'+THIS_MONTH+'">', true, 1)
+    + field('Company', coSel(cur ? cur.company_id : undefined), true, 1)
+    + '</div>',
+    async () => {
+      const mk=v('f-from'); if(!mk) return ferr('Month is required.');
+      if(lockedMsg(mk)) return ferr(lockedMsg(mk));
+      const ex = (D.comps[id]||[]).find(r=>r.effective_from===mk);
+      if(ex) await db(sb.from('hub_worker_company').update({voided_at:new Date().toISOString(), void_reason:'Replaced by a new company for the same month'}).eq('id', ex.id));
+      await db(sb.from('hub_worker_company').insert({worker_id:id, company_id:$('f-co').value||null, effective_from:mk}));
+      return 'Company changed from ' + mk;
+    });
+}
+function formPayee(id, slot){
+  const w = D.workers.find(x=>x.id===id), cur = latestD(slot===2 ? D.payees2[id] : D.payees[id], TODAY);
+  form('Payee ' + slot + ' · ' + w.name,
+    '<div class="fgrid">'
+    + field('Payee name', '<input id="f-bn" value="'+esc(cur ? cur.beneficiary_name : '')+'">', true, 1)
+    + field('Account no.', '<input id="f-ac" inputmode="numeric" placeholder="'+(cur ? 'now '+last4(cur.account_no)+' — enter the full number' : '')+'">', true, 1)
+    + field('From date', '<input id="f-from" type="date" value="'+TODAY+'">', true, 1)
+    + '</div>',
+    async () => {
+      const bn=v('f-bn').toUpperCase(), ac=v('f-ac').replace(/\s/g,''), d=v('f-from');
+      if(!bn || !ac || !d) return ferr('Payee name, account no. and date are required.');
+      await db(sb.from('hub_worker_payee').insert({worker_id:id, slot, beneficiary_name:bn, account_no:ac, channel:'MERCHANTRADE', effective_from:d}));
+      return 'Payee ' + slot + ' saved';
+    });
+}
+async function removePayee2(id){
+  const r = prompt('Remove payee 2 — reason:'); if(!r || !r.trim()) return;
+  try{ for(const p of (D.payees2[id]||[])) await db(sb.from('hub_worker_payee').update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', p.id));
+    await load(); detail(id); toast('Payee 2 removed'); }
+  catch(e){ toast(nice(e), true); }
+}
+function formPassport(id){
+  const w = D.workers.find(x=>x.id===id), cur = (D.passports[id]||[]).slice(-1)[0];
+  form('Passport · ' + w.name,
+    field('Passport no.', '<input id="f-pass" placeholder="'+(cur ? 'now '+last4(cur.passport_no) : '')+'">', true, 1),
+    async () => {
+      const no = v('f-pass').toUpperCase(); if(!no) return ferr('Passport no. is required.');
+      const ex = (D.passports[id]||[]).find(r=>r.effective_from===TODAY);
+      if(ex) await db(sb.from('hub_worker_passport').update({voided_at:new Date().toISOString(), void_reason:'Replaced on the same day'}).eq('id', ex.id));
+      await db(sb.from('hub_worker_passport').insert({worker_id:id, passport_no:no, effective_from:TODAY}));
+      return 'Passport saved';
+    });
+}
+async function voidRow(table, rid){
+  const r = prompt('Void this entry — reason:'); if(!r || !r.trim()) return;
+  try{ await db(sb.from(table).update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', rid)); await load(); if(OPEN_ID) detail(OPEN_ID); toast('Voided'); }
+  catch(e){ toast(nice(e), true); }
+}
+async function voidWorker(id){
+  const w = D.workers.find(x=>x.id===id);
+  const r = prompt('Void ' + w.name + '? Only for a worker added by mistake.\nReason:'); if(!r || !r.trim()) return;
+  try{ await db(sb.from('hub_worker').update({voided_at:new Date().toISOString(), void_reason:r.trim()}).eq('id', id)); closeD(); await load(); toast('Voided: ' + w.name); }
+  catch(e){ toast(nice(e), true); }
+}
+async function showLog(id){
+  const w = D.workers.find(x=>x.id===id);
+  const [lg, rt, cp, py] = await Promise.all([
+    sb.from('hub_worker_log').select('changed_at,before_data,after_data').eq('worker_id', id).order('changed_at', {ascending:false}),
+    sb.from('hub_worker_rate').select('effective_from,rate_type,rate,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
+    sb.from('hub_worker_company').select('effective_from,company_id,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
+    sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at,void_reason').eq('worker_id', id).order('effective_from'),
+  ]);
+  const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Join date', stop_date:'Stop date', stop_reason:'Stop reason', stop_note:'Stop note', voided_at:'Voided', worker_type:'Type'};
+  const logRows = (lg.data||[]).map(x => { const b = x.before_data||{}, a = x.after_data||{};
+    const ch = Object.keys(F).filter(k => (b[k]??null) !== (a[k]??null)).map(k => F[k] + ': ' + esc(b[k]??'—') + ' → ' + esc(a[k]??'—'));
+    return '<tr><td class="mono" style="white-space:nowrap">' + new Date(x.changed_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur'}) + '</td><td>' + (x.before_data ? (ch.join('<br>') || '(no change)') : 'Created') + '</td></tr>'; });
+  const st = x => x.voided_at ? '<span style="color:var(--red)">Voided' + (x.void_reason ? ': ' + esc(x.void_reason) : '') + '</span>' : 'Active';
+  const tbl = (t, rows) => '<h4>' + t + '</h4><table>' + (rows.join('') || '<tr><td class="dim">None</td></tr>') + '</table>';
+  $('fc').innerHTML = '<h3>History · ' + esc(w.name) + '</h3>'
+    + tbl('Details', logRows)
+    + tbl('Rate', (rt.data||[]).map(x => '<tr><td class="mono">from ' + x.effective_from + '</td><td>' + D.rateType[x.rate_type] + ' ' + rm(x.rate) + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('Company', (cp.data||[]).map(x => '<tr><td class="mono">from ' + x.effective_from + '</td><td>' + coTag(x.company_id ? (D.company[x.company_id]||{}).code : 'BOTH') + '</td><td>' + st(x) + '</td></tr>'))
+    + tbl('Payee', (py.data||[]).map(x => '<tr><td>Payee ' + (x.slot||1) + ' · from ' + x.effective_from + '</td><td>' + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + '</td><td>' + st(x) + '</td></tr>'))
+    + '<div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeF()">Close</button></div>';
+  $('fc').querySelectorAll('h4').forEach(h => h.style.cssText = 'margin:16px 0 6px;font-size:12px;color:var(--ink3);font-weight:500');
+  $('fm').style.display='flex';
+}
 boot();
 </script>
 </body>

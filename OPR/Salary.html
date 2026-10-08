@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v63</title>
+<title>Salary v65</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -101,7 +101,7 @@ tr:hover td{background:#fafaf8;}
 /* -- FOOD PURCHASE TABLE ------- */
 .food-row{display:grid;grid-template-columns:90px 1fr 1fr 60px 80px 80px 120px 70px 30px;gap:6px;align-items:center;padding:5px 0;border-bottom:.5px solid var(--border);}
 .food-row-hdr{grid-template-columns:90px 1fr 1fr 60px 80px 80px 120px 70px 30px;font-size:10px;font-weight:700;color:var(--text3);padding:6px 0 4px;}
-input[type=text],input[type=number],input[type=date]{border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;background:var(--white);color:var(--text);width:100%;}
+input[type=text],input[type=number],input[type=date],.form-row input:not([type]),.form-row input[type=month]{border:1px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;background:var(--white);color:var(--text);width:100%;}
 input:focus{outline:none;border-color:var(--acc);}
 input.ghost{border:none;background:transparent;color:var(--text3);font-style:italic;}
 select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:12px;background:var(--white);}
@@ -157,10 +157,12 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
   .card-hdr{flex-wrap:wrap;gap:8px;}
   .db-grid,.recon3{grid-template-columns:1fr !important;}
   .food-row{min-width:760px;}
-  .form-grid{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr !important;}
+  .modal input,.modal select{max-width:100%;box-sizing:border-box;}
   .modal{max-width:calc(100vw - 16px) !important;}
   table{max-width:none;}
   .db-grid>*{min-width:0;}
+  .m-hide{display:none !important;}
   [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important;}
   #rem-pending>div,#db-recon .card{overflow-x:auto !important;}
 }
@@ -317,7 +319,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
           <button class="btn btn-sm wf-btn" data-filter="ad" onclick="setWorkerFilter('ad')">AD</button>
           <button class="btn btn-sm wf-btn" data-filter="both" onclick="setWorkerFilter('both')">Both</button>
         </div>
-        <button class="btn btn-pri" onclick="openWorkerModal()">+ Add Worker</button>
+        <a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html">Add / edit workers in Workers ↗</a>
       </div>
     </div>
     <div class="tbl-wrap" id="workers-table"></div>
@@ -542,7 +544,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 63;
+const APP_VERSION = 65;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -581,7 +583,7 @@ async function loadData(){
   const notVoid = q => q.is('voided_at', null);
   const [co, wk, rt, cp, py, pp, nt, at, go, pm, fd, ps, av, rm] = await Promise.all([
     fetchAll('hub_company','id,code'),
-    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,phone', q=>q.is('voided_at',null).order('worker_no')),
+    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,stop_note,phone', q=>q.is('voided_at',null).order('worker_no')),
     fetchAll('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_company','id,worker_id,company_id,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
@@ -610,7 +612,7 @@ async function loadData(){
       rateHistory: rates.map(r => ({from:r.effective_from, rate:Number(r.rate)})),
       farm, phone:w.phone||'', bankAccount: pay ? pay.account_no : '', beneficiary: pay ? pay.beneficiary_name : '', bankAccount2: pay2 ? pay2.account_no : '', beneficiary2: pay2 ? pay2.beneficiary_name : '',
       passport: pas ? pas.passport_no : '', joinDate:w.join_date||'', stopDate:w.stop_date||'',
-      stopReason:w.stop_reason||'', stopNotes:notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active' };
+      stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active' };
   });
   S.attendance = {}; at.forEach(r => { const mk = r.work_date.slice(0,7), d = parseInt(r.work_date.slice(8,10));
     ((S.attendance[mk] ??= {})[r.worker_id] ??= {})[d] = r.code; });
@@ -755,6 +757,8 @@ const coIdOf = farm => farm==='both' ? null : (farm==='ad' ? CO_ID['AD'] : CO_ID
 const RT = t => t==='monthly' ? 'MONTHLY' : 'DAILY';
 
 async function syncWorkers(cur){
+  // Worker master data is edited only in the Workers system (Owner 2026-10-08). Salary never writes it.
+  SNAP.S.workers = clone(S.workers); cur.S.workers = clone(S.workers); return;
   const old = {}; (SNAP.S.workers||[]).forEach(w => old[w.id] = w);
   const maxNo = Math.max(0, ...cur.S.workers.map(w => Number(w.no)||0));
   let nextNo = maxNo + 1;
@@ -930,6 +934,11 @@ function setWorkerFilter(f){
   document.querySelectorAll('.wf-btn').forEach(b=>b.classList.toggle('on',b.dataset.filter===f));
   renderWorkers();
 }
+// Coming back from the Workers system → reload so worker changes show here
+document.addEventListener('visibilitychange', async () => {
+  if(document.visibilityState !== 'visible' || !CLOUD_OK || dirty || syncing) return;
+  try{ await loadData(); const pg = (document.querySelector('.page.on')||{}).id; if(pg) goPage(pg.replace('page-','')); renderExitRecords(); }catch(e){ console.warn(e); }
+});
 function goPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('on'));
@@ -983,7 +992,7 @@ function renderWorkers(){
     const stopMk=w.stopDate?w.stopDate.substring(0,7):"";
     const stoppedThisMonth=stopMk===mk;
     const effectiveStatus=stoppedThisMonth?'stopped':'active';
-    return `<tr style="${stoppedThisMonth?'opacity:.7;':''}">
+    return `<tr class="w-row" style="cursor:pointer;${stoppedThisMonth?'opacity:.7;':''}" onclick="openWorkerCard('${w.id}')">
       <td style="font-family:'IBM Plex Mono',monospace;color:var(--text3);font-size:10px;">${w.no||i+1}</td>
       <td><strong>${w.name}</strong>${w.title?`<br><span style="font-size:10px;color:var(--text3);">${w.title}</span>`:''}</td>
       <td>
@@ -993,16 +1002,12 @@ function renderWorkers(){
       </td>
       <td>${w.rateType==='monthly'?'<span style="color:var(--text3);font-size:10px;">Monthly</span> ':'<span style="color:var(--text3);font-size:10px;">Daily</span> '}<strong style="font-family:'IBM Plex Mono',monospace;">${fmtRM(getRateForMonth(w,monthKey()))}</strong>${getRateForMonth(w,monthKey())!==w.rate?'<span style="font-size:9px;color:var(--amb);margin-left:3px;">★</span>':''}</td>
       <td><span class="badge badge-${w.farm||'hx'}">${(w.farm||'HX').toUpperCase()}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.bankAccount||'--'}</td>
-      <td style="font-size:11px;">${w.beneficiary||'--'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
-      <td><div style="display:flex;gap:4px;">
-        <button class="btn btn-sm" onclick="openWorkerModal('${w.id}')">Edit</button>
+      <td class="m-hide" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${mask4(w.bankAccount)}</td>
+      <td class="m-hide" style="font-size:11px;">${w.beneficiary||'--'}</td>
+      <td class="m-hide" style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${w.phone||'--'}</td>
+      <td class="m-hide" onclick="event.stopPropagation()"><div style="display:flex;gap:4px;">
+        <a class="btn btn-sm" style="text-decoration:none;" href="../CORE/FarmHub.html#w=${w.id}">Edit in Workers ↗</a>
         <button class="btn btn-sm" onclick="openWorkerHistory('${w.id}')">History</button>
-        ${workerHasRecords(w.id)?'':`<button class="btn btn-sm btn-red" title="Only for workers added by mistake, with no records" onclick="voidWorker('${w.id}')">Void</button>`}
-        ${effectiveStatus==='active'
-          ?`<button class="btn btn-sm btn-red" onclick="openStopModal('${w.id}')">Stop</button>`
-          :`<button class="btn btn-sm" onclick="activateWorker('${w.id}')">Activate</button>`}
       </div></td>
     </tr>`;
   }
@@ -1018,12 +1023,43 @@ function renderWorkers(){
     </div>
     <table>
       <thead><tr>
-        <th>#</th><th>Name</th><th>Status / Stop Date</th><th>Rate</th><th>Farm</th><th>Bank Account</th><th>Beneficiary</th><th>Phone</th><th></th>
+        <th>#</th><th>Name</th><th>Status / Stop Date</th><th>Rate</th><th>Farm</th><th class="m-hide">Bank Account</th><th class="m-hide">Beneficiary</th><th class="m-hide">Phone</th><th class="m-hide"></th>
       </tr></thead>
       <tbody>${rows||'<tr><td colspan="9"><div class="empty"><div class="icon">👥</div><p>No workers for '+MONTHS[mo-1]+' '+y+'</p></div></td></tr>'}</tbody>
     </table>`;
 }
 
+// Tap a worker → see all their settings, with the actions on top
+const mask4 = v => v ? '••••' + String(v).slice(-4) : '--';
+function openWorkerCard(id){
+  const w = getWorker(id); if(!w) return; const mk = monthKey();
+  const stopMk = w.stopDate ? w.stopDate.substring(0,7) : '';
+  const active = !(w.stopDate && stopMk <= mk);
+  const kv = (k, v) => '<div style="color:var(--text3);font-size:11px;">' + k + '</div><div style="font-size:13px;">' + v + '</div>';
+  const farm = {hx:'HX', ad:'AD', both:'Both (shared)'}[w.farm] || (w.farm||'').toUpperCase();
+  const p2 = w.bankAccount2 || w.beneficiary2;
+  document.getElementById('modal-title').textContent = (w.no ? '#' + w.no + ' · ' : '') + w.name;
+  document.getElementById('modal-body').innerHTML =
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+    + '<a class="btn btn-pri" style="text-decoration:none;" href="../CORE/FarmHub.html#w=' + id + '">Edit in Workers ↗</a>'
+    + '<button class="btn" onclick="closeModal();openWorkerHistory(\'' + id + '\')">History</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--text3);margin:-6px 0 12px;">Worker details are kept in the Workers system. Changes there show here automatically.</div>'
+    + '<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 12px;align-items:baseline;">'
+    + kv('Status', active ? '<span class="badge badge-active">active</span>' : '<span class="badge badge-stopped">stopped</span>')
+    + kv('Position', esc(w.title || '--'))
+    + kv('Company', farm)
+    + kv('Rate', (w.rateType === 'monthly' ? 'Monthly ' : 'Daily ') + fmtRM(getRateForMonth(w, mk)))
+    + kv('Join date', esc(w.joinDate || '--'))
+    + kv('Stop date', esc(w.stopDate || '--') + (w.stopDate && w.stopReason ? ' · ' + esc(reasonLabel(w.stopReason)) : ''))
+    + kv('Phone', esc(w.phone || '--'))
+    + kv('Passport', mask4(w.passport))
+    + kv('Payee 1', esc(w.beneficiary || '--') + ' · ' + mask4(w.bankAccount))
+    + (p2 ? kv('Payee 2', esc(w.beneficiary2 || '--') + ' · ' + mask4(w.bankAccount2)) : '')
+    + '</div>';
+  document.getElementById('modal-footer').innerHTML = '<button class="btn" onclick="closeModal()">Close</button>';
+  document.getElementById('modal-overlay').classList.add('on');
+}
 function openWorkerModal(id){
   _editingWorkerId=id||null;
   const w=id?getWorker(id):{};
