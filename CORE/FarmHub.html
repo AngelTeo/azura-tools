@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v13</title>
+<title>Workers v14</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -102,7 +102,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 13;
+const APP_VERSION = 14;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -161,12 +161,15 @@ async function load(){
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
     q('hub_worker_passport', 'id,worker_id,passport_no,effective_from', ord),
     q('hub_company', 'id,code'),
+    q('hub_farm', 'id,code,company_id', x => x.eq('active', true).order('code')),
+    q('hub_worker_farm', 'id,worker_id,farm_id,effective_from', ord),
   ]);
   const bad = res.find(r => r.error); if(bad){ gate('Could not load data', 'Please refresh the page.'); throw bad.error; }
-  const [w, r, c, p, pp, co] = res.map(x => x.data);
+  const [w, r, c, p, pp, co, fm, wf] = res.map(x => x.data);
   const grp = rows => { const m = {}; rows.forEach(x => (m[x.worker_id] ??= []).push(x)); return m; };
   D.workers = w; D.rates = grp(r); D.comps = grp(c); D.pay1 = grp(p.filter(x => (x.slot || 1) === 1)); D.pay2 = grp(p.filter(x => x.slot === 2)); D.pass = grp(pp);
   D.co = {}; D.coId = {}; co.forEach(x => { D.co[x.id] = x.code; D.coId[x.code] = x.id; });
+  D.farms = fm; D.farm = {}; fm.forEach(f => D.farm[f.id] = f); D.wfarm = grp(wf);
   const lr = await sb.from('salary_run').select('month').eq('status', 'LOCKED');
   D.locked = new Set((lr.data || []).map(x => x.month));
   await loadPhotos();
@@ -178,6 +181,13 @@ const latestM = (arr, mk) => (arr || []).filter(x => x.effective_from <= mk).sli
 const latestD = (arr, d) => (arr || []).filter(x => x.effective_from <= d).slice(-1)[0] || null;
 const isActive = w => !w.stop_date || w.stop_date >= TODAY;
 function coOf(w){ const c = latestM(D.comps[w.id], THIS_MONTH); return !c ? '' : c.company_id ? (D.co[c.company_id] || '').toLowerCase() : 'both'; }
+// Home farm: 'HX A' … 'AD 3', 'ALL' (all farms), or '' when not set
+function farmOf(w){ const r = latestM(D.wfarm[w.id], THIS_MONTH); return !r ? '' : r.farm_id ? (D.farm[r.farm_id] || {}).code || '' : 'ALL'; }
+const farmName = f => f === 'ALL' ? 'All farms' : f;
+const farmCo = f => f === 'ALL' ? 'both' : f ? (D.co[(D.farms.find(x => x.code === f) || {}).company_id] || '').toLowerCase() : '';
+function farmOpts(sel){ const g = c => D.farms.filter(f => (D.co[f.company_id] || '') === c).map(f => [f.code, f.code]);
+  return opts('farm', g('HX'), sel, '', 'g3') + '<div style="height:8px"></div>' + opts('farm2', g('AD'), sel, '', 'g3') + '<div style="height:8px"></div>' + opts('farm3', [['ALL', 'All farms (Both)']], sel, '', 'g2'); }
+function pickFarm(){ return pick('farm') || pick('farm2') || pick('farm3'); }
 const coName = c => c === 'both' ? 'Both' : (c || '—').toUpperCase();
 function rateOf(w){ return latestM(D.rates[w.id], THIS_MONTH); }
 const rateTxt = r => r ? (r.rate_type === 'MONTHLY' ? 'Monthly ' : 'Daily ') + rm(r.rate) : 'No rate';
@@ -206,7 +216,7 @@ function render(){
   $('cnt').textContent = list.length + ' workers';
   $('list').innerHTML = list.map(w => { const c = isActive(w) ? coOf(w) : 'stop';
     return '<div class="row" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + avInner(w) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
-      + (isActive(w) ? coName(coOf(w)) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
+      + (isActive(w) ? (farmOf(w) ? farmName(farmOf(w)) : coName(coOf(w))) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
     || '<div class="empty">No workers</div>';
 }
 function setFilter(k){ FILTER = k; render(); }
@@ -226,7 +236,7 @@ async function openWorker(id){
     + (act ? '<span class="pill on">Active</span>' : '<span class="pill off">Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || '') : '') + '</span>') + '</div></div>'
     + '<div class="grp">Pay</div>'
     + it('Rate', r ? rateTxt(r) : 'Not set', r ? 'since ' + fmtM(r.effective_from) : '', 'sheetRate()')
-    + it('Company', coName(coOf(w)), cRow ? 'since ' + fmtM(cRow.effective_from) : '', 'sheetCompany()')
+    + (() => { const fr = latestM(D.wfarm[id], THIS_MONTH), f = farmOf(w); return it('Farm', f ? farmName(f) + ' <span style="color:var(--text3);font-weight:400">· ' + coName(farmCo(f)) + '</span>' : coName(coOf(w)), (() => { const nx = (D.wfarm[id] || []).filter(x => x.effective_from > THIS_MONTH).slice(-1)[0]; return (fr ? 'since ' + fmtM(fr.effective_from) : (cRow ? 'since ' + fmtM(cRow.effective_from) : '')) + (nx ? ' · <b style="color:var(--acc)">' + fmtM(nx.effective_from) + ' → ' + farmName(nx.farm_id ? D.farm[nx.farm_id].code : 'ALL') + '</b>' : ''); })(), 'sheetFarm()'); })()
     + it('Payee 1', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) : '', 'sheetPayeeEdit(1)')
     + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
     + '<div class="grp">Details</div>'
@@ -264,6 +274,7 @@ function sheet(html){ $('sheet').innerHTML = '<div class="grab"></div>' + html +
 $('sheet').addEventListener('click', e => {
   const b = e.target.closest('button.opt'); if(!b || b.disabled) return; const g = b.closest('[data-g]'); if(!g) return;
   g.querySelectorAll('button.opt').forEach(x => x.classList.toggle('on', x === b));
+  if(/^farm/.test(g.dataset.g)) $('sheet').querySelectorAll('[data-g^="farm"] button.opt').forEach(x => x.classList.toggle('on', x === b));
   if(g.dataset.g === 'amt' && $('s-other')) $('s-other').value = '';
   if(g.dataset.on) window[g.dataset.on](b.dataset.v);
 });
@@ -306,6 +317,23 @@ function sheetRate(){
     if(ex) await db(sb.from('hub_worker_rate').update({voided_at:now(), void_reason:'Replaced by a new rate for the same month'}).eq('id', ex.id));
     await db(sb.from('hub_worker_rate').insert({worker_id:w.id, rate_type:type, rate, effective_from:from}));
   }, 'Rate saved');
+}
+async function saveFarm(wid, f, from){
+  const exF = (D.wfarm[wid] || []).find(x => x.effective_from === from);
+  if(exF) await db(sb.from('hub_worker_farm').update({voided_at:now(), void_reason:'Replaced by a new farm for the same month'}).eq('id', exF.id));
+  await db(sb.from('hub_worker_farm').insert({worker_id:wid, farm_id: f === 'ALL' ? null : D.farms.find(x => x.code === f).id, effective_from:from}));
+  const c = farmCo(f), exC = (D.comps[wid] || []).find(x => x.effective_from === from);
+  if(exC) await db(sb.from('hub_worker_company').update({voided_at:now(), void_reason:'Company follows the new farm'}).eq('id', exC.id));
+  await db(sb.from('hub_worker_company').insert({worker_id:wid, company_id: c === 'both' ? null : D.coId[c.toUpperCase()], effective_from:from}));
+}
+function sheetFarm(){
+  const w = cur(), mo = monthOpts();
+  sheet('<h3>Farm</h3><p class="h">Where this worker normally works. The company follows the farm.</p>' + farmOpts(farmOf(w))
+    + '<div class="lbl">Starts from</div>' + opts('from', mo, mo[0][0], 'dark') + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const f = pickFarm(), from = pick('from'); if(!f) return serr('Tap a farm.');
+    await saveFarm(w.id, f, from);
+  }, 'Farm saved');
 }
 function sheetCompany(){
   const w = cur(), mo = monthOpts();
@@ -416,30 +444,31 @@ async function voidWorker(){
 function sheetAdd(){
   const hx = 'hx';
   sheet('<h3>Add worker</h3><input class="inp" id="s-name" placeholder="Name" autocapitalize="characters">'
-    + '<div class="lbl">Company</div>' + opts('co', [['hx', 'HX'], ['ad', 'AD'], ['both', 'Both']], hx)
+    + '<div class="lbl">Farm</div>' + farmOpts(null)
     + '<div class="lbl">Rate</div>' + opts('type', [['DAILY', 'Daily'], ['MONTHLY', 'Monthly']], 'DAILY', 'dark').replace('data-g="type"', 'data-g="type" data-on="onRateType"')
     + '<div id="amtbox" style="margin-top:8px">' + amtHtml('DAILY', null) + '</div>'
     + '<div class="lbl">Joined</div>' + dayPicker('day', TODAY)
     + '<button class="save" id="s-save">Add worker</button>');
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
-    const name = $('s-name').value.trim().toUpperCase(), rate = amtVal(), join = $('s-date').value, c = pick('co');
-    if(!name) return serr('Type the name.'); if(!(rate >= 0)) return serr('Tap a rate or type one.'); if(!join) return serr('Pick the join date.');
+    const name = $('s-name').value.trim().toUpperCase(), rate = amtVal(), join = $('s-date').value, f = pickFarm();
+    if(!name) return serr('Type the name.'); if(!f) return serr('Tap a farm.'); if(!(rate >= 0)) return serr('Tap a rate or type one.'); if(!join) return serr('Pick the join date.');
     if(D.workers.some(x => x.name === name) && !confirm(name + ' already exists. Add another?')) return false;
     const top = await db(sb.from('hub_worker').select('worker_no').not('worker_no', 'is', null).order('worker_no', {ascending:false}).limit(1));
     const id = crypto.randomUUID(), no = ((top[0] || {}).worker_no || 0) + 1, mk = join.slice(0, 7);
     await db(sb.from('hub_worker').insert({id, worker_no:no, name, worker_type:'FOREIGN', join_date:join}));
     await db(sb.from('hub_worker_rate').insert({worker_id:id, rate_type:pick('type'), rate, effective_from:mk}));
-    await db(sb.from('hub_worker_company').insert({worker_id:id, company_id: c === 'both' ? null : D.coId[c.toUpperCase()], effective_from:mk}));
+    D.wfarm[id] = []; D.comps[id] = []; await saveFarm(id, f, mk);
     OPEN = id;
   }, 'Worker added');
 }
 async function sheetHistory(){
   const w = cur();
-  const [lg, rt, cp, py] = await Promise.all([
+  const [lg, rt, cp, py, fr] = await Promise.all([
     sb.from('hub_worker_log').select('changed_at,before_data,after_data').eq('worker_id', w.id).order('changed_at', {ascending:false}),
     sb.from('hub_worker_rate').select('effective_from,rate_type,rate,voided_at').eq('worker_id', w.id).order('effective_from'),
     sb.from('hub_worker_company').select('effective_from,company_id,voided_at').eq('worker_id', w.id).order('effective_from'),
     sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at').eq('worker_id', w.id).order('effective_from'),
+    sb.from('hub_worker_farm').select('effective_from,farm_id,voided_at').eq('worker_id', w.id).order('effective_from'),
   ]);
   const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
   const rows = [];
@@ -447,7 +476,9 @@ async function sheetHistory(){
     const ch = Object.keys(F).filter(k => (b[k] ?? null) !== (a[k] ?? null)).map(k => F[k] + ': ' + esc(b[k] ?? '—') + ' → ' + esc(a[k] ?? '—'));
     rows.push([x.changed_at.slice(0, 10), x.before_data ? (ch.join('<br>') || '—') : 'Added']); });
   (rt.data || []).forEach(x => rows.push([x.effective_from, 'Rate ' + rateTxt(x) + (x.voided_at ? ' (cancelled)' : '')]));
-  (cp.data || []).forEach(x => rows.push([x.effective_from, 'Company ' + coName(x.company_id ? (D.co[x.company_id] || '').toLowerCase() : 'both') + (x.voided_at ? ' (cancelled)' : '')]));
+  const fMon = new Set((fr.data || []).map(x => x.effective_from));
+  (cp.data || []).filter(x => !fMon.has(x.effective_from)).forEach(x => rows.push([x.effective_from, 'Company ' + coName(x.company_id ? (D.co[x.company_id] || '').toLowerCase() : 'both') + (x.voided_at ? ' (cancelled)' : '')]));
+  (fr.data || []).forEach(x => rows.push([x.effective_from, 'Farm ' + farmName(x.farm_id ? (D.farm[x.farm_id] || {}).code || '?' : 'ALL') + (x.voided_at ? ' (cancelled)' : '')]));
   (py.data || []).forEach(x => rows.push([x.effective_from, (x.slot === 2 ? '2nd payee ' : 'Payee ') + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + (x.voided_at ? ' (removed)' : '')]));
   rows.sort((a, b) => a[0] < b[0] ? 1 : -1);
   sheet('<h3>History · ' + esc(w.name) + '</h3><table class="hist">' + (rows.map(r => '<tr><td style="white-space:nowrap;color:var(--text3)">' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') || '<tr><td>No changes yet</td></tr>') + '</table>');

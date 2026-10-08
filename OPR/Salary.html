@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v68</title>
+<title>Salary v69</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -93,6 +93,43 @@ tr:hover td{background:#fafaf8;}
 .att-cell.st-both{background:var(--purl);color:var(--pur);}
 .att-cell.st-hx_half{background:#e8f0ff;color:#5580cc;border:1px dashed #a0c0ee;}
 .att-cell.st-ad_half{background:#e0f5ec;color:#4a9a70;border:1px dashed #80c8a0;}
+.att-cell.st-split{background:linear-gradient(135deg,var(--accl) 50%,var(--grnl) 50%);color:var(--text2);}
+.att-cell.st-off{background:#fce8e6;color:var(--red);}
+/* v69 daily attendance */
+.av-tabs{display:flex;gap:6px;margin:0 0 10px}
+.av-tabs button{flex:1;max-width:160px;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-weight:600;font-size:13px;color:var(--text2);cursor:pointer}
+.av-tabs button.on{background:var(--text);border-color:var(--text);color:#fff}
+#att-day{max-width:560px}
+.ad-days{display:flex;gap:6px;padding:2px 0 8px;overflow-x:auto;scrollbar-width:none}
+.ad-day{flex:none;width:44px;border:1px solid var(--border);background:#fff;border-radius:10px;padding:5px 0;text-align:center;font-size:11px;color:var(--text3);cursor:pointer;position:relative}
+.ad-day b{display:block;font-size:15px;color:var(--text)}
+.ad-day.on{background:var(--text);border-color:var(--text);color:#ccc}.ad-day.on b{color:#fff}
+.ad-day.done::after{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--grn)}
+.ad-day.part::after{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--amb)}
+.ad-sum{display:flex;gap:6px;padding:2px 0 8px;flex-wrap:wrap}
+.ad-tag{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.t-hx{background:var(--ambl);color:var(--amb)}.t-ad{background:var(--grnl);color:var(--grn)}.t-both{background:var(--purl);color:var(--pur)}.t-off{background:#fce8e6;color:var(--red)}.t-none{background:#ece9e2;color:var(--text3)}
+.ad-all{display:block;width:100%;margin:2px 0 8px;padding:12px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.ad-all small{display:block;font-weight:400;font-size:11px;opacity:.85}
+.ad-co{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:14px 2px 2px}
+.ad-co.hx{color:var(--amb)}.ad-co.ad{color:var(--grn)}.ad-co.both{color:var(--pur)}
+.ad-fm{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);padding:6px 2px 4px;display:flex;justify-content:space-between}
+.ad-list{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ad-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #eeebe4;cursor:pointer}
+.ad-row:last-child{border-bottom:0}
+.ad-row .n{flex:1;font-weight:600;font-size:14px;min-width:0}.ad-row .n small{display:block;font-weight:400;font-size:11px;color:var(--text3)}
+.ad-row.vis{background:#fbfaf7}.ad-row.vis .n{color:var(--text2)}
+.ad-moved{font-size:11px;color:var(--red);font-weight:600}
+.ad-dim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:200}
+.ad-sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px 20px;z-index:201;display:none;max-height:92vh;overflow:auto}
+.ad-grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 10px}
+.ad-sheet h3{font-size:16px}.ad-sheet p{font-size:12px;color:var(--text3);margin:2px 0 8px}
+.ad-lbl{font-size:12px;color:var(--text3);margin:10px 0 6px}
+.ad-g{display:grid;gap:8px}
+.ad-opt{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:10px 2px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text)}
+.ad-opt.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
+.ad-cancel{width:100%;margin-top:12px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer}
+.ad-lock{font-size:12px;background:var(--ambl);color:var(--amb);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .att-cell:hover{filter:brightness(.92);transform:scale(1.08);}
 .att-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;align-items:center;}
 .leg-item{display:flex;align-items:center;gap:4px;}
@@ -331,6 +368,9 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 <!-- ATTENDANCE -->
 <div class="page" id="page-attendance">
   <div class="card">
+    <div class="av-tabs"><button id="av-day" onclick="setAttView('day')">Daily</button><button id="av-month" onclick="setAttView('month')">Month grid</button></div>
+    <div id="att-day"></div>
+    <div id="att-month">
     <div class="card-hdr">
       <span class="card-title" id="att-title">Attendance Log</span>
       <div style="display:flex;gap:6px;">
@@ -342,16 +382,21 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div id="att-toolbar"></div>
     <div class="att-legend">
       <span style="font-size:10px;font-weight:600;color:var(--text2);">Codes:</span>
-      <div class="leg-item"><div class="leg-dot att-cell st-empty">·</div><span>Off</span></div>
+      <div class="leg-item"><div class="leg-dot att-cell st-empty">·</div><span>Not marked</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-hx">H</div><span>HX full</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-ad">A</div><span>AD full</span></div>
-      <div class="leg-item"><div class="leg-dot att-cell st-both">B</div><span>Both</span></div>
+      <div class="leg-item"><div class="leg-dot att-cell st-both">B</div><span>Both (1 day: ½ HX + ½ AD)</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-hx_half">½H</div><span>HX half</span></div>
       <div class="leg-item"><div class="leg-dot att-cell st-ad_half">½A</div><span>AD half</span></div>
+      <div class="leg-item"><div class="leg-dot att-cell st-split">S</div><span>Split ½ HX + ½ AD</span></div>
+      <div class="leg-item"><div class="leg-dot att-cell st-off">✕</div><span>Off</span></div>
     </div>
     <div class="att-grid-wrap" id="att-grid"></div>
+    </div>
   </div>
 </div>
+<div class="ad-dim" id="ad-dim" onclick="adClose()"></div>
+<div class="ad-sheet" id="ad-sheet"></div>
 
 <!-- FOOD -->
 <div class="page" id="page-food">
@@ -506,9 +551,9 @@ Rm. 1800"></textarea>
 // -- CONSTANTS ----------------------------------------
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const ATT_STATES = ['','hx','ad','both','hx_half','ad_half'];
-const ATT_LABELS = {'':{lbl:'·',cls:'st-empty'},'hx':{lbl:'H',cls:'st-hx'},'ad':{lbl:'A',cls:'st-ad'},'both':{lbl:'B',cls:'st-both'},'hx_half':{lbl:'½H',cls:'st-hx_half'},'ad_half':{lbl:'½A',cls:'st-ad_half'}};
-const ATT_VALUES = {'':{'hx':0,'ad':0},'hx':{'hx':1,'ad':0},'ad':{'hx':0,'ad':1},'both':{'hx':1,'ad':1},'hx_half':{'hx':0.5,'ad':0},'ad_half':{'hx':0,'ad':0.5}};
+const ATT_STATES = ['','hx','ad','both','hx_half','ad_half','split','off'];
+const ATT_LABELS = {'':{lbl:'·',cls:'st-empty'},'hx':{lbl:'H',cls:'st-hx'},'ad':{lbl:'A',cls:'st-ad'},'both':{lbl:'B',cls:'st-both'},'hx_half':{lbl:'½H',cls:'st-hx_half'},'ad_half':{lbl:'½A',cls:'st-ad_half'},'split':{lbl:'S',cls:'st-split'},'off':{lbl:'✕',cls:'st-off'}};
+const ATT_VALUES = {'':{'hx':0,'ad':0},'hx':{'hx':1,'ad':0},'ad':{'hx':0,'ad':1},'both':{'hx':0.5,'ad':0.5},'hx_half':{'hx':0.5,'ad':0},'ad_half':{'hx':0,'ad':0.5},'split':{'hx':0.5,'ad':0.5},'off':{'hx':0,'ad':0}};
 const BANK_CHARGE = 11;
 function calcRecordCharges(r){
   // RM11 per TRANSACTION (record), regardless of how many workers share it
@@ -544,13 +589,15 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 68;
+const APP_VERSION = 69;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const TODAY_KL = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 let CLOUD_OK = false, CAN_EDIT = false, SNAP = null, syncTimer = null, syncing = false, syncAgain = false, dirty = false;
 let CO_ID = {}, CO_CODE = {}, W_RATES = {}, W_COMP = {}, W_PAY = {}, W_PAY2 = {}, W_PP = {};
+let FARMS = [], FARM_CODE = {}, W_FARM = {}; // v69: farms [code, 'hx'|'ad'], worker home farm history
+const THIS_MK = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0'); })();
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2,'0');
 
@@ -589,7 +636,7 @@ async function loadData(){
     fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_passport','id,worker_id,passport_no,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('salary_worker_note','worker_id,stop_notes'),
-    fetchAll('salary_attendance','worker_id,work_date,code', q=>q.neq('code','')),
+    fetchAll('salary_attendance','worker_id,work_date,code,am_farm,pm_farm', q=>q.neq('code','')),
     fetchAll('salary_gross_override','worker_id,month,amount', q=>q.not('amount','is',null)),
     fetchAll('salary_pay_method','worker_id,month,method', q=>q.neq('method','transfer')),
     fetchAll('salary_food','id,month,data', q=>notVoid(q).order('created_at')),
@@ -604,7 +651,7 @@ async function loadData(){
   const notes = {}; nt.forEach(n => notes[n.worker_id] = n.stop_notes || '');
   S.workers = wk.map(w => {
     const rates = W_RATES[w.id] || [], last = rates[rates.length-1];
-    const comp = (W_COMP[w.id] || []).slice(-1)[0];
+    const comp = (W_COMP[w.id] || []).filter(r => r.effective_from <= THIS_MK).slice(-1)[0] || (W_COMP[w.id] || [])[0];
     const pay = (W_PAY[w.id] || []).slice(-1)[0], pay2 = (W_PAY2[w.id] || []).slice(-1)[0], pas = (W_PP[w.id] || []).slice(-1)[0];
     const farm = !comp ? 'hx' : comp.company_id ? (CO_CODE[comp.company_id]==='AD' ? 'ad' : 'hx') : 'both';
     return { id:w.id, no:w.worker_no, name:w.name, title:w.title||'',
@@ -614,8 +661,9 @@ async function loadData(){
       passport: pas ? pas.passport_no : '', joinDate:w.join_date||'', stopDate:w.stop_date||'',
       stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active' };
   });
-  S.attendance = {}; at.forEach(r => { const mk = r.work_date.slice(0,7), d = parseInt(r.work_date.slice(8,10));
-    ((S.attendance[mk] ??= {})[r.worker_id] ??= {})[d] = r.code; });
+  S.attendance = {}; S.attFarm = {}; at.forEach(r => { const mk = r.work_date.slice(0,7), d = parseInt(r.work_date.slice(8,10));
+    ((S.attendance[mk] ??= {})[r.worker_id] ??= {})[d] = r.code;
+    if(r.am_farm || r.pm_farm) ((S.attFarm[mk] ??= {})[r.worker_id] ??= {})[d] = (r.am_farm||'') + '|' + (r.pm_farm||''); });
   S.grossOverride = {}; go.forEach(r => (S.grossOverride[r.month] ??= {})[r.worker_id] = Number(r.amount));
   S.paymentMethod = {}; pm.forEach(r => (S.paymentMethod[r.month] ??= {})[r.worker_id] = r.method);
   S.food = {}; fd.forEach(r => (S.food[r.month] ??= []).push(r.data));
@@ -636,12 +684,19 @@ async function loadData(){
   lm.forEach(m => LA(m.worker_id).months[m.month] = {amount:Number(m.amount), note:m.note||''});
   S.cashout = {}; co2.forEach(c => ((S.cashout[c.month] ??= {})[c.worker_id] ??= []).push(c.data));
   S.payeeSlot = {}; pc.forEach(c => (S.payeeSlot[c.month] ??= {})[c.worker_id] = c.slot);
+  const [fm, wf] = await Promise.all([
+    fetchAll('hub_farm','id,code,company_id', q=>q.eq('active',true).order('code')),
+    fetchAll('hub_worker_farm','worker_id,farm_id,effective_from', q=>q.is('voided_at',null).order('effective_from').order('created_at')),
+  ]);
+  FARM_CODE = {}; fm.forEach(f => FARM_CODE[f.id] = f.code);
+  FARMS = fm.map(f => [f.code, (CO_CODE[f.company_id]||'').toLowerCase()]).filter(f => f[1]).sort((a,b) => (a[1]===b[1] ? (a[0]<b[0]?-1:1) : a[1]==='hx'?-1:1));
+  W_FARM = grp(wf);
   await loadLocks();
   SNAP = clone({S, REM});
 }
 
 // ---- 比对：只送真的变了的 ----
-function flatAtt(s){ const o={}; for(const mk in s.attendance) for(const w in s.attendance[mk]) for(const d in s.attendance[mk][w]){ const v=s.attendance[mk][w][d]||''; if(v) o[w+'|'+mk+'-'+pad2(d)]=v; } return o; }
+function flatAtt(s){ const o={}, F=s.attFarm||{}; for(const mk in s.attendance) for(const w in s.attendance[mk]) for(const d in s.attendance[mk][w]){ const v=s.attendance[mk][w][d]||''; if(v){ const f=((F[mk]||{})[w]||{})[d]; o[w+'|'+mk+'-'+pad2(d)] = f ? v+'#'+f : v; } } return o; }
 function flat2(obj, skip){ const o={}; for(const mk in obj) for(const w in obj[mk]){ const v=obj[mk][w]; if(v!==undefined && v!==null && v!==skip) o[w+'|'+mk]=v; } return o; }
 function flatFood(s){ const o={}; for(const mk in s.food) (s.food[mk]||[]).forEach(r => { if(r && r.id) o[r.id]={month:mk,data:r}; }); return o; }
 function flatPers(s){ const o={}; for(const mk in s.personal) for(const w in s.personal[mk]) (s.personal[mk][w]||[]).forEach(r => { if(r && r.id) o[r.id]={month:mk,worker_id:w,data:r}; }); return o; }
@@ -675,8 +730,8 @@ async function syncNow(){
     const A0 = flatAtt(SNAP.S), A1 = flatAtt(cur.S), att = [];
     for(const k in A1) if(A0[k]!==A1[k]) att.push(k);
     for(const k in A0) if(!(k in A1)) att.push(k);
-    await upsertChunks('salary_attendance', att.map(k => { const [w,d]=k.split('|'); return {worker_id:w, work_date:d, code:A1[k]||''}; }), 'worker_id,work_date');
-    SNAP.S.attendance = cur.S.attendance;
+    await upsertChunks('salary_attendance', att.map(k => { const [w,d]=k.split('|'), [code,f]=(A1[k]||'').split('#'), [am,pm]=(f||'|').split('|'); return {worker_id:w, work_date:d, code:code||'', am_farm:am||null, pm_farm:pm||null}; }), 'worker_id,work_date');
+    SNAP.S.attendance = cur.S.attendance; SNAP.S.attFarm = cur.S.attFarm;
 
     const G0 = flat2(SNAP.S.grossOverride), G1 = flat2(cur.S.grossOverride), g = [];
     for(const k of new Set([...Object.keys(G0),...Object.keys(G1)])) if(G0[k]!==G1[k]){ const [w,m]=k.split('|'); g.push({worker_id:w, month:m, amount: k in G1 ? Number(G1[k]) : null}); }
@@ -1307,7 +1362,7 @@ function updateAttSummaryRow(wid){
 
 function fillAllHX(){const mk=monthKey();const m=getMonth();const y=getYear();const days=daysInMonth(y,m);if(!S.attendance[mk])S.attendance[mk]={};workersInMonth(mk).forEach(w=>{if(!S.attendance[mk][w.id])S.attendance[mk][w.id]={};for(let d=1;d<=days;d++)S.attendance[mk][w.id][d]='hx';});saveAll();renderAttendance();}
 function fillAllAD(){const mk=monthKey();const m=getMonth();const y=getYear();const days=daysInMonth(y,m);if(!S.attendance[mk])S.attendance[mk]={};workersInMonth(mk).forEach(w=>{if(!S.attendance[mk][w.id])S.attendance[mk][w.id]={};for(let d=1;d<=days;d++)S.attendance[mk][w.id][d]='ad';});saveAll();renderAttendance();}
-function clearAttendance(){if(!confirm('Clear all attendance for this month?'))return;const mk=monthKey();S.attendance[mk]={};saveAll();renderAttendance();}
+function clearAttendance(){if(!confirm('Clear all attendance for this month?'))return;const mk=monthKey();S.attendance[mk]={};if(S.attFarm)S.attFarm[mk]={};saveAll();renderAttendance();}
 
 // ======================================================
 // FOOD
@@ -3245,7 +3300,7 @@ function revertLockedEdits(cur){
   if(!hit.size) return false;
   // 只还原已锁月份的部分
   for(const m of hit){
-    for(const cat of ['attendance','grossOverride','paymentMethod','personal']){
+    for(const cat of ['attendance','attFarm','grossOverride','paymentMethod','personal']){ if(!SNAP.S[cat] || !S[cat]) continue;
       if(SNAP.S[cat][m] !== undefined) S[cat][m] = clone(SNAP.S[cat][m]); else delete S[cat][m];
       if(SNAP.S[cat][m] !== undefined) cur.S[cat][m] = clone(SNAP.S[cat][m]); else delete cur.S[cat][m];
     }
@@ -3588,6 +3643,7 @@ function setAtt(wid, d, code){
   const mk = monthKey(), w = getWorker(wid); if(!w || !inServiceOn(w, dayStr(mk,d))) return false;
   S.attendance[mk] ??= {}; S.attendance[mk][wid] ??= {};
   if(code) S.attendance[mk][wid][d] = code; else delete S.attendance[mk][wid][d];
+  setFarmOf(mk, wid, d, null);
   return true;
 }
 function attCellClick(wid, d){
@@ -3618,6 +3674,9 @@ function attFillAll(code){
   saveAll(); renderAttendance();
 }
 function renderAttendance(){
+  document.getElementById('av-day').classList.toggle('on', ATT_VIEW==='day'); document.getElementById('av-month').classList.toggle('on', ATT_VIEW==='month');
+  document.getElementById('att-day').style.display = ATT_VIEW==='day' ? '' : 'none'; document.getElementById('att-month').style.display = ATT_VIEW==='month' ? '' : 'none';
+  if(ATT_VIEW==='day') return renderAttDay();
   const mk = monthKey(), m = getMonth(), y = getYear(), days = daysInMonth(y, m);
   const workers = attWorkers(mk);
   document.getElementById('att-title').textContent = `Attendance -- ${MONTHS[m-1]} ${y}`;
@@ -3642,6 +3701,127 @@ function renderAttendance(){
   });
   document.getElementById('att-grid').innerHTML = `<table class="att-table" style="user-select:none;"><thead>${hdr}</thead><tbody>${body}</tbody></table>`;
 }
+
+// ---------- v69 每日出勤：按公司 → farm 分组 · Everyone worked 只填空的 · 上午/下午不同 farm ----------
+let AD_MK = null;
+let ATT_VIEW = (() => { try{ return localStorage.getItem('attView') || 'day'; }catch(e){ return 'day'; } })(), AD_DAY = null, AD_CUR = null, AD_MODE = 'full';
+function setAttView(v){ ATT_VIEW = v; try{ localStorage.setItem('attView', v); }catch(e){} renderAttendance(); }
+const farmCo = f => f === 'ALL' ? 'both' : (FARMS.find(x => x[0] === f) || [0, ''])[1];
+const farmLbl = f => f === 'ALL' ? 'All farms' : f;
+function homeFarm(w, mk){ const r = (W_FARM[w.id] || []).filter(x => x.effective_from <= mk).slice(-1)[0] || (W_FARM[w.id] || [])[0];
+  return r ? (r.farm_id ? FARM_CODE[r.farm_id] || '' : 'ALL') : ''; }
+function farmOfDay(mk, wid, d){ const v = (((S.attFarm||{})[mk]||{})[wid]||{})[d]; if(!v) return null; const [am, pm] = v.split('|'); return {am: am||null, pm: pm||null}; }
+function setFarmOf(mk, wid, d, f){ S.attFarm ??= {}; if(f){ ((S.attFarm[mk] ??= {})[wid] ??= {})[d] = (f.am||'') + '|' + (f.pm||''); } else if(((S.attFarm[mk]||{})[wid]||{})[d] !== undefined) delete S.attFarm[mk][wid][d]; }
+// 由上午/下午 farm 算出薪资代码
+function codeFromFarms(am, pm, half){
+  const a = farmCo(am);
+  if(half) return a === 'hx' ? 'hx_half' : a === 'ad' ? 'ad_half' : '';
+  const b = farmCo(pm || am);
+  if(a === b) return a === 'both' ? 'split' : a;
+  return 'split';
+}
+function adGet(mk, w, d){ const code = (((S.attendance[mk]||{})[w.id])||{})[d] || ''; if(!code) return null; if(code === 'off') return {off:true};
+  const f = farmOfDay(mk, w.id, d);
+  if(f && f.am) return {code, am:f.am, pm:f.pm, half: !f.pm};
+  return {code, am:null, pm:null, half: /_half$/.test(code)}; }   // 月表笔刷填的（只有公司）
+function adSet(mk, wid, d, code, f){ S.attendance[mk] ??= {}; S.attendance[mk][wid] ??= {};
+  if(code) S.attendance[mk][wid][d] = code; else delete S.attendance[mk][wid][d]; setFarmOf(mk, wid, d, code && code !== 'off' ? f : null); }
+function adDefault(w, mk){ const h = homeFarm(w, mk); if(h) return {code: codeFromFarms(h, h, false), f:{am:h, pm:h}};
+  return {code: w.farm === 'both' ? 'split' : (w.farm || 'hx'), f:null}; }
+function adWorkers(mk, d){ return workersInMonth(mk).filter(w => inServiceOn(w, dayStr(mk, d))); }
+const coTag = c => c === 'hx' ? 't-hx' : c === 'ad' ? 't-ad' : 't-both';
+function adTag(x){
+  if(!x) return '<span class="ad-tag t-none">—</span>';
+  if(x.off) return '<span class="ad-tag t-off">Off</span>';
+  if(!x.am){ const L = {hx:'HX',ad:'AD',both:'Both',hx_half:'HX ½',ad_half:'AD ½',split:'½ HX + ½ AD'}[x.code] || x.code;
+    return '<span class="ad-tag ' + coTag(x.code.slice(0,2)) + '">' + L + '</span>'; }
+  if(x.half) return '<span class="ad-tag ' + coTag(farmCo(x.am)) + '">' + farmLbl(x.am) + ' ½</span>';
+  if(x.am === x.pm) return '<span class="ad-tag ' + coTag(farmCo(x.am)) + '">' + farmLbl(x.am) + '</span>';
+  return '<span class="ad-tag ' + coTag(farmCo(x.am)) + '">AM ' + farmLbl(x.am) + '</span> <span class="ad-tag ' + coTag(farmCo(x.pm)) + '">PM ' + farmLbl(x.pm) + '</span>';
+}
+function renderAttDay(){
+  const mk = monthKey(), m = getMonth(), y = getYear(), days = daysInMonth(y, m), lock = isLocked(mk);
+  if(AD_MK !== mk){ AD_MK = mk; AD_DAY = null; }
+  const today = new Date(); if(AD_DAY === null || AD_DAY > days) AD_DAY = (THIS_MK === mk) ? today.getDate() : 1;
+  const D = AD_DAY, ws = adWorkers(mk, D), wd = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let h = lock ? '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>' : '';
+  h += '<div class="ad-days" id="ad-days">';
+  for(let d=1; d<=days; d++){ const all = adWorkers(mk, d), n = all.filter(w => adGet(mk, w, d)).length;
+    h += '<div class="ad-day' + (d===D?' on':'') + (all.length && n===all.length?' done':n?' part':'') + '" data-d="' + d + '" onclick="AD_DAY=' + d + ';renderAttDay()">' + wd[dayOfWeek(y,m,d)] + '<b>' + d + '</b></div>'; }
+  h += '</div>';
+  // 每个 farm 人数（半天 = 0.5）
+  const c = {}; let none = 0, off = 0;
+  ws.forEach(w => { const x = adGet(mk, w, D); if(!x){ none++; return; } if(x.off){ off++; return; }
+    if(x.am){ if(x.half) c[x.am] = (c[x.am]||0) + 0.5; else [x.am, x.pm].forEach(f => c[f] = (c[f]||0) + 0.5); }
+    else { const k = x.code === 'split' ? 'Both' : x.code.slice(0,2).toUpperCase(); c[k] = (c[k]||0) + (/_half$/.test(x.code) ? 0.5 : 1); } });
+  const order = [...FARMS.map(f => f[0]), 'ALL', 'HX', 'AD', 'Both'];
+  h += '<div class="ad-sum">' + order.filter(k => c[k]).map(k => '<span class="ad-tag ' + coTag(k==='HX'?'hx':k==='AD'?'ad':k==='Both'?'both':farmCo(k)) + '">' + farmLbl(k) + ' ' + fmtNum(c[k]) + '</span>').join('')
+     + (off ? '<span class="ad-tag t-off">Off ' + off + '</span>' : '') + (none ? '<span class="ad-tag t-none">Not marked ' + none + '</span>' : '') + '</div>';
+  if(none && !lock) h += '<button class="ad-all" onclick="adEveryone()">Everyone worked<small>Each worker at their own farm — only fills the ' + none + ' not marked</small></button>';
+  if(!ws.length) h += '<div class="empty"><p>No workers on this day</p></div>';
+  // 分组：公司 → farm
+  const groups = [['hx','HX'],['ad','AD'],['both','All farms']];
+  for(const [cc, label] of groups){
+    const farms = cc === 'both' ? ['ALL'] : FARMS.filter(f => f[1] === cc).map(f => f[0]);
+    let gh = '';
+    for(const f of [...farms, '']){
+      const own = ws.filter(w => { const hf = homeFarm(w, mk); return f ? hf === f : (!hf && (w.farm||'hx') === cc); });
+      const vis = f ? ws.filter(w => { const x = adGet(mk, w, D); return homeFarm(w, mk) !== f && x && !x.off && (x.am === f || x.pm === f); }) : [];
+      if(!own.length && !vis.length) continue;
+      if(cc !== 'both') gh += '<div class="ad-fm"><span>' + (f || 'Farm not set') + '</span><span>' + own.length + '</span></div>';
+      gh += '<div class="ad-list">' + own.map(w => { const x = adGet(mk, w, D), hf = homeFarm(w, mk);
+          const mv = x && x.am && hf && (x.am !== hf || (x.pm && x.pm !== hf)) ? '<span class="ad-moved">moved</span>' : '';
+          return '<div class="ad-row" onclick="adOpen(\'' + w.id + '\')"><div class="n">' + esc(w.name) + '<small>' + esc(w.title||'') + (w.rateType==='monthly'?' · monthly':'') + '</small></div>' + mv + adTag(x) + '</div>'; }).join('')
+        + vis.map(w => '<div class="ad-row vis" onclick="adOpen(\'' + w.id + '\')"><div class="n">↪ ' + esc(w.name) + '<small>from ' + farmLbl(homeFarm(w, mk)) + '</small></div>' + adTag(adGet(mk, w, D)) + '</div>').join('') + '</div>';
+    }
+    if(gh) h += '<div class="ad-co ' + cc + '">' + label + '</div>' + gh;
+  }
+  const el = document.getElementById('att-day'); el.innerHTML = h;
+  const on = el.querySelector('.ad-day.on'); if(on){ const box = document.getElementById('ad-days'); box.scrollLeft = on.offsetLeft - box.offsetLeft - box.clientWidth/2 + 22; }
+}
+function adEveryone(){
+  const mk = monthKey(), D = AD_DAY; if(isLocked(mk)) return;
+  let n = 0; adWorkers(mk, D).forEach(w => { if(adGet(mk, w, D)) return; const df = adDefault(w, mk); adSet(mk, w.id, D, df.code, df.f); n++; });
+  saveAll(); renderAttDay(); toast(n + ' workers marked');
+}
+function adChips(id, sel, withAll){
+  const list = [...FARMS.map(f => f[0]), ...(withAll ? ['ALL'] : [])];
+  return '<div class="ad-g" style="grid-template-columns:repeat(' + (withAll ? 4 : 3) + ',1fr)" data-g="' + id + '">' + list.map(f => '<button class="ad-opt' + (f===sel?' on':'') + '" data-v="' + f + '">' + farmLbl(f) + '</button>').join('') + '</div>';
+}
+function adOpen(wid){
+  const mk = monthKey(); if(isLocked(mk)){ toast('This month is locked'); return; }
+  const w = getWorker(wid), x = adGet(mk, w, AD_DAY); AD_CUR = wid;
+  AD_MODE = !x || x.off ? 'full' : x.half ? 'half' : (x.am && x.pm && x.am !== x.pm) ? 'split' : 'full';
+  adSheet(); document.getElementById('ad-dim').style.display = 'block'; document.getElementById('ad-sheet').style.display = 'block';
+}
+function adSheet(){
+  const mk = monthKey(), w = getWorker(AD_CUR), x = adGet(mk, w, AD_DAY), hf = homeFarm(w, mk) || '';
+  let am = x && !x.off && x.am ? x.am : hf, pm = x && !x.off && x.pm ? x.pm : am;
+  if(AD_MODE !== 'full' && am === 'ALL') am = null; if(AD_MODE === 'split' && pm === 'ALL') pm = null;
+  const [y, m] = mk.split('-').map(Number);
+  let h = '<div class="ad-grab"></div><h3>' + esc(w.name) + ' · ' + AD_DAY + ' ' + MONTHS[m-1].slice(0,3) + '</h3><p>Own farm: ' + (hf ? farmLbl(hf) : 'not set') + '</p>'
+    + '<div class="ad-g" style="grid-template-columns:repeat(3,1fr)" data-g="mode">' + [['full','Full day'],['split','AM / PM'],['half','Half day']].map(([v,l]) => '<button class="ad-opt' + (v===AD_MODE?' on':'') + '" data-v="' + v + '">' + l + '</button>').join('') + '</div>';
+  if(AD_MODE === 'split') h += '<div class="ad-lbl">Morning</div>' + adChips('am', am, false) + '<div class="ad-lbl">Afternoon</div>' + adChips('pm', pm, false);
+  else h += '<div class="ad-lbl">' + (AD_MODE === 'half' ? 'Half day at' : 'Worked at') + '</div>' + adChips('am', am, AD_MODE === 'full');
+  h += '<div class="ad-g" style="grid-template-columns:1fr 1fr;margin-top:12px"><button class="ad-opt' + (x && x.off ? ' on' : '') + '" style="color:var(--red)" data-act="off">Off</button><button class="ad-opt" data-act="clear">Clear</button></div>'
+    + '<button class="ad-cancel" onclick="adClose()">Done</button>';
+  document.getElementById('ad-sheet').innerHTML = h;
+}
+function adSave(){
+  const sh = document.getElementById('ad-sheet'), v = g => (sh.querySelector('[data-g="' + g + '"] .ad-opt.on') || {}).dataset?.v;
+  const am = v('am'), pm = AD_MODE === 'split' ? v('pm') : AD_MODE === 'full' ? am : null; if(!am || (AD_MODE === 'split' && !pm)) return;
+  const code = codeFromFarms(am, pm, AD_MODE === 'half'); if(!code) return;
+  adSet(monthKey(), AD_CUR, AD_DAY, code, {am, pm}); saveAll(); renderAttDay();
+}
+document.getElementById('ad-sheet').addEventListener('click', e => {
+  const b = e.target.closest('.ad-opt'); if(!b) return; const mk = monthKey();
+  if(b.dataset.act === 'off'){ adSet(mk, AD_CUR, AD_DAY, 'off', null); saveAll(); adClose(); return; }
+  if(b.dataset.act === 'clear'){ adSet(mk, AD_CUR, AD_DAY, '', null); saveAll(); adClose(); return; }
+  const g = b.parentElement.dataset.g;
+  if(g === 'mode'){ AD_MODE = b.dataset.v; adSheet(); adSave(); adSheet(); return; }
+  b.parentElement.querySelectorAll('.ad-opt').forEach(x => x.classList.toggle('on', x === b)); adSave();
+});
+function adClose(){ document.getElementById('ad-dim').style.display = 'none'; document.getElementById('ad-sheet').style.display = 'none'; renderAttDay(); }
 document.addEventListener('mouseup', () => { _painting = false; });
 
 // ---------- 工人：作废（只限建错、没有任何纪录）· 改动纪录 ----------
