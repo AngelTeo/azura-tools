@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v81</title>
+<title>Salary v82</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -182,7 +182,7 @@ tr:hover td{background:#fafaf8;}
 }
 .rp-acc{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
 .rp-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;color:var(--text3)}.rp-h b{font-size:13px}.rp-h b.hx{color:var(--amb)}.rp-h b.ad{color:var(--grn)}
-.rp-it{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--bg2);cursor:pointer}.rp-it .n{flex:1;min-width:0;font-weight:600;font-size:14px}.rp-it .n small{display:block;font-weight:400;font-size:12px;color:var(--text3)}
+.rp-it{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--bg2);cursor:pointer}.rp-it .n{flex:1;min-width:0;font-weight:600;font-size:14px}.rp-it .n small{display:block;font-weight:400;font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rp-ck{width:24px;height:24px;border:2px solid var(--border);border-radius:6px;flex:none;text-align:center;line-height:20px;font-size:14px;color:#fff}.rp-ck.on{background:var(--grn);border-color:var(--grn)}
 .rp-warn{font-size:10px;font-weight:700;background:var(--ambl);color:var(--amb);border-radius:4px;padding:1px 5px;margin-left:5px}
 .rp-nob{background:#fff;border:1.5px dashed var(--border);border-radius:12px;padding:8px 12px;font-size:13px}.rp-nob small{color:var(--text3)}
@@ -620,7 +620,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 81;
+const APP_VERSION = 82;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3839,7 +3839,7 @@ function rpRender(){
   if(!lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
   h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button class="ad-opt" data-act="stars">⭐ Pick who goes first</button><button class="ad-opt" data-act="phone">📱 Saved in phone</button></div>';
   const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '')
-    + (!done && !rpSaved(i) ? '<span class="rp-warn">⚠ not in ' + i.acct.toUpperCase() + ' phone</span>' : '') + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + ' · ' + esc(i.acc) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
+    + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + '</small><small>' + esc(i.acc) + (!done && !rpSaved(i) ? ' · <b style="color:var(--amb)">⚠ not in phone</b>' : '') + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
   const acCard = (ac, list, d) => { const sentT = d === 0 ? items.filter(i => i.acct === ac && i.sent === today) : [], all = [...sentT, ...list]; if(!all.length) return '';
     const t = sum(all); return '<div class="rp-acc"><div class="rp-h"><b class="' + ac + '">' + ac.toUpperCase() + ' account</b><span>' + fmtRM(t) + ' / RM 5,000 · left ' + fmtRM(r2(REM_MAX - t)) + '</span></div><div class="av-bar" style="margin:0 12px 6px"><i style="width:' + Math.min(100, t / 50) + '%"></i></div>'
       + sentT.map(i => row(i, true)).join('') + list.map(i => row(i, false)).join('') + '</div>'; };
@@ -3849,7 +3849,7 @@ function rpRender(){
   const before = sent.filter(i => i.sent !== today);
   if(before.length) h += '<div class="ad-fm" data-act="showsent" style="cursor:pointer"><span>SENT BEFORE TODAY · ' + before.length + ' · ' + fmtRM(sum(before)) + '</span><span style="color:var(--acc)">' + (RP_SHOW_SENT ? 'Hide' : 'Show') + '</span></div>'
     + (RP_SHOW_SENT ? '<div class="ad-list">' + before.sort((a, b) => a.sent < b.sent ? 1 : -1).map(i => '<div class="ad-row" data-key="' + i.key + '"><div class="n">' + esc(i.w.name) + '<small>' + fmtDay(i.sent) + ' · ' + i.acct.toUpperCase() + ' · to ' + esc(i.ben) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '</div></div>').join('') + '</div>' : '');
-  if(P.nob.length) h += '<div class="ad-fm"><span>CAN\'T PLAN YET · NO BANK ACCOUNT</span><span>' + P.nob.length + '</span></div><div class="rp-nob">' + P.nob.map(i => esc(i.w.name) + ' · ' + fmtRM(i.send)).join(' · ') + '<br><small>Add the bank in Workers, or pay cash in Summary.</small></div>';
+  if(P.nob.length) h += '<div class="ad-fm"><span>CAN\'T PLAN YET · NO BANK ACCOUNT</span><span>' + P.nob.length + '</span></div><p style="font-size:12px;color:var(--text3);margin:0 2px 6px">Add the bank in Workers, or pay cash in Summary.</p><div class="ad-list">' + P.nob.map(i => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(i.w.name) + '<small>' + i.acct.toUpperCase() + ' account</small></div><div class="fd-amt">' + fmtRM(i.send) + '</div></div>').join('') + '</div>';
   el.innerHTML = h;
 }
 let RP_SHOW_SENT = false;
