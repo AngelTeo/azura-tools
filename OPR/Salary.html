@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v82</title>
+<title>Salary v83</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -155,6 +155,8 @@ tr:hover td{background:#fafaf8;}
 .sm-flt{display:flex;gap:6px;overflow:auto;padding:2px 0 8px}.sm-flt span{border:1.5px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;white-space:nowrap;cursor:pointer}.sm-flt span.on{border-color:var(--text);background:var(--text);color:#fff}
 .sm-tag{font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:1px}.sm-tag.c{background:var(--ambl);color:var(--amb)}.sm-tag.u{background:var(--redl);color:var(--red)}.sm-tag.n{background:#ece9e2;color:var(--text3)}
 .sm-slip{flex:none;border:1.5px solid var(--border);background:#fff;border-radius:9px;padding:4px 7px;font-size:16px;line-height:1;cursor:pointer;display:flex;flex-direction:column;align-items:center}.sm-slip span{font-size:9px;font-weight:700;color:var(--text3);margin-top:2px}
+.ad-row .hm{width:40px;flex:none}.ad-row .hm b{display:block;font-size:14px}.ad-row .hm small{font-size:11px;color:var(--text3)}
+.hdet{background:var(--bg);padding:6px 14px 8px 64px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--bg2)}.hdet div{display:flex;justify-content:space-between;padding:2px 0}
 .sm-ln{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bg2);font-size:14px}.sm-ln.m span:last-child{color:var(--red)}.sm-ln a{color:var(--acc);font-size:12px;cursor:pointer;margin-left:4px}
 .sm-ln.t{font-weight:700;font-size:16px;border-bottom:0;border-top:2px solid var(--text);margin-top:4px;padding-top:8px}
 .sm-ck2{display:grid;grid-template-columns:1fr 1fr;gap:20px}.sm-ck table{width:100%;font-size:13px;border-collapse:collapse}.sm-ck td{padding:6px 4px;border-bottom:1px solid var(--bg2)}.sm-ck td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
@@ -620,7 +622,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 82;
+const APP_VERSION = 83;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -989,6 +991,7 @@ async function boot(){
   document.getElementById('who-chip').textContent = (me.display_name||'') + ' · ' + (me.position||me.role);
   setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? 'Connected' : 'View only');
   initMonthSel(); renderDashboard(); renderExitRecords(); updateLockStrip();
+  const hm = location.hash.match(/hist=([0-9a-f-]{36})/); if(hm && getWorker(hm[1])){ goPage('summary'); renderSummary(); smHist(hm[1], 'salary', 'fromhash'); }
 }
 
 
@@ -3716,8 +3719,9 @@ function smFullTable(rows, mk){
     + '<tr class="total-row"><td><strong>TOTAL</strong></td><td class="num">' + fmtRM(sum(r => r.s.gross)) + '</td><td class="num">' + fmtRM(sum(r => r.s.food)) + '</td><td class="num">' + fmtRM(sum(r => r.s.advD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.persD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.totalDed)) + '</td><td class="num">' + fmtRM(sum(r => r.net)) + '</td><td class="num">' + fmtRM(sum(r => r.cash)) + '</td><td class="num">' + fmtRM(sum(r => r.fee)) + '</td><td class="num">' + fmtRM(sum(r => r.tx)) + '</td><td data-col-noprint></td><td data-col-noprint></td></tr></tbody></table></div>';
 }
 function smShow(){ document.getElementById('sm-dim').style.display = 'block'; document.getElementById('sm-sheet').style.display = 'block'; }
-function smClose(){ document.getElementById('sm-dim').style.display = 'none'; document.getElementById('sm-sheet').style.display = 'none'; SM.wid = null; renderSummary(); }
+function smClose(){ SM.hist = null; if(location.hash.startsWith('#hist=')) history.replaceState(null, '', location.pathname); document.getElementById('sm-dim').style.display = 'none'; document.getElementById('sm-sheet').style.display = 'none'; SM.wid = null; renderSummary(); }
 function smWorker(wid, mode){
+  SM.hist = null;
   const mk = monthKey(), w = getWorker(wid), r = smRow(w, mk), s = r.s, lock = isLocked(mk) || !CAN_EDIT; SM.wid = wid;
   const ln = (a, b, cls) => '<div class="sm-ln' + (cls ? ' ' + cls : '') + '"><span>' + a + '</span><span>' + b + '</span></div>';
   let h = '<div class="ad-grab"></div><h3>' + esc(w.name) + '</h3><p>' + esc(homeFarm(w, mk) || 'Farm not set') + ' · ' + (w.rateType==='monthly' ? 'monthly salary' : fmtNum(s.totalD) + (s.totalD === 1 ? ' day × ' : ' days × ') + fmtRM(getRateForMonth(w, mk))) + '</p>';
@@ -3744,7 +3748,7 @@ function smWorker(wid, mode){
       }
     }
     if(homeFarm(w, mk) === 'ALL' || (!homeFarm(w, mk) && w.farm === 'both')) h += '<div class="ad-lbl">Send from</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + ['hx','ad'].map(a => '<button class="ad-opt' + (acctOf(w, mk) === a ? ' on' : '') + '" data-from="' + a + '"' + (lock ? ' disabled' : '') + '>' + a.toUpperCase() + ' account</button>').join('') + '</div>';
-    h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="cashout">💵 Pay part in cash</button><button class="ad-opt" data-act="receipt">🧾 Receipt</button></div><button class="ad-cancel" data-act="close">Close</button>';
+    h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="cashout">💵 Pay part in cash</button><button class="ad-opt" data-act="receipt">🧾 Receipt</button><button class="ad-opt" data-act="hist" style="grid-column:1/-1">📜 Salary &amp; loan history</button></div><button class="ad-cancel" data-act="close">Close</button>';
   }
   document.getElementById('sm-sheet').innerHTML = h; smShow();
 }
@@ -3776,6 +3780,7 @@ document.getElementById('sm-sheet').addEventListener('click', e => {
     setPayeeX(wid, mk, {split: v}); toast('Saved'); renderSummary(); return smWorker(wid); }
   if(a === 'cashout'){ smClose(); return openCashOut(wid, mk); }
   if(a === 'receipt') return printReceipt(wid, mk);
+  if(a === 'hist') return smHist(wid);
 });
 // 锁月：净薪负数 → 下个月的借款（同一个月重锁不会重复）
 function minusToLoans(mk){
@@ -3913,6 +3918,50 @@ document.getElementById('rp-sheet').addEventListener('click', e => {
   if(a === 'unsend'){ if(!confirm('Undo sent for ' + i.w.name + '?')) return; rpSet(i, {sent:''}); }
   rpRender(); rpOne(i.key);
 });
+
+// ---------- v83 员工历史：薪水（一月一行，点开看明细，🧾 薪水单）＋ 借款（借、还、每月扣） ----------
+function smHist(wid, tab, open){
+  const w = getWorker(wid); if(!w) return; SM.wid = wid; SM.hist = {tab: tab || 'salary', open: open || null};
+  const months = []; for(let m = '2026-01'; m <= THIS_MK; m = nextMk(m)) if(workerInMonth(w, m)) months.push(m);
+  let h = '<div class="ad-grab"></div><h3>' + esc(w.name) + ' · History</h3><p>' + esc(homeFarm(w, THIS_MK) || '') + '</p>'
+    + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">' + [['salary','Salary'],['loan','Loan']].map(t => '<button class="ad-opt' + (SM.hist.tab === t[0] ? ' on' : '') + '" data-htab="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
+  if(SM.hist.tab === 'salary'){
+    const rows = months.map(m => { const s = calcWorkerSummary(w, m), pm = s.pm || getPayMethod(w.id, m);
+      return {m, s, pm, got: pm === 'cash' && m >= FEE_RULE_START ? r2(s.cashPaid || 0) : r2(s.toTx || 0), open: m === THIS_MK && !isLocked(m)}; });
+    const done = rows.filter(r => !r.open), sum = f => r2(done.reduce((a, r) => a + f(r), 0));
+    h += '<div class="sm-top"><div class="l">So far · ' + done.length + ' month' + (done.length === 1 ? '' : 's') + '</div><div class="g3"><div>Days worked<b>' + fmtNum(sum(r => r.s.totalD)) + '</b></div><div>Salary<b>' + fmtRM(sum(r => r.s.gross)) + '</b></div><div>He got<b>' + fmtRM(sum(r => r.got + (r.s.cashOut || 0))) + '</b></div></div></div>';
+    h += '<div class="ad-fm"><span>MONTH</span><span>HE GOT</span></div><div class="ad-list">' + rows.reverse().map(r => { const [y, mm] = r.m.split('-').map(Number), s = r.s;
+      const sub = r.open ? 'This month (not finished)' : fmtNum(s.totalD) + (s.totalD === 1 ? ' day' : ' days') + ' · salary ' + fmtRM(s.gross);
+      const sub2 = r.open ? '' : '− ' + fmtRM(s.totalDed) + ' deducted · ' + (r.pm === 'cash' ? '<b style="color:var(--amb)">Cash</b>' : r.pm === 'unpaid' ? '<b style="color:var(--red)">Not paid</b>' : 'Bank') + (isLocked(r.m) ? ' · 🔒' : '');
+      let x = '<div class="ad-row" data-hm="' + r.m + '"><div class="hm"><b>' + MONTHS[mm-1].slice(0,3) + '</b><small>' + y + '</small></div><div class="n" style="font-weight:600;font-size:13px">' + sub + '<small>' + sub2 + '</small></div><div class="fd-amt">' + fmtRM(r.got + (s.cashOut || 0)) + '</div><button class="sm-slip" data-hslip="' + r.m + '">🧾<span>Slip</span></button></div>';
+      if(SM.hist.open === r.m && !r.open) x += '<div class="hdet">' + [['Salary', fmtRM(s.gross)], ['Food', '− ' + fmtRM(s.food)], ['Loan', '− ' + fmtRM(s.advD)], ['Personal', '− ' + fmtRM(s.persD)], ['Net pay', fmtRM(s.net)]]
+          .concat(s.cashOut ? [['Cash during the month', '− ' + fmtRM(s.cashOut)]] : []).concat(s.bankChg ? [['Bank fee', '− ' + fmtRM(s.bankChg)]] : [])
+          .concat([[r.pm === 'cash' ? 'Paid in cash' : 'Sent to bank', fmtRM(r.got)]]).map(l => '<div><span>' + l[0] + '</span><span>' + l[1] + '</span></div>').join('') + '</div>';
+      return x; }).join('') + '</div><p style="margin-top:6px">Tap a month to see the breakdown. 🧾 opens that month\'s salary slip.</p>';
+  } else {
+    const L = loanAcc(wid) || {txn:[], plan:[], months:{}}, t = advanceTrack(wid, THIS_MK), owes = r2((t.loaned || 0) - (t.paidBefore || 0)), paid = r2((t.loaned || 0) - owes);
+    if(!(L.txn || []).length) h += '<div class="empty"><p>No loan</p></div>';
+    else {
+      h += '<div class="sm-top"><div class="g3"><div>Borrowed<b>' + fmtRM(t.loaned || 0) + '</b></div><div>Paid back<b>' + fmtRM(paid) + '</b></div><div>Still owes<b style="color:' + (owes > 0.004 ? 'var(--red)' : 'var(--grn)') + '">' + fmtRM(owes) + '</b></div></div><div class="av-bar" style="margin-top:8px"><i style="width:' + (t.loaned ? Math.round(paid / t.loaned * 100) : 100) + '%"></i></div></div>';
+      const ev = [];
+      (L.txn || []).forEach(x => ev.push([x.date || x.month, x.kind === 'LOAN' ? 'Borrowed' : x.kind === 'WRITE_OFF' ? 'Written off' : 'Paid back in the old system (to Sep 2026)', (x.kind === 'LOAN' ? '+ ' : '− ') + fmtRM(x.amount), x.note && x.kind !== 'OPENING_REPAID' ? x.note.replace(/^\[minus [\d-]+\] /, '') : '']));
+      (L.plan || []).forEach(p => ev.push([p.from + '-00', 'Monthly amount set', fmtRM(p.monthly) + '/month', 'from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4)]));
+      for(let m = NEW_SYS_START; m <= THIS_MK; m = nextMk(m)){ const a = advanceTrack(wid, m); if(!(a.thisMonth > 0)) continue; const ov = (L.months || {})[m];
+        ev.push([m + '-99', m === THIS_MK && !isLocked(m) ? 'This month (planned)' : 'Taken from salary', '− ' + fmtRM(a.thisMonth), MONTHS[Number(m.slice(5))-1].slice(0,3) + ' ' + m.slice(0,4) + ' · left ' + fmtRM(a.balanceAfter) + (ov && ov.note ? ' · ' + ov.note : '')]); }
+      ev.sort((a, b) => a[0] < b[0] ? -1 : 1);
+      h += '<div class="ad-fm"><span>WHAT HAPPENED</span><span></span></div><div class="ad-list">' + ev.map(e => '<div class="ad-row" style="cursor:default"><div class="n" style="font-weight:600;font-size:13px">' + e[1] + '<small>' + (/-\d\d$/.test(e[0]) && !/-(00|99)$/.test(e[0]) ? fmtDay(e[0]) : '') + (e[3] ? (/-\d\d$/.test(e[0]) && !/-(00|99)$/.test(e[0]) ? ' · ' : '') + esc(e[3]) : '') + '</small></div><div class="fd-amt">' + e[2] + '</div></div>').join('') + '</div>'
+        + '<p style="margin-top:6px">Same numbers as Advance. Borrow more or change the monthly amount in Advance.</p>';
+    }
+  }
+  h += '<button class="ad-cancel" data-act="' + (open === 'fromhash' ? 'close' : 'back') + '">' + (open === 'fromhash' ? 'Close' : 'Back') + '</button>';
+  document.getElementById('sm-sheet').innerHTML = h; smShow();
+}
+document.getElementById('sm-sheet').addEventListener('click', e => {
+  if(!SM.hist || !SM.wid) return; const b = e.target.closest('[data-htab],[data-hslip],[data-hm]'); if(!b) return;
+  if(b.dataset.htab){ e.stopImmediatePropagation(); return smHist(SM.wid, b.dataset.htab); }
+  if(b.dataset.hslip){ e.stopImmediatePropagation(); return printReceipt(SM.wid, b.dataset.hslip); }
+  if(b.dataset.hm){ e.stopImmediatePropagation(); return smHist(SM.wid, 'salary', SM.hist.open === b.dataset.hm ? null : b.dataset.hm); }
+}, true);
 
 function askReason(msg){ const r = prompt(msg + '\nReason:'); return r && r.trim() ? r.trim() : null; }
 function voidLoanTxn(wid, id){ const r = askReason('Void this loan entry'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }

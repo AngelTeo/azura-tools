@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v17</title>
+<title>Workers v18</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -116,7 +116,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -134,7 +134,7 @@ const last4 = s => s ? '••' + String(s).slice(-4) : '';
 const REASON = {run:'RUN', chase:'CHASE', resign:'RESIGN'};
 
 const D = {workers:[], rates:{}, comps:{}, pay1:{}, pay2:{}, pass:{}, co:{}, coId:{}, locked:new Set()};
-let CAN_EDIT = false, CAN_SALARY = false, FILTER = 'active', OPEN = null;
+let CAN_EDIT = false, CAN_SALARY = false, CAN_SEE_SALARY = false, FILTER = 'active', OPEN = null;
 
 function toast(t, bad){ const x = $('toast'); x.textContent = t; x.className = bad ? 'bad' : ''; x.style.display = 'block'; clearTimeout(x._t); x._t = setTimeout(() => x.style.display = 'none', bad ? 6000 : 2200); }
 function nice(e){
@@ -157,7 +157,7 @@ async function boot(){
   const [{data:a1}, {data:a2}] = await Promise.all([sb.rpc('hub_can_access', {p_system:'FARMHUB'}), sb.rpc('hub_can_access', {p_system:'SALARY'})]);
   const a = (a1 && a1[0]) || {};
   if(!a.can_see) return gate('No access', 'Please ask the owner for access to Workers.', true);
-  CAN_EDIT = !!a.can_edit; CAN_SALARY = !!((a2 && a2[0]) || {}).can_edit;
+  CAN_EDIT = !!a.can_edit; CAN_SALARY = !!((a2 && a2[0]) || {}).can_edit; CAN_SEE_SALARY = !!((a2 && a2[0]) || {}).can_see;
   $('who').textContent = me.display_name || '';
   $('fab').hidden = !CAN_EDIT;
   await load();
@@ -256,6 +256,7 @@ async function openWorker(id){
     + ((farmOf(w) === 'ALL' || coOf(w) === 'both') ? it('Costs charged to', w.cost_co ? w.cost_co : 'Not set', 'food, personal, loan, cash, bank fee', 'sheetCostCo()') : '')
     + it('Payee 1', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) : '', 'sheetPayeeEdit(1)')
     + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
+    + (CAN_SEE_SALARY ? '<div class="item tap" onclick="location.href=\'../OPR/Salary.html?v=' + Date.now() + '#hist=' + w.id + '\'"><div class="k">History</div><div class="v" style="color:var(--acc)">Salary &amp; loan history<small>Opens in Salary</small></div><span class="chev">›</span></div>' : '')
     + '<div class="grp">Details</div>'
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
     + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--text3);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
