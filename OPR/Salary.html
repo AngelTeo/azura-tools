@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v80</title>
+<title>Salary v81</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -163,7 +163,7 @@ tr:hover td{background:#fafaf8;}
 .sm-res{border-radius:8px;padding:8px 10px;font-weight:700;margin-top:10px;font-size:13px}
 @media(max-width:700px){.sm-ck2{grid-template-columns:1fr}.sm-desk{display:none}}
 .av-alert{background:var(--ambl);border:1.5px solid #e8c77a;border-radius:12px;padding:10px 14px;color:var(--amb);margin-bottom:8px;cursor:pointer}
-.av-alert b{display:block;font-size:14px}.av-alert small{font-size:12px}.av-alert span{float:right;font-weight:700;color:var(--acc)}
+.av-alert b{display:block;font-size:14px}.av-alert.sm-card{padding:10px 14px}.av-alert.sm-card.on{background:#fff;border-color:var(--acc)}.av-alert small{font-size:12px}.av-alert span{float:right;font-weight:700;color:var(--acc)}
 .av-big{font-size:26px;font-weight:700}.av-bar{height:8px;background:#ece9e2;border-radius:4px;overflow:hidden;margin:6px 0}.av-bar i{display:block;height:100%;background:var(--grn)}
 .av-mo{display:flex;gap:6px;flex-wrap:wrap}.av-mo span{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 7px;background:#fff}.av-mo span.now{background:var(--ambl);border-color:#e8c77a}
 .av-pick{border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}.av-pick.on{border-color:var(--acc);background:var(--accl)}.av-pick b{font-size:14px}.av-pick small{display:block;font-size:12px;color:var(--text3)}
@@ -620,7 +620,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 80;
+const APP_VERSION = 81;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3458,7 +3458,7 @@ function renderAdvance(){
   let h = '';
   if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
   h += '<div class="fd-sum"><div>Taken this month<b>' + fmtRM(taken) + '</b></div><div>Still owed<b>' + fmtRM(owed) + '</b></div></div>';
-  if(short.length) h += '<div class="av-alert" data-act="decide" data-wid="' + short[0].w.id + '"><span>Decide ›</span><b>' + short.length + ' worker' + (short.length>1?'s':'') + ': salary not enough this month</b><small>' + esc(short.map(x => x.w.name).join(', ')) + ' — tap to choose what to do</small></div>';
+  if(short.length) h += '<div class="av-alert" data-act="decide" data-wid="' + short[0].w.id + '"><span>Decide ›</span><b>' + short.length + ' worker' + (short.length>1?'s':'') + ': salary not enough this month</b></div>';
   if(!lock) h += '<button class="ad-all" data-act="new">+ New loan</button>';
   const row = (r, kind) => { const L = loanAcc(r.w.id), plan = loanPlanFor(L, mk), ob = avOwesBefore(r.t), ov = (L.months||{})[mk];
     if(kind === 'left') return '<div class="ad-row vis" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + '<small style="color:var(--red)">Stopped ' + fmtDay(r.w.stopDate) + ' · not deducted any more</small></div><div class="fd-amt">' + fmtRM(ob) + '</div></div>';
@@ -3672,9 +3672,12 @@ function renderSummary(){
   if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
   h += '<div class="sm-top"><div class="l">To transfer · ' + txR.length + ' worker' + (txR.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(txR, r => r.tx)) + '</div>'
     + '<div class="g3"><div>Paid in cash<b>' + fmtRM(sum(cashR, r => r.cash)) + '</b></div><div>Not paid<b>' + unR.length + '</b></div><div>Bank fees<b>' + fmtRM(sum(rows, r => r.fee)) + '</b></div></div></div>';
-  if(miR.length) h += '<div class="av-alert" data-f="minus"><span>See ›</span><b>' + miR.length + ' worker' + (miR.length>1?'s':'') + ': salary is minus</b><small>' + esc(miR.map(r => r.w.name + ' −' + fmtRM(r.minus)).join(', ')) + (lock ? '' : ' — when you lock ' + MONTHS[m-1] + ', this becomes a loan, taken from ' + MONTHS[Number(nextMk(mk).slice(5))-1]) + '</small></div>';
-  if(nbR.length) h += '<div class="av-alert" data-f="nobank"><span>See ›</span><b>' + nbR.length + ' worker' + (nbR.length>1?'s':'') + ' have no bank account</b><small>' + esc(nbR.slice(0,4).map(r => r.w.name).join(', ')) + (nbR.length>4?'…':'') + ' — pay cash, or add the bank in Workers</small></div>';
-  const F = [['all','All',rows.length],['transfer','Transfer',txR.length],['cash','Cash',cashR.length],['unpaid','Not paid',unR.length],['nobank','No bank',nbR.length],['minus','Minus',miR.length]].filter(f => f[0]==='all' || f[2]);
+  // 月初大家薪水还没满，负数不准；25 号起（或月份已过 / 已锁）才提醒
+  const showMinus = lock || mk < TODAY_KL.slice(0,7) || Number(TODAY_KL.slice(8,10)) >= AV_ALERT_DAY;
+  const card = (f, n, txt) => '<div class="av-alert sm-card' + (SM.filter === f ? ' on' : '') + '" data-f="' + f + '"><span>' + (SM.filter === f ? 'Show all ✕' : 'See ›') + '</span><b>' + n + ' ' + txt + '</b></div>';
+  if(miR.length && showMinus) h += card('minus', miR.length, (miR.length > 1 ? 'workers' : 'worker') + ': salary is minus' + (lock ? ' (added to loans)' : ' → becomes a loan when you lock'));
+  if(nbR.length) h += card('nobank', nbR.length, (nbR.length > 1 ? 'workers have' : 'worker has') + ' no bank account');
+  const F = [['all','All',rows.length],['transfer','Transfer',txR.length],['cash','Cash',cashR.length],['unpaid','Not paid',unR.length],['nobank','No bank',nbR.length],['minus','Minus',showMinus ? miR.length : 0]].filter(f => f[0]==='all' || f[2]);
   if(!F.some(f => f[0]===SM.filter)) SM.filter = 'all';
   if(SM.view === 'list'){
     h += '<div class="sm-flt">' + F.map(f => '<span class="' + (SM.filter===f[0]?'on':'') + '" data-f="' + f[0] + '">' + f[1] + ' ' + f[2] + '</span>').join('') + '</div>';
@@ -3682,7 +3685,7 @@ function renderSummary(){
     h += '<div class="ad-fm"><span>WORKER</span><span>GETS</span></div><div class="ad-list">' + show.map(r => {
       const tag = (r.pm==='cash' ? '<span class="sm-tag c">CASH</span>' : '') + (r.pm==='unpaid' ? '<span class="sm-tag u">NOT PAID</span>' : '') + (r.noBank ? '<span class="sm-tag n">NO BANK</span>' : '');
       const sub = esc(homeFarm(r.w, mk) || 'Farm not set') + ' · ' + (r.w.rateType==='monthly' ? 'monthly' : fmtNum(r.s.totalD) + (r.s.totalD === 1 ? ' day' : ' days')) + ' · salary ' + fmtRM(r.s.gross);
-      const right = r.minus ? 'RM 0.00<small style="color:var(--red)">minus ' + fmtRM(r.minus) + ' → loan</small>' : fmtRM(r.gets) + '<small style="color:var(--red)">− ' + fmtRM(r.s.totalDed) + ' deducted</small>';
+      const right = r.minus && showMinus ? 'RM 0.00<small style="color:var(--red)">minus ' + fmtRM(r.minus) + ' → loan</small>' : fmtRM(r.gets) + '<small style="color:var(--red)">− ' + fmtRM(r.s.totalDed) + ' deducted</small>';
       return '<div class="ad-row" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + tag + '<small>' + sub + '</small></div><div class="fd-amt"' + (r.pm==='unpaid'?' style="text-decoration:line-through;color:var(--text3)"':'') + '>' + right + '</div>'
         + '<button class="sm-slip" data-slip="' + r.w.id + '" title="Salary slip">🧾<span>Slip</span></button></div>'; }).join('') + '</div>';
     document.getElementById('summary-table').innerHTML = '<div style="padding:12px 16px;max-width:620px">' + h + '</div>';
@@ -3836,7 +3839,7 @@ function rpRender(){
   if(!lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
   h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button class="ad-opt" data-act="stars">⭐ Pick who goes first</button><button class="ad-opt" data-act="phone">📱 Saved in phone</button></div>';
   const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '')
-    + (!done && !rpSaved(i) ? '<span class="rp-warn">⚠ type again</span>' : '') + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + ' · ' + esc(i.acc) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
+    + (!done && !rpSaved(i) ? '<span class="rp-warn">⚠ not in ' + i.acct.toUpperCase() + ' phone</span>' : '') + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + ' · ' + esc(i.acc) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
   const acCard = (ac, list, d) => { const sentT = d === 0 ? items.filter(i => i.acct === ac && i.sent === today) : [], all = [...sentT, ...list]; if(!all.length) return '';
     const t = sum(all); return '<div class="rp-acc"><div class="rp-h"><b class="' + ac + '">' + ac.toUpperCase() + ' account</b><span>' + fmtRM(t) + ' / RM 5,000 · left ' + fmtRM(r2(REM_MAX - t)) + '</span></div><div class="av-bar" style="margin:0 12px 6px"><i style="width:' + Math.min(100, t / 50) + '%"></i></div>'
       + sentT.map(i => row(i, true)).join('') + list.map(i => row(i, false)).join('') + '</div>'; };
@@ -3870,9 +3873,9 @@ function rpStars(){ const mk = monthKey(), items = rpItems(mk).filter(i => !i.se
 function rpPhone(ac){ const mk = monthKey(); RP = {mode:'phone', ac}; const last = rpLastSent(), B = S.benef || {};
   const saved = Object.keys(B).filter(k => k.startsWith(ac + '|') && B[k].saved).map(k => ({k, acc:k.slice(3), name:B[k].name||'', last:last[k.slice(3)]||''})).sort((a, b) => (a.last||'') < (b.last||'') ? 1 : -1);
   const need = rpItems(mk).filter(i => i.acct === ac && !i.sent && i.acc && !rpSaved(i));
-  let h = '<div class="ad-grab"></div><h3>Saved in phone</h3><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + ['hx','ad'].map(a => '<button class="ad-opt' + (a === ac ? ' on' : '') + '" data-ph="' + a + '">' + a.toUpperCase() + ' account</button>').join('') + '</div>'
+  let h = '<div class="ad-grab"></div><h3>Saved in phone</h3><p>Each company\'s Merchantrade app keeps up to 20 payees. Mark who is already saved, so you know who must be typed in.</p><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + ['hx','ad'].map(a => '<button class="ad-opt' + (a === ac ? ' on' : '') + '" data-ph="' + a + '">' + a.toUpperCase() + ' account</button>').join('') + '</div>'
     + '<p style="margin-top:8px">' + saved.length + ' / 20 saved' + (saved.length >= 20 ? ' · <b style="color:var(--red)">full — remove one before adding</b>' : ' · ' + (20 - saved.length) + ' free') + '</p><div class="av-bar"><i style="width:' + Math.min(100, saved.length * 5) + '%;background:' + (saved.length >= 18 ? 'var(--amb)' : 'var(--grn)') + '"></i></div>';
-  if(need.length) h += '<div class="ad-lbl">This month needs typing again</div>' + need.map(i => '<div class="rp-slot"><div>' + esc(i.ben) + '<small>' + esc(i.w.name) + ' · ' + esc(i.acc) + '</small></div><button class="ad-opt" style="padding:6px 10px" data-psave="' + i.key + '">Saved now ✓</button></div>').join('');
+  if(need.length) h += '<div class="ad-lbl">Not in the ' + ac.toUpperCase() + ' phone yet — type the bank details when sending, then tap Saved</div>' + need.filter((i, n, a) => a.findIndex(x => x.acc === i.acc) === n).map(i => '<div class="rp-slot"><div>' + esc(i.ben) + '<small>' + esc(need.filter(x => x.acc === i.acc).map(x => x.w.name).join(', ')) + ' · ' + esc(i.acc) + '</small></div><button class="ad-opt" style="padding:6px 10px" data-psave="' + i.key + '">Saved now ✓</button></div>').join('');
   h += '<div class="ad-lbl">Saved</div>' + (saved.map((x, n) => { const old = saved.length >= 18 && n >= saved.length - 3;
       return '<div class="rp-slot"><div>' + esc(x.name || x.acc) + '<small>' + esc(x.acc) + ' · ' + (x.last ? 'last sent ' + fmtDay(x.last) : 'not sent yet') + '</small></div><button class="ad-opt" style="padding:6px 10px;color:var(--red)" data-prm="' + x.k + '">' + (old ? 'Not used long · remove' : 'Remove') + '</button></div>'; }).join('') || '<p>Nothing marked yet.</p>');
   h += '<button class="ad-cancel" data-act="close">Done</button>'; document.getElementById('rp-sheet').innerHTML = h; rpShow(); }
