@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v79</title>
+<title>Salary v80</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -180,6 +180,15 @@ tr:hover td{background:#fafaf8;}
   #summary-table > div{max-width:580px!important}
   .ad-row.sel{background:var(--accl)}
 }
+.rp-acc{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
+.rp-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;color:var(--text3)}.rp-h b{font-size:13px}.rp-h b.hx{color:var(--amb)}.rp-h b.ad{color:var(--grn)}
+.rp-it{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--bg2);cursor:pointer}.rp-it .n{flex:1;min-width:0;font-weight:600;font-size:14px}.rp-it .n small{display:block;font-weight:400;font-size:12px;color:var(--text3)}
+.rp-ck{width:24px;height:24px;border:2px solid var(--border);border-radius:6px;flex:none;text-align:center;line-height:20px;font-size:14px;color:#fff}.rp-ck.on{background:var(--grn);border-color:var(--grn)}
+.rp-warn{font-size:10px;font-weight:700;background:var(--ambl);color:var(--amb);border-radius:4px;padding:1px 5px;margin-left:5px}
+.rp-nob{background:#fff;border:1.5px dashed var(--border);border-radius:12px;padding:8px 12px;font-size:13px}.rp-nob small{color:var(--text3)}
+.rp-slot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bg2);font-size:13px}.rp-slot small{display:block;color:var(--text3);font-size:11px}
+.rp-old{margin-top:14px}.rp-old > summary{cursor:pointer;font-size:12px;color:var(--text3);padding:8px 2px}
+@media(min-width:1100px){#rp-app{max-width:580px!important}}
 .ad-lock{font-size:12px;background:var(--ambl);color:var(--amb);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .att-cell:hover{filter:brightness(.92);transform:scale(1.08);}
 .att-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;align-items:center;}
@@ -493,6 +502,8 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 
 <!-- REMITTANCE -->
 <div class="page" id="page-remittance">
+  <div class="card"><div id="rp-app" style="max-width:580px"></div></div>
+  <details class="rp-old"><summary>Old remittance list (paste / records from v56)</summary>
   <!-- paste panel -->
   <div class="card" style="background:linear-gradient(135deg,#e8f0fb,#eff5ff);border-color:#c0d0ee;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
@@ -543,7 +554,10 @@ Rm. 1800"></textarea>
   </div>
   <!-- pending workers (bottom) -->
   <div id="rem-pending" style="margin-top:14px;"></div>
+  </details>
 </div>
+<div class="ad-dim side" id="rp-dim" onclick="rpClose()"></div>
+<div class="ad-sheet side" id="rp-sheet"></div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -606,7 +620,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 79;
+const APP_VERSION = 80;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -656,7 +670,7 @@ async function loadData(){
   const notVoid = q => q.is('voided_at', null);
   const [co, wk, rt, cp, py, pp, nt, at, go, pm, fd, ps, av, rm] = await Promise.all([
     fetchAll('hub_company','id,code'),
-    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,stop_note,phone,shares_food', q=>q.is('voided_at',null).order('worker_no')),
+    fetchAll('hub_worker','id,worker_no,name,title,join_date,stop_date,stop_reason,stop_note,phone,shares_food,cost_co', q=>q.is('voided_at',null).order('worker_no')),
     fetchAll('hub_worker_rate','id,worker_id,rate_type,rate,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_company','id,worker_id,company_id,effective_from', q=>notVoid(q).order('effective_from').order('created_at')),
     fetchAll('hub_worker_payee','id,worker_id,beneficiary_name,account_no,effective_from,slot', q=>notVoid(q).order('effective_from').order('created_at')),
@@ -685,7 +699,7 @@ async function loadData(){
       rateHistory: rates.map(r => ({from:r.effective_from, rate:Number(r.rate)})),
       farm, phone:w.phone||'', bankAccount: pay ? pay.account_no : '', beneficiary: pay ? pay.beneficiary_name : '', bankAccount2: pay2 ? pay2.account_no : '', beneficiary2: pay2 ? pay2.beneficiary_name : '',
       passport: pas ? pas.passport_no : '', joinDate:w.join_date||'', stopDate:w.stop_date||'',
-      stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active', sharesFood: w.shares_food !== false };
+      stopReason:w.stop_reason||'', stopNotes:w.stop_note||notes[w.id]||'', status: w.stop_date ? 'stopped' : 'active', sharesFood: w.shares_food !== false, costCo: w.cost_co || '' };
   });
   S.attendance = {}; S.attFarm = {}; at.forEach(r => { const mk = r.work_date.slice(0,7), d = parseInt(r.work_date.slice(8,10));
     ((S.attendance[mk] ??= {})[r.worker_id] ??= {})[d] = r.code;
@@ -696,12 +710,14 @@ async function loadData(){
   S.personal = {}; ps.forEach(r => ((S.personal[r.month] ??= {})[r.worker_id] ??= []).push(r.data));
   S.advance = {}; av.forEach(r => S.advance[r.worker_id] = r.data);
   REM.records = rm.map(r => r.data);
-  const [lt, lp, lm, co2, pc] = await Promise.all([
+  const [lt, lp, lm, co2, pc, rs, bs] = await Promise.all([
     fetchAll('salary_loan_txn','id,worker_id,month,txn_date,kind,amount,note', q=>q.is('voided_at',null).order('created_at')),
     fetchAll('salary_loan_plan','id,worker_id,effective_from,monthly_pay', q=>q.is('voided_at',null).order('effective_from')),
     fetchAll('salary_loan_month','worker_id,month,amount,note', q=>q.not('amount','is',null)),
     fetchAll('salary_cashout','id,worker_id,month,data', q=>q.is('voided_at',null).order('created_at')),
-    fetchAll('salary_payee_choice','worker_id,month,slot', q=>q.neq('slot',1)),
+    fetchAll('salary_payee_choice','worker_id,month,slot,split_amount,send_from'),
+    fetchAll('salary_remit_state','worker_id,month,slot,star,sent_on,hold_until'),
+    fetchAll('salary_benef_saved','account,account_no,name,saved'),
   ]);
   S.loans = {};
   const LA = w => S.loans[w] ??= {txn:[], plan:[], months:{}};
@@ -709,7 +725,11 @@ async function loadData(){
   lp.forEach(p => LA(p.worker_id).plan.push({id:p.id, from:p.effective_from, monthly:Number(p.monthly_pay)}));
   lm.forEach(m => LA(m.worker_id).months[m.month] = {amount:Number(m.amount), note:m.note||''});
   S.cashout = {}; co2.forEach(c => ((S.cashout[c.month] ??= {})[c.worker_id] ??= []).push(c.data));
-  S.payeeSlot = {}; pc.forEach(c => (S.payeeSlot[c.month] ??= {})[c.worker_id] = c.slot);
+  S.payeeSlot = {}; S.payeeX = {};
+  pc.forEach(c => { if(c.slot !== 1) (S.payeeSlot[c.month] ??= {})[c.worker_id] = c.slot;
+    const x = {}; if(c.split_amount != null) x.split = Number(c.split_amount); if(c.send_from) x.from = c.send_from; if(Object.keys(x).length) (S.payeeX[c.month] ??= {})[c.worker_id] = x; });
+  S.remState = {}; rs.forEach(r => { const o = {}; if(r.star) o.star = true; if(r.sent_on) o.sent = r.sent_on; if(r.hold_until) o.hold = r.hold_until; (S.remState[r.month] ??= {})[r.worker_id + '|' + r.slot] = o; });
+  S.benef = {}; bs.forEach(b => S.benef[b.account + '|' + b.account_no] = {name:b.name||'', saved:!!b.saved});
   const [fm, wf, fs] = await Promise.all([
     fetchAll('hub_farm','id,code,company_id', q=>q.eq('active',true).order('code')),
     fetchAll('hub_worker_farm','worker_id,farm_id,effective_from', q=>q.is('voided_at',null).order('effective_from').order('created_at')),
@@ -826,10 +846,20 @@ async function syncV60(cur){
   await voidIds('salary_cashout', 'id', Object.keys(C0).filter(k => !(k in C1)));
   SNAP.S.cashout = cur.S.cashout;
   // 这个月汇给哪一组收款人
-  const Q0 = flat2(SNAP.S.payeeSlot||{}), Q1 = flat2(cur.S.payeeSlot||{}), q = [];
-  for(const k of new Set([...Object.keys(Q0), ...Object.keys(Q1)])) if(Q0[k] !== Q1[k]){ const [w,m] = k.split('|'); q.push({worker_id:w, month:m, slot: Q1[k] || 1}); }
+  const pq = st => { const o = {}, A = flat2(st.payeeSlot||{}), X = flat2(st.payeeX||{}); for(const k of new Set([...Object.keys(A), ...Object.keys(X)])) o[k] = {slot:A[k]||1, split:(X[k]||{}).split ?? null, from:(X[k]||{}).from || null}; return o; };
+  const Q0 = pq(SNAP.S), Q1 = pq(cur.S), q = [];
+  for(const k of new Set([...Object.keys(Q0), ...Object.keys(Q1)])) if(!same(Q0[k], Q1[k])){ const [w,m] = k.split('|'), v = Q1[k] || {slot:1, split:null, from:null}; q.push({worker_id:w, month:m, slot:v.slot, split_amount:v.split, send_from:v.from}); }
   await upsertChunks('salary_payee_choice', q, 'worker_id,month');
-  SNAP.S.payeeSlot = cur.S.payeeSlot;
+  SNAP.S.payeeSlot = cur.S.payeeSlot; SNAP.S.payeeX = cur.S.payeeX;
+  // 汇款计划：⭐ / 已寄 / 明天再寄
+  const rq = st => { const o = {}; for(const m in (st.remState||{})) for(const k in st.remState[m]) o[m + '|' + k] = st.remState[m][k]; return o; };
+  const RS0 = rq(SNAP.S), RS1 = rq(cur.S);
+  await upsertChunks('salary_remit_state', Object.keys(RS1).filter(k => !same(RS0[k], RS1[k])).map(k => { const [m, w, sl] = k.split('|'), v = RS1[k]; return {worker_id:w, month:m, slot:Number(sl), star:!!v.star, sent_on:v.sent||null, hold_until:v.hold||null, updated_at:now()}; }), 'worker_id,month,slot');
+  SNAP.S.remState = cur.S.remState;
+  // 手机里存了哪些收款人
+  const B0 = SNAP.S.benef||{}, B1 = cur.S.benef||{};
+  await upsertChunks('salary_benef_saved', Object.keys(B1).filter(k => !same(B0[k], B1[k])).map(k => ({account:k.slice(0,2), account_no:k.slice(3), name:B1[k].name||null, saved:!!B1[k].saved, updated_at:now()})), 'account,account_no');
+  SNAP.S.benef = cur.S.benef;
 }
 
 // ---- 工人：写回 FarmHub 主资料（历史类表只新增；同一生效日先作废旧的再新增） ----
@@ -1983,7 +2013,8 @@ function calcWorkerSummaryLive(w,mk){
   const advD=getAdvanceDeduction(w.id, mk);
   let advHX=0,advAD=0;
   if(advD>0){
-    const advFarm=(mk<NEW_SYS_START?(S.advance[w.id]?.farm):null)||w.farm||'hx';
+    let advFarm=(mk<NEW_SYS_START?(S.advance[w.id]?.farm):null)||w.farm||'hx';
+    if(advFarm==='both' && mk>=FEE_RULE_START && w.costCo) advFarm=w.costCo.toLowerCase();   // All farms：费用算 Workers 里设的公司
     if(advFarm==='both'){advHX=advD/2; advAD=advD/2;}
     else if(advFarm==='ad'){advAD=advD;}
     else{advHX=advD;}
@@ -1994,7 +2025,7 @@ function calcWorkerSummaryLive(w,mk){
   const totalDed=food+advD+persD;
   const net=gross-totalDed;
   const cashOut=cashOutOf(w.id,mk);
-  const cf=w.farm||'hx';
+  let cf=w.farm||'hx'; if(cf==='both' && mk>=FEE_RULE_START && w.costCo) cf=w.costCo.toLowerCase();
   const cashHX=cf==='both'?r2(cashOut/2):cf==='hx'?cashOut:0, cashAD=r2(cashOut-cashHX);
   const payable=r2(net-cashOut);
   // 9 月起：现金付的人、没钱可转的人，不收银行手续费，也不算转账（9 月以前照 v56）
@@ -2004,7 +2035,17 @@ function calcWorkerSummaryLive(w,mk){
     if(pm==='cash'){bankChg=0;toTx=0;cashPaid=Math.max(0,payable);}
     else if(payable<=BANK_CHARGE){bankChg=0;toTx=Math.max(0,payable);}
   }
-  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,cashOut,cashHX,cashAD,payable,bankChg,toTx,cashPaid,pm,rateType:w.rateType,rate:getRateForMonth(w,mk)};
+  // 要寄几笔：拆两个收款人 = 两笔，各扣 RM 11（工人自己出）
+  const slot=payeeSlot(w.id,mk), px=((S.payeeX||{})[mk]||{})[w.id]||{}, sp=r2(Number(px.split)||0);
+  let transfers=null;
+  if(mk>=FEE_RULE_START){
+    transfers=[];
+    if(pm==='transfer' && payable>BANK_CHARGE){
+      if(slot===3 && w.bankAccount2 && sp>BANK_CHARGE && payable-sp>BANK_CHARGE){ bankChg=2*BANK_CHARGE; toTx=r2(payable-bankChg); transfers=[{slot:1,send:sp},{slot:2,send:r2(payable-sp)}]; }
+      else transfers=[{slot:slot===2&&w.bankAccount2?2:1,send:payable}];
+    }
+  }
+  return{hxD,adD,totalD,absentD,gross,hxSalary,adSalary,food,advD,advHX,advAD,persD,totalDed,net,cashOut,cashHX,cashAD,payable,bankChg,toTx,cashPaid,pm,transfers,acct:acctOf(w,mk),rateType:w.rateType,rate:getRateForMonth(w,mk)};
 }
 
 function setGrossOverride(wid,mk,val){
@@ -2051,6 +2092,7 @@ function renderExitRecords(){
 function pushToRemittance(){
   const mk=monthKey();const m=getMonth();const y=getYear();
   if(!requireLocked(m,y))return;
+  goPage('remittance'); renderRemittance(); return;   // v80：Remittance 按每日计划寄，不再一笔一笔推
   const workers=workersInMonth(mk);
   let pushed=0;
   workers.forEach(w=>{
@@ -2209,6 +2251,7 @@ function printReceipt(wid, mk){
         + '<tr class="star1"><td style="text-align:center">★</td><td style="text-align:right">BALANCE AFTER CASH OUT</td><td style="text-align:right">RM ' + Number(s.payable).toFixed(2) + '</td></tr>' : '')
     + '<tr class="star2"><td style="text-align:center">★</td><td style="text-align:right">BANK CHARGES</td><td style="text-align:right">' + (s.bankChg?'RM '+s.bankChg.toFixed(2):'--') + '</td></tr>'
     + (s.net < 0 ? '<tr class="row-alt"><td></td><td style="text-align:right">Minus pay → loan, taken from ' + MONTHS[Number(nextMk(mk).slice(5))-1] + ' salary</td><td style="text-align:right">RM ' + (-s.net).toFixed(2) + '</td></tr>' : '')
+    + ((s.transfers||[]).length === 2 ? s.transfers.map(t => '<tr class="row-alt"><td></td><td style="text-align:right">Transfer to ' + esc(((s.payees||{1:{b:w.beneficiary},2:{b:w.beneficiary2}})[t.slot]||{}).b || ('Payee ' + t.slot)) + ' (bank fee RM 11)</td><td style="text-align:right">RM ' + (t.send - BANK_CHARGE).toFixed(2) + '</td></tr>').join('') : '')
     + '<tr class="star3"><td style="text-align:center;font-size:13px">★</td><td style="text-align:right;font-size:12px;font-weight:700">' + (s.pm==='cash' ? 'PAID IN CASH' : 'AMOUNT TO TRANSFER') + '</td><td style="text-align:right;font-size:13px;font-weight:700">RM ' + (s.pm==='cash' ? Number(s.cashPaid||0) : s.toTx).toFixed(2) + '</td></tr>'
     + '</table>'
 
@@ -2292,6 +2335,7 @@ function remAddAllPending(){
   toast(added>0?"Added "+added+" workers":"All workers already added");
 }
 function renderRemittance(){
+  rpRender();
   var m=getMonth(),y=getYear();
   var mk=y+"-"+(m<10?"0":"")+m;
   var records=REM.records.filter(function(r){return r.month===m&&r.year===y;}).sort(function(a,b){return a.addedAt-b.addedAt;});
@@ -3164,6 +3208,7 @@ function revertLockedEdits(cur){
   const hit = new Set();
   // v60：先付现金、收款人选择、借款单月例外
   for(const m of new Set([...Object.keys(SNAP.S.cashout||{}), ...Object.keys(cur.S.cashout||{})])) if(isLocked(m) && !same((SNAP.S.cashout||{})[m], (cur.S.cashout||{})[m])){ hit.add(m); S.cashout[m] = clone((SNAP.S.cashout||{})[m]||{}); cur.S.cashout[m] = clone(S.cashout[m]); }
+  for(const m of new Set([...Object.keys(SNAP.S.payeeX||{}), ...Object.keys(cur.S.payeeX||{})])) if(isLocked(m) && !same((SNAP.S.payeeX||{})[m], (cur.S.payeeX||{})[m])){ hit.add(m); S.payeeX ??= {}; cur.S.payeeX ??= {}; S.payeeX[m] = clone((SNAP.S.payeeX||{})[m] || {}); cur.S.payeeX[m] = clone((SNAP.S.payeeX||{})[m] || {}); }
   for(const m of new Set([...Object.keys(SNAP.S.payeeSlot||{}), ...Object.keys(cur.S.payeeSlot||{})])) if(isLocked(m) && !same((SNAP.S.payeeSlot||{})[m], (cur.S.payeeSlot||{})[m])){ hit.add(m); S.payeeSlot[m] = clone((SNAP.S.payeeSlot||{})[m]||{}); cur.S.payeeSlot[m] = clone(S.payeeSlot[m]); }
   for(const w in (cur.S.loans||{})){ const a = ((SNAP.S.loans||{})[w]||{}).months||{}, b = cur.S.loans[w].months||{};
     for(const m of new Set([...Object.keys(a), ...Object.keys(b)])) if(isLocked(m) && !same(a[m], b[m])){ hit.add(m);
@@ -3244,6 +3289,7 @@ async function doLockMonth(mk){
     const s = calcWorkerSummaryLive(w, mk);
     return {worker_id: w.id, data: Object.assign({}, s, {
       name: w.name, no: w.no, farm: w.farm, rateType: w.rateType, rate: getRateForMonth(w, mk),
+      payees: {1:{b:w.beneficiary||'', a:w.bankAccount||''}, 2:{b:w.beneficiary2||'', a:w.bankAccount2||''}},
       payMethod: getPayMethod(w.id, mk), beneficiary: payeeOf(w,mk).beneficiary, bankAccount: payeeOf(w,mk).bankAccount, payeeSlot: payeeOf(w,mk).slot, lockedMonth: mk })};
   });
   const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
@@ -3312,10 +3358,13 @@ function payeeOf(w, mk){
 }
 function PO(w){ return payeeOf(w, monthKey()); }
 function setPayeeSlot(wid, mk, slot){
-  S.payeeSlot ??= {}; S.payeeSlot[mk] ??= {};
-  if(Number(slot) === 1) delete S.payeeSlot[mk][wid]; else S.payeeSlot[mk][wid] = 2;
-  saveAll(); toast('This month pays Payee ' + slot);
+  S.payeeSlot ??= {}; S.payeeSlot[mk] ??= {}; slot = Number(slot);
+  if(slot === 1) delete S.payeeSlot[mk][wid]; else S.payeeSlot[mk][wid] = slot;
+  saveAll(); toast(slot === 3 ? 'This month: split to Payee 1 and Payee 2' : 'This month pays Payee ' + slot);
 }
+function setPayeeX(wid, mk, patch){ S.payeeX ??= {}; S.payeeX[mk] ??= {}; const v = Object.assign({}, S.payeeX[mk][wid] || {}, patch);
+  Object.keys(v).forEach(k => { if(v[k] == null || v[k] === '') delete v[k]; });
+  if(Object.keys(v).length) S.payeeX[mk][wid] = v; else delete S.payeeX[mk][wid]; saveAll(); }
 
 // ---------- 先付现金 ----------
 function cashOutOf(wid, mk){ return sumBy(((S.cashout||{})[mk]||{})[wid], x => x.amount); }
@@ -3683,8 +3732,16 @@ function smWorker(wid, mode){
     if(r.minus) h += '<div class="ad-lock" style="margin-top:8px">Food, loan and personal are more than his salary. ' + (isLocked(mk) ? 'The minus was added to his loan.' : 'When you lock ' + MONTHS[Number(mk.slice(5))-1] + ', ' + fmtRM(r.minus) + ' is added to his loan and taken from his ' + MONTHS[Number(nextMk(mk).slice(5))-1] + ' salary (you can change it in Advance).') + '</div>';
     if(r.noBank) h += '<div class="ad-lock" style="margin-top:8px">No bank account. Pick Cash, or add the bank in Workers.</div>';
     h += '<div class="ad-lbl">How is he paid?</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [['transfer','Bank'],['cash','Cash'],['unpaid','Not paid yet']].map(p => '<button class="ad-opt' + (r.pm===p[0]?' on':'') + '" data-pm="' + p[0] + '"' + (lock?' disabled':'') + '>' + p[1] + '</button>').join('') + '</div>';
-    if(w.bankAccount2 && w.beneficiary2) h += '<div class="ad-lbl">Send to</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [1,2].map(n => '<button class="ad-opt' + (payeeSlot(wid, mk)===n?' on':'') + '" data-slot="' + n + '"' + (lock?' disabled':'') + '>' + esc(n===1 ? w.beneficiary : w.beneficiary2) + '</button>').join('') + '</div>';
-    h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="cashout">💵 Cash out part</button><button class="ad-opt" data-act="receipt">🧾 Receipt</button></div><button class="ad-cancel" data-act="close">Close</button>';
+    const ps = payeeSlot(wid, mk), px = ((S.payeeX||{})[mk]||{})[wid] || {}, pay = r2(s.payable || 0);
+    if(w.bankAccount2 && w.beneficiary2 && r.pm === 'transfer'){
+      h += '<div class="ad-lbl">Send to</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [[1, esc(w.beneficiary)], [2, esc(w.beneficiary2)], [3, 'Split']].map(o => '<button class="ad-opt' + (ps === o[0] ? ' on' : '') + '" data-slot="' + o[0] + '"' + (lock ? ' disabled' : '') + '>' + o[1] + '</button>').join('') + '</div>';
+      if(ps === 3){ const a = Number(px.split) || 0, b2 = r2(pay - a);
+        h += '<div class="ad-lbl">' + esc(w.beneficiary) + ' — send (RM)</div><div style="display:flex;gap:8px"><input class="fd-in" id="sm-split" inputmode="decimal" value="' + (a || '') + '"' + (lock ? ' disabled' : '') + '>' + (lock ? '' : '<button class="ad-opt" data-act="savesplit" style="flex:none;padding:8px 14px">Save</button>') + '</div>'
+          + '<div class="fd-each" style="background:var(--ambl);color:var(--amb)">' + (a > BANK_CHARGE && b2 > BANK_CHARGE ? '2 transfers · ' + esc(w.beneficiary) + ' gets ' + fmtRM(r2(a - BANK_CHARGE)) + ' · ' + esc(w.beneficiary2) + ' gets ' + fmtRM(r2(b2 - BANK_CHARGE)) + ' (the rest) · bank fee RM 22' : 'Type how much to send to ' + esc(w.beneficiary) + '. The rest goes to ' + esc(w.beneficiary2) + '.') + '</div>';
+      }
+    }
+    if(homeFarm(w, mk) === 'ALL' || (!homeFarm(w, mk) && w.farm === 'both')) h += '<div class="ad-lbl">Send from</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + ['hx','ad'].map(a => '<button class="ad-opt' + (acctOf(w, mk) === a ? ' on' : '') + '" data-from="' + a + '"' + (lock ? ' disabled' : '') + '>' + a.toUpperCase() + ' account</button>').join('') + '</div>';
+    h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="cashout">💵 Pay part in cash</button><button class="ad-opt" data-act="receipt">🧾 Receipt</button></div><button class="ad-cancel" data-act="close">Close</button>';
   }
   document.getElementById('sm-sheet').innerHTML = h; smShow();
 }
@@ -3699,7 +3756,7 @@ document.getElementById('summary-table').addEventListener('click', e => {
   const r = e.target.closest('[data-wid]'); if(r) smWorker(r.dataset.wid);
 });
 document.getElementById('sm-sheet').addEventListener('click', e => {
-  const b = e.target.closest('[data-act],[data-pm],[data-slot]'); if(!b || !SM.wid || b.disabled) return;
+  const b = e.target.closest('[data-act],[data-pm],[data-slot],[data-from]'); if(!b || !SM.wid || b.disabled) return;
   const mk = monthKey(), wid = SM.wid, a = b.dataset.act;
   if(a === 'close') return smClose();
   if(a === 'back') return smWorker(wid);
@@ -3707,7 +3764,13 @@ document.getElementById('sm-sheet').addEventListener('click', e => {
   if(a === 'savegross'){ const v = r2(parseFloat(document.getElementById('sm-gross').value)); if(!(v >= 0)){ document.getElementById('sm-err').textContent = 'Type the salary.'; return; }
     setGrossOverride(wid, mk, v); renderSummary(); renderDashboard(); return smWorker(wid); }
   if(b.dataset.pm){ setPayMethod(wid, mk, b.dataset.pm); toast(getWorker(wid).name + ': ' + {transfer:'Bank', cash:'Cash', unpaid:'Not paid yet'}[b.dataset.pm]); renderSummary(); renderDashboard(); return smWorker(wid); }
-  if(b.dataset.slot){ setPayeeSlot(wid, mk, Number(b.dataset.slot)); return smWorker(wid); }
+  if(b.dataset.slot){ const n = Number(b.dataset.slot); setPayeeSlot(wid, mk, n);
+    if(n === 3 && !(((S.payeeX||{})[mk]||{})[wid]||{}).split){ const pay = r2(calcWorkerSummary(getWorker(wid), mk).payable || 0); setPayeeX(wid, mk, {split: Math.round(pay / 2)}); }
+    renderSummary(); return smWorker(wid); }
+  if(b.dataset.from){ setPayeeX(wid, mk, {from: b.dataset.from}); toast('Send from ' + b.dataset.from.toUpperCase() + ' account'); renderSummary(); return smWorker(wid); }
+  if(a === 'savesplit'){ const v = r2(parseFloat(document.getElementById('sm-split').value)), pay = r2(calcWorkerSummary(getWorker(wid), mk).payable || 0);
+    if(!(v > BANK_CHARGE) || !(pay - v > BANK_CHARGE)){ toast('Each part must be more than RM 11 (between RM 11.01 and ' + fmtRM(r2(pay - 11.01)) + ')', 3500); return; }
+    setPayeeX(wid, mk, {split: v}); toast('Saved'); renderSummary(); return smWorker(wid); }
   if(a === 'cashout'){ smClose(); return openCashOut(wid, mk); }
   if(a === 'receipt') return printReceipt(wid, mk);
 });
@@ -3726,6 +3789,127 @@ function minusToLoans(mk){
   if(n) saveAll();
   return n;
 }
+
+// ---------- v80 Remittance plan：每个户口每天 RM 5,000 · ⭐ 先寄 · 其余凑满 · 一人一笔不拆天 · 手机已存名单 ----------
+let RP = null;
+function acctOf(w, mk){ const hf = homeFarm(w, mk); if(hf === 'ALL' || (!hf && w.farm === 'both')) return (((S.payeeX||{})[mk]||{})[w.id]||{}).from || (w.costCo||'HX').toLowerCase(); return (hf ? farmCo(hf) : w.farm) === 'ad' ? 'ad' : 'hx'; }
+function rpItems(mk){
+  return workersInMonth(mk).flatMap(w => { const s = calcWorkerSummary(w, mk), pm = s.pm || getPayMethod(w.id, mk); if(pm !== 'transfer') return [];
+    let tr = s.transfers; if(!tr) tr = s.toTx > 0 ? [{slot: (s.payeeSlot || payeeSlot(w.id, mk)) === 2 ? 2 : 1, send: r2(s.toTx + (s.bankChg||0))}] : [];
+    const P = s.payees || {1:{b:w.beneficiary, a:w.bankAccount}, 2:{b:w.beneficiary2, a:w.bankAccount2}}, acct = s.acct || acctOf(w, mk);
+    return tr.map(t => { const p = P[t.slot] || {}, st = ((S.remState||{})[mk]||{})[w.id + '|' + t.slot] || {};
+      return {key:w.id + '|' + t.slot, w, slot:t.slot, send:r2(t.send), ben:p.b||'', acc:p.a||'', acct, star:!!st.star, sent:st.sent||'', hold:st.hold||''}; }); });
+}
+function rpBest(list, capC){ // 在上限内挑一组，总数最接近上限
+  const c = list.map(i => Math.round(i.send * 100)), par = new Int32Array(capC + 1).fill(-2), it = new Int16Array(capC + 1); par[0] = -1; let sums = [0];
+  for(let k = 0; k < c.length; k++){ const add = []; for(const s of sums){ const t = s + c[k]; if(t <= capC && par[t] === -2){ par[t] = s; it[t] = k; add.push(t); } } sums = sums.concat(add); }
+  let best = 0; for(const s of sums) if(s > best) best = s; const pick = []; let t = best; while(t > 0){ pick.push(list[it[t]]); t = par[t]; } return pick;
+}
+function rpPlan(items){
+  const today = TODAY_KL, ok = i => i.acc && i.ben, days = [];
+  for(const ac of ['hx','ad']){
+    let rem = items.filter(i => i.acct === ac && !i.sent && ok(i)), d = 0;
+    const sentToday = r2(items.filter(i => i.acct === ac && i.sent === today).reduce((s, i) => s + i.send, 0));
+    while(rem.length && d < 60){
+      const cap = Math.round((d === 0 ? REM_MAX - sentToday : REM_MAX) * 100), pool = d === 0 ? rem.filter(i => !(i.hold && i.hold > today)) : rem;
+      let left = cap; const day = [];
+      pool.filter(i => i.star).forEach(i => { const c = Math.round(i.send * 100); if(c <= left){ day.push(i); left -= c; } });
+      day.push(...rpBest(pool.filter(i => !day.includes(i)), Math.max(0, left)));
+      if(!day.length && d > 0){ day.push(rem[0]); rem[0].over = true; }
+      rem = rem.filter(i => !day.includes(i));
+      ((days[d] ??= {hx:[], ad:[]})[ac]) = day.sort((a, b) => (b.star - a.star) || (b.send - a.send)); d++;
+    }
+  }
+  return {days, nob:items.filter(i => !ok(i) && !i.sent)};
+}
+const rpBenKey = i => i.acct + '|' + i.acc;
+const rpSaved = i => !!((S.benef||{})[rpBenKey(i)]||{}).saved;
+function rpLastSent(){ const o = {}; for(const mk in (S.remState||{})) for(const k in S.remState[mk]){ const st = S.remState[mk][k]; if(!st.sent) continue; const [wid, slot] = k.split('|'), w = getWorker(wid); if(!w) continue;
+    const acc = slot === '2' ? w.bankAccount2 : w.bankAccount; if(acc && (!o[acc] || o[acc] < st.sent)) o[acc] = st.sent; } return o; }
+function rpSet(i, patch){ S.remState ??= {}; const mk = monthKey(), m = S.remState[mk] ??= {}; m[i.key] = Object.assign({}, m[i.key] || {}, patch); saveAll(); }
+function rpRender(){
+  const el = document.getElementById('rp-app'); if(!el) return;
+  const mk = monthKey(), [y, m] = mk.split('-').map(Number), lock = isLocked(mk), items = rpItems(mk), P = rpPlan(items), today = TODAY_KL;
+  const sum = a => r2(a.reduce((s, i) => s + i.send, 0)), sent = items.filter(i => i.sent);
+  let h = '<div class="sm-top"><div class="l">To send in ' + MONTHS[m-1] + ' · ' + items.length + ' transfer' + (items.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(items)) + '</div>'
+    + '<div class="g3"><div>Days needed<b>' + P.days.length + (P.days.length===1?' day':' days') + '</b></div><div>Sent<b>' + sent.length + ' / ' + items.length + '</b></div><div>No bank yet<b>' + P.nob.length + '</b></div></div></div>';
+  if(!lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
+  h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button class="ad-opt" data-act="stars">⭐ Pick who goes first</button><button class="ad-opt" data-act="phone">📱 Saved in phone</button></div>';
+  const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '')
+    + (!done && !rpSaved(i) ? '<span class="rp-warn">⚠ type again</span>' : '') + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + ' · ' + esc(i.acc) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
+  const acCard = (ac, list, d) => { const sentT = d === 0 ? items.filter(i => i.acct === ac && i.sent === today) : [], all = [...sentT, ...list]; if(!all.length) return '';
+    const t = sum(all); return '<div class="rp-acc"><div class="rp-h"><b class="' + ac + '">' + ac.toUpperCase() + ' account</b><span>' + fmtRM(t) + ' / RM 5,000 · left ' + fmtRM(r2(REM_MAX - t)) + '</span></div><div class="av-bar" style="margin:0 12px 6px"><i style="width:' + Math.min(100, t / 50) + '%"></i></div>'
+      + sentT.map(i => row(i, true)).join('') + list.map(i => row(i, false)).join('') + '</div>'; };
+  if(!P.days.length && !sent.filter(i => i.sent === today).length) h += '<div class="empty"><p>' + (items.length ? 'Everything is sent ✓' : 'Nothing to send this month') + '</p></div>';
+  P.days.forEach((D, d) => { h += '<div class="ad-fm"><span>' + (d === 0 ? 'DAY 1 · TODAY' : 'DAY ' + (d + 1)) + '</span><span>MAX RM 5,000 EACH</span></div>' + acCard('hx', D.hx, d) + acCard('ad', D.ad, d); });
+  if(!P.days.length && sent.some(i => i.sent === today)) h += '<div class="ad-fm"><span>TODAY</span><span></span></div>' + acCard('hx', [], 0) + acCard('ad', [], 0);
+  const before = sent.filter(i => i.sent !== today);
+  if(before.length) h += '<div class="ad-fm" data-act="showsent" style="cursor:pointer"><span>SENT BEFORE TODAY · ' + before.length + ' · ' + fmtRM(sum(before)) + '</span><span style="color:var(--acc)">' + (RP_SHOW_SENT ? 'Hide' : 'Show') + '</span></div>'
+    + (RP_SHOW_SENT ? '<div class="ad-list">' + before.sort((a, b) => a.sent < b.sent ? 1 : -1).map(i => '<div class="ad-row" data-key="' + i.key + '"><div class="n">' + esc(i.w.name) + '<small>' + fmtDay(i.sent) + ' · ' + i.acct.toUpperCase() + ' · to ' + esc(i.ben) + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '</div></div>').join('') + '</div>' : '');
+  if(P.nob.length) h += '<div class="ad-fm"><span>CAN\'T PLAN YET · NO BANK ACCOUNT</span><span>' + P.nob.length + '</span></div><div class="rp-nob">' + P.nob.map(i => esc(i.w.name) + ' · ' + fmtRM(i.send)).join(' · ') + '<br><small>Add the bank in Workers, or pay cash in Summary.</small></div>';
+  el.innerHTML = h;
+}
+let RP_SHOW_SENT = false;
+function rpShow(){ document.getElementById('rp-dim').style.display = 'block'; document.getElementById('rp-sheet').style.display = 'block'; }
+function rpClose(){ document.getElementById('rp-dim').style.display = 'none'; document.getElementById('rp-sheet').style.display = 'none'; RP = null; rpRender(); }
+function rpOne(key){ const mk = monthKey(), i = rpItems(mk).find(x => x.key === key); if(!i) return; const lock = isLocked(mk); RP = {mode:'one', key};
+  let h = '<div class="ad-grab"></div><h3>' + esc(i.w.name) + '</h3><p>' + i.acct.toUpperCase() + ' account · to ' + esc(i.ben) + ' · ' + esc(i.acc) + '</p>'
+    + '<div class="sm-ln"><span>Send</span><span>' + fmtRM(i.send) + '</span></div><div class="sm-ln m"><span>Bank fee (he pays)</span><span>− ' + fmtRM(BANK_CHARGE) + '</span></div><div class="sm-ln t"><span>' + esc(i.ben) + ' gets</span><span>' + fmtRM(r2(i.send - BANK_CHARGE)) + '</span></div>'
+    + (i.sent ? '<div class="ad-lock" style="margin-top:8px;background:var(--grnl);color:var(--grn)">Sent on ' + fmtDay(i.sent) + '</div>' : '')
+    + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px">'
+    + (i.sent ? '<button class="ad-opt" data-act="unsend">Undo sent</button>' : '<button class="ad-opt' + (i.star ? ' on' : '') + '" data-act="star">' + (i.star ? '⭐ Goes first' : '☆ Make it go first') + '</button>'
+      + (i.hold && i.hold > TODAY_KL ? '<button class="ad-opt on" data-act="today">Back to today</button>' : '<button class="ad-opt" data-act="hold">Not today → tomorrow</button>'))
+    + (rpSaved(i) ? '<button class="ad-opt on" data-act="unsave">📱 Saved in ' + i.acct.toUpperCase() + ' phone</button>' : '<button class="ad-opt" data-act="save">📱 Mark saved in ' + i.acct.toUpperCase() + ' phone</button>')
+    + (!i.sent && lock ? '<button class="ad-opt" data-act="send" style="background:var(--grn);color:#fff;border-color:var(--grn)">✓ Sent today</button>' : '') + '</div>'
+    + '<button class="ad-cancel" data-act="close">Close</button>';
+  document.getElementById('rp-sheet').innerHTML = h; rpShow(); }
+function rpStars(){ const mk = monthKey(), items = rpItems(mk).filter(i => !i.sent && i.acc); RP = {mode:'stars'};
+  let h = '<div class="ad-grab"></div><h3>Who goes first?</h3><p>Tap to put ⭐. ⭐ workers are sent first; the rest are filled in to use the RM 5,000.</p>';
+  ['hx','ad'].forEach(ac => { const L = items.filter(i => i.acct === ac); if(!L.length) return; h += '<div class="fd-farm"><b>' + ac.toUpperCase() + ' ACCOUNT</b></div><div class="fd-chips">' + L.map(i => '<span class="fd-chip' + (i.star ? ' on' : '') + '" data-star="' + i.key + '">' + (i.star ? '⭐ ' : '') + esc(i.w.name) + (i.slot === 2 ? ' (2)' : '') + '</span>').join('') + '</div>'; });
+  h += '<button class="ad-cancel" data-act="close">Done</button>'; document.getElementById('rp-sheet').innerHTML = h; rpShow(); }
+function rpPhone(ac){ const mk = monthKey(); RP = {mode:'phone', ac}; const last = rpLastSent(), B = S.benef || {};
+  const saved = Object.keys(B).filter(k => k.startsWith(ac + '|') && B[k].saved).map(k => ({k, acc:k.slice(3), name:B[k].name||'', last:last[k.slice(3)]||''})).sort((a, b) => (a.last||'') < (b.last||'') ? 1 : -1);
+  const need = rpItems(mk).filter(i => i.acct === ac && !i.sent && i.acc && !rpSaved(i));
+  let h = '<div class="ad-grab"></div><h3>Saved in phone</h3><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + ['hx','ad'].map(a => '<button class="ad-opt' + (a === ac ? ' on' : '') + '" data-ph="' + a + '">' + a.toUpperCase() + ' account</button>').join('') + '</div>'
+    + '<p style="margin-top:8px">' + saved.length + ' / 20 saved' + (saved.length >= 20 ? ' · <b style="color:var(--red)">full — remove one before adding</b>' : ' · ' + (20 - saved.length) + ' free') + '</p><div class="av-bar"><i style="width:' + Math.min(100, saved.length * 5) + '%;background:' + (saved.length >= 18 ? 'var(--amb)' : 'var(--grn)') + '"></i></div>';
+  if(need.length) h += '<div class="ad-lbl">This month needs typing again</div>' + need.map(i => '<div class="rp-slot"><div>' + esc(i.ben) + '<small>' + esc(i.w.name) + ' · ' + esc(i.acc) + '</small></div><button class="ad-opt" style="padding:6px 10px" data-psave="' + i.key + '">Saved now ✓</button></div>').join('');
+  h += '<div class="ad-lbl">Saved</div>' + (saved.map((x, n) => { const old = saved.length >= 18 && n >= saved.length - 3;
+      return '<div class="rp-slot"><div>' + esc(x.name || x.acc) + '<small>' + esc(x.acc) + ' · ' + (x.last ? 'last sent ' + fmtDay(x.last) : 'not sent yet') + '</small></div><button class="ad-opt" style="padding:6px 10px;color:var(--red)" data-prm="' + x.k + '">' + (old ? 'Not used long · remove' : 'Remove') + '</button></div>'; }).join('') || '<p>Nothing marked yet.</p>');
+  h += '<button class="ad-cancel" data-act="close">Done</button>'; document.getElementById('rp-sheet').innerHTML = h; rpShow(); }
+function rpMarkSaved(i, on){ S.benef ??= {}; const k = rpBenKey(i);
+  if(on){ const n = Object.keys(S.benef).filter(x => x.startsWith(i.acct + '|') && S.benef[x].saved).length; if(n >= 20){ toast(i.acct.toUpperCase() + ' phone has 20 saved. Remove one first.', 3500); rpPhone(i.acct); return false; } }
+  S.benef[k] = {name:i.ben, saved:on}; saveAll(); return true; }
+document.getElementById('rp-app').addEventListener('click', e => {
+  const t = e.target.closest('[data-tick]'), mk = monthKey();
+  if(t){ const i = rpItems(mk).find(x => x.key === t.dataset.tick); if(!i) return;
+    if(!isLocked(mk)){ toast('Lock ' + MONTHS[Number(mk.slice(5))-1] + ' first (Check & lock month).', 3500); return; }
+    if(i.sent){ if(!confirm('Undo sent for ' + i.w.name + '?')) return; rpSet(i, {sent:''}); }
+    else { rpSet(i, {sent:TODAY_KL, hold:''}); if(!rpSaved(i) && confirm('Did you save ' + i.ben + ' in the ' + i.acct.toUpperCase() + ' phone?')) rpMarkSaved(i, true); toast(i.w.name + ' · sent ' + fmtRM(i.send)); }
+    return rpRender(); }
+  const b = e.target.closest('[data-act],[data-key]'); if(!b) return;
+  if(b.dataset.act === 'stars') return rpStars();
+  if(b.dataset.act === 'phone') return rpPhone('hx');
+  if(b.dataset.act === 'showsent'){ RP_SHOW_SENT = !RP_SHOW_SENT; return rpRender(); }
+  if(b.dataset.key) return rpOne(b.dataset.key);
+});
+document.getElementById('rp-sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-act],[data-star],[data-ph],[data-psave],[data-prm]'); if(!b || !RP) return;
+  const mk = monthKey(), a = b.dataset.act, find = k => rpItems(mk).find(x => x.key === k);
+  if(a === 'close') return rpClose();
+  if(b.dataset.star){ const i = find(b.dataset.star); rpSet(i, {star:!i.star}); return rpStars(); }
+  if(b.dataset.ph) return rpPhone(b.dataset.ph);
+  if(b.dataset.psave){ if(rpMarkSaved(find(b.dataset.psave), true)) rpPhone(RP.ac); return; }
+  if(b.dataset.prm){ if(!confirm('Remove this from the ' + RP.ac.toUpperCase() + ' phone list?')) return; S.benef[b.dataset.prm].saved = false; saveAll(); return rpPhone(RP.ac); }
+  const i = find(RP.key); if(!i) return rpClose();
+  if(a === 'star') rpSet(i, {star:!i.star});
+  if(a === 'hold'){ const t = new Date(TODAY_KL + 'T00:00:00'); t.setDate(t.getDate() + 1); rpSet(i, {hold: t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate())}); toast(i.w.name + ' moved to tomorrow'); }
+  if(a === 'today') rpSet(i, {hold:''});
+  if(a === 'save'){ if(!rpMarkSaved(i, true)) return; }
+  if(a === 'unsave') rpMarkSaved(i, false);
+  if(a === 'send'){ rpSet(i, {sent:TODAY_KL, hold:''}); toast(i.w.name + ' · sent ' + fmtRM(i.send)); }
+  if(a === 'unsend'){ if(!confirm('Undo sent for ' + i.w.name + '?')) return; rpSet(i, {sent:''}); }
+  rpRender(); rpOne(i.key);
+});
 
 function askReason(msg){ const r = prompt(msg + '\nReason:'); return r && r.trim() ? r.trim() : null; }
 function voidLoanTxn(wid, id){ const r = askReason('Void this loan entry'); if(!r) return; VOID_REASON[id] = r; const L = S.loans[wid]; L.txn = L.txn.filter(t => t.id !== id); saveAll(); openLoanHistory(wid); renderAdvance(); }

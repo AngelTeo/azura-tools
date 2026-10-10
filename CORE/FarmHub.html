@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v16</title>
+<title>Workers v17</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -116,7 +116,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -169,7 +169,7 @@ async function load(){
   const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
   const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food,cost_co', x => x.is('voided_at', null).order('worker_no')),
     q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
     q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
@@ -253,6 +253,7 @@ async function openWorker(id){
     + '<div class="grp">Pay</div>'
     + it('Rate', r ? rateTxt(r) : 'Not set', r ? 'since ' + fmtM(r.effective_from) : '', 'sheetRate()')
     + (() => { const fr = latestM(D.wfarm[id], THIS_MONTH), f = farmOf(w); return it('Farm', f ? farmName(f) + ' <span style="color:var(--text3);font-weight:400">· ' + coName(farmCo(f)) + '</span>' : coName(coOf(w)), (() => { const nx = (D.wfarm[id] || []).filter(x => x.effective_from > THIS_MONTH).slice(-1)[0]; return (fr ? 'since ' + fmtM(fr.effective_from) : (cRow ? 'since ' + fmtM(cRow.effective_from) : '')) + (nx ? ' · <b style="color:var(--acc)">' + fmtM(nx.effective_from) + ' → ' + farmName(nx.farm_id ? D.farm[nx.farm_id].code : 'ALL') + '</b>' : ''); })(), 'sheetFarm()'); })()
+    + ((farmOf(w) === 'ALL' || coOf(w) === 'both') ? it('Costs charged to', w.cost_co ? w.cost_co : 'Not set', 'food, personal, loan, cash, bank fee', 'sheetCostCo()') : '')
     + it('Payee 1', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) : '', 'sheetPayeeEdit(1)')
     + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
     + '<div class="grp">Details</div>'
@@ -417,6 +418,15 @@ function sheetFood(){
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
     const v = pick('food') !== 'no'; if(v === (w.shares_food !== false)) return 'No change';
     await db(sb.from('hub_worker').update({shares_food:v}).eq('id', w.id));
+  }, 'Saved');
+}
+function sheetCostCo(){
+  const w = cur();
+  sheet('<h3>Costs charged to</h3><p class="h">This worker is on all farms: salary is half HX, half AD. Pick which company his food, personal, loan, cash and bank fee go to.</p>'
+    + opts('cco', [['HX', 'HX'], ['AD', 'AD']], w.cost_co || '', '', 'g2') + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const v = pick('cco'); if(!v) return serr('Pick HX or AD.'); if(v === w.cost_co) return 'No change';
+    await db(sb.from('hub_worker').update({cost_co:v}).eq('id', w.id));
   }, 'Saved');
 }
 function sheetPhone(){ const w = cur(); sheetText('Phone', w.phone, 'tel', v => db(sb.from('hub_worker').update({phone:v || null}).eq('id', w.id))); }
