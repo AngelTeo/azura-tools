@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v78</title>
+<title>Salary v79</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -167,6 +167,19 @@ tr:hover td{background:#fafaf8;}
 .av-big{font-size:26px;font-weight:700}.av-bar{height:8px;background:#ece9e2;border-radius:4px;overflow:hidden;margin:6px 0}.av-bar i{display:block;height:100%;background:var(--grn)}
 .av-mo{display:flex;gap:6px;flex-wrap:wrap}.av-mo span{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 7px;background:#fff}.av-mo span.now{background:var(--ambl);border-color:#e8c77a}
 .av-pick{border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}.av-pick.on{border-color:var(--acc);background:var(--accl)}.av-pick b{font-size:14px}.av-pick small{display:block;font-size:12px;color:var(--text3)}
+/* 电脑（宽 1100 以上）：名单在左，明细固定在右；Attendance HX / AD 两栏；手机不变 */
+.dk-cols{display:block}
+@media(min-width:1100px){
+  #att-day{max-width:none}
+  .dk-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;align-items:start}
+  .ad-dim.side{display:none!important}
+  .ad-sheet.side{left:auto;right:max(30px,calc((100vw - 1200px)/2 + 30px));top:172px;bottom:20px;transform:none;width:calc(min(100vw,1200px) - 680px);max-width:620px;max-height:none;border-radius:14px;border:1px solid var(--border);box-shadow:0 6px 30px rgba(0,0,0,.12);z-index:150}
+  .ad-sheet.side .ad-grab{display:none}
+  #ad-sheet{top:50%;bottom:auto;transform:translate(-50%,-50%);border-radius:18px}
+  #food-app,#personal-list,#advance-list{max-width:580px!important}
+  #summary-table > div{max-width:580px!important}
+  .ad-row.sel{background:var(--accl)}
+}
 .ad-lock{font-size:12px;background:var(--ambl);color:var(--amb);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .att-cell:hover{filter:brightness(.92);transform:scale(1.08);}
 .att-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;align-items:center;}
@@ -440,22 +453,22 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
 <div class="page" id="page-food">
   <div class="card"><div id="food-app" style="max-width:560px"></div></div>
 </div>
-<div class="ad-dim" id="fd-dim" onclick="fdClose()"></div>
-<div class="ad-sheet" id="fd-sheet"></div>
+<div class="ad-dim side" id="fd-dim" onclick="fdClose()"></div>
+<div class="ad-sheet side" id="fd-sheet"></div>
 
 <!-- PERSONAL -->
 <div class="page" id="page-personal">
   <div class="card"><div id="personal-list" style="max-width:560px"></div></div>
 </div>
-<div class="ad-dim" id="ps-dim" onclick="psClose()"></div>
-<div class="ad-sheet" id="ps-sheet"></div>
+<div class="ad-dim side" id="ps-dim" onclick="psClose()"></div>
+<div class="ad-sheet side" id="ps-sheet"></div>
 
 <!-- ADVANCE -->
 <div class="page" id="page-advance">
   <div class="card"><div id="advance-list" style="max-width:560px"></div></div>
 </div>
-<div class="ad-dim" id="av-dim" onclick="avClose()"></div>
-<div class="ad-sheet" id="av-sheet"></div>
+<div class="ad-dim side" id="av-dim" onclick="avClose()"></div>
+<div class="ad-sheet side" id="av-sheet"></div>
 
 <!-- SUMMARY -->
 <div class="page" id="page-summary">
@@ -475,8 +488,8 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
   </div>
   <div style="margin-top:12px;" id="summary-totals"></div>
 </div>
-<div class="ad-dim" id="sm-dim" onclick="smClose()"></div>
-<div class="ad-sheet" id="sm-sheet"></div>
+<div class="ad-dim side" id="sm-dim" onclick="smClose()"></div>
+<div class="ad-sheet side" id="sm-sheet"></div>
 
 <!-- REMITTANCE -->
 <div class="page" id="page-remittance">
@@ -593,7 +606,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 78;
+const APP_VERSION = 79;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1012,6 +1025,7 @@ document.addEventListener('visibilitychange', async () => {
   try{ await loadData(); const pg = (document.querySelector('.page.on')||{}).id; if(pg) goPage(pg.replace('page-','')); renderExitRecords(); }catch(e){ console.warn(e); }
 });
 function goPage(p){
+  document.querySelectorAll('.ad-sheet,.ad-dim').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('on'));
   document.getElementById('page-'+p).classList.add('on');
@@ -3854,7 +3868,7 @@ function renderAttDay(){
   if(none && !lock) h += '<button class="ad-all" onclick="adEveryone()">Everyone worked<small>Each worker at their own farm — only fills the ' + none + ' not marked</small></button>';
   if(!ws.length) h += '<div class="empty"><p>No workers on this day</p></div>';
   // 分组：公司 → farm
-  const groups = [['hx','HX'],['ad','AD'],['both','All farms']];
+  const groups = [['hx','HX'],['ad','AD'],['both','All farms']], cols = {hx:'', ad:'', both:''};
   for(const [cc, label] of groups){
     const farms = cc === 'both' ? ['ALL'] : FARMS.filter(f => f[1] === cc).map(f => f[0]);
     let gh = '';
@@ -3868,8 +3882,9 @@ function renderAttDay(){
           return '<div class="ad-row" onclick="adOpen(\'' + w.id + '\')"><div class="n">' + esc(w.name) + '<small>' + esc(w.title||'') + (w.rateType==='monthly'?' · monthly':'') + '</small></div>' + mv + adTag(x) + '</div>'; }).join('')
         + vis.map(w => '<div class="ad-row vis" onclick="adOpen(\'' + w.id + '\')"><div class="n">↪ ' + esc(w.name) + '<small>from ' + farmLbl(homeFarm(w, mk)) + '</small></div>' + adTag(adGet(mk, w, D)) + '</div>').join('') + '</div>';
     }
-    if(gh) h += '<div class="ad-co ' + cc + '">' + label + '</div>' + gh;
+    if(gh) cols[cc] = '<div class="ad-co ' + cc + '">' + label + '</div>' + gh;
   }
+  if(cols.hx || cols.ad || cols.both) h += '<div class="dk-cols"><div>' + cols.hx + '</div><div>' + cols.ad + cols.both + '</div></div>';
   const el = document.getElementById('att-day'); el.innerHTML = h;
   const on = el.querySelector('.ad-day.on'); if(on){ const box = document.getElementById('ad-days'); box.scrollLeft = on.offsetLeft - box.offsetLeft - box.clientWidth/2 + 22; }
 }

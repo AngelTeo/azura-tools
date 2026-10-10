@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v15</title>
+<title>Workers v16</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -76,6 +76,19 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 #gate b{display:block;font-size:17px;margin-bottom:8px;color:var(--red)}
 #gate a{display:inline-block;margin-top:16px;background:var(--acc);color:#fff;border-radius:10px;padding:10px 18px;text-decoration:none}
 .view{display:none}.view.on{display:block}
+.dk-ph{display:none}
+/* 电脑（宽 1100 以上）：名单在左，工人资料在右；手机不变 */
+@media(min-width:1100px){
+  .wrap{max-width:1200px;display:grid;grid-template-columns:520px 1fr;gap:0 24px;align-items:start;padding:0 14px 90px}
+  #gate{grid-column:1/-1}
+  #v-list{display:block!important;grid-column:1}
+  #v-det{grid-column:2;margin-top:14px;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto}
+  #v-det > header{display:none}
+  #v-det:not(.on) ~ .dk-ph{display:flex;grid-column:2;margin-top:14px;height:240px;border:2px dashed var(--border);border-radius:14px;align-items:center;justify-content:center;color:var(--text3)}
+  .row.sel{background:var(--accl)}
+  .fab{right:auto;left:max(30px,calc((100vw - 1200px)/2 + 470px))}
+  .sheet{top:50%;bottom:auto;transform:translate(-50%,-50%);border-radius:18px}
+}
 </style>
 </head>
 <body>
@@ -95,6 +108,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
     <header><button class="back" onclick="backToList()">← Workers</button><h1></h1></header>
     <div id="det"></div>
   </div>
+  <div class="dk-ph">Tap a worker to see details</div>
 </div>
 
 <div class="dim" id="dim" onclick="closeSheet()"></div>
@@ -102,7 +116,7 @@ header .who{font-size:12px;color:#aaa;white-space:nowrap}
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -215,18 +229,20 @@ function render(){
   });
   $('cnt').textContent = list.length + ' workers';
   $('list').innerHTML = list.map(w => { const c = isActive(w) ? coOf(w) : 'stop';
-    return '<div class="row" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + avInner(w) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
+    return '<div class="row' + (OPEN === w.id ? ' sel' : '') + '" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + avInner(w) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
       + (isActive(w) ? (farmOf(w) ? farmName(farmOf(w)) : coName(coOf(w))) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
     || '<div class="empty">No workers</div>';
 }
 function setFilter(k){ FILTER = k; render(); }
 $('q').oninput = render;
-function show(id){ document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); scrollTo(0, 0); }
+function show(id){ document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); if(innerWidth < 1100) scrollTo(0, 0); else if(id === 'v-det') $('v-det').scrollTop = 0; }
 function backToList(){ OPEN = null; history.replaceState(null, '', location.pathname); render(); show('v-list'); }
 
 // ── worker page ──
 async function openWorker(id){
   const w = D.workers.find(x => x.id === id); if(!w) return; OPEN = id;
+  document.querySelectorAll('#list .row.sel').forEach(r => r.classList.remove('sel'));
+  const selRow = document.querySelector('#list .row[onclick*="' + id + '"]'); if(selRow) selRow.classList.add('sel');
   history.replaceState(null, '', '#w=' + id);
   const r = rateOf(w), cRow = latestM(D.comps[id], THIS_MONTH), p1 = latestD(D.pay1[id], TODAY) || (D.pay1[id] || [])[0], p2 = latestD(D.pay2[id], TODAY), pas = (D.pass[id] || []).slice(-1)[0];
   const act = isActive(w), c = act ? coOf(w) : 'stop', E = CAN_EDIT;
