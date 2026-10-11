@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v83</title>
+<title>Salary v84</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -1434,7 +1434,14 @@ function clearAttendance(){if(!confirm('Clear all attendance for this month?'))r
 function ensureFood(){const mk=monthKey();if(!S.food[mk])S.food[mk]=[];}
 // ---------- v70 Food：每笔一行 · 那天在职的人分摊 · 每一笔照实算，每个工人整个月加起来才进位到 10 仙 ----------
 let FOOD_VIEW = 'list', FD = null, FD_MODE = 'form';
-function foodIds(r, mk){ return r.workerIds || workersInMonth(mk).map(w => w.id); }
+// v84 食物分摊：2026-09 起、有日期的那一笔 = 当天在职且分享食物的人（自动）＋ 单笔手动加的 − 单笔手动拿掉的。补入职 / 停工日会自动重算
+const FOOD_AUTO_START = '2026-09';
+function foodLive(r, mk){ return mk >= FOOD_AUTO_START && !!(r && r.date); }
+function foodAutoIds(mk, date){ return foodAutoOn(mk, date).map(w => w.id); }
+function foodApply(mk, date, addIds, removeIds){ const rm = new Set(removeIds||[]), inMonth = new Set(workersInMonth(mk).map(w => w.id)), auto = foodAutoIds(mk, date).filter(id => !rm.has(id)), on = new Set(auto);
+  (addIds||[]).forEach(id => { if(inMonth.has(id) && !rm.has(id)) on.add(id); }); return [...on]; }
+function foodExceptions(mk, date, sel){ const auto = new Set(foodAutoIds(mk, date)), s = new Set(sel); return {addIds:[...s].filter(id => !auto.has(id)), removeIds:[...auto].filter(id => !s.has(id))}; }
+function foodIds(r, mk){ if(foodLive(r, mk)) return foodApply(mk, r.date, r.addIds, r.removeIds); return r.workerIds || workersInMonth(mk).map(w => w.id); }
 function foodEach(total, n){ return n > 0 ? (Number(total)||0) / n : 0; }   // 照实，不进位
 function up10(x){ const sen = Math.round(x * 100 * 1000) / 1000; return Math.ceil(sen / 10 - 1e-6) / 10; }
 function foodShare(r, mk){ return foodEach(r.total, foodIds(r, mk).length); }
@@ -1485,7 +1492,7 @@ function fdOpen(id){
   const r = id ? (S.food[mk]||[]).find(x => x.id === id) : null;
   const t = new Date(), today = t.getFullYear() + '-' + pad2(t.getMonth()+1) + '-' + pad2(t.getDate());
   const date = r ? (r.date||'') : (today.slice(0,7) === mk ? today : mk + '-01');
-  FD = r ? {id:r.id, date, vendor:r.vendor||'', description:r.description||'', total:r.total ? String(r.total) : '', workerIds:foodIds(r, mk).slice(), autoSel:r.autoSel !== false}
+  FD = r ? {id:r.id, date, vendor:r.vendor||'', description:r.description||'', total:r.total ? String(r.total) : '', workerIds:foodIds(r, mk).slice(), autoSel:foodLive(r, mk) ? !((r.addIds||[]).length || (r.removeIds||[]).length) : r.autoSel !== false}
          : {id:null, date, vendor:'', description:'', total:'', workerIds:foodAutoOn(mk, date).map(w => w.id), autoSel:true};
   FD_MODE = 'form'; fdDraw(); document.getElementById('fd-dim').style.display = 'block'; document.getElementById('fd-sheet').style.display = 'block';
 }
@@ -1507,7 +1514,7 @@ function fdDraw(){
       + (typing ? '<input class="fd-in" id="fd-shop" style="margin-top:8px" placeholder="New shop name — it will be added to the list" value="' + (picked ? '' : esc(FD.vendor)) + '">' : '')
       + '<div class="ad-lbl">What</div><input class="fd-in" id="fd-what" placeholder="e.g. Rice 10kg x3" value="' + esc(FD.description) + '">'
       + '<div class="ad-lbl">Total (RM)</div><input class="fd-in big" id="fd-total" inputmode="decimal" placeholder="0.00" value="' + esc(FD.total) + '">'
-      + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + (FD.autoSel ? 'Everyone working that day' : n + ' people picked') + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>Change</span></div>'
+      + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + fdWhoLabel(mk, n) + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>Change</span></div>'
       + '<div class="fd-each" id="fd-each">' + (n ? 'Each pays ' + fmtRM(each) : 'Nobody picked yet') + '</div>'
       + '<div class="fd-err" id="fd-err"></div><button class="fd-save" data-act="save">Save</button>'
       + (FD.id ? '<button class="fd-del" data-act="del">Delete purchase</button>' : '') + '<button class="ad-cancel" data-act="cancel">Cancel</button>';
@@ -1516,24 +1523,38 @@ function fdDraw(){
       + FOOD_SHOPS.filter(x => x.shown).map(x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.label) + '</div><button class="ad-opt" style="padding:6px 12px;color:var(--red)" data-hide="' + x.id + '">Hide</button></div>').join('') + '</div>'
       + '<button class="fd-save" data-act="back">Done</button>';
   } else {
-    const people = foodPeopleOn(mk, FD.date), sel = new Set(FD.workerIds), groups = {};
+    const people = foodPeopleOn(mk, FD.date), sel = new Set(FD.workerIds), groups = {}, auto = new Set(FD.date ? foodAutoIds(mk, FD.date) : []);
     people.forEach(w => { const f = homeFarm(w, mk) || ('Farm not set'); (groups[f] ??= []).push(w); });
     const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
     h += '<h3>Who shares</h3><p>' + (FD.date ? 'Working on ' + fmtDay(FD.date) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
     order.forEach(f => { const ws = groups[f], k = ws.filter(w => sel.has(w.id)).length;
       h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b><span data-farm="' + f + '">' + (k === ws.length ? 'All ' + k + ' ✓' : k ? k + ' of ' + ws.length : 'None') + '</span></div>'
-        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + (w.sharesFood === false ? ' <small style="font-weight:500">· by hand</small>' : '') + '</span>').join('') + '</div>'; });
+        + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + fdChipTag(mk, w, sel, auto) + '</span>').join('') + '</div>'; });
     h += '<div class="fd-each">' + (n ? n + ' people · each pays ' + fmtRM(each) : 'Nobody picked') + '</div>'
       + '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:10px"><button class="ad-opt" data-act="everyone">Everyone</button><button class="ad-opt" data-act="nobody">Nobody</button></div>'
       + '<button class="fd-save" data-act="back">Done</button>';
   }
   sh.innerHTML = h;
 }
+function fdWhoLabel(mk, n){
+  if(mk < FOOD_AUTO_START || !FD.date) return FD.autoSel ? 'Everyone working that day' : n + ' people picked';
+  const ex = foodExceptions(mk, FD.date, FD.workerIds), x = [];
+  if(ex.addIds.length) x.push(ex.addIds.length + ' added'); if(ex.removeIds.length) x.push(ex.removeIds.length + ' removed');
+  return 'Everyone working that day' + (x.length ? ' · ' + x.join(' · ') : '');
+}
+function fdChipTag(mk, w, sel, auto){
+  if(mk < FOOD_AUTO_START) return w.sharesFood === false ? ' <small style="font-weight:500">· by hand</small>' : '';
+  if(sel.has(w.id) && !auto.has(w.id)) return ' <small style="font-weight:500">· added</small>';
+  if(!sel.has(w.id) && auto.has(w.id)) return ' <small style="font-weight:500">· removed</small>';
+  return w.sharesFood === false ? ' <small style="font-weight:500">· by hand</small>' : '';
+}
 function fdKeep(){ // 记住表单里打的字
   const g = id => document.getElementById(id); if(!g('fd-what')) return;
   FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop')) FD.vendor = g('fd-shop').value.trim();
 }
-function fdSetDate(d){ FD.date = d; if(FD.autoSel) FD.workerIds = foodAutoOn(monthKey(), d).map(w => w.id); }
+function fdSetDate(d){ const mk = monthKey();
+  if(mk >= FOOD_AUTO_START && FD.date && d){ const ex = foodExceptions(mk, FD.date, FD.workerIds); FD.date = d; FD.workerIds = foodApply(mk, d, ex.addIds, ex.removeIds); return; }   // 换日子：手动加 / 拿掉的人跟着走
+  FD.date = d; if(FD.autoSel) FD.workerIds = foodAutoOn(mk, d).map(w => w.id); }
 async function fdSave(){
   fdKeep(); const mk = monthKey(), err = m => { document.getElementById('fd-err').textContent = m; };
   const total = r2(parseFloat(String(FD.total).replace(/,/g, '')));
@@ -1543,6 +1564,7 @@ async function fdSave(){
   if(FD.vendor && !foodShops().some(v => sameShop(v, FD.vendor))){ FD.vendor = FD.vendor.trim().replace(/\s+/g, ' '); try{ await addShop(FD.vendor); }catch(e){ toast('Shop not added to the list: ' + (e.message||e)); } }
   else if(FD.vendor){ FD.vendor = foodShops().find(v => sameShop(v, FD.vendor)); }
   ensureFood(); const data = {date:FD.date, vendor:FD.vendor.trim(), description:FD.description.trim(), qty:1, unitPrice:total, total, workerIds:FD.workerIds.slice(), autoSel:FD.autoSel};
+  if(mk >= FOOD_AUTO_START){ const ex = foodExceptions(mk, FD.date, FD.workerIds); data.addIds = ex.addIds; data.removeIds = ex.removeIds; data.autoSel = !ex.addIds.length && !ex.removeIds.length; }
   if(FD.id){ const r = S.food[mk].find(x => x.id === FD.id); Object.assign(r, data); } else S.food[mk].push({id:genId('f'), ...data});
   saveAll(); fdClose(); toast('Saved · each pays ' + fmtRM(foodEach(total, data.workerIds.length)));
 }
