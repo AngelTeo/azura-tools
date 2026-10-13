@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v19</title>
+<title>Workers v20</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -144,6 +144,16 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
 /* ══════ WORKERS extras ══════ */
 .toast.bad{background:var(--danger)}
 .stats{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.cboxes{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.cbox{background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;overflow:hidden;flex:1 1 300px;max-width:460px}
+.cbox.both{flex:0 1 160px}
+.cb-h{display:flex;justify-content:center;align-items:baseline;gap:14px;padding:10px;font-weight:700;font-size:14px;border-bottom:.5px solid var(--bdr);cursor:pointer}
+.cb-h b{font-size:20px;font-variant-numeric:tabular-nums}
+.cbox.HX .cb-h{border-top:3px solid var(--c-hx)}.cbox.AD .cb-h{border-top:3px solid var(--c-ad)}.cbox.both .cb-h{border-top:3px solid var(--c-both)}
+.cb-r{display:flex}
+.cc{flex:1;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;cursor:pointer;font-size:12px;font-weight:600}
+.cc+.cc{border-left:.5px solid var(--bdr)}.cc b{font-size:16px;font-variant-numeric:tabular-nums}
+.cc:hover,.cb-h:hover{background:#F0F6F2}
 .av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none;vertical-align:middle;overflow:hidden}
 .av img{width:100%;height:100%;object-fit:cover;display:block}
 .av.hx{background:#FFF3D6;color:#7A4A00}.av.ad{background:#D8F3E8;color:#0E6B4A}.av.both{background:#EDE5FF;color:#5C2DA0}.av.stop{background:var(--sur2);color:var(--mut)}
@@ -183,7 +193,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
 <!-- ══════ GATE ══════ -->
 <div id="gate" style="display:none">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Workers <span class="ver">v19</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Workers <span class="ver">v20</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Master Data</div>
     <div id="gateMsg"></div>
   </div>
@@ -193,7 +203,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">👷 Workers <span class="ver">v19</span></div>
+    <div class="nav-logo">👷 Workers <span class="ver">v20</span></div>
     <button class="ntab on" data-p="workers" onclick="go('workers')">Workers</button>
     <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
     <div class="nav-r">
@@ -208,7 +218,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
   <!-- Workers -->
   <div class="page on" id="page-workers">
     <h1 class="pt">Workers <button class="btn btn-pri" id="fab" hidden onclick="sheetAdd()">+ New worker</button></h1>
-    <div class="stats" id="wStats"></div>
+    <div id="wStats"></div>
     <div class="row-inline" style="margin-bottom:10px">
       <input type="text" id="q" placeholder="Search name / position / farm" style="max-width:320px">
       <select id="fco" onchange="render()" style="max-width:160px"><option value="">All companies</option><option value="hx">HX</option><option value="ad">AD</option><option value="both">Both</option></select>
@@ -236,7 +246,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 const SYS = 'Workers';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -346,14 +356,20 @@ const coTag = c => c ? '<span class="co ' + (c === 'both' ? 'both' : c.toUpperCa
 const payeeOf = w => latestD(D.pay1[w.id], TODAY) || (D.pay1[w.id] || [])[0];
 function render(){
   const act = D.workers.filter(isActive), cnt = c => act.filter(w => coOf(w) === c).length;
-  $('wStats').innerHTML = '<div class="stat"><small>Active workers</small><b>' + act.length + '</b></div><div class="stat"><small>HX</small><b>' + cnt('hx') + '</b></div><div class="stat"><small>AD</small><b>' + cnt('ad') + '</b></div><div class="stat"><small>Both</small><b>' + cnt('both') + '</b></div><div class="stat"><small>Stopped</small><b>' + (D.workers.length - act.length) + '</b></div>';
+  const cell = (label, n, q) => '<div class="cc"' + (q ? ' onclick="$(\'q\').value=\'' + q + '\';render()"' : '') + '><span>' + esc(label) + '</span><b>' + n + '</b></div>';
+  const box = (c, title, total, cells) => '<div class="cbox ' + c + '"><div class="cb-h" onclick="$(\'q\').value=\'\';$(\'fco\').value=\'' + c.toLowerCase() + '\';render()"><span>' + title + '</span><b>' + total + '</b></div><div class="cb-r">' + cells + '</div></div>';
+  const farmCells = c => { const lc = c.toLowerCase(), none = act.filter(w => coOf(w) === lc && !farmOf(w)).length;
+    return D.farms.filter(f => (D.co[f.company_id] || '') === c).map(f => cell(f.code, act.filter(w => farmOf(w) === f.code).length, f.code)).join('') + (none ? cell('No farm', none, '') : ''); };
+  $('wStats').innerHTML = '<div class="stats"><div class="stat"><small>Active workers</small><b>' + act.length + '</b></div><div class="stat"><small>Stopped</small><b>' + (D.workers.length - act.length) + '</b></div></div>'
+    + '<div class="cboxes">' + box('HX', 'HX', cnt('hx'), farmCells('HX')) + box('AD', 'AD', cnt('ad'), farmCells('AD'))
+    + (cnt('both') ? box('both', 'Both', cnt('both'), cell('All farms', act.filter(w => farmOf(w) === 'ALL').length, 'All farms')) : '') + '</div>';
   const qs = $('q').value.trim().toLowerCase(), fc = $('fco').value, all = $('fstop').checked;
   const list = D.workers.filter(w => {
     if(!all && !isActive(w)) return false;
     if(fc && (!isActive(w) || coOf(w) !== fc)) return false;
-    if(qs && ![w.name, w.title, farmOf(w)].join(' ').toLowerCase().includes(qs)) return false;
+    if(qs && ![w.name, w.title, farmName(farmOf(w))].join(' ').toLowerCase().includes(qs)) return false;
     return true;
-  }).sort((a, b) => (isActive(b) - isActive(a)) || ((a.worker_no ?? 1e9) - (b.worker_no ?? 1e9)));
+  }).sort((a, b) => (isActive(b) - isActive(a)) || (a.name || '').localeCompare(b.name || ''));
   $('cnt').textContent = list.length + ' workers';
   $('list').innerHTML = list.map(w => { const act = isActive(w), c = act ? coOf(w) : 'stop', p = payeeOf(w), r = rateOf(w), f = farmOf(w);
     return '<tr class="click" onclick="openWorker(\'' + w.id + '\')"><td class="code">' + (w.worker_no ?? '') + '</td>'
