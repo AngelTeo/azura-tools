@@ -1,122 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v18</title>
+<title>Workers v19</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-:root{--bg:#f2f0eb;--bg2:#e8e5de;--white:#fff;--border:#d8d5ce;--hint:#c4c0b8;--text:#1a1916;--text2:#4a4740;--text3:#8a8680;
---acc:#1A56A0;--accl:#ddeaff;--grn:#0E6B4A;--grnl:#d8f3e8;--red:#A3291F;--redl:#fce8e6;--amb:#7A4A00;--ambl:#fff3d6;--pur:#5C2DA0;--purl:#ede5ff}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:14px;min-height:100vh}
-button,input,select{font-family:inherit}
-.wrap{max-width:560px;margin:0 auto;padding-bottom:90px}
-header{background:var(--text);color:#fff;padding:9px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
-header a,header .back{color:#fff;text-decoration:none;font-size:15px;background:none;border:0;cursor:pointer;white-space:nowrap}
-header h1{font-size:15px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-header .who{font-size:12px;color:#aaa;white-space:nowrap}
-.search{margin:10px 14px 6px;display:block;width:calc(100% - 28px);padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:#fff}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap;color:var(--text2);cursor:pointer}
-.chip.on{background:var(--text);color:#fff;border-color:var(--text)}
-.count{font-size:12px;color:var(--text3);padding:0 16px 6px}
-.list{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.row{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bg2);cursor:pointer}
-.row:last-child{border-bottom:0}
-.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
-.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-.av.cam{position:relative}.av.cam::after{content:'📷';position:absolute;right:-4px;bottom:-4px;font-size:13px;background:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.av.hx{background:var(--ambl);color:var(--amb)}.av.ad{background:var(--grnl);color:var(--grn)}.av.both{background:var(--purl);color:var(--pur)}.av.stop{background:var(--bg2);color:var(--text3)}
-.row .t{flex:1;min-width:0}.row .n{font-weight:600}.row .s{font-size:12px;color:var(--text3);margin-top:2px}
-.chev{color:var(--hint);font-size:20px}
-.empty{padding:30px 16px;text-align:center;color:var(--text3)}
-.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:18px;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;font-size:24px;border:0;box-shadow:0 6px 18px rgba(26,86,160,.35);cursor:pointer}
-.hero{padding:12px 14px 10px;display:flex;align-items:center;gap:12px;cursor:pointer}
-.hero .av{width:42px;height:42px;font-size:15px}
-.hero .n{font-size:17px;font-weight:700}.hero .s{font-size:12px;color:var(--text3);margin-top:3px}
-.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;margin-top:4px}
-.pill.on{background:var(--grnl);color:var(--grn)}.pill.off{background:var(--redl);color:var(--red)}
-.grp{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;padding:10px 14px 4px}
-.item{display:flex;align-items:center;padding:9px 14px;background:#fff;border-bottom:1px solid var(--bg2);gap:10px}
-.item.tap{cursor:pointer}
-.item .k{width:84px;color:var(--text3);font-size:13px;flex:none}.item .v{flex:1;font-weight:500;min-width:0}
-.item .v small{display:block;font-weight:400;color:var(--text3);font-size:11px;margin-top:1px}
-.btn-wide{display:block;width:calc(100% - 28px);margin:12px 14px 0;padding:10px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer}
-.btn-wide.red{border-color:#f0b8b4;color:var(--red)}
-.btn-wide.link{border:0;background:none;color:var(--text3);font-weight:500;font-size:13px;margin-top:6px}
-.dim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:20}
-.sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px 22px;z-index:21;display:none}
-.grab{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
-.sheet h3{font-size:16px;margin-bottom:2px}.sheet p.h{font-size:12px;color:var(--text3);margin-bottom:6px}
-.lbl{font-size:12px;color:var(--text3);margin:10px 0 6px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.opt{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:9px 6px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer}
-.opt.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
-.opt.dark.on{border-color:var(--text);background:var(--text);color:#fff}
-.opt.red.on{border-color:var(--red);background:var(--redl);color:var(--red)}
-.opt:disabled{opacity:.4;cursor:default}
-.inp{width:100%;margin-top:6px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;background:#fff}
-.save{width:100%;margin-top:14px;padding:11px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.save.red{background:var(--red)}
-.cancel{width:100%;margin-top:8px;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer}
-.save:disabled{opacity:.6}
-.err{margin-top:10px;font-size:13px;color:var(--red);display:none}
-.pcard{border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.pcard .v{flex:1}.pcard small{display:block;color:var(--text3);font-size:12px}
-.hist td{padding:7px 4px;border-bottom:1px solid var(--bg2);font-size:13px;vertical-align:top}
-.hist{width:100%;border-collapse:collapse}
-#toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;display:none;z-index:30;max-width:90vw}
-#toast.bad{background:var(--red)}
-#gate{padding:60px 20px;text-align:center;display:none}
-#gate b{display:block;font-size:17px;margin-bottom:8px;color:var(--red)}
-#gate a{display:inline-block;margin-top:16px;background:var(--acc);color:#fff;border-radius:10px;padding:10px 18px;text-decoration:none}
-.view{display:none}.view.on{display:block}
-.dk-ph{display:none}
-/* 电脑（宽 1100 以上）：名单在左，工人资料在右；手机不变 */
-@media(min-width:1100px){
-  .wrap{max-width:1200px;display:grid;grid-template-columns:520px 1fr;gap:0 24px;align-items:start;padding:0 14px 90px}
-  #gate{grid-column:1/-1}
-  #v-list{display:block!important;grid-column:1}
-  #v-det{grid-column:2;margin-top:14px;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto}
-  #v-det > header{display:none}
-  #v-det:not(.on) ~ .dk-ph{display:flex;grid-column:2;margin-top:14px;height:240px;border:2px dashed var(--border);border-radius:14px;align-items:center;justify-content:center;color:var(--text3)}
-  .row.sel{background:var(--accl)}
-  .fab{right:auto;left:max(30px,calc((100vw - 1200px)/2 + 470px))}
-  .sheet{top:50%;bottom:auto;transform:translate(-50%,-50%);border-radius:18px}
+:root{
+  --layer:#2F5D3F;
+  --c-ad:#0E6B4A; --c-hx:#B7791F; --c-both:#5C2DA0;
+  --sur:#ffffff; --sur2:#f7f6f2; --bdr:#e0ddd6;
+  --txt:#1a1a1a; --mut:#888888; --hint:#bbbbbb;
+  --ok:#0F6E56; --warn:#854F0B; --danger:#A32D2D; --info:#236FAD;
 }
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,"Microsoft YaHei",sans-serif;
+  background:var(--sur2);color:var(--txt);font-size:13px;line-height:1.4}
+
+/* ══════ NAV (TOPBAR) ══════ */
+.nav{background:var(--layer);border-bottom:.5px solid rgba(0,0,0,.2);
+  display:flex;align-items:center;padding:0 16px;position:sticky;top:0;z-index:50;
+  overflow-x:auto;gap:0;min-height:56px}
+.nav-home{background:none;border:none;color:rgba(255,255,255,.75);font-size:18px;cursor:pointer;padding:0 12px 0 0;flex-shrink:0;min-height:44px;min-width:44px}
+.nav-home:hover{color:#fff}
+.nav-logo{font-size:13px;font-weight:600;padding:0 14px 0 0;
+  border-right:.5px solid rgba(255,255,255,.2);margin-right:4px;white-space:nowrap;
+  flex-shrink:0;color:#fff;display:flex;align-items:center;min-height:44px}
+.ver{background:#F9CB42;color:var(--layer);border-radius:4px;padding:1px 6px;
+  font-size:10px;font-weight:700;margin-left:6px}
+.ntab{padding:0 14px;font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;
+  border:none;background:transparent;border-bottom:2.5px solid transparent;
+  transition:all .15s;white-space:nowrap;flex-shrink:0;font-family:inherit;min-height:44px}
+.ntab:hover{color:#fff}
+.ntab.on{color:#fff;border-bottom-color:#fff;font-weight:600}
+.nav-r{margin-left:auto;display:flex;gap:6px;align-items:center;padding-left:24px;flex-shrink:0}
+.saved{font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap}
+.sync{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:22px;
+  background:rgba(255,255,255,.14);color:#fff;font-size:11px;border:.5px solid rgba(255,255,255,.3);cursor:pointer;font-family:inherit}
+.sync i{width:8px;height:8px;border-radius:50%;background:#7CD4A8;display:inline-block}
+.sync.bad i{background:#FF8A8A}.sync.busy i{background:#F9CB42}
+.btn-nav{padding:0 12px;border-radius:6px;border:.5px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.12);color:#fff;font-size:11px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}
+.btn-nav:hover{opacity:.85}
+
+/* ══════ PAGES ══════ */
+.page{display:none;padding:16px;max-width:1200px;margin:0 auto}
+.page.on{display:block}
+h1.pt{font-size:18px;margin:4px 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ══════ BUTTONS ══════ */
+.btn{padding:0 14px;min-height:44px;border-radius:6px;border:.5px solid var(--bdr);
+  background:var(--sur);color:var(--txt);font-size:12px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--sur2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-pri{background:var(--layer);color:#fff;border-color:var(--layer);font-weight:600}
+.btn-pri:hover{opacity:.85;background:var(--layer)}
+.btn-sm{min-height:36px;padding:0 10px;font-size:11px}
+
+/* ══════ CARDS ══════ */
+.card{background:var(--sur);border:.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+.mg-line{font-size:12px;line-height:2}
+.mg-val{background:var(--sur2);border-radius:4px;font-size:11px;padding:1px 6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:10px 14px}
+.stat small{display:block;font-size:11px;color:var(--mut)}.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+
+/* ══════ ALERT ══════ */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+.alert-warn{background:#FFF3CD;color:var(--warn);border-left:3px solid var(--warn)}
+.alert-danger{background:#FCEBEB;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-info{background:#E8F0F7;color:var(--info);border-left:3px solid var(--info)}
+
+/* ══════ TABLES ══════ */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.data{width:100%;border-collapse:collapse;font-size:12px}
+table.data thead th{background:#2d2d2d;color:#fff;padding:9px 10px;text-align:left;
+  font-size:10px;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+table.data tbody td{padding:7px 10px;border-bottom:.5px solid var(--bdr);height:36px;vertical-align:middle}
+table.data tbody tr:nth-child(even){background:var(--sur2)}
+table.data tbody tr.click{cursor:pointer}
+table.data tbody tr.click:hover{background:#FFF9E6}
+table.data td.num,table.data th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.data tfoot td{padding:8px 10px;font-weight:700;border-top:1px solid var(--txt)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-active{background:#E1F5EE;color:var(--ok)}
+.b-pending{background:#FFF3CD;color:var(--warn)}
+.b-archived{background:var(--sur2);color:var(--mut)}
+.co{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:#777}
+.co.AD{background:var(--c-ad)}.co.HX{background:var(--c-hx)}
+.empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:12px}
+.code{font-family:ui-monospace,Consolas,monospace;font-weight:600;color:var(--layer);white-space:nowrap}
+
+/* ══════ FORM ══════ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld>span{font-size:11px;color:var(--mut)}
+.fld>span b{color:var(--danger)}
+.fld.wide{grid-column:1/-1}
+input[type=text],input[type=number],select{
+  width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;
+  font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+input:disabled,select:disabled{background:var(--sur2);color:var(--mut)}
+input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(--layer)}
+.hint{font-size:11px;color:var(--mut);line-height:1.5}
+.row-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:12px;cursor:pointer}
+.chk input{width:18px;height:18px}
+
+/* ══════ ACCORDION ══════ */
+.acc{border:.5px solid var(--bdr);border-radius:16px;overflow:hidden;background:var(--sur);margin-bottom:12px}
+.acc-hdr{padding:16px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;letter-spacing:.05em;color:var(--mut);min-height:44px}
+.acc-body{display:none;padding:0 16px 16px}
+.acc.open .acc-body{display:block}
+
+/* ══════ MODAL ══════ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 12px;overflow-y:auto}
+.ov.on{display:flex}
+.modal{background:var(--sur);border-radius:14px;width:560px;max-width:100%;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+.modal-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:.5px solid var(--bdr);font-weight:700}
+.modal-b{padding:16px 18px}
+.modal-f{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:.5px solid var(--bdr);flex-wrap:wrap}
+.modal-f .left{margin-right:auto}
+.x{background:none;border:none;font-size:18px;cursor:pointer;color:var(--mut);min-width:44px;min-height:44px}
+.merr{color:var(--danger);font-size:12px;margin-top:10px;display:none}
+
+/* ══════ TOAST ══════ */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9999}
+.toast.show{opacity:1}
+#saveBanner{display:none}#saveBanner.on{display:flex}
+
+#gate{max-width:380px;margin:60px auto;padding:0 16px}
+@media (max-width:640px){
+  .page{padding:12px}
+  .grid{grid-template-columns:1fr}
+  .toast{left:12px;right:12px;bottom:12px}
+  table.data td,table.data th{white-space:nowrap}
+}
+
+.co.both{background:var(--c-both)}
+/* ══════ WORKERS extras ══════ */
+.toast.bad{background:var(--danger)}
+.stats{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none;vertical-align:middle;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av.hx{background:#FFF3D6;color:#7A4A00}.av.ad{background:#D8F3E8;color:#0E6B4A}.av.both{background:#EDE5FF;color:#5C2DA0}.av.stop{background:var(--sur2);color:var(--mut)}
+.nm{display:flex;align-items:center;gap:10px}.nm .t small{display:block;color:var(--mut);font-size:11px;font-weight:400}
+.hero{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.hero .av{width:56px;height:56px;font-size:18px}.hero .av.cam{cursor:pointer}
+.hero .n{font-size:17px;font-weight:700}.hero .s{font-size:12px;color:var(--mut);margin-top:2px}
+.sec{font-size:10px;font-weight:700;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 2px}
+.it{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 4px;border-bottom:.5px solid var(--bdr)}
+.it .k{width:120px;color:var(--mut);font-size:12px;flex:none}.it .v{flex:1;min-width:0;font-weight:500}
+.it .v small{display:block;font-weight:400;color:var(--mut);font-size:11px}
+.it.tap{cursor:pointer}.it.tap:hover{background:#FFF9E6}
+.it .chg{color:var(--layer);font-size:11px;font-weight:600;flex:none}
+.lbl{font-size:11px;color:var(--mut);margin:12px 0 6px}
+p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
+.g2,.g3,.g4{display:grid;gap:8px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.opt{border:.5px solid var(--bdr);background:var(--sur);border-radius:6px;min-height:44px;padding:0 6px;font-size:13px;font-weight:600;color:var(--txt);cursor:pointer;font-family:inherit}
+.opt.on{border-color:var(--layer);background:#E3EFE7;color:var(--layer);box-shadow:0 0 0 1.5px var(--layer) inset}
+.opt.dark.on{background:var(--layer);color:#fff}
+.opt.red.on{border-color:var(--danger);background:#FCEBEB;color:var(--danger);box-shadow:0 0 0 1.5px var(--danger) inset}
+.opt:disabled{opacity:.4;cursor:default}
+.inp{width:100%;margin-top:6px;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur)}
+.save{width:100%;margin-top:16px;min-height:44px;border:0;border-radius:6px;background:var(--layer);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.save.red{background:var(--danger)}.save:disabled{opacity:.6}
+.cancel{width:100%;margin-top:8px;min-height:44px;border:.5px solid var(--bdr);border-radius:6px;background:var(--sur);color:var(--txt);font-size:12px;cursor:pointer;font-family:inherit}
+.btn-wide{min-height:40px;padding:0 12px;border-radius:6px;border:.5px solid var(--bdr);background:var(--sur);font-size:12px;cursor:pointer;font-family:inherit;width:100%;margin-top:8px}
+.btn-wide.red{color:var(--danger);border-color:#f0b8b4}.btn-wide.link{border:0;background:none;color:var(--mut)}
+.err{margin-top:10px;font-size:12px;color:var(--danger);display:none}
+.pcard{border:.5px solid var(--bdr);border-radius:6px;padding:9px 12px;margin-top:6px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pcard .v{flex:1}.pcard small{display:block;color:var(--mut);font-size:11px}
+.hist{width:100%;border-collapse:collapse}.hist td{padding:7px 4px;border-bottom:.5px solid var(--bdr);font-size:12px;vertical-align:top}
+.chev{color:var(--hint)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="gate"></div>
 
-  <div class="view" id="v-list">
-    <header><a href="../index.html">← Home</a><h1>Workers</h1><span class="who" id="who"></span></header>
-    <input class="search" id="q" placeholder="Search name" autocomplete="off">
-    <div class="chips" id="fchips"></div>
-    <div class="count" id="cnt"></div>
-    <div class="list" id="list"></div>
-    <button class="fab" id="fab" hidden onclick="sheetAdd()">+</button>
+<!-- ══════ GATE ══════ -->
+<div id="gate" style="display:none">
+  <div class="card">
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Workers <span class="ver">v19</span></div>
+    <div class="hint" style="margin-bottom:14px">Azura Delta · Master Data</div>
+    <div id="gateMsg"></div>
   </div>
-
-  <div class="view" id="v-det">
-    <header><button class="back" onclick="backToList()">← Workers</button><h1></h1></header>
-    <div id="det"></div>
-  </div>
-  <div class="dk-ph">Tap a worker to see details</div>
 </div>
 
-<div class="dim" id="dim" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet"></div>
-<div id="toast"></div>
+<!-- ══════ APP ══════ -->
+<div id="app" style="display:none">
+  <nav class="nav">
+    <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
+    <div class="nav-logo">👷 Workers <span class="ver">v19</span></div>
+    <button class="ntab on" data-p="workers" onclick="go('workers')">Workers</button>
+    <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
+    <div class="nav-r">
+      <span class="saved" id="savedAt">Saved --:--</span>
+      <button class="sync" id="syncBadge" onclick="go('manage')"><i></i><span id="syncTxt">Cloud</span></button>
+      <button class="btn-nav" onclick="exportAll()">↓ Export</button>
+      <button class="btn-nav" id="btnImp" onclick="$('impFile').click()">↑ Import</button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importFile(this)">
+    </div>
+  </nav>
+
+  <!-- Workers -->
+  <div class="page on" id="page-workers">
+    <h1 class="pt">Workers <button class="btn btn-pri" id="fab" hidden onclick="sheetAdd()">+ New worker</button></h1>
+    <div class="stats" id="wStats"></div>
+    <div class="row-inline" style="margin-bottom:10px">
+      <input type="text" id="q" placeholder="Search name / position / farm" style="max-width:320px">
+      <select id="fco" onchange="render()" style="max-width:160px"><option value="">All companies</option><option value="hx">HX</option><option value="ad">AD</option><option value="both">Both</option></select>
+      <label class="chk"><input type="checkbox" id="fstop" onchange="render()"> Show stopped</label>
+      <span class="hint" id="cnt"></span>
+    </div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th>No.</th><th>Name</th><th>Farm</th><th>Company</th><th class="num">Rate</th><th>Pay to</th><th>Joined</th><th>Food</th><th>Status</th></tr></thead>
+      <tbody id="list"></tbody></table></div></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="page" id="page-manage"><div id="manageView"></div></div>
+</div>
+
+<!-- ══════ MODAL ══════ -->
+<div class="ov" id="ov" onclick="if(event.target===this)backToList()">
+  <div class="modal">
+    <div class="modal-h"><span id="mTitle"></span><button class="x" onclick="backToList()">✕</button></div>
+    <div class="modal-b" id="mBody"></div>
+    <div class="modal-f" id="mFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION = 18;
+const APP_VERSION = 19;
+const SYS = 'Workers';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -134,9 +255,9 @@ const last4 = s => s ? '••' + String(s).slice(-4) : '';
 const REASON = {run:'RUN', chase:'CHASE', resign:'RESIGN'};
 
 const D = {workers:[], rates:{}, comps:{}, pay1:{}, pay2:{}, pass:{}, co:{}, coId:{}, locked:new Set()};
-let CAN_EDIT = false, CAN_SALARY = false, CAN_SEE_SALARY = false, FILTER = 'active', OPEN = null;
+let CAN_EDIT = false, CAN_SALARY = false, CAN_SEE_SALARY = false, OPEN = null, ME = null, LOADED = false, lastErr = '', lastSaved = null;
 
-function toast(t, bad){ const x = $('toast'); x.textContent = t; x.className = bad ? 'bad' : ''; x.style.display = 'block'; clearTimeout(x._t); x._t = setTimeout(() => x.style.display = 'none', bad ? 6000 : 2200); }
+function toast(t, bad){ const x = $('toast'); x.textContent = t; x.classList.toggle('bad', !!bad); x.classList.add('show'); clearTimeout(x._t); x._t = setTimeout(() => x.classList.remove('show'), bad ? 6000 : 2400); }
 function nice(e){
   const m = (e && (e.message || String(e))) || '';
   if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection. Nothing was saved. Please try again.';
@@ -146,7 +267,9 @@ function nice(e){
   return m;
 }
 async function db(p){ const {data, error} = await p; if(error) throw error; return data; }
-function gate(title, body, home){ $('gate').style.display = 'block'; $('gate').innerHTML = '<b>' + esc(title) + '</b><div>' + esc(body) + '</div>' + (home ? '<a href="../index.html">Go to Home</a>' : ''); }
+function gate(title, body, home){ $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').innerHTML = '<div class="alert alert-warn"><span>⚠</span><div><b>' + esc(title) + '</b><br>' + esc(body) + '</div></div>' + (home ? '<a class="btn btn-pri" href="../index.html" style="width:100%;justify-content:center;text-decoration:none">← Back to Home</a>' : ''); setSync('bad', 'Offline'); }
+function setSync(st, txt){ const b = $('syncBadge'); if(!b) return; b.classList.remove('bad', 'busy'); if(st !== 'ok') b.classList.add(st); $('syncTxt').textContent = txt; }
+function markSaved(){ lastSaved = new Date(); $('savedAt').textContent = 'Saved ' + String(lastSaved.getHours()).padStart(2, '0') + ':' + String(lastSaved.getMinutes()).padStart(2, '0'); setSync('ok', 'Cloud'); }
 
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
@@ -158,11 +281,12 @@ async function boot(){
   const a = (a1 && a1[0]) || {};
   if(!a.can_see) return gate('No access', 'Please ask the owner for access to Workers.', true);
   CAN_EDIT = !!a.can_edit; CAN_SALARY = !!((a2 && a2[0]) || {}).can_edit; CAN_SEE_SALARY = !!((a2 && a2[0]) || {}).can_see;
-  $('who').textContent = me.display_name || '';
-  $('fab').hidden = !CAN_EDIT;
+  ME = {...me, email:session.user.email};
+  $('gate').style.display = 'none'; $('app').style.display = 'block';
+  $('fab').hidden = !CAN_EDIT; $('btnImp').style.display = CAN_EDIT ? '' : 'none';
   await load();
   const m = location.hash.match(/w=([0-9a-f-]{36})/);
-  if(m && D.workers.some(w => w.id === m[1])) openWorker(m[1]); else show('v-list');
+  if(m && D.workers.some(w => w.id === m[1])) openWorker(m[1]);
 }
 
 async function load(){
@@ -178,7 +302,8 @@ async function load(){
     q('hub_farm', 'id,code,company_id', x => x.eq('active', true).order('code')),
     q('hub_worker_farm', 'id,worker_id,farm_id,effective_from', ord),
   ]);
-  const bad = res.find(r => r.error); if(bad){ gate('Could not load data', 'Please refresh the page.'); throw bad.error; }
+  const bad = res.find(r => r.error); if(bad){ LOADED = false; lastErr = bad.error.message; gate('Could not load data', 'Nothing was changed. Please refresh the page.'); throw bad.error; }
+  LOADED = true; setSync('ok', 'Cloud');
   const [w, r, c, p, pp, co, fm, wf] = res.map(x => x.data);
   const grp = rows => { const m = {}; rows.forEach(x => (m[x.worker_id] ??= []).push(x)); return m; };
   D.workers = w; D.rates = grp(r); D.comps = grp(c); D.pay1 = grp(p.filter(x => (x.slot || 1) === 1)); D.pay2 = grp(p.filter(x => x.slot === 2)); D.pass = grp(pp);
@@ -188,6 +313,7 @@ async function load(){
   D.locked = new Set((lr.data || []).map(x => x.month));
   await loadPhotos();
   render();
+  if($('page-manage').classList.contains('on')) renderManage();
 }
 
 // current values
@@ -215,59 +341,67 @@ async function loadPhotos(){
 const avInner = w => w.photo_path && PHOTO[w.photo_path] ? '<img src="' + esc(PHOTO[w.photo_path]) + '" alt="">' : esc(initials(w.name));
 const initials = n => (n || '?').split(/\s+/).map(x => x[0]).join('').slice(0, 2);
 
-// ── list ──
+// ── list (table, Academee HrStaff style) ──
+const coTag = c => c ? '<span class="co ' + (c === 'both' ? 'both' : c.toUpperCase()) + '">' + coName(c) + '</span>' : '';
+const payeeOf = w => latestD(D.pay1[w.id], TODAY) || (D.pay1[w.id] || [])[0];
 function render(){
   const act = D.workers.filter(isActive), cnt = c => act.filter(w => coOf(w) === c).length;
-  const F = [['active', 'Active ' + act.length], ['hx', 'HX ' + cnt('hx')], ['ad', 'AD ' + cnt('ad')], ['both', 'Both ' + cnt('both')], ['stopped', 'Stopped ' + (D.workers.length - act.length)]];
-  $('fchips').innerHTML = F.map(([k, l]) => '<button class="chip' + (FILTER === k ? ' on' : '') + '" onclick="setFilter(\'' + k + '\')">' + l + '</button>').join('');
-  const qs = $('q').value.trim().toLowerCase();
+  $('wStats').innerHTML = '<div class="stat"><small>Active workers</small><b>' + act.length + '</b></div><div class="stat"><small>HX</small><b>' + cnt('hx') + '</b></div><div class="stat"><small>AD</small><b>' + cnt('ad') + '</b></div><div class="stat"><small>Both</small><b>' + cnt('both') + '</b></div><div class="stat"><small>Stopped</small><b>' + (D.workers.length - act.length) + '</b></div>';
+  const qs = $('q').value.trim().toLowerCase(), fc = $('fco').value, all = $('fstop').checked;
   const list = D.workers.filter(w => {
-    if(FILTER === 'stopped' ? isActive(w) : !isActive(w)) return false;
-    if(['hx','ad','both'].includes(FILTER) && coOf(w) !== FILTER) return false;
-    if(qs && !(w.name || '').toLowerCase().includes(qs)) return false;
+    if(!all && !isActive(w)) return false;
+    if(fc && (!isActive(w) || coOf(w) !== fc)) return false;
+    if(qs && ![w.name, w.title, farmOf(w)].join(' ').toLowerCase().includes(qs)) return false;
     return true;
-  });
+  }).sort((a, b) => (isActive(b) - isActive(a)) || ((a.worker_no ?? 1e9) - (b.worker_no ?? 1e9)));
   $('cnt').textContent = list.length + ' workers';
-  $('list').innerHTML = list.map(w => { const c = isActive(w) ? coOf(w) : 'stop';
-    return '<div class="row' + (OPEN === w.id ? ' sel' : '') + '" onclick="openWorker(\'' + w.id + '\')"><div class="av ' + (c || 'stop') + '">' + avInner(w) + '</div><div class="t"><div class="n">' + esc(w.name) + '</div><div class="s">'
-      + (isActive(w) ? (farmOf(w) ? farmName(farmOf(w)) : coName(coOf(w))) + ' · ' + rateTxt(rateOf(w)) : 'Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || w.stop_reason) : '')) + '</div></div><span class="chev">›</span></div>'; }).join('')
-    || '<div class="empty">No workers</div>';
+  $('list').innerHTML = list.map(w => { const act = isActive(w), c = act ? coOf(w) : 'stop', p = payeeOf(w), r = rateOf(w), f = farmOf(w);
+    return '<tr class="click" onclick="openWorker(\'' + w.id + '\')"><td class="code">' + (w.worker_no ?? '') + '</td>'
+      + '<td><div class="nm"><span class="av ' + (c || 'stop') + '">' + avInner(w) + '</span><div class="t"><b>' + esc(w.name) + '</b>' + (w.title ? '<small>' + esc(w.title) + '</small>' : '') + '</div></div></td>'
+      + '<td>' + (f ? esc(farmName(f)) : '<span class="hint">Not set</span>') + '</td><td>' + coTag(coOf(w)) + '</td>'
+      + '<td class="num">' + (r ? rm(r.rate) + '<div class="hint">' + (r.rate_type === 'MONTHLY' ? 'Monthly' : 'Daily') + '</div>' : '<span class="hint">Not set</span>') + '</td>'
+      + '<td>' + (p ? esc(p.beneficiary_name) + '<div class="hint">' + last4(p.account_no) + '</div>' : '<span class="hint">Not set</span>') + '</td>'
+      + '<td>' + (w.join_date ? fmtD(w.join_date) : '') + '</td><td>' + (w.shares_food === false ? '<span class="hint">No</span>' : 'Yes') + '</td>'
+      + '<td>' + (act ? '<span class="badge b-active">Active</span>' : '<span class="badge b-archived">Stopped ' + fmtD(w.stop_date) + '</span>') + '</td></tr>'; }).join('')
+    || '<tr><td colspan="9" class="empty">No matching worker</td></tr>';
 }
-function setFilter(k){ FILTER = k; render(); }
 $('q').oninput = render;
-function show(id){ document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); if(innerWidth < 1100) scrollTo(0, 0); else if(id === 'v-det') $('v-det').scrollTop = 0; }
-function backToList(){ OPEN = null; history.replaceState(null, '', location.pathname); render(); show('v-list'); }
+function go(p){
+  document.querySelectorAll('.page').forEach(x => x.classList.toggle('on', x.id === 'page-' + p));
+  document.querySelectorAll('.ntab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  if(p === 'manage') renderManage(); else render();
+  scrollTo(0, 0);
+}
+function backToList(){ OPEN = null; history.replaceState(null, '', location.pathname); $('ov').classList.remove('on'); render(); }
 
 // ── worker page ──
 async function openWorker(id){
   const w = D.workers.find(x => x.id === id); if(!w) return; OPEN = id;
-  document.querySelectorAll('#list .row.sel').forEach(r => r.classList.remove('sel'));
-  const selRow = document.querySelector('#list .row[onclick*="' + id + '"]'); if(selRow) selRow.classList.add('sel');
   history.replaceState(null, '', '#w=' + id);
   const r = rateOf(w), cRow = latestM(D.comps[id], THIS_MONTH), p1 = latestD(D.pay1[id], TODAY) || (D.pay1[id] || [])[0], p2 = latestD(D.pay2[id], TODAY), pas = (D.pass[id] || []).slice(-1)[0];
   const act = isActive(w), c = act ? coOf(w) : 'stop', E = CAN_EDIT;
-  const it = (k, v, sub, fn) => '<div class="item' + (E && fn ? ' tap" onclick="' + fn : '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (E && fn ? '<span class="chev">›</span>' : '') + '</div>';
-  $('det').innerHTML =
-    '<div class="hero"><div class="av ' + (c || 'stop') + (E ? ' cam" onclick="pickPhoto()"' : '"') + '>' + avInner(w) + '</div><div' + (E ? ' onclick="sheetName()" style="cursor:pointer;flex:1"' : '') + '><div class="n">' + esc(w.name) + '</div><div class="s">#' + (w.worker_no ?? '') + (w.title ? ' · ' + esc(w.title) : '') + (w.worker_type === 'LOCAL' ? ' · Local' : '') + '</div>'
-    + (act ? '<span class="pill on">Active</span>' : '<span class="pill off">Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || '') : '') + '</span>') + '</div></div>'
-    + '<div class="grp">Pay</div>'
+  const it = (k, v, sub, fn) => '<div class="it' + (E && fn ? ' tap" onclick="' + fn : '') + '"><div class="k">' + k + '</div><div class="v">' + v + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (E && fn ? '<span class="chg">Change</span>' : '') + '</div>';
+  const html =
+    '<div class="hero"><div class="av ' + (c || 'stop') + (E ? ' cam" title="Change photo" onclick="pickPhoto()"' : '"') + '>' + avInner(w) + '</div><div' + (E ? ' title="Change name" onclick="sheetName()" style="cursor:pointer;flex:1"' : '') + '><div class="n">' + esc(w.name) + '</div><div class="s">#' + (w.worker_no ?? '') + (w.title ? ' · ' + esc(w.title) : '') + (w.worker_type === 'LOCAL' ? ' · Local' : '') + '</div>'
+    + (act ? '<span class="badge b-active">Active</span>' : '<span class="badge b-archived">Stopped ' + fmtD(w.stop_date) + (w.stop_reason ? ' · ' + (REASON[w.stop_reason] || '') : '') + '</span>') + '</div></div>'
+    + '<div class="sec">Pay</div>'
     + it('Rate', r ? rateTxt(r) : 'Not set', r ? 'since ' + fmtM(r.effective_from) : '', 'sheetRate()')
-    + (() => { const fr = latestM(D.wfarm[id], THIS_MONTH), f = farmOf(w); return it('Farm', f ? farmName(f) + ' <span style="color:var(--text3);font-weight:400">· ' + coName(farmCo(f)) + '</span>' : coName(coOf(w)), (() => { const nx = (D.wfarm[id] || []).filter(x => x.effective_from > THIS_MONTH).slice(-1)[0]; return (fr ? 'since ' + fmtM(fr.effective_from) : (cRow ? 'since ' + fmtM(cRow.effective_from) : '')) + (nx ? ' · <b style="color:var(--acc)">' + fmtM(nx.effective_from) + ' → ' + farmName(nx.farm_id ? D.farm[nx.farm_id].code : 'ALL') + '</b>' : ''); })(), 'sheetFarm()'); })()
+    + (() => { const fr = latestM(D.wfarm[id], THIS_MONTH), f = farmOf(w); return it('Farm', f ? farmName(f) + ' <span style="color:var(--mut);font-weight:400">· ' + coName(farmCo(f)) + '</span>' : coName(coOf(w)), (() => { const nx = (D.wfarm[id] || []).filter(x => x.effective_from > THIS_MONTH).slice(-1)[0]; return (fr ? 'since ' + fmtM(fr.effective_from) : (cRow ? 'since ' + fmtM(cRow.effective_from) : '')) + (nx ? ' · <b style="color:var(--layer)">' + fmtM(nx.effective_from) + ' → ' + farmName(nx.farm_id ? D.farm[nx.farm_id].code : 'ALL') + '</b>' : ''); })(), 'sheetFarm()'); })()
     + ((farmOf(w) === 'ALL' || coOf(w) === 'both') ? it('Costs charged to', w.cost_co ? w.cost_co : 'Not set', 'food, personal, loan, cash, bank fee', 'sheetCostCo()') : '')
     + it('Payee 1', p1 ? esc(p1.beneficiary_name) : 'Not set', p1 ? 'Account ' + last4(p1.account_no) : '', 'sheetPayeeEdit(1)')
     + it('Payee 2', p2 ? esc(p2.beneficiary_name) : 'Not set', p2 ? 'Account ' + last4(p2.account_no) : '', 'sheetPayeeEdit(2)')
-    + (CAN_SEE_SALARY ? '<div class="item tap" onclick="location.href=\'../OPR/Salary.html?v=' + Date.now() + '#hist=' + w.id + '\'"><div class="k">History</div><div class="v" style="color:var(--acc)">Salary &amp; loan history<small>Opens in Salary</small></div><span class="chev">›</span></div>' : '')
-    + '<div class="grp">Details</div>'
+    + (CAN_SEE_SALARY ? '<div class="it tap" onclick="location.href=\'../OPR/Salary.html?v=' + Date.now() + '#hist=' + w.id + '\'"><div class="k">Salary history</div><div class="v" style="color:var(--layer)">Salary &amp; loan history<small>Opens in Salary</small></div><span class="chg">Open →</span></div>' : '')
+    + '<div class="sec">Details</div>'
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
-    + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--text3);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
+    + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--mut);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
     + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
     + it('Passport', pas ? last4(pas.passport_no) : 'Not set', '', 'sheetPassport()')
     + (w.stop_note ? it('Stop note', esc(w.stop_note), '', '') : '')
-    + '<div class="item tap" onclick="sheetHistory()"><div class="k">History</div><div class="v" style="color:var(--text3);font-weight:400">All changes</div><span class="chev">›</span></div>'
-    + (E ? (act && !w.stop_date ? '<button class="btn-wide red" onclick="sheetStop()">Stop worker</button>'
-             : '<button class="btn-wide" onclick="sheetStop()">Change stop date</button><button class="btn-wide" onclick="reactivate()">Reactivate</button>')
-         + '<button class="btn-wide red" style="margin-bottom:24px" onclick="sheetDelete()">Delete worker</button>' : '');
-  show('v-det');
+    + '<div class="it tap" onclick="sheetHistory()"><div class="k">Change log</div><div class="v" style="color:var(--mut);font-weight:400">All changes</div><span class="chg">Open →</span></div>';
+  const foot = (E ? (act && !w.stop_date ? '<button class="btn btn-sm left" style="color:var(--danger)" onclick="sheetStop()">Stop worker</button>'
+             : '<button class="btn btn-sm left" onclick="sheetStop()">Change stop date</button><button class="btn btn-sm" onclick="reactivate()">Reactivate</button>')
+         + '<button class="btn btn-sm" style="color:var(--danger)" onclick="sheetDelete()">Delete</button>' : '') + '<button class="btn btn-pri" onclick="backToList()">Done</button>';
+  $('mTitle').textContent = w.name; $('mBody').innerHTML = html; $('mFoot').innerHTML = foot; $('ov').classList.add('on');
 }
 async function sheetDelete(){
   const w = cur(); const {data:why, error} = await sb.rpc('hub_worker_records', {p_worker:w.id});
@@ -281,30 +415,35 @@ async function sheetDelete(){
     + '<div class="lbl">Reason</div>' + opts('why', [['Added by mistake', 'Added by mistake'], ['Duplicate', 'Duplicate']], 'Added by mistake', 'dark')
     + '<button class="save red" id="s-save">Delete worker</button>');
   $('s-save').onclick = async () => { $('s-save').disabled = true;
-    try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:pick('why')}).eq('id', w.id)); closeSheet(); await load(); backToList(); toast('Deleted ' + w.name); }
+    try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:pick('why')}).eq('id', w.id)); OPEN = null; await load(); backToList(); markSaved(); toast('Deleted ' + w.name); }
     catch(e){ serr(nice(e)); $('s-save').disabled = false; } };
 }
 const cur = () => D.workers.find(x => x.id === OPEN);
 
 // ── bottom sheets ──
-function sheet(html){ $('sheet').innerHTML = '<div class="grab"></div>' + html + '<div class="err" id="serr"></div><button class="cancel" onclick="closeSheet()">Cancel</button>'; $('dim').style.display = 'block'; $('sheet').style.display = 'block';
+function sheet(html){
+  const m = html.match(/^<h3>([\s\S]*?)<\/h3>/), t = m ? m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&') : '';
+  $('mTitle').textContent = t; $('mBody').innerHTML = (m ? html.slice(m[0].length) : html) + '<div class="err" id="serr"></div>';
+  $('mFoot').innerHTML = '<button class="btn" onclick="closeSheet()">' + (OPEN ? '← Back' : 'Cancel') + '</button>';
+  $('ov').classList.add('on');
 }
 // one tap handler for every option group in the sheet (groups can be redrawn)
-$('sheet').addEventListener('click', e => {
+$('mBody').addEventListener('click', e => {
   const b = e.target.closest('button.opt'); if(!b || b.disabled) return; const g = b.closest('[data-g]'); if(!g) return;
   g.querySelectorAll('button.opt').forEach(x => x.classList.toggle('on', x === b));
-  if(/^farm/.test(g.dataset.g)) $('sheet').querySelectorAll('[data-g^="farm"] button.opt').forEach(x => x.classList.toggle('on', x === b));
+  if(/^farm/.test(g.dataset.g)) $('mBody').querySelectorAll('[data-g^="farm"] button.opt').forEach(x => x.classList.toggle('on', x === b));
   if(g.dataset.g === 'amt' && $('s-other')) $('s-other').value = '';
   if(g.dataset.on) window[g.dataset.on](b.dataset.v);
 });
-function closeSheet(){ $('dim').style.display = 'none'; $('sheet').style.display = 'none'; }
-const pick = g => { const b = $('sheet').querySelector('[data-g="' + g + '"] button.opt.on'); return b ? b.dataset.v : null; };
+function closeSheet(){ if(OPEN && D.workers.some(w => w.id === OPEN)) openWorker(OPEN); else backToList(); }
+const pick = g => { const b = $('mBody').querySelector('[data-g="' + g + '"] button.opt.on'); return b ? b.dataset.v : null; };
 const opts = (g, list, on, cls, cols) => '<div class="' + (cols || 'g' + list.length) + '" data-g="' + g + '">' + list.map(([v, l, dis]) => '<button class="opt ' + (cls || '') + (v === on ? ' on' : '') + '" data-v="' + esc(v) + '"' + (dis ? ' disabled' : '') + '>' + l + '</button>').join('') + '</div>';
 function serr(t){ $('serr').textContent = t; $('serr').style.display = 'block'; return false; }
 async function saveWith(btn, fn, msg){
   btn.disabled = true;
-  try{ const r = await fn(); if(r === false){ btn.disabled = false; return; } closeSheet(); await load(); if(OPEN) openWorker(OPEN); toast(typeof r === 'string' ? r : (msg || 'Saved')); }
-  catch(e){ serr(nice(e)); btn.disabled = false; }
+  setSync('busy', 'Saving');
+  try{ const r = await fn(); if(r === false){ btn.disabled = false; setSync('ok', 'Cloud'); return; } await load(); if(OPEN && D.workers.some(w => w.id === OPEN)) openWorker(OPEN); else backToList(); markSaved(); toast(typeof r === 'string' ? r : (msg || 'Saved')); }
+  catch(e){ lastErr = nice(e); serr(lastErr); btn.disabled = false; setSync('bad', 'Save failed'); }
 }
 const now = () => new Date().toISOString();
 function monthOpts(){ // This month / Next month — skip months whose salary is locked
@@ -318,7 +457,7 @@ function commonRates(type){ // the 4 most used rates of this type
   return (top.length >= 2 ? top : def);
 }
 function amtHtml(type, sel){ return opts('amt', commonRates(type).map(v => [String(v), String(v)]), sel != null ? String(sel) : null, '', 'g4') + '<input class="inp" id="s-other" inputmode="decimal" placeholder="Other amount" oninput="clearAmt()">'; }
-function clearAmt(){ $('sheet').querySelectorAll('[data-g="amt"] .opt').forEach(x => x.classList.remove('on')); }
+function clearAmt(){ $('mBody').querySelectorAll('[data-g="amt"] .opt').forEach(x => x.classList.remove('on')); }
 function amtVal(){ const o = ($('s-other') || {}).value; if(o && o.trim()) return parseFloat(o); const p = pick('amt'); return p == null ? NaN : parseFloat(p); }
 function onRateType(t){ const box = $('amtbox'); if(box) box.innerHTML = amtHtml(t, null); }
 
@@ -386,7 +525,7 @@ function sheetPayeeEdit(slot){
 }
 async function removePayee2(){
   const w = cur(); if(!confirm('Remove the 2nd payee?')) return;
-  try{ for(const p of (D.pay2[w.id] || [])) await db(sb.from('hub_worker_payee').update({voided_at:now(), void_reason:'2nd payee removed'}).eq('id', p.id)); closeSheet(); await load(); openWorker(w.id); toast('Removed'); }
+  try{ for(const p of (D.pay2[w.id] || [])) await db(sb.from('hub_worker_payee').update({voided_at:now(), void_reason:'2nd payee removed'}).eq('id', p.id)); await load(); openWorker(w.id); markSaved(); toast('Removed'); }
   catch(e){ toast(nice(e), true); }
 }
 function dayPicker(g, val){
@@ -394,7 +533,7 @@ function dayPicker(g, val){
   return opts(g, [[TODAY, 'Today'], [y, 'Yesterday']], on, 'dark').replace('data-g="' + g + '"', 'data-g="' + g + '" data-on="dayPicked"') + '<input class="inp" type="date" id="s-date" value="' + esc(val || '') + '" oninput="clearDay()">';
 }
 function dayPicked(v){ $('s-date').value = v; }
-function clearDay(){ $('sheet').querySelectorAll('[data-g="day"] .opt').forEach(x => x.classList.toggle('on', x.dataset.v === $('s-date').value)); }
+function clearDay(){ $('mBody').querySelectorAll('[data-g="day"] .opt').forEach(x => x.classList.toggle('on', x.dataset.v === $('s-date').value)); }
 function sheetJoin(){
   const w = cur();
   sheet('<h3>Join date</h3>' + dayPicker('day', w.join_date || '') + '<button class="save" id="s-save">Save</button>');
@@ -471,16 +610,16 @@ function sheetStop(){
 }
 async function reactivate(){
   const w = cur(); if(!confirm('Reactivate ' + w.name + '?')) return;
-  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', w.id)); await adjustFood(w, w.join_date, w.join_date, w.stop_date, null); await load(); openWorker(w.id); toast('Reactivated'); }
+  try{ await db(sb.from('hub_worker').update({stop_date:null, stop_reason:null, stop_note:null}).eq('id', w.id)); await adjustFood(w, w.join_date, w.join_date, w.stop_date, null); await load(); openWorker(w.id); markSaved(); toast('Reactivated'); }
   catch(e){ toast(nice(e), true); }
 }
 async function voidWorker(){
   const w = cur(); const r = prompt('Remove ' + w.name + '? Only for a worker added by mistake.\nReason:'); if(!r || !r.trim()) return;
-  try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:r.trim()}).eq('id', w.id)); await load(); backToList(); toast('Removed'); }
+  try{ await db(sb.from('hub_worker').update({voided_at:now(), void_reason:r.trim()}).eq('id', w.id)); OPEN = null; await load(); backToList(); markSaved(); toast('Removed'); }
   catch(e){ toast(nice(e), true); }
 }
 function sheetAdd(){
-  const hx = 'hx';
+  OPEN = null;
   sheet('<h3>Add worker</h3><input class="inp" id="s-name" placeholder="Name" autocapitalize="characters">'
     + '<div class="lbl">Farm</div>' + farmOpts(null)
     + '<div class="lbl">Rate</div>' + opts('type', [['DAILY', 'Daily'], ['MONTHLY', 'Monthly']], 'DAILY', 'dark').replace('data-g="type"', 'data-g="type" data-on="onRateType"')
@@ -519,7 +658,7 @@ async function sheetHistory(){
   (fr.data || []).forEach(x => rows.push([x.effective_from, 'Farm ' + farmName(x.farm_id ? (D.farm[x.farm_id] || {}).code || '?' : 'ALL') + (x.voided_at ? ' (cancelled)' : '')]));
   (py.data || []).forEach(x => rows.push([x.effective_from, (x.slot === 2 ? '2nd payee ' : 'Payee ') + esc(x.beneficiary_name) + ' ' + last4(x.account_no) + (x.voided_at ? ' (removed)' : '')]));
   rows.sort((a, b) => a[0] < b[0] ? 1 : -1);
-  sheet('<h3>History · ' + esc(w.name) + '</h3><table class="hist">' + (rows.map(r => '<tr><td style="white-space:nowrap;color:var(--text3)">' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') || '<tr><td>No changes yet</td></tr>') + '</table>');
+  sheet('<h3>History · ' + esc(w.name) + '</h3><table class="hist">' + (rows.map(r => '<tr><td style="white-space:nowrap;color:var(--mut)">' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('') || '<tr><td>No changes yet</td></tr>') + '</table>');
 }
 // Attendance outside the new working period → ask first
 async function attendanceOk(w, join, stop){
@@ -562,10 +701,87 @@ function pickPhoto(){
       const path = w.id + '/' + Date.now() + '.jpg';
       const {error} = await sb.storage.from('worker-photos').upload(path, blob, {contentType:'image/jpeg'}); if(error) throw error;
       await db(sb.from('hub_worker').update({photo_path:path}).eq('id', w.id));
-      await load(); openWorker(w.id); toast('Photo saved');
+      await load(); openWorker(w.id); markSaved(); toast('Photo saved');
     }catch(e){ toast(nice(e), true); }
   };
   i.click();
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('ov').classList.contains('on')) closeSheet(); });
+
+// ══════ Settings ══════
+function renderManage(){
+  const v = $('manageView'); if(!ME){ v.innerHTML = ''; return; }
+  const n = o => Object.values(o || {}).reduce((s, a) => s + a.length, 0);
+  v.innerHTML = '<h1 class="pt">Settings</h1>'
+  + '<div class="card"><div class="card-title">① My identity</div><div class="mg-line">Signed in: <span class="mg-val">' + esc(ME.display_name || '') + '</span> · Role: <span class="mg-val">' + esc(ME.role) + '</span></div>'
+  + '<div class="mg-line">Access: view ✔ · edit ' + (CAN_EDIT ? '✔' : '✘ (view only)') + ' · salary ' + (CAN_SALARY ? 'edit ✔' : CAN_SEE_SALARY ? 'view ✔' : '✘') + '</div>'
+  + '<div class="hint">Sign-in is shared with the Home page; to sign out or switch user, press “Sign out” on the Home page.</div></div>'
+  + '<div class="card"><div class="card-title">② System info</div><div class="mg-line">System: <span class="mg-val">Workers</span> (Master Data) · Version: <span class="mg-val">v' + APP_VERSION + '</span> · Layer: <span class="mg-val">HUB #2F5D3F</span></div>'
+  + '<div class="mg-line">Record counts: workers ' + D.workers.length + ' · rates ' + n(D.rates) + ' · farm moves ' + n(D.wfarm) + ' · payees ' + (n(D.pay1) + n(D.pay2)) + ' · passports ' + n(D.pass) + '</div>'
+  + '<div class="mg-line">Who reads this: Salary, and later Harvest and the reports</div></div>'
+  + '<div class="card"><div class="card-title">③ Cloud connection</div><div class="mg-line">Status: ' + (LOADED ? '<span class="badge b-active">Connected</span>' : '<span class="badge b-archived">Offline</span>') + ' · Last saved: ' + (lastSaved ? $('savedAt').textContent.replace('Saved ', '') : '—') + '</div>'
+  + (lastErr ? '<div class="alert alert-danger" style="margin-top:8px">Last error: ' + esc(lastErr) + '</div>' : '')
+  + '<div class="hint">Every change is saved to the cloud the moment you press Save. Pay, farm, payee and passport changes are kept as history: old rows are never edited or deleted.</div>'
+  + '<div class="row-inline" style="margin-top:8px"><button class="btn" onclick="load()">Reload</button></div></div>'
+  + '<div class="card"><div class="card-title">④ Data backup</div><div class="alert alert-warn"><span>⚠</span><div>The cloud is on the free plan — <b>no automatic backup</b>. After big changes, press “↓ Export” and keep the file in <span class="mg-val">P:\\Teo\\azura-delta\\FarmHub\\03_EVIDENCE\\</span></div></div>'
+  + '<div class="mg-line">↓ Export: all worker records as one JSON file (includes passport and bank account numbers — sensitive, do not send to anyone)</div>'
+  + '<div class="mg-line">↑ Import: restore from a backup file — only adds rows that are missing, never changes or deletes; shows how many first</div></div>'
+  + '<div class="acc" onclick="if(event.target.closest(\'.acc-hdr\'))this.classList.toggle(\'open\')"><div class="acc-hdr">⑤ Advanced <span>▼</span></div><div class="acc-body">'
+  + '<div class="mg-line">Tables: ' + EXP.map(t => '<span class="mg-val">' + t + '</span>').join(' ') + '</div>'
+  + '<div class="mg-line">Photos are kept in the cloud folder <span class="mg-val">worker-photos</span> (not in the backup file).</div>'
+  + '<div class="mg-line">Free plan pauses after a week of no use: supabase.com → AzuraDelta-Main → Restore project.</div></div></div>';
+}
+
+// ══════ Export / Import ══════
+const EXP = ['hub_worker', 'hub_worker_rate', 'hub_worker_company', 'hub_worker_farm', 'hub_worker_payee', 'hub_worker_passport'];
+const EXP_COLS = {
+  hub_worker: 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food,cost_co',
+  hub_worker_rate: 'id,worker_id,rate_type,rate,effective_from',
+  hub_worker_company: 'id,worker_id,company_id,effective_from',
+  hub_worker_farm: 'id,worker_id,farm_id,effective_from',
+  hub_worker_payee: 'id,worker_id,slot,beneficiary_name,account_no,channel,effective_from',
+  hub_worker_passport: 'id,worker_id,passport_no,effective_from',
+};
+const pad2 = n => String(n).padStart(2, '0');
+async function exportAll(){
+  if(!LOADED){ toast('Cloud not loaded — cannot export', true); return; }
+  const res = await Promise.all(EXP.map(t => sb.from(t).select(EXP_COLS[t]).is('voided_at', null)));
+  const bad = res.find(r => r.error); if(bad){ toast('Export failed: ' + nice(bad.error), true); return; }
+  const data = {}; EXP.forEach((t, i) => data[t] = res[i].data);
+  const d = new Date(), stamp = d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes());
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:d.toISOString(), itemCount:Object.fromEntries(EXP.map(t => [t, data[t].length]))}, data};
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
+  a.download = 'Workers_' + stamp + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('✓ Backup downloaded');
+}
+let IMP = null;
+function importFile(inp){
+  const f = inp.files[0]; inp.value = ''; if(!f) return;
+  if(!LOADED || !CAN_EDIT){ toast('Cannot import', true); return; }
+  const rd = new FileReader();
+  rd.onload = async () => {
+    let j; try{ j = JSON.parse(rd.result); }catch(e){ toast('Wrong file format — nothing imported', true); return; }
+    if(!j || !j.meta || j.meta.system !== SYS || !j.data){ toast('This is not a Workers backup file — nothing imported', true); return; }
+    const res = await Promise.all(EXP.map(t => sb.from(t).select('id')));
+    const bad = res.find(r => r.error); if(bad){ toast(nice(bad.error), true); return; }
+    const plan = {}; let tot = 0;
+    EXP.forEach((t, i) => { const have = new Set((res[i].data || []).map(x => x.id)), rows = Array.isArray(j.data[t]) ? j.data[t] : [];
+      const todo = rows.filter(r => r.id && !have.has(r.id)); plan[t] = {nw:todo.length, same:rows.length - todo.length, todo}; tot += todo.length; });
+    IMP = plan; OPEN = null;
+    $('mTitle').textContent = '↑ Import preview';
+    $('mBody').innerHTML = '<div class="hint" style="margin-bottom:8px">Backup time: ' + esc(j.meta.exportTime || '') + '. Only rows that are missing are added — nothing is changed or deleted.</div><div class="tw"><table class="data"><thead><tr><th>Table</th><th class="num">Add</th><th class="num">Already there</th></tr></thead><tbody>'
+      + EXP.map(t => '<tr><td>' + t + '</td><td class="num">' + plan[t].nw + '</td><td class="num">' + plan[t].same + '</td></tr>').join('') + '</tbody></table></div>';
+    $('mFoot').innerHTML = '<button class="btn" onclick="backToList()">Cancel</button><button class="btn btn-pri" ' + (tot ? '' : 'disabled') + ' onclick="runImport()">Import ' + tot + '</button>';
+    $('ov').classList.add('on');
+  };
+  rd.readAsText(f);
+}
+async function runImport(){
+  if(!IMP) return; backToList();
+  for(const t of EXP){ const rows = IMP[t].todo; if(!rows.length) continue;
+    const {error} = await sb.from(t).insert(rows);
+    if(error){ toast('Import stopped at ' + t + ': ' + nice(error), true); lastErr = error.message; await load(); return; } }
+  IMP = null; await load(); markSaved(); toast('✓ Imported');
 }
 boot();
 </script>
