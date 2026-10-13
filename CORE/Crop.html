@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crops v1</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --layer:#2F5D3F;
+  --c-ad:#0E6B4A; --c-hx:#B7791F;
+  --sur:#ffffff; --sur2:#f7f6f2; --bdr:#e0ddd6;
+  --txt:#1a1a1a; --mut:#888888; --hint:#bbbbbb;
+  --ok:#0F6E56; --warn:#854F0B; --danger:#A32D2D; --info:#236FAD;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,"Microsoft YaHei",sans-serif;
+  background:var(--sur2);color:var(--txt);font-size:13px;line-height:1.4}
+
+/* ══════ NAV (TOPBAR) ══════ */
+.nav{background:var(--layer);border-bottom:.5px solid rgba(0,0,0,.2);
+  display:flex;align-items:center;padding:0 16px;position:sticky;top:0;z-index:50;
+  overflow-x:auto;gap:0;min-height:56px}
+.nav-home{background:none;border:none;color:rgba(255,255,255,.75);font-size:18px;cursor:pointer;padding:0 12px 0 0;flex-shrink:0;min-height:44px;min-width:44px}
+.nav-home:hover{color:#fff}
+.nav-logo{font-size:13px;font-weight:600;padding:0 14px 0 0;
+  border-right:.5px solid rgba(255,255,255,.2);margin-right:4px;white-space:nowrap;
+  flex-shrink:0;color:#fff;display:flex;align-items:center;min-height:44px}
+.ver{background:#F9CB42;color:var(--layer);border-radius:4px;padding:1px 6px;
+  font-size:10px;font-weight:700;margin-left:6px}
+.ntab{padding:0 14px;font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;
+  border:none;background:transparent;border-bottom:2.5px solid transparent;
+  transition:all .15s;white-space:nowrap;flex-shrink:0;font-family:inherit;min-height:44px}
+.ntab:hover{color:#fff}
+.ntab.on{color:#fff;border-bottom-color:#fff;font-weight:600}
+.nav-r{margin-left:auto;display:flex;gap:6px;align-items:center;padding-left:24px;flex-shrink:0}
+.saved{font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap}
+.sync{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:22px;
+  background:rgba(255,255,255,.14);color:#fff;font-size:11px;border:.5px solid rgba(255,255,255,.3);cursor:pointer;font-family:inherit}
+.sync i{width:8px;height:8px;border-radius:50%;background:#7CD4A8;display:inline-block}
+.sync.bad i{background:#FF8A8A}.sync.busy i{background:#F9CB42}
+.btn-nav{padding:0 12px;border-radius:6px;border:.5px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.12);color:#fff;font-size:11px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}
+.btn-nav:hover{opacity:.85}
+
+/* ══════ PAGES ══════ */
+.page{display:none;padding:16px;max-width:1200px;margin:0 auto}
+.page.on{display:block}
+h1.pt{font-size:18px;margin:4px 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ══════ BUTTONS ══════ */
+.btn{padding:0 14px;min-height:44px;border-radius:6px;border:.5px solid var(--bdr);
+  background:var(--sur);color:var(--txt);font-size:12px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--sur2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-pri{background:var(--layer);color:#fff;border-color:var(--layer);font-weight:600}
+.btn-pri:hover{opacity:.85;background:var(--layer)}
+.btn-sm{min-height:36px;padding:0 10px;font-size:11px}
+
+/* ══════ CARDS ══════ */
+.card{background:var(--sur);border:.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+.mg-line{font-size:12px;line-height:2}
+.mg-val{background:var(--sur2);border-radius:4px;font-size:11px;padding:1px 6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:10px 14px}
+.stat small{display:block;font-size:11px;color:var(--mut)}.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+
+/* ══════ ALERT ══════ */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+.alert-warn{background:#FFF3CD;color:var(--warn);border-left:3px solid var(--warn)}
+.alert-danger{background:#FCEBEB;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-info{background:#E8F0F7;color:var(--info);border-left:3px solid var(--info)}
+
+/* ══════ TABLES ══════ */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.data{width:100%;border-collapse:collapse;font-size:12px}
+table.data thead th{background:#2d2d2d;color:#fff;padding:9px 10px;text-align:left;
+  font-size:10px;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+table.data tbody td{padding:7px 10px;border-bottom:.5px solid var(--bdr);height:36px;vertical-align:middle}
+table.data tbody tr:nth-child(even){background:var(--sur2)}
+table.data tbody tr.click{cursor:pointer}
+table.data tbody tr.click:hover{background:#FFF9E6}
+table.data td.num,table.data th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.data tfoot td{padding:8px 10px;font-weight:700;border-top:1px solid var(--txt)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-active{background:#E1F5EE;color:var(--ok)}
+.b-pending{background:#FFF3CD;color:var(--warn)}
+.b-archived{background:var(--sur2);color:var(--mut)}
+.co{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:#777}
+.co.AD{background:var(--c-ad)}.co.HX{background:var(--c-hx)}
+.empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:12px}
+.code{font-family:ui-monospace,Consolas,monospace;font-weight:600;color:var(--layer);white-space:nowrap}
+
+/* ══════ FORM ══════ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld>span{font-size:11px;color:var(--mut)}
+.fld>span b{color:var(--danger)}
+.fld.wide{grid-column:1/-1}
+input[type=text],input[type=number],select{
+  width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;
+  font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+input:disabled,select:disabled{background:var(--sur2);color:var(--mut)}
+input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(--layer)}
+.hint{font-size:11px;color:var(--mut);line-height:1.5}
+.row-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:12px;cursor:pointer}
+.chk input{width:18px;height:18px}
+
+/* ══════ ACCORDION ══════ */
+.acc{border:.5px solid var(--bdr);border-radius:16px;overflow:hidden;background:var(--sur);margin-bottom:12px}
+.acc-hdr{padding:16px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;letter-spacing:.05em;color:var(--mut);min-height:44px}
+.acc-body{display:none;padding:0 16px 16px}
+.acc.open .acc-body{display:block}
+
+/* ══════ MODAL ══════ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 12px;overflow-y:auto}
+.ov.on{display:flex}
+.modal{background:var(--sur);border-radius:14px;width:560px;max-width:100%;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+.modal-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:.5px solid var(--bdr);font-weight:700}
+.modal-b{padding:16px 18px}
+.modal-f{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:.5px solid var(--bdr);flex-wrap:wrap}
+.modal-f .left{margin-right:auto}
+.x{background:none;border:none;font-size:18px;cursor:pointer;color:var(--mut);min-width:44px;min-height:44px}
+.merr{color:var(--danger);font-size:12px;margin-top:10px;display:none}
+
+/* ══════ TOAST ══════ */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9999}
+.toast.show{opacity:1}
+#saveBanner{display:none}#saveBanner.on{display:flex}
+
+#gate{max-width:380px;margin:60px auto;padding:0 16px}
+@media (max-width:640px){
+  .page{padding:12px}
+  .grid{grid-template-columns:1fr}
+  .toast{left:12px;right:12px;bottom:12px}
+  table.data td,table.data th{white-space:nowrap}
+}
+
+.sec{font-size:10px;font-weight:700;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 6px}
+table.mini{width:100%;border-collapse:collapse}table.mini th{font-size:10px;color:var(--mut);text-align:left;font-weight:600;padding:2px 4px}
+table.mini td{padding:3px 4px}table.mini td:first-child{font-size:12px}table.mini input{min-height:36px;padding:4px 8px}
+</style>
+</head>
+<body>
+
+<!-- ══════ GATE ══════ -->
+<div id="gate">
+  <div class="card">
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Crops <span class="ver">v1</span></div>
+    <div class="hint" style="margin-bottom:14px">Azura Delta · Master Data</div>
+    <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
+    <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
+  </div>
+</div>
+
+<!-- ══════ APP ══════ -->
+<div id="app" style="display:none">
+  <nav class="nav">
+    <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
+    <div class="nav-logo">🍆 Crops <span class="ver">v1</span></div>
+    <button class="ntab on" data-p="varieties" onclick="go('varieties')">Varieties</button>
+    <button class="ntab" data-p="plan" onclick="go('plan')">Growing plan</button>
+    <button class="ntab" data-p="materials" onclick="go('materials')">Materials</button>
+    <button class="ntab" data-p="grades" onclick="go('grades')">Grades</button>
+    <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
+    <div class="nav-r">
+      <span class="saved" id="savedAt">Saved --:--</span>
+      <button class="sync" id="syncBadge" onclick="go('manage')"><i></i><span id="syncTxt">Cloud</span></button>
+      <button class="btn-nav" onclick="exportAll()">↓ Export</button>
+      <button class="btn-nav" id="btnImp" onclick="$('impFile').click()">↑ Import</button>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="importFile(this)">
+    </div>
+  </nav>
+
+  <div style="max-width:1200px;margin:0 auto;padding:12px 16px 0">
+    <div class="alert alert-danger" id="saveBanner"><span>⚠</span><div id="saveBannerTxt"></div></div>
+    <div class="alert alert-danger" id="loadBanner" style="display:none"><span>⚠</span><div>Cannot read the cloud data, <b>no data has been changed</b>. Check your connection, then press <button class="btn btn-sm" onclick="loadAll()">Reload</button></div></div>
+  </div>
+
+  <!-- Varieties -->
+  <div class="page on" id="page-varieties">
+    <h1 class="pt">Varieties <button class="btn btn-pri edit-only" onclick="openVariety(null)">+ New variety</button></h1>
+    <div class="row-inline" style="margin-bottom:10px"><label class="chk"><input type="checkbox" id="varShowOff" onchange="renderVarieties()"> Show stopped</label></div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th>Code</th><th>Variety</th><th>Crop</th><th>Status</th></tr></thead><tbody id="varRows"></tbody></table></div></div>
+    <div class="card" style="padding:0"><div class="card-title" style="padding:14px 16px 0">Crops</div><div class="tw"><table class="data">
+      <thead><tr><th>Code</th><th>Crop</th><th class="num">Varieties in use</th></tr></thead><tbody id="cropRows"></tbody></table></div></div>
+  </div>
+
+  <!-- Growing plan -->
+  <div class="page" id="page-plan">
+    <h1 class="pt">Growing plan <button class="btn btn-pri edit-only" onclick="openNewPlan()">+ New version</button></h1>
+    <div id="planView"></div>
+  </div>
+
+  <!-- Materials -->
+  <div class="page" id="page-materials">
+    <h1 class="pt">Materials per bag <button class="btn btn-pri edit-only" onclick="openMaterial(null)">+ New material</button></h1>
+    <div class="alert alert-warn" id="matWarn"><span>⚠</span><div>Some amounts are not set yet. Click a row to fill in how much is used per bag and how many cycles it lasts.</div></div>
+    <div class="row-inline" style="margin-bottom:10px"><label class="chk"><input type="checkbox" id="matShowOff" onchange="renderMaterials()"> Show stopped</label></div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th>Code</th><th>Material</th><th class="num">Per bag</th><th>Unit</th><th class="num">Lasts (cycles)</th><th>From</th><th>Status</th></tr></thead><tbody id="matRows"></tbody></table></div></div>
+  </div>
+
+  <!-- Grades -->
+  <div class="page" id="page-grades">
+    <h1 class="pt">Grades <button class="btn btn-pri edit-only" onclick="openGrade(null)">+ New grade</button></h1>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th>Code</th><th>Label</th><th class="num">Order</th><th>Status</th></tr></thead><tbody id="grdRows"></tbody></table></div></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="page" id="page-manage"><div id="manageView"></div></div>
+</div>
+
+<!-- ══════ MODAL ══════ -->
+<div class="ov" id="ov" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-h"><span id="mTitle"></span><button class="x" onclick="closeModal()">✕</button></div>
+    <div class="modal-b" id="mBody"></div>
+    <div class="modal-f" id="mFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Crops — Azura Delta Master Data (照 Academee HrStaff 的作业模式)
+   作物、品种、种植标准、每袋材料、等级只在这里改；其他系统只读
+   不删资料：品种、材料只能停用；等级只能隐藏；种植标准只能出新版本
+   ══════════════════════════════════════════════════════════════ */
+const APP_VERSION = 1;
+const SYS = 'Crops';
+const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+
+/* 表与栏位（只送这些栏位上云端）；hist = 历史表，只能新增 */
+const T = {
+  hub_crop:                    {pk:'id', cols:['id','code','name']},
+  hub_crop_variety:            {pk:'id', cols:['id','crop_id','code','name','active']},
+  hub_crop_protocol:           {pk:'id', hist:true, cols:['id','crop_id','variety_id','version','effective_from','cycle_days','expected_kg_per_bag','voided_at']},
+  hub_crop_protocol_stage:     {pk:'id', hist:true, cols:['id','protocol_id','stage_code','stage_name','day_from','day_to','sort','voided_at']},
+  hub_crop_protocol_milestone: {pk:'id', hist:true, cols:['id','protocol_id','code','name','day','stage_code','sort','voided_at']},
+  hub_crop_material:           {pk:'id', cols:['id','crop_id','code','name','qty_per_bag','unit','reuse_cycles','source','note','sort','active']},
+  hub_grade:                   {pk:'id', cols:['id','crop_id','code','label','sort','shown']},
+};
+const ORDER = ['hub_crop','hub_crop_variety','hub_crop_protocol','hub_crop_protocol_stage','hub_crop_protocol_milestone','hub_crop_material','hub_grade'];
+
+let sb = null, ME = null, CAN_EDIT = false, LOADED = false, lastErr = '', lastSaved = null, saving = false, saveTimer = null;
+const S = {}; ORDER.forEach(t => S[t] = []);
+const dirty = new Map();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const uid = () => crypto.randomUUID();
+const fmt = n => Number(n || 0).toLocaleString('en');
+const ac = n => Number(n || 0).toFixed(2);
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2400); }
+
+const by = (tbl, pk) => S[tbl].find(r => r[T[tbl].pk] === pk);
+
+/* ══════ 进门：共用首页的登入 ══════ */
+const GATE_MSG = {
+  no_login:  'You are not signed in. Go back to the Home page, sign in, then open Crops.',
+  no_access: 'This account does not have access to Crops. Please ask the owner.',
+  offline:   'Cannot reach the cloud — check your connection and refresh.'
+};
+function gate(kind, extra){
+  $('app').style.display = 'none'; $('gate').style.display = 'block';
+  $('gateMsg').innerHTML = `<div class="alert ${kind === 'no_access' ? 'alert-danger' : 'alert-warn'}"><span>⚠</span><div>${GATE_MSG[kind] || esc(kind)}${extra ? '<div class="hint">' + esc(extra) + '</div>' : ''}</div></div>`;
+  $('gateHome').style.display = 'inline-flex';
+}
+async function boot(){
+  if(!window.supabase){ gate('offline'); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY);
+  let ss = null;
+  try{ ss = (await sb.auth.getSession()).data.session; }catch(e){ gate('offline', e.message); return; }
+  if(!ss){ gate('no_login'); return; }
+  const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,status').eq('id', ss.user.id).maybeSingle();
+  if(e1){ gate('offline', e1.message); return; }
+  if(!me || me.status !== 'ACTIVE'){ gate('no_access'); return; }
+  const {data:a1} = await sb.rpc('hub_can_access', {p_system:'CROP'});
+  const a = (a1 && a1[0]) || {};
+  if(!a.can_see){ gate('no_access'); return; }
+  ME = {...me, email: ss.user.email}; CAN_EDIT = !!a.can_edit;
+  $('gate').style.display = 'none'; $('app').style.display = 'block';
+  document.querySelectorAll('.edit-only').forEach(x => x.style.display = CAN_EDIT ? '' : 'none');
+  $('btnImp').style.display = CAN_EDIT ? '' : 'none';
+  await loadAll();
+}
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeModal();
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); flushNow(); }
+});
+
+/* ══════ 载入 ══════ */
+async function loadAll(){
+  setSync('busy', 'Loading');
+  try{
+    if(dirty.size) throw new Error('There are unsaved changes — press “Upload now” first');
+    const res = await Promise.all(ORDER.map(t => sb.from(t).select(T[t].cols.join(','))));
+    const bad = res.find(r => r.error); if(bad) throw bad.error;
+    ORDER.forEach((t, i) => { S[t] = res[i].data || []; });
+    LOADED = true; $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
+  }catch(err){
+    LOADED = false; $('loadBanner').style.display = 'flex'; setSync('bad', 'Offline'); lastErr = err.message || String(err);
+  }
+  renderAll();
+}
+function setSync(st, txt){ const b = $('syncBadge'); b.classList.remove('bad', 'busy'); if(st !== 'ok') b.classList.add(st); $('syncTxt').textContent = txt; }
+
+/* ══════ 存档（800ms 合并；失败一定看得到） ══════ */
+function touch(tbl, row){
+  if(!LOADED){ toast('Cloud not loaded — changes will not be saved'); return; }
+  dirty.set(tbl + '|' + row[T[tbl].pk], true);
+  setSync('busy', 'Pending upload ' + dirty.size);
+  clearTimeout(saveTimer); saveTimer = setTimeout(flush, 800);
+}
+async function flushNow(){ clearTimeout(saveTimer); await flush(); }
+async function flush(){
+  if(saving){ clearTimeout(saveTimer); saveTimer = setTimeout(flush, 400); return; }
+  if(!dirty.size) return;
+  saving = true;
+  const keys = [...dirty.keys()], errs = [];
+  for(const t of ORDER){
+    if(T[t].ro) continue;
+    const ks = keys.filter(k => k.startsWith(t + '|')); if(!ks.length) continue;
+    const rows = ks.map(k => by(t, k.slice(t.length + 1))).filter(Boolean).map(r => pick(t, r));
+    const {data, error} = await sb.from(t).upsert(rows, {onConflict:T[t].pk}).select(T[t].cols.join(','));
+    if(error){ errs.push(t + ': ' + nice(error)); continue; }
+    (data || []).forEach(d => { const i = S[t].findIndex(r => r[T[t].pk] === d[T[t].pk]); if(i >= 0) Object.assign(S[t][i], d); });
+    ks.forEach(k => dirty.delete(k));
+  }
+  saving = false;
+  if(errs.length){
+    lastErr = errs.join('; ');
+    $('saveBannerTxt').innerHTML = '<b>' + dirty.size + ' changes not saved to the cloud.</b> Your changes are still on screen — do not close this tab.<br>' + esc(lastErr) + '<br><button class="btn btn-sm" style="margin-top:6px" onclick="flushNow()">Upload now</button>';
+    $('saveBanner').classList.add('on'); setSync('bad', 'Save failed'); toast('⚠ Save failed');
+  }else{
+    lastErr = ''; $('saveBanner').classList.remove('on');
+    lastSaved = new Date(); $('savedAt').textContent = 'Saved ' + hhmm(lastSaved);
+    setSync('ok', 'Cloud'); toast('✓ Saved');
+  }
+  if($('page-manage').classList.contains('on')) renderManage();
+}
+function pick(t, r){ const o = {}; T[t].cols.forEach(c => { if(r[c] !== undefined) o[c] = r[c]; }); return o; }
+function nice(e){
+  const m = (e && (e.message || String(e))) || '';
+  if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.';
+  if(/row-level security|permission denied/i.test(m)) return 'You do not have permission to edit.';
+  if(/duplicate key/i.test(m)) return 'This code already exists.';
+  if(/code cannot be changed|code/i.test(m) && /locked|change/i.test(m)) return 'The code cannot be changed after it is created.';
+  return m;
+}
+window.addEventListener('beforeunload', e => { if(dirty.size){ e.preventDefault(); e.returnValue = ''; } });
+
+
+/* ══════ Crops helpers ══════ */
+const STAGE_EN = {SEEDING:'Seeding', NURSERY:'Nursery', FIRST_HARVEST:'First harvest', PEAK:'Peak production', CYCLE_END:'Cycle end'};
+const stageName = s => STAGE_EN[s.stage_code] || s.stage_name;
+const cropName = id => (by('hub_crop', id) || {}).name || '';
+const varName = id => (by('hub_crop_variety', id) || {}).name || '';
+const fDate = d => { if(!d) return ''; const [y, m, dd] = d.split('-'); return +dd + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m - 1] + ' ' + y; };
+const todayIso = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
+const liveProtocols = () => S.hub_crop_protocol.filter(p => !p.voided_at).sort((a, b) => (b.effective_from || '').localeCompare(a.effective_from || '') || b.version - a.version);
+function currentProtocol(){ const t = todayIso(); return liveProtocols().find(p => p.effective_from <= t) || liveProtocols().slice(-1)[0] || null; }
+const stagesOf = pid => S.hub_crop_protocol_stage.filter(s => s.protocol_id === pid && !s.voided_at).sort((a, b) => a.sort - b.sort || a.day_from - b.day_from);
+const msOf = pid => S.hub_crop_protocol_milestone.filter(m => m.protocol_id === pid && !m.voided_at).sort((a, b) => a.day - b.day || a.sort - b.sort);
+const onOff = a => a ? '<span class="badge b-active">In use</span>' : '<span class="badge b-archived">Stopped</span>';
+
+/* ══════ 页面切换 ══════ */
+function go(p){
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('on'));
+  $('page-' + p).classList.add('on');
+  document.querySelectorAll('.ntab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  renderAll(); window.scrollTo(0, 0);
+}
+function renderAll(){ renderVarieties(); renderPlan(); renderMaterials(); renderGrades(); if($('page-manage').classList.contains('on')) renderManage(); }
+const notLoaded = (id, cols) => { $(id).innerHTML = '<tr><td colspan="' + cols + '" class="empty">Cloud not loaded</td></tr>'; };
+
+/* ══════ Varieties ══════ */
+function renderVarieties(){
+  if(!LOADED) return notLoaded('varRows', 4);
+  const all = $('varShowOff').checked;
+  const rows = S.hub_crop_variety.filter(v => all || v.active).sort((a, b) => cropName(a.crop_id).localeCompare(cropName(b.crop_id)) || a.name.localeCompare(b.name));
+  $('varRows').innerHTML = rows.length ? rows.map(v => `<tr class="click" onclick="openVariety('${v.id}')"><td class="code">${esc(v.code)}</td><td><b>${esc(v.name)}</b></td><td>${esc(cropName(v.crop_id))}</td><td>${onOff(v.active)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No variety</td></tr>';
+  $('cropRows').innerHTML = S.hub_crop.map(c => `<tr class="click" onclick="openCrop('${c.id}')"><td class="code">${esc(c.code)}</td><td><b>${esc(c.name)}</b></td><td class="num">${S.hub_crop_variety.filter(v => v.crop_id === c.id && v.active).length}</td></tr>`).join('');
+}
+function openCrop(id){
+  const c = by('hub_crop', id), dis = CAN_EDIT ? '' : 'disabled';
+  openModal('Crop ' + c.code, `<div class="grid"><label class="fld"><span>Code</span><input type="text" value="${esc(c.code)}" disabled></label>
+    <label class="fld"><span>Name <b>*</b></span><input type="text" id="cpName" value="${esc(c.name)}" ${dis}></label></div><div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="closeModal()">${CAN_EDIT ? 'Cancel' : 'Close'}</button>${CAN_EDIT ? `<button class="btn btn-pri" onclick="saveCrop('${id}')">Save</button>` : ''}`);
+}
+function saveCrop(id){ const n = $('cpName').value.trim(); if(!n) return merr('Please enter the name'); const c = by('hub_crop', id); c.name = n; touch('hub_crop', c); closeModal(); renderAll(); }
+function nextVarCode(crop){ const n = S.hub_crop_variety.filter(v => v.crop_id === crop.id).map(v => parseInt((v.code.match(/_V(\d+)$/) || [])[1], 10) || 0); return crop.code + '_V' + (Math.max(0, ...n) + 1); }
+function openVariety(id){
+  const v = id ? by('hub_crop_variety', id) : {active:true, crop_id:(S.hub_crop[0] || {}).id}, dis = CAN_EDIT ? '' : 'disabled';
+  openModal(id ? 'Variety ' + v.code : 'New variety', `<div class="grid">
+    <label class="fld"><span>Crop <b>*</b></span><select id="vrCrop" ${id ? 'disabled' : dis}>${S.hub_crop.map(c => `<option value="${c.id}" ${v.crop_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
+    <label class="fld"><span>Code</span><input type="text" value="${esc(v.code || 'Given automatically')}" disabled></label>
+    <label class="fld wide"><span>Variety name <b>*</b></span><input type="text" id="vrName" value="${esc(v.name || '')}" placeholder="e.g. Terung Panjang" ${dis}></label>
+  </div><div class="hint" style="margin-top:10px">Seed supplier will be added when the Suppliers page is ready.</div><div class="merr" id="merr"></div>`,
+    `${id && CAN_EDIT ? `<button class="btn btn-sm left" onclick="toggleVariety('${id}')">${v.active ? 'Stop using' : 'Use again'}</button>` : ''}<button class="btn" onclick="closeModal()">${CAN_EDIT ? 'Cancel' : 'Close'}</button>${CAN_EDIT ? `<button class="btn btn-pri" onclick="saveVariety('${id || ''}')">Save</button>` : ''}`);
+}
+function saveVariety(id){
+  const n = $('vrName').value.trim(); if(!n) return merr('Please enter the variety name');
+  let v;
+  if(id) v = by('hub_crop_variety', id);
+  else { const c = by('hub_crop', $('vrCrop').value); if(!c) return merr('Please choose the crop'); v = {id:uid(), crop_id:c.id, code:nextVarCode(c), active:true}; S.hub_crop_variety.push(v); }
+  v.name = n; touch('hub_crop_variety', v); closeModal(); renderAll();
+}
+function toggleVariety(id){
+  const v = by('hub_crop_variety', id);
+  if(v.active && S.hub_crop_variety.filter(x => x.crop_id === v.crop_id && x.active).length <= 1) return merr('This is the only variety in use — it cannot be stopped');
+  v.active = !v.active; touch('hub_crop_variety', v); closeModal(); renderAll();
+}
+
+/* ══════ Growing plan ══════ */
+function renderPlan(){
+  const box = $('planView'); if(!LOADED){ box.innerHTML = '<div class="empty">Cloud not loaded</div>'; return; }
+  const p = currentProtocol();
+  if(!p){ box.innerHTML = '<div class="empty">No growing plan yet</div>'; return; }
+  const st = stagesOf(p.id), ms = msOf(p.id), older = liveProtocols().filter(x => x.id !== p.id);
+  box.innerHTML = `<div class="stats">
+      <div class="stat"><small>Crop</small><b style="font-size:15px">${esc(cropName(p.crop_id))}${p.variety_id ? ' · ' + esc(varName(p.variety_id)) : ''}</b></div>
+      <div class="stat"><small>Days per cycle</small><b>${p.cycle_days}</b></div>
+      <div class="stat"><small>Expected per bag</small><b>${Number(p.expected_kg_per_bag)} kg</b></div>
+      <div class="stat"><small>Version</small><b>v${p.version}</b><div class="hint">since ${fDate(p.effective_from)}</div></div></div>
+    <div class="card" style="padding:0"><div class="card-title" style="padding:14px 16px 0">Stages</div><div class="tw"><table class="data">
+      <thead><tr><th>Stage</th><th class="num">From day</th><th class="num">To day</th><th class="num">Days</th></tr></thead>
+      <tbody>${st.map(s => `<tr><td><b>${esc(stageName(s))}</b></td><td class="num">${s.day_from}</td><td class="num">${s.day_to}</td><td class="num">${s.day_to - s.day_from + 1}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card" style="padding:0"><div class="card-title" style="padding:14px 16px 0">Milestones</div><div class="tw"><table class="data">
+      <thead><tr><th class="num">Day</th><th>Milestone</th><th>Stage</th></tr></thead>
+      <tbody>${ms.length ? ms.map(m => `<tr><td class="num"><b>${m.day}</b></td><td>${esc(m.name)}</td><td>${esc(STAGE_EN[m.stage_code] || m.stage_code || '')}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">No milestones</td></tr>'}</tbody></table></div></div>
+    <div class="hint" style="margin:-4px 0 12px">A plan is never edited: “+ New version” makes a new plan from a date. Cycles already planted keep the plan they started with.</div>
+    ${older.length ? `<div class="card" style="padding:0"><div class="card-title" style="padding:14px 16px 0">Earlier versions</div><div class="tw"><table class="data"><thead><tr><th>Version</th><th>From</th><th class="num">Days</th><th class="num">kg / bag</th></tr></thead><tbody>${older.map(o => `<tr><td>v${o.version}</td><td>${fDate(o.effective_from)}</td><td class="num">${o.cycle_days}</td><td class="num">${Number(o.expected_kg_per_bag)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+}
+function openNewPlan(){
+  const p = currentProtocol(); if(!p) return;
+  const st = stagesOf(p.id), ms = msOf(p.id);
+  openModal('New growing plan (v' + (Math.max(...S.hub_crop_protocol.filter(x => x.crop_id === p.crop_id).map(x => x.version)) + 1) + ')', `<div class="grid">
+      <label class="fld"><span>Starts from <b>*</b></span><input type="date" id="npFrom" value="${todayIso()}"></label>
+      <label class="fld"><span>Days per cycle <b>*</b></span><input type="number" min="1" id="npDays" value="${p.cycle_days}"></label>
+      <label class="fld"><span>Expected kg per bag <b>*</b></span><input type="number" min="0" step="0.1" id="npKg" value="${Number(p.expected_kg_per_bag)}"></label></div>
+    <div class="sec">Stages</div><table class="mini"><tr><th>Stage</th><th>From day</th><th>To day</th></tr>${st.map((s, i) => `<tr><td>${esc(stageName(s))}</td><td><input type="number" min="0" id="npSf${i}" value="${s.day_from}"></td><td><input type="number" min="0" id="npSt${i}" value="${s.day_to}"></td></tr>`).join('')}</table>
+    <div class="sec">Milestones</div><table class="mini"><tr><th>Milestone</th><th>Day</th></tr>${ms.map((m, i) => `<tr><td><input type="text" id="npMn${i}" value="${esc(m.name)}"></td><td><input type="number" min="0" id="npMd${i}" value="${m.day}"></td></tr>`).join('')}</table>
+    <div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" id="npSave" onclick="saveNewPlan()">Save new version</button>`);
+}
+async function saveNewPlan(){
+  const p = currentProtocol(), st = stagesOf(p.id), ms = msOf(p.id);
+  const from = $('npFrom').value, days = parseInt($('npDays').value, 10), kg = parseFloat($('npKg').value);
+  if(!from) return merr('Please choose the start date');
+  if(!(days > 0)) return merr('Days per cycle must be more than 0');
+  if(!(kg >= 0)) return merr('Please enter the expected kg per bag');
+  const nst = st.map((s, i) => ({...s, day_from:parseInt($('npSf' + i).value, 10), day_to:parseInt($('npSt' + i).value, 10)}));
+  if(nst.some(s => !(s.day_from >= 0) || !(s.day_to >= s.day_from) || s.day_to > days)) return merr('Each stage needs From ≤ To, and no day after day ' + days);
+  const nms = ms.map((m, i) => ({...m, name:$('npMn' + i).value.trim(), day:parseInt($('npMd' + i).value, 10)}));
+  if(nms.some(m => !m.name || !(m.day >= 0) || m.day > days)) return merr('Each milestone needs a name and a day between 0 and ' + days);
+  const pid = uid(), ver = Math.max(...S.hub_crop_protocol.filter(x => x.crop_id === p.crop_id).map(x => x.version)) + 1;
+  const stageOf = d => (nst.find(s => d >= s.day_from && d <= s.day_to) || {}).stage_code || null;
+  $('npSave').disabled = true; setSync('busy', 'Saving');
+  try{
+    let r = await sb.from('hub_crop_protocol').insert({id:pid, crop_id:p.crop_id, variety_id:p.variety_id, version:ver, effective_from:from, cycle_days:days, expected_kg_per_bag:kg}); if(r.error) throw r.error;
+    r = await sb.from('hub_crop_protocol_stage').insert(nst.map((s, i) => ({protocol_id:pid, stage_code:s.stage_code, stage_name:s.stage_name, day_from:s.day_from, day_to:s.day_to, sort:i}))); if(r.error) throw r.error;
+    r = await sb.from('hub_crop_protocol_milestone').insert(nms.map((m, i) => ({protocol_id:pid, code:m.code, name:m.name, day:m.day, stage_code:stageOf(m.day), sort:i}))); if(r.error) throw r.error;
+    closeModal(); lastSaved = new Date(); $('savedAt').textContent = 'Saved ' + hhmm(lastSaved); toast('✓ New plan saved'); await loadAll();
+  }catch(e){ $('npSave').disabled = false; setSync('bad', 'Save failed'); lastErr = nice(e); merr(lastErr + ' — if part was saved, press Reload and check.'); }
+}
+
+/* ══════ Materials ══════ */
+function renderMaterials(){
+  if(!LOADED) return notLoaded('matRows', 7);
+  const all = $('matShowOff').checked;
+  const rows = S.hub_crop_material.filter(m => all || m.active).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
+  $('matRows').innerHTML = rows.length ? rows.map(m => `<tr class="click" onclick="openMaterial('${m.id}')"><td class="code">${esc(m.code)}</td><td><b>${esc(m.name)}</b>${m.note ? '<div class="hint">' + esc(m.note) + '</div>' : ''}</td>
+    <td class="num">${m.qty_per_bag != null ? Number(m.qty_per_bag) : '<span class="hint">Not set</span>'}</td><td>${esc(m.unit || '')}</td>
+    <td class="num">${m.reuse_cycles != null ? m.reuse_cycles + (m.reuse_cycles === 1 ? ' (new every cycle)' : '') : '<span class="hint">Not set</span>'}</td><td>${esc(m.source || '')}</td><td>${onOff(m.active)}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty">No material</td></tr>';
+  $('matWarn').style.display = S.hub_crop_material.some(m => m.active && (m.qty_per_bag == null || m.reuse_cycles == null)) ? 'flex' : 'none';
+}
+function openMaterial(id){
+  const m = id ? by('hub_crop_material', id) : {active:true, crop_id:(S.hub_crop[0] || {}).id}, dis = CAN_EDIT ? '' : 'disabled';
+  openModal(id ? 'Material ' + m.code : 'New material', `<div class="grid">
+    <label class="fld"><span>Code <b>*</b> (cannot change later)</span><input type="text" id="mtCode" value="${esc(m.code || '')}" placeholder="e.g. FERT_NPK" ${id ? 'disabled' : dis}></label>
+    <label class="fld"><span>Name <b>*</b></span><input type="text" id="mtName" value="${esc(m.name || '')}" ${dis}></label>
+    <label class="fld"><span>Amount per bag</span><input type="number" min="0" step="0.01" id="mtQty" value="${m.qty_per_bag ?? ''}" ${dis}></label>
+    <label class="fld"><span>Unit</span><input type="text" id="mtUnit" value="${esc(m.unit || '')}" placeholder="e.g. L, kg, pcs" ${dis}></label>
+    <label class="fld"><span>Lasts how many cycles</span><input type="number" min="1" step="1" id="mtReuse" value="${m.reuse_cycles ?? ''}" placeholder="1 = new every cycle" ${dis}></label>
+    <label class="fld"><span>Where it comes from</span><input type="text" id="mtSrc" value="${esc(m.source || '')}" placeholder="e.g. HX (internal price)" ${dis}></label>
+    <label class="fld wide"><span>Note</span><input type="text" id="mtNote" value="${esc(m.note || '')}" ${dis}></label>
+  </div><div class="hint" style="margin-top:10px">The new planting area budget will use: bags × amount per bag, and how many bags need new material each cycle.</div><div class="merr" id="merr"></div>`,
+    `${id && CAN_EDIT ? `<button class="btn btn-sm left" onclick="toggleMaterial('${id}')">${m.active ? 'Stop using' : 'Use again'}</button>` : ''}<button class="btn" onclick="closeModal()">${CAN_EDIT ? 'Cancel' : 'Close'}</button>${CAN_EDIT ? `<button class="btn btn-pri" onclick="saveMaterial('${id || ''}')">Save</button>` : ''}`);
+}
+function saveMaterial(id){
+  const name = $('mtName').value.trim(), q = $('mtQty').value.trim(), r = $('mtReuse').value.trim();
+  if(!name) return merr('Please enter the name');
+  const qty = q === '' ? null : parseFloat(q), reuse = r === '' ? null : parseInt(r, 10);
+  if(q !== '' && !(qty >= 0)) return merr('Amount per bag must be a number');
+  if(r !== '' && !(reuse >= 1)) return merr('Lasts how many cycles must be 1 or more');
+  let m;
+  if(id) m = by('hub_crop_material', id);
+  else {
+    const code = $('mtCode').value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    if(!code) return merr('Please enter the code'); if(S.hub_crop_material.some(x => x.code === code)) return merr('This code already exists');
+    m = {id:uid(), crop_id:(S.hub_crop[0] || {}).id, code, active:true, sort:S.hub_crop_material.length}; S.hub_crop_material.push(m);
+  }
+  Object.assign(m, {name, qty_per_bag:qty, unit:$('mtUnit').value.trim() || null, reuse_cycles:reuse, source:$('mtSrc').value.trim() || null, note:$('mtNote').value.trim() || null});
+  touch('hub_crop_material', m); closeModal(); renderAll();
+}
+function toggleMaterial(id){ const m = by('hub_crop_material', id); m.active = !m.active; touch('hub_crop_material', m); closeModal(); renderAll(); }
+
+/* ══════ Grades ══════ */
+function renderGrades(){
+  if(!LOADED) return notLoaded('grdRows', 4);
+  const rows = S.hub_grade.slice().sort((a, b) => a.sort - b.sort);
+  $('grdRows').innerHTML = rows.map(g => `<tr class="click" onclick="openGrade('${g.id}')"><td class="code">${esc(g.code)}</td><td><b>${esc(g.label)}</b></td><td class="num">${g.sort}</td><td>${g.shown ? '<span class="badge b-active">Shown</span>' : '<span class="badge b-archived">Hidden</span>'}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No grade</td></tr>';
+}
+function openGrade(id){
+  const g = id ? by('hub_grade', id) : {shown:true, sort:S.hub_grade.length, crop_id:(S.hub_crop[0] || {}).id}, dis = CAN_EDIT ? '' : 'disabled';
+  openModal(id ? 'Grade ' + g.code : 'New grade', `<div class="grid">
+    <label class="fld"><span>Code <b>*</b> (cannot change later)</span><input type="text" id="gdCode" value="${esc(g.code || '')}" placeholder="e.g. C" ${id ? 'disabled' : dis}></label>
+    <label class="fld"><span>Label <b>*</b></span><input type="text" id="gdLabel" value="${esc(g.label || '')}" ${dis}></label>
+    <label class="fld"><span>Order</span><input type="number" step="1" id="gdSort" value="${g.sort}" ${dis}></label>
+    <label class="fld"><span>Shown in Harvest / Sales</span><select id="gdShown" ${dis}><option value="1" ${g.shown ? 'selected' : ''}>Shown</option><option value="0" ${g.shown ? '' : 'selected'}>Hidden</option></select></label>
+  </div><div class="hint" style="margin-top:10px">Each buyer can map these grades to its own grades (on the Buyers page, coming later).</div><div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="closeModal()">${CAN_EDIT ? 'Cancel' : 'Close'}</button>${CAN_EDIT ? `<button class="btn btn-pri" onclick="saveGrade('${id || ''}')">Save</button>` : ''}`);
+}
+function saveGrade(id){
+  const label = $('gdLabel').value.trim(); if(!label) return merr('Please enter the label');
+  let g;
+  if(id) g = by('hub_grade', id);
+  else { const code = $('gdCode').value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_'); if(!code) return merr('Please enter the code'); if(S.hub_grade.some(x => x.code === code)) return merr('This code already exists'); g = {id:uid(), crop_id:(S.hub_crop[0] || {}).id, code}; S.hub_grade.push(g); }
+  Object.assign(g, {label, sort:parseInt($('gdSort').value, 10) || 0, shown:$('gdShown').value === '1'});
+  touch('hub_grade', g); closeModal(); renderAll();
+}
+
+/* ══════ Settings ══════ */
+function renderManage(){
+  const v = $('manageView'); if(!ME){ v.innerHTML = ''; return; }
+  v.innerHTML = `<h1 class="pt">Settings</h1>
+  <div class="card"><div class="card-title">① My identity</div>
+    <div class="mg-line">Signed in: <span class="mg-val">${esc(ME.display_name || '')}</span> · Role: <span class="mg-val">${esc(ME.role)}</span></div>
+    <div class="mg-line">Access: view ✔ · edit ${CAN_EDIT ? '✔' : '✘ (view only)'}</div>
+    <div class="hint">Sign-in is shared with the Home page; to sign out or switch user, press “Sign out” on the Home page.</div></div>
+  <div class="card"><div class="card-title">② System info</div>
+    <div class="mg-line">System: <span class="mg-val">Crops</span> (Master Data) · Version: <span class="mg-val">v${APP_VERSION}</span> · Layer: <span class="mg-val">HUB #2F5D3F</span></div>
+    <div class="mg-line">Record counts: crops ${S.hub_crop.length} · varieties ${S.hub_crop_variety.length} · plan versions ${liveProtocols().length} · materials ${S.hub_crop_material.length} · grades ${S.hub_grade.length}</div>
+    <div class="mg-line">Who reads this: Crop Monitoring, Harvest, Revenue, the new planting area budget and the reports</div></div>
+  <div class="card"><div class="card-title">③ Cloud connection</div>
+    <div class="mg-line">Status: ${LOADED ? '<span class="badge b-active">Connected</span>' : '<span class="badge b-archived">Offline</span>'} · Pending upload: <b>${dirty.size}</b> · Last saved: ${lastSaved ? hhmm(lastSaved) : '—'}</div>
+    ${lastErr ? `<div class="alert alert-danger" style="margin-top:8px">Last error: ${esc(lastErr)}</div>` : ''}
+    <div class="row-inline" style="margin-top:8px"><button class="btn" onclick="flushNow()">Upload now</button><button class="btn" onclick="loadAll()">Reload</button></div></div>
+  <div class="card"><div class="card-title">④ Data backup</div>
+    <div class="alert alert-warn"><span>⚠</span><div>The cloud is on the free plan — <b>no automatic backup</b>. After big changes, press “↓ Export” and keep the file in <span class="mg-val">P:\\Teo\\azura-delta\\FarmHub\\03_EVIDENCE\\</span></div></div>
+    <div class="mg-line">↓ Export: crops, varieties, growing plans, materials and grades as one JSON file</div>
+    <div class="mg-line">↑ Import: restore from a backup file (add / update only, never delete; growing plans are only added, never changed)</div></div>
+  <div class="acc" onclick="if(event.target.closest('.acc-hdr'))this.classList.toggle('open')"><div class="acc-hdr">⑤ Advanced <span>▼</span></div>
+    <div class="acc-body">
+      <div class="mg-line">Tables: ${ORDER.map(t => `<span class="mg-val">${t}</span>`).join(' ')}</div>
+      <div class="mg-line">Nothing is ever deleted: varieties and materials are stopped, grades are hidden, plans get a new version.</div>
+      <div class="mg-line">Free plan pauses after a week of no use: supabase.com → AzuraDelta-Main → Restore project.</div>
+    </div></div>`;
+}
+
+/* ══════ MODAL ══════ */
+function openModal(title, body, foot){ $('mTitle').textContent = title; $('mBody').innerHTML = body; $('mFoot').innerHTML = foot; $('ov').classList.add('on'); }
+function closeModal(){ $('ov').classList.remove('on'); }
+function merr(t){ const e = $('merr'); if(e){ e.textContent = t; e.style.display = 'block'; } return false; }
+
+
+/* ══════ Export / Import ══════ */
+async function exportAll(){
+  if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
+  if(dirty.size) await flushNow();
+  const res = await Promise.all(ORDER.map(t => sb.from(t).select(T[t].cols.join(','))));
+  const bad = res.find(r => r.error); if(bad){ toast('⚠ Export failed: ' + bad.error.message); return; }
+  const data = {}; ORDER.forEach((t, i) => data[t] = res[i].data);
+  const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), itemCount:Object.fromEntries(ORDER.map(t => [t, data[t].length]))}, data};
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
+  a.download = `Crops_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('✓ Backup downloaded');
+}
+let IMP = null;
+function importFile(inp){
+  const f = inp.files[0]; inp.value = ''; if(!f) return;
+  if(!LOADED || !CAN_EDIT){ toast('Cannot import'); return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    let j; try{ j = JSON.parse(rd.result); }catch(e){ toast('⚠ Wrong file format — nothing imported'); return; }
+    if(!j || !j.meta || j.meta.system !== SYS || !j.data){ toast('⚠ This is not a Crops backup file — nothing imported'); return; }
+    const plan = {}; let tot = 0;
+    ORDER.filter(t => !T[t].ro).forEach(t => {
+      const pk = T[t].pk, rows = Array.isArray(j.data[t]) ? j.data[t] : [];
+      let nw = 0, up = 0, same = 0; const todo = [];
+      rows.forEach(row => { const cur = by(t, row[pk]); const p = pick(t, row);
+        if(!cur){ nw++; todo.push(p); } else if(!T[t].hist && JSON.stringify(pick(t, cur)) !== JSON.stringify(p)){ up++; todo.push(p); } else same++; });
+      plan[t] = {nw, up, same, todo}; tot += todo.length;
+    });
+    IMP = plan;
+    openModal('↑ Import preview', `<div class="hint" style="margin-bottom:8px">Backup time: ${esc(j.meta.exportTime || '')}. Adds and updates only — nothing in the cloud is deleted.</div>
+      <div class="tw"><table class="data"><thead><tr><th>Table</th><th class="num">Add</th><th class="num">Update</th><th class="num">No change</th></tr></thead><tbody>
+      ${Object.keys(plan).map(t => `<tr><td>${t}</td><td class="num">${plan[t].nw}</td><td class="num">${plan[t].up}</td><td class="num">${plan[t].same}</td></tr>`).join('')}</tbody></table></div>`,
+      `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" ${tot ? '' : 'disabled'} onclick="runImport()">Import ${tot}</button>`);
+  };
+  rd.readAsText(f);
+}
+async function runImport(){
+  if(!IMP) return; closeModal();
+  for(const t of Object.keys(IMP)){
+    const rows = IMP[t].todo; if(!rows.length) continue;
+    const {error} = await sb.from(t).upsert(rows, {onConflict:T[t].pk});
+    if(error){ toast('⚠ Import stopped at ' + t + ': ' + nice(error)); lastErr = error.message; await loadAll(); return; }
+  }
+  IMP = null; toast('✓ Imported'); await loadAll();
+}
+
+boot();
+</script>
+</body>
+</html>
