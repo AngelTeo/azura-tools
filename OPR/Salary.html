@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v84</title>
+<title>Salary v85</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -622,7 +622,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 83;
+const APP_VERSION = 85;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -2148,8 +2148,8 @@ function printReceipt(wid, mk){
   const monthLabel = MONTHS[mo-1] + ' ' + y;
   const daysInMo = daysInMonth(y, mo);
   const absentD = daysInMo - s.totalD;
-  const advRec = mk < NEW_SYS_START ? S.advance[wid] : loanAcc(wid);
-  const advBalance = mk < NEW_SYS_START
+  const advRec = mk < LOAN_SYS_START ? S.advance[wid] : loanAcc(wid);
+  const advBalance = mk < LOAN_SYS_START
     ? (advRec ? Math.max(0, advRec.totalAmount - (getAdvancePaidUpTo(wid, mk) + getAdvanceDeduction(wid, mk))) : 0)
     : Math.max(0, advanceTrack(wid, mk).balanceAfter);
   const cashList = ((S.cashout||{})[mk]||{})[wid] || [];
@@ -3170,7 +3170,8 @@ function confirmImport(){ alert('Import is not available.'); return;
 
 // -- 锁月 + 快照 + 预支只算真的扣到的（v58） ------------------------------
 let LOCKS = {}, PAYSLIPS = {}, CAN_APPROVE = false;
-const NEW_SYS_START = '2026-10';   // 新系统第一个月；之前的预支已扣额 = openingPaid
+const NEW_SYS_START = '2026-10';   // 新系统第一个月（出勤 Both、食物进位等规则）
+const LOAN_SYS_START = '2026-09';  // 借款在新系统的第一个月（Owner 2026-10-14：九月薪水在新系统做）；之前已扣额 = OPENING_REPAID（到 2026-08）
 const r2 = n => Math.round((Number(n)||0)*100)/100;
 const nextMk = mk => { const [y,m]=mk.split('-').map(Number); return m===12 ? `${y+1}-01` : `${y}-${pad2(m+1)}`; };
 const isLocked = mk => !!(LOCKS[mk] && LOCKS[mk].status==='LOCKED');
@@ -3216,8 +3217,8 @@ function advanceTrack(wid, mk){
   const thisMonth = (mk < a.startMonth) ? 0 : dedFor(mk);
   return {paidBefore: r2(paid), thisMonth};
 }
-function getAdvanceDeduction(wid, mk){ return mk < NEW_SYS_START ? getAdvanceDeductionV56(wid, mk) : advanceTrack(wid, mk).thisMonth; }
-function getAdvancePaidUpTo(wid, mk){ return mk < NEW_SYS_START ? getAdvancePaidUpToV56(wid, mk) : advanceTrack(wid, mk).paidBefore; }
+function getAdvanceDeduction(wid, mk){ return mk < LOAN_SYS_START ? getAdvanceDeductionV56(wid, mk) : advanceTrack(wid, mk).thisMonth; }
+function getAdvancePaidUpTo(wid, mk){ return mk < LOAN_SYS_START ? getAdvancePaidUpToV56(wid, mk) : advanceTrack(wid, mk).paidBefore; }
 
 // 已锁月份的改动：画面上还原，并提示
 const LOCK_KEYS = {
@@ -3446,9 +3447,9 @@ function advanceTrack(wid, mk){
     const amt = (ov && ov.amount != null) ? Number(ov.amount) : (loanPlanFor(L, m) ?? 0);
     return r2(Math.max(0, Math.min(amt, rem)));
   };
-  let cur = start < NEW_SYS_START ? NEW_SYS_START : start, guard = 360;
+  let cur = start < LOAN_SYS_START ? LOAN_SYS_START : start, guard = 360;
   while(cur < mk && guard-- > 0){ paid = r2(paid + dedFor(cur)); cur = nextMk(cur); }
-  const thisMonth = mk < NEW_SYS_START ? 0 : dedFor(mk);
+  const thisMonth = mk < LOAN_SYS_START ? 0 : dedFor(mk);
   const loaned = loanedBy(L, mk);
   return {paidBefore:paid, thisMonth, loaned, balanceAfter:r2(loaned - paid - thisMonth), plan:loanPlanFor(L, mk), override:(L.months||{})[mk] || null};
 }
@@ -3467,7 +3468,7 @@ function avAll(mk){
 }
 // 薪水不够扣借款：扣借款前的净薪 < 这个月要扣的
 function loanShort(mk){
-  if(mk < NEW_SYS_START || isLocked(mk)) return [];
+  if(mk < LOAN_SYS_START || isLocked(mk)) return [];
   return avAll(mk).filter(r => r.t.thisMonth > 0 || (loanAcc(r.w.id).months||{})[mk]).map(r => {
     const s = calcWorkerSummaryLive(r.w, mk), avail = r2(s.net + s.advD), ov = (loanAcc(r.w.id).months||{})[mk];
     const want = ov ? (loanPlanFor(loanAcc(r.w.id), mk) ?? 0) : r.t.thisMonth;
@@ -3516,7 +3517,7 @@ function avWorker(wid){
   if(!lock){
     if(isLeft) h += ob > 0.004 ? '<button class="fd-del" data-act="writeoff">Write off ' + fmtRM(ob) + '</button>' : '';
     else h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-top:14px"><button class="ad-opt" data-act="more">+ Borrow more</button><button class="ad-opt" data-act="plan">Change monthly</button>'
-      + (ob > 0.004 && mk >= NEW_SYS_START ? '<button class="ad-opt" data-act="month">Pause / change ' + MONTHS[Number(mk.slice(5))-1].slice(0,3) + '</button>' : '') + '<button class="ad-opt" data-act="hist">History</button></div>';
+      + (ob > 0.004 && mk >= LOAN_SYS_START ? '<button class="ad-opt" data-act="month">Pause / change ' + MONTHS[Number(mk.slice(5))-1].slice(0,3) + '</button>' : '') + '<button class="ad-opt" data-act="hist">History</button></div>';
   }
   if(lock || isLeft) h += '<button class="ad-opt" style="width:100%;margin-top:8px" data-act="hist">History</button>';
   h += '<button class="ad-cancel" data-act="close">Close</button>';
@@ -3600,10 +3601,10 @@ function avDecide(wid){ // 薪水不够：三选一
   avSet(h); }
 function avHistory(){ const w = getWorker(AV.wid), L = loanAcc(AV.wid) || {txn:[], plan:[], months:{}};
   AV = {...AV, mode:'hist'};
-  const K = {LOAN:'Borrowed', OPENING_REPAID:'Paid back in the old system (to Sep 2026)', WRITE_OFF:'Written off'};
+  const K = {LOAN:'Borrowed', OPENING_REPAID:'Paid back in the old system (to Aug 2026)', WRITE_OFF:'Written off'};
   const items = [];
   (L.txn||[]).forEach(t => items.push([t.date || t.month, K[t.kind] + (t.note ? ' · ' + esc(t.note.replace(/^\[minus [\d-]+\] /, '')) : ''), (t.kind==='LOAN' ? '+' : '−') + fmtRM(t.amount), t.kind!=='OPENING_REPAID' && t.month >= NEW_SYS_START && !isLocked(t.month) ? 'txn:' + t.id : '']));
-  (L.plan||[]).forEach(p => items.push([p.from, 'Monthly amount from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4), fmtRM(p.monthly), (p.from < NEW_SYS_START || isLocked(p.from)) ? '' : 'plan:' + p.id]));
+  (L.plan||[]).forEach(p => items.push([p.from, 'Monthly amount from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4), fmtRM(p.monthly), (p.from < LOAN_SYS_START || isLocked(p.from)) ? '' : 'plan:' + p.id]));
   Object.keys(L.months||{}).forEach(m => items.push([m, (Number(L.months[m].amount)===0 ? 'Paused' : 'This month only ' + fmtRM(L.months[m].amount)) + (L.months[m].note ? ' · ' + esc(L.months[m].note) : ''), '', '']));
   Object.keys(PAYSLIPS).filter(m => isLocked(m) && PAYSLIPS[m][AV.wid] && Number(PAYSLIPS[m][AV.wid].advD) > 0).forEach(m => items.push([m, 'Taken from salary (locked month)', '−' + fmtRM(PAYSLIPS[m][AV.wid].advD), '']));
   items.sort((a, b) => a[0] < b[0] ? -1 : 1);
@@ -3966,9 +3967,9 @@ function smHist(wid, tab, open){
     else {
       h += '<div class="sm-top"><div class="g3"><div>Borrowed<b>' + fmtRM(t.loaned || 0) + '</b></div><div>Paid back<b>' + fmtRM(paid) + '</b></div><div>Still owes<b style="color:' + (owes > 0.004 ? 'var(--red)' : 'var(--grn)') + '">' + fmtRM(owes) + '</b></div></div><div class="av-bar" style="margin-top:8px"><i style="width:' + (t.loaned ? Math.round(paid / t.loaned * 100) : 100) + '%"></i></div></div>';
       const ev = [];
-      (L.txn || []).forEach(x => ev.push([x.date || x.month, x.kind === 'LOAN' ? 'Borrowed' : x.kind === 'WRITE_OFF' ? 'Written off' : 'Paid back in the old system (to Sep 2026)', (x.kind === 'LOAN' ? '+ ' : '− ') + fmtRM(x.amount), x.note && x.kind !== 'OPENING_REPAID' ? x.note.replace(/^\[minus [\d-]+\] /, '') : '']));
+      (L.txn || []).forEach(x => ev.push([x.date || x.month, x.kind === 'LOAN' ? 'Borrowed' : x.kind === 'WRITE_OFF' ? 'Written off' : 'Paid back in the old system (to Aug 2026)', (x.kind === 'LOAN' ? '+ ' : '− ') + fmtRM(x.amount), x.note && x.kind !== 'OPENING_REPAID' ? x.note.replace(/^\[minus [\d-]+\] /, '') : '']));
       (L.plan || []).forEach(p => ev.push([p.from + '-00', 'Monthly amount set', fmtRM(p.monthly) + '/month', 'from ' + MONTHS[Number(p.from.slice(5))-1].slice(0,3) + ' ' + p.from.slice(0,4)]));
-      for(let m = NEW_SYS_START; m <= THIS_MK; m = nextMk(m)){ const a = advanceTrack(wid, m); if(!(a.thisMonth > 0)) continue; const ov = (L.months || {})[m];
+      for(let m = LOAN_SYS_START; m <= THIS_MK; m = nextMk(m)){ const a = advanceTrack(wid, m); if(!(a.thisMonth > 0)) continue; const ov = (L.months || {})[m];
         ev.push([m + '-99', m === THIS_MK && !isLocked(m) ? 'This month (planned)' : 'Taken from salary', '− ' + fmtRM(a.thisMonth), MONTHS[Number(m.slice(5))-1].slice(0,3) + ' ' + m.slice(0,4) + ' · left ' + fmtRM(a.balanceAfter) + (ov && ov.note ? ' · ' + ov.note : '')]); }
       ev.sort((a, b) => a[0] < b[0] ? -1 : 1);
       h += '<div class="ad-fm"><span>WHAT HAPPENED</span><span></span></div><div class="ad-list">' + ev.map(e => '<div class="ad-row" style="cursor:default"><div class="n" style="font-weight:600;font-size:13px">' + e[1] + '<small>' + (/-\d\d$/.test(e[0]) && !/-(00|99)$/.test(e[0]) ? fmtDay(e[0]) : '') + (e[3] ? (/-\d\d$/.test(e[0]) && !/-(00|99)$/.test(e[0]) ? ' · ' : '') + esc(e[3]) : '') + '</small></div><div class="fd-amt">' + e[2] + '</div></div>').join('') + '</div>'
