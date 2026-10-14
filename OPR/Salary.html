@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v85</title>
+<title>Salary v86</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -584,7 +584,7 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const ATT_STATES = ['','hx','ad','both','hx_half','ad_half','split','off'];
 const ATT_LABELS = {'':{lbl:'·',cls:'st-empty'},'hx':{lbl:'H',cls:'st-hx'},'ad':{lbl:'A',cls:'st-ad'},'both':{lbl:'B',cls:'st-both'},'hx_half':{lbl:'½H',cls:'st-hx_half'},'ad_half':{lbl:'½A',cls:'st-ad_half'},'split':{lbl:'S',cls:'st-split'},'off':{lbl:'✕',cls:'st-off'}};
 const ATT_VALUES = {'':{'hx':0,'ad':0},'hx':{'hx':1,'ad':0},'ad':{'hx':0,'ad':1},'both':{'hx':0.5,'ad':0.5},'hx_half':{'hx':0.5,'ad':0},'ad_half':{'hx':0,'ad':0.5},'split':{'hx':0.5,'ad':0.5},'off':{'hx':0,'ad':0}};
-// 9 月（含）以前照 v56 已发的薪水：Both = 1 天 HX + 1 天 AD；10 月起 Both = 各半天（共 1 天）
+// 8 月（含）以前照 v56 已发的薪水：Both = 1 天 HX + 1 天 AD；9 月起 Both = 各半天（共 1 天）
 function attV(v, mk){ return (v === 'both' && mk && mk < NEW_SYS_START) ? {hx:1, ad:1} : (ATT_VALUES[v] || {hx:0, ad:0}); }
 const BANK_CHARGE = 11;
 const FEE_RULE_START = '2026-09';
@@ -622,7 +622,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 85;
+const APP_VERSION = 86;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3170,8 +3170,8 @@ function confirmImport(){ alert('Import is not available.'); return;
 
 // -- 锁月 + 快照 + 预支只算真的扣到的（v58） ------------------------------
 let LOCKS = {}, PAYSLIPS = {}, CAN_APPROVE = false;
-const NEW_SYS_START = '2026-10';   // 新系统第一个月（出勤 Both、食物进位等规则）
-const LOAN_SYS_START = '2026-09';  // 借款在新系统的第一个月（Owner 2026-10-14：九月薪水在新系统做）；之前已扣额 = OPENING_REPAID（到 2026-08）
+const NEW_SYS_START = '2026-09';   // 新系统第一个月（Owner 2026-10-14：九月薪水在新系统做）：出勤 Both、食物进位、借款都从这个月起照新规则
+const LOAN_SYS_START = NEW_SYS_START;  // 借款之前已扣额 = OPENING_REPAID（到 2026-08）
 const r2 = n => Math.round((Number(n)||0)*100)/100;
 const nextMk = mk => { const [y,m]=mk.split('-').map(Number); return m===12 ? `${y+1}-01` : `${y}-${pad2(m+1)}`; };
 const isLocked = mk => !!(LOCKS[mk] && LOCKS[mk].status==='LOCKED');
