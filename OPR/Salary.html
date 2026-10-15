@@ -614,7 +614,8 @@ const S = {
   food: {},         // monthKey -> [{id,date,vendor,desc,qty,unitPrice,total,workerIds:[]}]
   personal: {},     // monthKey -> workerId -> [{id,date,desc,amount}]
   advance: {},      // workerId -> {totalHX,totalAD,installments,monthlyPay,payments:{mk:amt},notes}
-  paymentMethod: {},// monthKey -> workerId -> "transfer"|"cash"|"unpaid"
+  paymentMethod: {},// monthKey -> workerId -> "transfer"|"cash"|"unpaid"（unpaid = Hold）
+  holds: {},        // v87 workerId -> [{id,from,kind:HOLD|RELEASE|WRITE_OFF,amount,payMonth,how,note,by,at}]
 };
 const REM = { records: [] };
 
@@ -622,7 +623,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 86;
+const APP_VERSION = 87;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -712,7 +713,7 @@ async function loadData(){
   S.personal = {}; ps.forEach(r => ((S.personal[r.month] ??= {})[r.worker_id] ??= []).push(r.data));
   S.advance = {}; av.forEach(r => S.advance[r.worker_id] = r.data);
   REM.records = rm.map(r => r.data);
-  const [lt, lp, lm, co2, pc, rs, bs] = await Promise.all([
+  const [lt, lp, lm, co2, pc, rs, bs, hd] = await Promise.all([
     fetchAll('salary_loan_txn','id,worker_id,month,txn_date,kind,amount,note', q=>q.is('voided_at',null).order('created_at')),
     fetchAll('salary_loan_plan','id,worker_id,effective_from,monthly_pay', q=>q.is('voided_at',null).order('effective_from')),
     fetchAll('salary_loan_month','worker_id,month,amount,note', q=>q.not('amount','is',null)),
@@ -720,6 +721,7 @@ async function loadData(){
     fetchAll('salary_payee_choice','worker_id,month,slot,split_amount,send_from'),
     fetchAll('salary_remit_state','worker_id,month,slot,star,sent_on,hold_until'),
     fetchAll('salary_benef_saved','account,account_no,name,saved'),
+    fetchAll('salary_hold','id,worker_id,from_month,kind,amount,pay_month,how,note,by_name,created_at', q=>q.is('voided_at',null).order('created_at')),
   ]);
   S.loans = {};
   const LA = w => S.loans[w] ??= {txn:[], plan:[], months:{}};
@@ -732,6 +734,7 @@ async function loadData(){
     const x = {}; if(c.split_amount != null) x.split = Number(c.split_amount); if(c.send_from) x.from = c.send_from; if(Object.keys(x).length) (S.payeeX[c.month] ??= {})[c.worker_id] = x; });
   S.remState = {}; rs.forEach(r => { const o = {}; if(r.star) o.star = true; if(r.sent_on) o.sent = r.sent_on; if(r.hold_until) o.hold = r.hold_until; (S.remState[r.month] ??= {})[r.worker_id + '|' + r.slot] = o; });
   S.benef = {}; bs.forEach(b => S.benef[b.account + '|' + b.account_no] = {name:b.name||'', saved:!!b.saved});
+  S.holds = {}; hd.forEach(t => (S.holds[t.worker_id] ??= []).push({id:t.id, from:t.from_month, kind:t.kind, amount:t.amount == null ? null : Number(t.amount), payMonth:t.pay_month||'', how:t.how||'', note:t.note||'', by:t.by_name||'', at:(t.created_at||'').slice(0,10)}));
   const [fm, wf, fs] = await Promise.all([
     fetchAll('hub_farm','id,code,company_id', q=>q.eq('active',true).order('code')),
     fetchAll('hub_worker_farm','worker_id,farm_id,effective_from', q=>q.is('voided_at',null).order('effective_from').order('created_at')),
@@ -841,6 +844,12 @@ async function syncV60(cur){
   for(const k of new Set([...Object.keys(M0), ...Object.keys(M1)])) if(!same(M0[k], M1[k])){ const [w,m] = k.split('|'); lmRows.push({worker_id:w, month:m, amount: M1[k] ? M1[k].amount : null, note: M1[k] ? (M1[k].note||null) : null}); }
   await upsertChunks('salary_loan_month', lmRows, 'worker_id,month');
   SNAP.S.loans = cur.S.loans;
+  // v87 Hold 帐：只新增或作废（作废要原因）
+  const hx = s => { const o = {}; for(const w in (s.holds||{})) (s.holds[w]||[]).forEach(t => o[t.id] = {w, t}); return o; };
+  const H0 = hx(SNAP.S), H1 = hx(cur.S);
+  await voidRows('salary_hold', Object.keys(H0).filter(k => !(k in H1)));
+  await upsertChunks('salary_hold', Object.keys(H1).filter(k => !(k in H0)).map(k => { const {w,t} = H1[k]; return {id:t.id, worker_id:w, from_month:t.from, kind:t.kind, amount:t.amount, pay_month:t.payMonth||null, how:t.how||null, note:t.note}; }), 'id');
+  SNAP.S.holds = cur.S.holds;
   // 先付现金
   const fc = s => { const o = {}; for(const m in (s.cashout||{})) for(const w in s.cashout[m]) (s.cashout[m][w]||[]).forEach(x => o[x.id] = {month:m, worker_id:w, data:x}); return o; };
   const C0 = fc(SNAP.S), C1 = fc(cur.S);
@@ -973,6 +982,7 @@ function needHome(title, body){
      + '<a href="../index.html" style="display:inline-block;background:#2f5d3f;color:#fff;border-radius:7px;padding:8px 16px;text-decoration:none">Go to Home</a>');
 }
 
+let MY_NAME = '';
 async function boot(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session) return needHome('Please sign in', 'Sign in from the Home page first.');
@@ -988,6 +998,7 @@ async function boot(){
   catch(e){ return gate('<b style="color:#a33a2c">Could not load data</b><p>'+e.message+'</p><p style="color:#888">Please refresh the page.</p>'); }
   CLOUD_OK = true;
   document.getElementById('gate').style.display='none';
+  MY_NAME = me.display_name || '';
   document.getElementById('who-chip').textContent = (me.display_name||'') + ' · ' + (me.position||me.role);
   setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? 'Connected' : 'View only');
   initMonthSel(); renderDashboard(); renderExitRecords(); updateLockStrip();
@@ -1458,7 +1469,13 @@ async function addShop(name){ // 新的店自动加进固定名单
   if(error) throw error; FOOD_SHOPS.push(...(data||[{code, label:name, sort, shown:true}]));
 }
 function foodPeopleOn(mk, date){ return workersInMonth(mk).filter(w => !date || inServiceOn(w, date)); }
-function foodAutoOn(mk, date){ return foodPeopleOn(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
+// v87 食物 15 号分界（Owner 2026-10-15）：1–15 号的单 = 前半个月有在职过的人分；16 号到月底的单 = 后半个月有在职过的人分
+const FOOD_HALF_START = '2026-09';
+function foodHalf(mk, date){ const last = mk + '-' + pad2(daysInMonth(...mk.split('-').map(Number))); return Number(date.slice(8,10)) <= 15 ? [mk + '-01', mk + '-15'] : [mk + '-16', last]; }
+const inServiceBetween = (w, a, b) => (!w.joinDate || w.joinDate <= b) && (!w.stopDate || w.stopDate >= a);
+function foodPeople(mk, date){ if(mk < FOOD_HALF_START || !date) return foodPeopleOn(mk, date); const [a, b] = foodHalf(mk, date); return workersInMonth(mk).filter(w => inServiceBetween(w, a, b)); }
+function foodHalfLabel(mk, date){ const [a, b] = foodHalf(mk, date); return Number(a.slice(8)) + '–' + Number(b.slice(8)) + ' ' + MONTHS[Number(mk.slice(5))-1].slice(0,3); }
+function foodAutoOn(mk, date){ return foodPeople(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
 function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
   ensureFood(); const mk = monthKey(), rows = S.food[mk], lock = isLocked(mk), [y, m] = mk.split('-').map(Number);
@@ -1523,10 +1540,10 @@ function fdDraw(){
       + FOOD_SHOPS.filter(x => x.shown).map(x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.label) + '</div><button class="ad-opt" style="padding:6px 12px;color:var(--red)" data-hide="' + x.id + '">Hide</button></div>').join('') + '</div>'
       + '<button class="fd-save" data-act="back">Done</button>';
   } else {
-    const people = foodPeopleOn(mk, FD.date), sel = new Set(FD.workerIds), groups = {}, auto = new Set(FD.date ? foodAutoIds(mk, FD.date) : []);
+    const people = foodPeople(mk, FD.date), sel = new Set(FD.workerIds), groups = {}, auto = new Set(FD.date ? foodAutoIds(mk, FD.date) : []);
     people.forEach(w => { const f = homeFarm(w, mk) || ('Farm not set'); (groups[f] ??= []).push(w); });
     const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
-    h += '<h3>Who shares</h3><p>' + (FD.date ? 'Working on ' + fmtDay(FD.date) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
+    h += '<h3>Who shares</h3><p>' + (FD.date ? (mk >= FOOD_HALF_START ? 'Working any day ' + foodHalfLabel(mk, FD.date) : 'Working on ' + fmtDay(FD.date)) : 'This month') + ' — tap a farm to pick all of it, tap a name to add or remove</p>';
     order.forEach(f => { const ws = groups[f], k = ws.filter(w => sel.has(w.id)).length;
       h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b><span data-farm="' + f + '">' + (k === ws.length ? 'All ' + k + ' ✓' : k ? k + ' of ' + ws.length : 'None') + '</span></div>'
         + '<div class="fd-chips">' + ws.map(w => '<span class="fd-chip' + (sel.has(w.id) ? ' on' : '') + '" data-w="' + w.id + '">' + esc(w.name) + fdChipTag(mk, w, sel, auto) + '</span>').join('') + '</div>'; });
@@ -1540,7 +1557,7 @@ function fdWhoLabel(mk, n){
   if(mk < FOOD_AUTO_START || !FD.date) return FD.autoSel ? 'Everyone working that day' : n + ' people picked';
   const ex = foodExceptions(mk, FD.date, FD.workerIds), x = [];
   if(ex.addIds.length) x.push(ex.addIds.length + ' added'); if(ex.removeIds.length) x.push(ex.removeIds.length + ' removed');
-  return 'Everyone working that day' + (x.length ? ' · ' + x.join(' · ') : '');
+  return (mk >= FOOD_HALF_START ? 'Everyone working ' + foodHalfLabel(mk, FD.date) : 'Everyone working that day') + (x.length ? ' · ' + x.join(' · ') : '');
 }
 function fdChipTag(mk, w, sel, auto){
   if(mk < FOOD_AUTO_START) return w.sharesFood === false ? ' <small style="font-weight:500">· by hand</small>' : '';
@@ -1579,7 +1596,7 @@ document.getElementById('fd-sheet').addEventListener('click', e => {
   if(b.dataset.date){ fdKeep(); fdSetDate(b.dataset.date); fdDraw(); return; }
   if(b.dataset.shop !== undefined){ fdKeep(); FD.vendor = b.dataset.shop; FD.newShop = false; fdDraw(); return; }
   if(b.dataset.w){ const id = b.dataset.w, s = new Set(FD.workerIds); s.has(id) ? s.delete(id) : s.add(id); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
-  if(b.dataset.farm){ const f = b.dataset.farm, ws = foodPeopleOn(mk, FD.date).filter(w => (homeFarm(w, mk) || 'Farm not set') === f).map(w => w.id), s = new Set(FD.workerIds);
+  if(b.dataset.farm){ const f = b.dataset.farm, ws = foodPeople(mk, FD.date).filter(w => (homeFarm(w, mk) || 'Farm not set') === f).map(w => w.id), s = new Set(FD.workerIds);
     const all = ws.every(id => s.has(id)); ws.forEach(id => all ? s.delete(id) : s.add(id)); FD.workerIds = [...s]; FD.autoSel = false; fdDraw(); return; }
   if(a === 'newshop'){ fdKeep(); if(!FD.newShop){ FD.newShop = true; FD.vendor = ''; } fdDraw(); const i = document.getElementById('fd-shop'); if(i) i.focus(); return; }
   if(a === 'shops'){ fdKeep(); FD_MODE = 'shops'; fdDraw(); return; }
@@ -3697,19 +3714,20 @@ function renderSummary(){
   let h = '';
   if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
   h += '<div class="sm-top"><div class="l">To transfer · ' + txR.length + ' worker' + (txR.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(txR, r => r.tx)) + '</div>'
-    + '<div class="g3"><div>Paid in cash<b>' + fmtRM(sum(cashR, r => r.cash)) + '</b></div><div>Not paid<b>' + unR.length + '</b></div><div>Bank fees<b>' + fmtRM(sum(rows, r => r.fee)) + '</b></div></div></div>';
+    + '<div class="g3"><div>Paid in cash<b>' + fmtRM(sum(cashR, r => r.cash)) + '</b></div><div>Held<b>' + unR.length + '</b></div><div>Bank fees<b>' + fmtRM(sum(rows, r => r.fee)) + '</b></div></div></div>';
   // 月初大家薪水还没满，负数不准；25 号起（或月份已过 / 已锁）才提醒
   const showMinus = lock || mk < TODAY_KL.slice(0,7) || Number(TODAY_KL.slice(8,10)) >= AV_ALERT_DAY;
   const card = (f, n, txt) => '<div class="av-alert sm-card' + (SM.filter === f ? ' on' : '') + '" data-f="' + f + '"><span>' + (SM.filter === f ? 'Show all ✕' : 'See ›') + '</span><b>' + n + ' ' + txt + '</b></div>';
+  h += holdCard(mk);
   if(miR.length && showMinus) h += card('minus', miR.length, (miR.length > 1 ? 'workers' : 'worker') + ': salary is minus' + (lock ? ' (added to loans)' : ' → becomes a loan when you lock'));
   if(nbR.length) h += card('nobank', nbR.length, (nbR.length > 1 ? 'workers have' : 'worker has') + ' no bank account');
-  const F = [['all','All',rows.length],['transfer','Transfer',txR.length],['cash','Cash',cashR.length],['unpaid','Not paid',unR.length],['nobank','No bank',nbR.length],['minus','Minus',showMinus ? miR.length : 0]].filter(f => f[0]==='all' || f[2]);
+  const F = [['all','All',rows.length],['transfer','Transfer',txR.length],['cash','Cash',cashR.length],['unpaid','Held',unR.length],['nobank','No bank',nbR.length],['minus','Minus',showMinus ? miR.length : 0]].filter(f => f[0]==='all' || f[2]);
   if(!F.some(f => f[0]===SM.filter)) SM.filter = 'all';
   if(SM.view === 'list'){
     h += '<div class="sm-flt">' + F.map(f => '<span class="' + (SM.filter===f[0]?'on':'') + '" data-f="' + f[0] + '">' + f[1] + ' ' + f[2] + '</span>').join('') + '</div>';
     const show = rows.filter(r => SM.filter==='all' || (SM.filter==='transfer' && r.tx>0) || (SM.filter==='cash' && r.cash>0) || (SM.filter==='unpaid' && r.pm==='unpaid') || (SM.filter==='nobank' && r.noBank) || (SM.filter==='minus' && r.minus>0));
     h += '<div class="ad-fm"><span>WORKER</span><span>GETS</span></div><div class="ad-list">' + show.map(r => {
-      const tag = (r.pm==='cash' ? '<span class="sm-tag c">CASH</span>' : '') + (r.pm==='unpaid' ? '<span class="sm-tag u">NOT PAID</span>' : '') + (r.noBank ? '<span class="sm-tag n">NO BANK</span>' : '');
+      const tag = (r.pm==='cash' ? '<span class="sm-tag c">CASH</span>' : '') + (r.pm==='unpaid' ? '<span class="sm-tag u">HELD</span>' : '') + (r.noBank ? '<span class="sm-tag n">NO BANK</span>' : '');
       const sub = esc(homeFarm(r.w, mk) || 'Farm not set') + ' · ' + (r.w.rateType==='monthly' ? 'monthly' : fmtNum(r.s.totalD) + (r.s.totalD === 1 ? ' day' : ' days')) + ' · salary ' + fmtRM(r.s.gross);
       const right = r.minus && showMinus ? 'RM 0.00<small style="color:var(--red)">minus ' + fmtRM(r.minus) + ' → loan</small>' : fmtRM(r.gets) + '<small style="color:var(--red)">− ' + fmtRM(r.s.totalDed) + ' deducted</small>';
       return '<div class="ad-row" data-wid="' + r.w.id + '"><div class="n">' + esc(r.w.name) + tag + '<small>' + sub + '</small></div><div class="fd-amt"' + (r.pm==='unpaid'?' style="text-decoration:line-through;color:var(--text3)"':'') + '>' + right + '</div>'
@@ -3725,20 +3743,20 @@ function renderSummary(){
     + '<div class="sm-ck2"><div><div class="ad-lbl">Bank Transfer (HX vs AD)</div><table><tr class="h"><td></td><td style="color:var(--acc)">HX</td><td style="color:var(--grn)">AD</td></tr>'
     + '<tr><td>Total Salary</td><td>' + fmtRM(c.hxSal) + '</td><td>' + fmtRM(c.adSal) + '</td></tr><tr class="m"><td>− Advance Deducted</td><td>−' + fmtRM(c.hxAdv) + '</td><td>−' + fmtRM(c.adAdv) + '</td></tr>'
     + '<tr class="t"><td>Company pays</td><td colspan="2">' + fmtRM(c.left) + '</td></tr></table></div>'
-    + '<div><div class="ad-lbl">Where the money goes</div><table>' + tr('Bank transfers to workers (' + txR.length + ')', fmtRM(c.tx)) + tr('Bank fees', fmtRM(c.fee)) + (c.cash ? tr('Paid in cash', fmtRM(c.cash)) : '') + (c.held ? tr('Not paid yet (held)', fmtRM(c.held)) : '')
+    + '<div><div class="ad-lbl">Where the money goes</div><table>' + tr('Bank transfers to workers (' + txR.length + ')', fmtRM(c.tx)) + tr('Bank fees', fmtRM(c.fee)) + (c.cash ? tr('Paid in cash', fmtRM(c.cash)) : '') + (c.held ? tr('Held (not sent)', fmtRM(c.held)) : '')
     + tr('Food -- Daniel', fmtRM(c.food)) + tr('Personal -- Daniel', fmtRM(c.pers)) + (c.minus ? tr('Minus pay → loan', '−' + fmtRM(c.minus), 'm') : '') + tr('Total', fmtRM(right), 't') + '</table></div></div>'
     + (ok ? '<div class="sm-res ok">✓ Matches — every ringgit is accounted for</div>' : '<div class="sm-res no">✗ Off by ' + fmtRM(r2(c.left - right)) + (c.bad.length ? ' — check: ' + esc(c.bad.map(r => r.w.name + ' (' + fmtRM(r.diff) + ')').join(', ')) : '') + '</div>')
     + '</div>';
 }
 function smFullTable(rows, mk){
   const lock = isLocked(mk), sum = f => r2(rows.reduce((a, r) => a + r2(f(r)), 0));
-  const body = rows.map(r => { const s = r.s; return '<tr data-wid="' + r.w.id + '" style="cursor:pointer"><td><strong>' + esc(r.w.name) + '</strong>' + (r.pm==='cash'?' <span class="sm-tag c">CASH</span>':'') + (r.pm==='unpaid'?' <span class="sm-tag u">NOT PAID</span>':'') + '<br><span style="font-size:10px;color:var(--text3)">' + esc(homeFarm(r.w, mk) || r.w.title || '') + '</span></td>'
+  const body = rows.map(r => { const s = r.s; return '<tr data-wid="' + r.w.id + '" style="cursor:pointer"><td><strong>' + esc(r.w.name) + '</strong>' + (r.pm==='cash'?' <span class="sm-tag c">CASH</span>':'') + (r.pm==='unpaid'?' <span class="sm-tag u">HELD</span>':'') + '<br><span style="font-size:10px;color:var(--text3)">' + esc(homeFarm(r.w, mk) || r.w.title || '') + '</span></td>'
     + '<td class="num sum-gross">' + fmtRM(s.gross) + '</td><td class="num sum-deduct">-' + fmtRM(s.food) + '</td><td class="num sum-deduct">-' + fmtRM(s.advD) + '</td><td class="num sum-deduct">-' + fmtRM(s.persD) + '</td><td class="num sum-deduct" style="font-weight:700">-' + fmtRM(s.totalDed) + '</td>'
     + '<td class="num sum-net"' + (r.minus?' style="color:var(--red)"':'') + '>' + fmtRM(r.net) + '</td><td class="num sum-deduct">' + (r.cash ? '-' + fmtRM(r.cash) : '--') + (lock ? '' : ' <button class="btn-icon" title="Cash out" data-co="' + r.w.id + '">💵</button>') + '</td><td class="num" style="font-size:11px;color:var(--text3)">' + (r.fee ? '-' + fmtRM(r.fee) : '--') + '</td>'
     + '<td class="num sum-transfer"' + (r.pm==='unpaid'?' style="text-decoration:line-through;color:var(--text3)"':'') + '>' + fmtRM(r.pm==='unpaid' ? s.toTx : r.tx) + '</td>'
-    + '<td data-col-noprint style="text-align:center;padding:4px 6px"><button class="sum-pay-btn ' + (r.pm==='unpaid'?'active-unpaid':'') + '" title="Mark Not paid / click again to undo" data-un="' + r.w.id + '"' + (lock?' disabled':'') + '>🚫</button></td>'
+    + '<td data-col-noprint style="text-align:center;padding:4px 6px"><button class="sum-pay-btn ' + (r.pm==='unpaid'?'active-unpaid':'') + '" title="Hold his pay / click again to undo" data-un="' + r.w.id + '"' + (lock?' disabled':'') + '>🚫</button></td>'
     + '<td data-col-noprint><button class="btn-icon" title="Salary slip" data-slip="' + r.w.id + '" style="font-size:16px">🧾</button></td></tr>'; }).join('');
-  return '<div class="tbl-wrap" style="border:none;border-radius:0"><table class="sum-table"><thead><tr><th style="width:180px">Worker</th><th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th><th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash</th><th class="num">Bank Charge</th><th class="num">To Transfer</th><th data-col-noprint style="text-align:center;font-size:10px">Not paid</th><th data-col-noprint style="font-size:10px">Slip</th></tr></thead><tbody>' + body
+  return '<div class="tbl-wrap" style="border:none;border-radius:0"><table class="sum-table"><thead><tr><th style="width:180px">Worker</th><th class="num">Gross Salary</th><th class="num">Food Deduct</th><th class="num">Adv Deduct</th><th class="num">Personal Deduct</th><th class="num">Total Deduct</th><th class="num">Net Pay</th><th class="num">Cash</th><th class="num">Bank Charge</th><th class="num">To Transfer</th><th data-col-noprint style="text-align:center;font-size:10px">Hold</th><th data-col-noprint style="font-size:10px">Slip</th></tr></thead><tbody>' + body
     + '<tr class="total-row"><td><strong>TOTAL</strong></td><td class="num">' + fmtRM(sum(r => r.s.gross)) + '</td><td class="num">' + fmtRM(sum(r => r.s.food)) + '</td><td class="num">' + fmtRM(sum(r => r.s.advD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.persD)) + '</td><td class="num">' + fmtRM(sum(r => r.s.totalDed)) + '</td><td class="num">' + fmtRM(sum(r => r.net)) + '</td><td class="num">' + fmtRM(sum(r => r.cash)) + '</td><td class="num">' + fmtRM(sum(r => r.fee)) + '</td><td class="num">' + fmtRM(sum(r => r.tx)) + '</td><td data-col-noprint></td><td data-col-noprint></td></tr></tbody></table></div>';
 }
 function smShow(){ document.getElementById('sm-dim').style.display = 'block'; document.getElementById('sm-sheet').style.display = 'block'; }
@@ -3758,10 +3776,11 @@ function smWorker(wid, mode){
       + ln('Net pay', r.minus ? '<b style="color:var(--red)">− ' + fmtRM(r.minus) + '</b>' : fmtRM(r.net));
     if(r.minus) h += ln('Minus becomes a loan', '<span style="color:var(--grn)">+ ' + fmtRM(r.minus) + '</span>');
     else h += ln('Cash out', s.cashOut ? '− ' + fmtRM(s.cashOut) : '—', 'm') + (r.pm==='cash' ? ln('Paid in cash', '− ' + fmtRM(s.cashPaid||0), 'm') : '') + ln('Bank fee', r.fee ? '− ' + fmtRM(r.fee) : '—', 'm');
-    h += ln(r.pm==='unpaid' ? 'Held (not paid yet)' : 'He gets', fmtRM(r.gets), 't') + '</div>';
+    h += ln(r.pm==='unpaid' ? 'Held (not sent)' : 'He gets', fmtRM(r.gets), 't') + '</div>';
+    if(r.pm === 'unpaid'){ const hr = holdsOf(wid).find(t => t.kind === 'HOLD' && t.from === mk); h += '<div class="ad-lock" style="margin-top:8px">Held' + (hr ? ': ' + esc(hr.note) + ' <small>· ' + esc(hr.by || '—') + ' · ' + fmtDay(hr.at) + '</small>' : '') + '<br><small>See it in Held pay at the top of Summary.</small></div>'; }
     if(r.minus) h += '<div class="ad-lock" style="margin-top:8px">Food, loan and personal are more than his salary. ' + (isLocked(mk) ? 'The minus was added to his loan.' : 'When you lock ' + MONTHS[Number(mk.slice(5))-1] + ', ' + fmtRM(r.minus) + ' is added to his loan and taken from his ' + MONTHS[Number(nextMk(mk).slice(5))-1] + ' salary (you can change it in Advance).') + '</div>';
     if(r.noBank) h += '<div class="ad-lock" style="margin-top:8px">No bank account. Pick Cash, or add the bank in Workers.</div>';
-    h += '<div class="ad-lbl">How is he paid?</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [['transfer','Bank'],['cash','Cash'],['unpaid','Not paid yet']].map(p => '<button class="ad-opt' + (r.pm===p[0]?' on':'') + '" data-pm="' + p[0] + '"' + (lock?' disabled':'') + '>' + p[1] + '</button>').join('') + '</div>';
+    h += '<div class="ad-lbl">How is he paid?</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [['transfer','Bank'],['cash','Cash'],['unpaid','Hold']].map(p => '<button class="ad-opt' + (r.pm===p[0]?' on':'') + '" data-pm="' + p[0] + '"' + (lock?' disabled':'') + '>' + p[1] + '</button>').join('') + '</div>';
     const ps = payeeSlot(wid, mk), px = ((S.payeeX||{})[mk]||{})[wid] || {}, pay = r2(s.payable || 0);
     if(w.bankAccount2 && w.beneficiary2 && r.pm === 'transfer'){
       h += '<div class="ad-lbl">Send to</div><div class="ad-g" style="grid-template-columns:repeat(3,1fr)">' + [[1, esc(w.beneficiary)], [2, esc(w.beneficiary2)], [3, 'Split']].map(o => '<button class="ad-opt' + (ps === o[0] ? ' on' : '') + '" data-slot="' + o[0] + '"' + (lock ? ' disabled' : '') + '>' + o[1] + '</button>').join('') + '</div>';
@@ -3780,12 +3799,13 @@ document.getElementById('summary-table').addEventListener('click', e => {
   const mk = monthKey(), sl = e.target.closest('[data-slip]'); if(sl) return printReceipt(sl.dataset.slip, mk);
   const co = e.target.closest('[data-co]'); if(co) return openCashOut(co.dataset.co, mk);
   const un = e.target.closest('[data-un]'); if(un){ if(un.disabled) return; const w = getWorker(un.dataset.un), now = getPayMethod(w.id, mk) === 'unpaid';
-    if(!confirm(now ? 'Mark ' + w.name + ' as paid again?' : 'Mark ' + w.name + ' as NOT PAID this month? His salary is held.')) return;
-    setPayMethod(w.id, mk, now ? 'transfer' : 'unpaid'); renderSummary(); renderDashboard(); return; }
+    return holdForm(w.id, !now, 'transfer'); }
+  const hc = e.target.closest('[data-held]'); if(hc) return smHeld();
   const f = e.target.closest('[data-f]'); if(f){ SM.filter = SM.filter === f.dataset.f && f.classList.contains('av-alert') ? 'all' : f.dataset.f; return renderSummary(); }
   const r = e.target.closest('[data-wid]'); if(r) smWorker(r.dataset.wid);
 });
 document.getElementById('sm-sheet').addEventListener('click', e => {
+  const hb = e.target.closest('[data-hact]'); if(hb && !hb.disabled) return holdAct(hb);
   const b = e.target.closest('[data-act],[data-pm],[data-slot],[data-from]'); if(!b || !SM.wid || b.disabled) return;
   const mk = monthKey(), wid = SM.wid, a = b.dataset.act;
   if(a === 'close') return smClose();
@@ -3793,6 +3813,7 @@ document.getElementById('sm-sheet').addEventListener('click', e => {
   if(a === 'gross') return smWorker(wid, 'gross');
   if(a === 'savegross'){ const v = r2(parseFloat(document.getElementById('sm-gross').value)); if(!(v >= 0)){ document.getElementById('sm-err').textContent = 'Type the salary.'; return; }
     setGrossOverride(wid, mk, v); renderSummary(); renderDashboard(); return smWorker(wid); }
+  if(b.dataset.pm && (b.dataset.pm === 'unpaid') !== (getPayMethod(wid, mk) === 'unpaid')) return holdForm(wid, b.dataset.pm === 'unpaid', b.dataset.pm);
   if(b.dataset.pm){ setPayMethod(wid, mk, b.dataset.pm); toast(getWorker(wid).name + ': ' + {transfer:'Bank', cash:'Cash', unpaid:'Not paid yet'}[b.dataset.pm]); renderSummary(); renderDashboard(); return smWorker(wid); }
   if(b.dataset.slot){ const n = Number(b.dataset.slot); setPayeeSlot(wid, mk, n);
     if(n === 3 && !(((S.payeeX||{})[mk]||{})[wid]||{}).split){ const pay = r2(calcWorkerSummary(getWorker(wid), mk).payable || 0); setPayeeX(wid, mk, {split: Math.round(pay / 2)}); }
@@ -3805,6 +3826,104 @@ document.getElementById('sm-sheet').addEventListener('click', e => {
   if(a === 'receipt') return printReceipt(wid, mk);
   if(a === 'hist') return smHist(wid);
 });
+
+// ---------- v87 Hold：工钱先扣住不发 · 记住欠多少 · 之后放行（可放一部分，自己选哪个月汇）或不发了 · 每一步写原因、记谁按的 ----------
+const holdsOf = wid => (S.holds||{})[wid] || [];
+const mName = m => MONTHS[Number(m.slice(5))-1] + ' ' + m.slice(0,4);
+function holdList(){
+  const out = [];
+  for(const m in (S.paymentMethod||{})) for(const wid in S.paymentMethod[m]){ if(S.paymentMethod[m][wid] !== 'unpaid') continue; const w = getWorker(wid); if(!w) continue;
+    const ev = holdsOf(wid).filter(t => t.from === m), r = smRow(w, m);
+    const rel = sumBy(ev.filter(t => t.kind === 'RELEASE'), t => t.amount), wo = sumBy(ev.filter(t => t.kind === 'WRITE_OFF'), t => t.amount);
+    out.push({w, m, hold:ev.find(t => t.kind === 'HOLD'), ev:ev.filter(t => t.kind !== 'HOLD'), held:r.held, rel, wo, owed:r2(Math.max(0, r.held - rel - wo))}); }
+  return out.sort((a, b) => a.m < b.m ? -1 : a.m > b.m ? 1 : a.w.name.localeCompare(b.w.name));
+}
+function holdReleases(mk){ const o = []; for(const wid in (S.holds||{})) holdsOf(wid).forEach(t => { if(t.kind === 'RELEASE' && t.payMonth === mk){ const w = getWorker(wid); if(w) o.push({w, t}); } }); return o; }
+function holdCard(mk){
+  const L = holdList().filter(x => x.owed > 0.004), R = holdReleases(mk); let h = '';
+  if(L.length) h += '<div class="av-alert sm-card" data-held="1"><span>See ›</span><b>Held pay · ' + new Set(L.map(x => x.w.id)).size + ' worker' + (new Set(L.map(x => x.w.id)).size > 1 ? 's' : '') + ' · ' + fmtRM(sumBy(L, x => x.owed)) + '</b><small>Not sent yet, from all months. Release it or mark it as not paid.</small></div>';
+  if(R.length){ const bank = sumBy(R.filter(x => x.t.how === 'transfer'), x => x.t.amount), cash = sumBy(R.filter(x => x.t.how === 'cash'), x => x.t.amount);
+    h += '<div class="av-alert sm-card" data-held="1" style="background:var(--grnl);border-color:#9cc8a6;color:var(--grn)"><span>See ›</span><b>Held pay released into ' + MONTHS[Number(mk.slice(5))-1] + ' · ' + fmtRM(r2(bank + cash)) + '</b><small>' + (bank ? 'Bank ' + fmtRM(bank) + ' (in Remittance)' : '') + (bank && cash ? ' · ' : '') + (cash ? 'Cash ' + fmtRM(cash) : '') + ' · not part of this month\'s salary</small></div>'; }
+  return h;
+}
+let HF = null;   // 表单状态
+function holdForm(wid, on, to){
+  const mk = monthKey(), w = getWorker(wid); if(!w) return;
+  if(isLocked(mk) || !CAN_EDIT){ toast(isLocked(mk) ? 'This month is locked' : 'View only'); return; }
+  if(!on){ const ev = holdsOf(wid).filter(t => t.from === mk && t.kind !== 'HOLD');
+    if(ev.length){ toast('Part of this held pay was already released or marked not paid. Void those first (Held pay).', 4000); return smHeld(); } }
+  SM.wid = wid; HF = {act: on ? 'hold' : 'unhold', wid, m:mk, to: to || 'transfer'};
+  const s = calcWorkerSummary(w, mk);
+  let h = '<div class="ad-grab"></div><h3>' + (on ? 'Hold ' : 'Stop holding ') + esc(w.name) + '\'s pay</h3><p>' + mName(mk) + ' · net ' + fmtRM(r2(s.net)) + '</p>'
+    + (on ? '<p>His salary is still worked out, but it is not sent and not counted in this month\'s transfers. The system remembers how much he is owed.</p>' : '<p>His pay goes back to ' + ({transfer:'Bank', cash:'Cash'}[HF.to] || 'Bank') + ' this month.</p>')
+    + '<div class="ad-lbl">Why? *</div><input class="fd-in" id="hf-note" placeholder="' + (on ? 'e.g. Ran away 16 Sep' : 'e.g. He came back') + '"><div class="fd-err" id="hf-err"></div>'
+    + '<button class="fd-save" data-hact="save">' + (on ? 'Hold his pay' : 'Stop holding') + '</button><button class="ad-cancel" data-hact="back">Cancel</button>';
+  document.getElementById('sm-sheet').innerHTML = h; smShow(); setTimeout(() => { const i = document.getElementById('hf-note'); if(i) i.focus(); }, 50);
+}
+function smHeld(){
+  SM.wid = null; HF = {act:'list'};
+  const L = holdList(), open = L.filter(x => x.owed > 0.004), done = L.filter(x => x.owed <= 0.004);
+  const evLine = t => '<div><span>' + (t.kind === 'RELEASE' ? 'Released ' + fmtRM(t.amount) + ' → ' + mName(t.payMonth) + ' (' + (t.how === 'cash' ? 'cash' : 'bank') + ')' : 'Not paid ' + fmtRM(t.amount)) + ' · ' + esc(t.note) + ' <small>· ' + esc(t.by || '—') + ' · ' + fmtDay(t.at) + '</small></span>'
+    + (CAN_EDIT ? '<a data-hact="void" data-id="' + t.id + '" style="color:var(--red);cursor:pointer;white-space:nowrap">Void</a>' : '') + '</div>';
+  const item = x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.w.name) + '<small>' + mName(x.m) + ' pay · held ' + fmtRM(x.held) + (x.hold ? ' · ' + esc(x.hold.note) + ' · ' + esc(x.hold.by || '—') + ' · ' + fmtDay(x.hold.at) : '') + '</small></div><div class="fd-amt">' + fmtRM(x.owed) + '<small>' + (x.owed > 0.004 ? 'owed' : 'settled') + '</small></div></div>'
+    + (x.ev.length ? '<div class="hdet" style="padding-left:14px">' + x.ev.map(evLine).join('') + '</div>' : '')
+    + (x.owed > 0.004 && CAN_EDIT ? '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin:6px 0 12px"><button class="ad-opt" data-hact="rel" data-w="' + x.w.id + '" data-m="' + x.m + '">Release</button><button class="ad-opt" style="color:var(--red)" data-hact="wo" data-w="' + x.w.id + '" data-m="' + x.m + '">Don\'t pay</button></div>' : '');
+  let h = '<div class="ad-grab"></div><h3>Held pay</h3><p>Pay that is held and not sent yet, from all months. Release all or part of it into a month\'s transfers, or mark it as not paid. Every step needs a reason.</p>'
+    + '<div class="sm-top"><div class="l">Still owed · ' + open.length + '</div><div class="b">' + fmtRM(sumBy(open, x => x.owed)) + '</div></div>'
+    + (open.length ? '<div class="ad-list">' + open.map(item).join('') + '</div>' : '<div class="empty"><p>Nothing held</p></div>')
+    + (done.length ? '<div class="ad-fm"><span>SETTLED · ' + done.length + '</span><span></span></div><div class="ad-list">' + done.map(item).join('') + '</div>' : '')
+    + '<button class="ad-cancel" data-hact="close">Close</button>';
+  document.getElementById('sm-sheet').innerHTML = h; smShow();
+}
+function holdMoveForm(kind, wid, m){
+  const x = holdList().find(i => i.w.id === wid && i.m === m); if(!x) return smHeld();
+  const cur = monthKey(), def = cur > m ? cur : nextMk(m);
+  HF = {act:kind, wid, m, how: HF && HF.how || 'transfer'};
+  let h = '<div class="ad-grab"></div><h3>' + (kind === 'rel' ? 'Release ' : 'Don\'t pay ') + esc(x.w.name) + '</h3><p>' + mName(m) + ' pay · still owed ' + fmtRM(x.owed) + '</p>'
+    + '<div class="ad-lbl">Amount (RM)</div><input class="fd-in big" id="hf-amt" inputmode="decimal" value="' + x.owed + '">';
+  if(kind === 'rel') h += '<div class="ad-lbl">Pay it with which month?</div><input class="fd-in" type="month" id="hf-month" value="' + def + '" min="' + nextMk(m) + '" style="padding:8px">'
+    + '<div class="ad-lbl">How</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [['transfer','Bank'],['cash','Cash']].map(o => '<button class="ad-opt' + (HF.how === o[0] ? ' on' : '') + '" data-hact="how" data-how="' + o[0] + '">' + o[1] + '</button>').join('') + '</div>'
+    + (HF.how === 'transfer' && !(x.w.bankAccount && x.w.beneficiary) ? '<div class="ad-lock" style="margin-top:8px">No bank account. Add it in Workers, or pick Cash.</div>' : '')
+    + '<p style="margin-top:6px">' + (HF.how === 'transfer' ? 'It shows in that month\'s Remittance as its own transfer. Bank fee RM 11 is taken from it.' : 'Pay him the cash yourself; it is only recorded here.') + '</p>';
+  else h += '<p style="margin-top:6px">This amount will not be paid. It stays in the history.</p>';
+  h += '<div class="ad-lbl">Why? *</div><input class="fd-in" id="hf-note" placeholder="' + (kind === 'rel' ? 'e.g. He came back to collect' : 'e.g. Ran away, never came back') + '"><div class="fd-err" id="hf-err"></div>'
+    + '<button class="fd-save" data-hact="savemove">' + (kind === 'rel' ? 'Release' : 'Don\'t pay') + '</button><button class="ad-cancel" data-hact="list">Back</button>';
+  document.getElementById('sm-sheet').innerHTML = h; smShow();
+}
+function holdVoidForm(id){
+  HF = {act:'void', id};
+  document.getElementById('sm-sheet').innerHTML = '<div class="ad-grab"></div><h3>Void this entry</h3><p>Write why. It is kept in the history.</p><input class="fd-in" id="hf-note" placeholder="Reason"><div class="fd-err" id="hf-err"></div>'
+    + '<button class="fd-del" data-hact="dovoid">Void</button><button class="ad-cancel" data-hact="list">Back</button>';
+  smShow();
+}
+function holdAct(b){
+  const a = b.dataset.hact, err = t => { const e = document.getElementById('hf-err'); if(e) e.textContent = t; }, note = () => (document.getElementById('hf-note') || {}).value?.trim() || '';
+  if(a === 'close') return smClose();
+  if(a === 'list') return smHeld();
+  if(a === 'back') return HF && HF.wid ? smWorker(HF.wid) : smClose();
+  if(a === 'rel' || a === 'wo'){ HF = {how:'transfer'}; return holdMoveForm(a, b.dataset.w, b.dataset.m); }
+  if(a === 'how'){ const keep = {amt:(document.getElementById('hf-amt')||{}).value, mon:(document.getElementById('hf-month')||{}).value, note:note()}; HF.how = b.dataset.how; holdMoveForm('rel', HF.wid, HF.m);
+    if(keep.amt) document.getElementById('hf-amt').value = keep.amt; if(keep.mon) document.getElementById('hf-month').value = keep.mon; document.getElementById('hf-note').value = keep.note; return; }
+  if(a === 'void') return holdVoidForm(b.dataset.id);
+  const r = note(); if(!r) return err('Write the reason.');
+  if(a === 'dovoid'){ for(const w in S.holds){ const t = S.holds[w].find(x => x.id === HF.id); if(t){ VOID_REASON[t.id] = r; S.holds[w] = S.holds[w].filter(x => x !== t); } }
+    saveAll(); toast('Voided'); renderSummary(); return smHeld(); }
+  if(a === 'save'){ const {wid, m} = HF, L = (S.holds ??= {})[wid] ??= [];
+    if(HF.act === 'hold'){ L.push({id:uid(), from:m, kind:'HOLD', amount:null, payMonth:'', how:'', note:r, by:MY_NAME, at:TODAY_KL}); setPayMethod(wid, m, 'unpaid'); toast(getWorker(wid).name + ': pay held'); }
+    else { L.filter(t => t.kind === 'HOLD' && t.from === m).forEach(t => { VOID_REASON[t.id] = 'Stopped holding: ' + r; }); S.holds[wid] = L.filter(t => !(t.kind === 'HOLD' && t.from === m)); setPayMethod(wid, m, HF.to === 'unpaid' ? 'transfer' : HF.to); toast(getWorker(wid).name + ': not held any more'); }
+    renderSummary(); renderDashboard(); return smWorker(wid); }
+  if(a === 'savemove'){ const x = holdList().find(i => i.w.id === HF.wid && i.m === HF.m); if(!x) return smHeld();
+    const amt = r2(parseFloat(String(document.getElementById('hf-amt').value).replace(/,/g, '')));
+    if(!(amt > 0)) return err('Type the amount.'); if(amt > x.owed + 0.001) return err('Only ' + fmtRM(x.owed) + ' is still owed.');
+    const L = (S.holds ??= {})[HF.wid] ??= [];
+    if(HF.act === 'rel'){ const pm = (document.getElementById('hf-month').value || '').slice(0,7);
+      if(!/^\d{4}-\d{2}$/.test(pm) || pm <= HF.m) return err('Pick a month after ' + mName(HF.m) + '.');
+      if(HF.how === 'transfer' && amt <= BANK_CHARGE) return err('By bank it must be more than RM 11. Pick Cash for small amounts.');
+      if(HF.how === 'transfer' && !(x.w.bankAccount && x.w.beneficiary)) return err('No bank account. Add it in Workers, or pick Cash.');
+      L.push({id:uid(), from:HF.m, kind:'RELEASE', amount:amt, payMonth:pm, how:HF.how, note:r, by:MY_NAME, at:TODAY_KL}); toast('Released ' + fmtRM(amt) + ' into ' + mName(pm)); }
+    else { L.push({id:uid(), from:HF.m, kind:'WRITE_OFF', amount:amt, payMonth:'', how:'', note:r, by:MY_NAME, at:TODAY_KL}); toast('Marked not paid: ' + fmtRM(amt)); }
+    saveAll(); renderSummary(); return smHeld(); }
+}
 // 锁月：净薪负数 → 下个月的借款（同一个月重锁不会重复）
 function minusToLoans(mk){
   const tag = '[minus ' + mk + ']', nm = nextMk(mk); let n = 0;
@@ -3829,7 +3948,13 @@ function rpItems(mk){
     let tr = s.transfers; if(!tr) tr = s.toTx > 0 ? [{slot: (s.payeeSlot || payeeSlot(w.id, mk)) === 2 ? 2 : 1, send: r2(s.toTx + (s.bankChg||0))}] : [];
     const P = s.payees || {1:{b:w.beneficiary, a:w.bankAccount}, 2:{b:w.beneficiary2, a:w.bankAccount2}}, acct = s.acct || acctOf(w, mk);
     return tr.map(t => { const p = P[t.slot] || {}, st = ((S.remState||{})[mk]||{})[w.id + '|' + t.slot] || {};
-      return {key:w.id + '|' + t.slot, w, slot:t.slot, send:r2(t.send), ben:p.b||'', acc:p.a||'', acct, star:!!st.star, sent:st.sent||'', hold:st.hold||''}; }); });
+      return {key:w.id + '|' + t.slot, w, slot:t.slot, send:r2(t.send), ben:p.b||'', acc:p.a||'', acct, star:!!st.star, sent:st.sent||'', hold:st.hold||''}; }); }).concat(rpReleaseItems(mk));
+}
+// v87 放行的 hold 工钱：同一个人同一个月合成一笔（slot 9），汇给第 1 组收款人，从当初欠钱那个月的公司户口出
+function rpReleaseItems(mk){
+  const g = {}; holdReleases(mk).filter(x => x.t.how === 'transfer').forEach(x => { const o = g[x.w.id] ??= {w:x.w, send:0, from:[]}; o.send = r2(o.send + x.t.amount); if(!o.from.includes(x.t.from)) o.from.push(x.t.from); });
+  return Object.values(g).map(o => { const st = ((S.remState||{})[mk]||{})[o.w.id + '|9'] || {};
+    return {key:o.w.id + '|9', w:o.w, slot:9, send:o.send, ben:o.w.beneficiary||'', acc:o.w.bankAccount||'', acct:acctOf(o.w, o.from[0]), star:!!st.star, sent:st.sent||'', hold:st.hold||'', rel:o.from}; });
 }
 function rpBest(list, capC){ // 在上限内挑一组，总数最接近上限
   const c = list.map(i => Math.round(i.send * 100)), par = new Int32Array(capC + 1).fill(-2), it = new Int16Array(capC + 1); par[0] = -1; let sums = [0];
@@ -3866,7 +3991,7 @@ function rpRender(){
     + '<div class="g3"><div>Days needed<b>' + P.days.length + (P.days.length===1?' day':' days') + '</b></div><div>Sent<b>' + sent.length + ' / ' + items.length + '</b></div><div>No bank yet<b>' + P.nob.length + '</b></div></div></div>';
   if(!lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
   h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button class="ad-opt" data-act="stars">⭐ Pick who goes first</button><button class="ad-opt" data-act="phone">📱 Saved in phone</button></div>';
-  const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '')
+  const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '') + (i.rel ? ' <small style="display:inline;color:var(--amb)">· held pay from ' + i.rel.map(m => MONTHS[Number(m.slice(5))-1].slice(0,3)).join(', ') + '</small>' : '')
     + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + '</small><small>' + esc(i.acc) + (!done && !rpSaved(i) ? ' · <b style="color:var(--amb)">⚠ not in phone</b>' : '') + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
   const acCard = (ac, list, d) => { const sentT = d === 0 ? items.filter(i => i.acct === ac && i.sent === today) : [], all = [...sentT, ...list]; if(!all.length) return '';
     const t = sum(all); return '<div class="rp-acc"><div class="rp-h"><b class="' + ac + '">' + ac.toUpperCase() + ' account</b><span>' + fmtRM(t) + ' / RM 5,000 · left ' + fmtRM(r2(REM_MAX - t)) + '</span></div><div class="av-bar" style="margin:0 12px 6px"><i style="width:' + Math.min(100, t / 50) + '%"></i></div>'
@@ -3955,7 +4080,7 @@ function smHist(wid, tab, open){
     h += '<div class="sm-top"><div class="l">So far · ' + done.length + ' month' + (done.length === 1 ? '' : 's') + '</div><div class="g3"><div>Days worked<b>' + fmtNum(sum(r => r.s.totalD)) + '</b></div><div>Salary<b>' + fmtRM(sum(r => r.s.gross)) + '</b></div><div>He got<b>' + fmtRM(sum(r => r.got + (r.s.cashOut || 0))) + '</b></div></div></div>';
     h += '<div class="ad-fm"><span>MONTH</span><span>HE GOT</span></div><div class="ad-list">' + rows.reverse().map(r => { const [y, mm] = r.m.split('-').map(Number), s = r.s;
       const sub = r.open ? 'This month (not finished)' : fmtNum(s.totalD) + (s.totalD === 1 ? ' day' : ' days') + ' · salary ' + fmtRM(s.gross);
-      const sub2 = r.open ? '' : '− ' + fmtRM(s.totalDed) + ' deducted · ' + (r.pm === 'cash' ? '<b style="color:var(--amb)">Cash</b>' : r.pm === 'unpaid' ? '<b style="color:var(--red)">Not paid</b>' : 'Bank') + (isLocked(r.m) ? ' · 🔒' : '');
+      const sub2 = r.open ? '' : '− ' + fmtRM(s.totalDed) + ' deducted · ' + (r.pm === 'cash' ? '<b style="color:var(--amb)">Cash</b>' : r.pm === 'unpaid' ? '<b style="color:var(--red)">Held</b>' : 'Bank') + (isLocked(r.m) ? ' · 🔒' : '');
       let x = '<div class="ad-row" data-hm="' + r.m + '"><div class="hm"><b>' + MONTHS[mm-1].slice(0,3) + '</b><small>' + y + '</small></div><div class="n" style="font-weight:600;font-size:13px">' + sub + '<small>' + sub2 + '</small></div><div class="fd-amt">' + fmtRM(r.got + (s.cashOut || 0)) + '</div><button class="sm-slip" data-hslip="' + r.m + '">🧾<span>Slip</span></button></div>';
       if(SM.hist.open === r.m && !r.open) x += '<div class="hdet">' + [['Salary', fmtRM(s.gross)], ['Food', '− ' + fmtRM(s.food)], ['Loan', '− ' + fmtRM(s.advD)], ['Personal', '− ' + fmtRM(s.persD)], ['Net pay', fmtRM(s.net)]]
           .concat(s.cashOut ? [['Cash during the month', '− ' + fmtRM(s.cashOut)]] : []).concat(s.bankChg ? [['Bank fee', '− ' + fmtRM(s.bankChg)]] : [])
