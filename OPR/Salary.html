@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v90</title>
+<title>Salary v91</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -632,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 90;
+const APP_VERSION = 91;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3701,7 +3701,7 @@ document.getElementById('av-sheet').addEventListener('click', e => {
 });
 
 // ---------- v77 Summary：一人一行 · 点开看明细 · 负数转借款 · 现金不收手续费 · 真对账 ----------
-let SM = {view:'list', filter:'all', wid:null};
+let SM = {view:'list', filter:'all', wid:null, mv:'month', open:null};
 const smRow = (w, mk) => { const s = calcWorkerSummary(w, mk), pm = s.pm || getPayMethod(w.id, mk), net = r2(s.net), minus = net < 0 ? r2(-net) : 0;
   const cash = r2((s.cashOut||0) + (s.cashPaid||0)), fee = r2(s.bankChg||0), tx = pm === 'unpaid' ? 0 : r2(s.toTx), held = pm === 'unpaid' ? Math.max(0, r2(net - (s.cashOut||0))) : 0;
   const gets = pm === 'unpaid' ? held : pm === 'cash' ? r2(s.cashPaid||0) : tx;
@@ -3748,18 +3748,57 @@ function renderSummary(){
   } else {
     document.getElementById('summary-table').innerHTML = '<div style="padding:12px 16px">' + h + '</div>' + smFullTable(rows, mk);
   }
-  // 对账：左边 HX/AD 公司付多少；右边一笔一笔真的钱去哪里
-  const c = smCheck(rows), right = r2(c.tx + c.fee + c.cash + c.held + c.food + c.pers - c.minus), ok = !c.bad.length && Math.abs(c.left - right) <= 0.01 * rows.length;
-  const tr = (a, b, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + a + '</td><td>' + b + '</td></tr>';
-  document.getElementById('summary-totals').innerHTML = '<div class="card sm-ck"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Bank Transfer Reconciliation</b><span class="sm-badge ' + (ok?'ok':'no') + '">' + (ok ? '✓ BALANCED' : '✗ CHECK FIGURES') + '</span></div>'
-    + '<div class="sm-ck2"><div><div class="ad-lbl">Bank Transfer (HX vs AD)</div><table><tr class="h"><td></td><td style="color:var(--acc)">HX</td><td style="color:var(--grn)">AD</td></tr>'
-    + '<tr><td>Total Salary</td><td>' + fmtRM(c.hxSal) + '</td><td>' + fmtRM(c.adSal) + '</td></tr><tr class="m"><td>− Advance Deducted</td><td>−' + fmtRM(c.hxAdv) + '</td><td>−' + fmtRM(c.adAdv) + '</td></tr>'
-    + '<tr class="t"><td>Company pays</td><td colspan="2">' + fmtRM(c.left) + '</td></tr></table></div>'
-    + '<div><div class="ad-lbl">Where the money goes</div><table>' + tr('Bank transfers to workers (' + txR.length + ')', fmtRM(c.tx)) + tr('Bank fees', fmtRM(c.fee)) + (c.cash ? tr('Paid in cash', fmtRM(c.cash)) : '') + (c.held ? tr('HOLD (not sent)', fmtRM(c.held)) : '')
-    + tr('Food -- Daniel', fmtRM(c.food)) + tr('Personal -- Daniel', fmtRM(c.pers)) + (c.minus ? tr('Minus pay → loan', '−' + fmtRM(c.minus), 'm') : '') + tr('Total', fmtRM(right), 't') + '</table></div></div>'
-    + (ok ? '<div class="sm-res ok">✓ Matches — every ringgit is accounted for</div>' : '<div class="sm-res no">✗ Off by ' + fmtRM(r2(c.left - right)) + (c.bad.length ? ' — check: ' + esc(c.bad.map(r => r.w.name + ' (' + fmtRM(r.diff) + ')').join(', ')) : '') + '</div>')
-    + '</div>';
+  document.getElementById('summary-totals').innerHTML = smMoneyCard(rows, mk);
 }
+
+// ---------- v91 工钱去哪里：薪水总数 = 汇款 + 手续费 + 现金 + HOLD + 扣借款 + 伙食 + 个人 − 薪水不够变借款（点一行看是哪些工人）· 1–12 月总表 ----------
+const MV_LINES = [
+  ['tx',    'Bank transfers to workers',       r => r.mTx],
+  ['fee',   'Bank fees',                        r => r.mFee],
+  ['cash',  'Paid in cash',                     r => r.mCash],
+  ['held',  'HOLD (not sent yet)',              r => r.held],
+  ['adv',   'Loan repaid → company',            r => r2(r.s.advD)],
+  ['food',  'Food → Daniel',                    r => r2(r.s.food)],
+  ['pers',  'Personal → Daniel',                r => r2(r.s.persD)],
+  ['minus', 'Salary not enough → becomes loan', r => -r.minus],
+];
+function mvRows(rows, mk){ return rows.map(r => { const old = r.pm === 'cash' && mk < FEE_RULE_START ? r.tx : 0;   // 9 月前现金付的人，旧算法记在汇款里 → 这里算现金
+  const pay = r2(r2(r.s.net) - (r.s.cashOut||0)), fee = mk >= FEE_RULE_START ? r.fee : (r.pm === 'unpaid' ? 0 : r2(Math.max(0, Math.min(r.fee, pay - r.tx))));   // 9 月前：没东西可汇时，手续费其实没扣
+  return Object.assign(r, {mTx: r2(r.tx - old), mCash: r2(r.cash + old), mFee: fee}); }); }
+function mvSum(rows){ const o = {gross: sumBy(rows, r => r2(r.s.gross)), hx: sumBy(rows, r => r.s.hxSalary), ad: sumBy(rows, r => r.s.adSalary)}; MV_LINES.forEach(([k, , f]) => o[k] = sumBy(rows, f)); o.total = r2(MV_LINES.reduce((t, [k]) => t + o[k], 0)); o.ok = Math.abs(o.gross - o.total) <= 0.01 * Math.max(1, rows.length); return o; }
+function smMoneyCard(rows, mk){
+  const [y, m] = mk.split('-').map(Number), tabs = '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);max-width:360px;margin-bottom:10px"><button class="ad-opt' + (SM.mv === 'month' ? ' on' : '') + '" data-mv="month">' + MONTHS[m-1] + ' ' + y + '</button><button class="ad-opt' + (SM.mv === 'year' ? ' on' : '') + '" data-mv="year">Whole year ' + y + '</button></div>';
+  if(SM.mv === 'year') return '<div class="card sm-ck">' + tabs + smYearTable(y) + '</div>';
+  const R = mvRows(rows, mk), t = mvSum(R), n = f => R.filter(r => Math.abs(f(r)) > 0.004).length;
+  let h = '<div class="card sm-ck">' + tabs + '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Where the salary goes · ' + MONTHS[m-1] + ' ' + y + '</b><span class="sm-badge ' + (t.ok ? 'ok' : 'no') + '">' + (t.ok ? '✓ BALANCED' : '✗ CHECK') + '</span></div>'
+    + '<table style="margin-top:8px"><tr class="t" style="border-top:0"><td>Salary of all workers (' + R.length + ')<br><small style="font-weight:400;color:var(--text3)">HX ' + fmtRM(t.hx) + ' · AD ' + fmtRM(t.ad) + '</small></td><td>' + fmtRM(t.gross) + '</td></tr>';
+  MV_LINES.forEach(([k, label, f]) => { const v = t[k], c = n(f), on = SM.open === k;
+    h += '<tr data-mvk="' + k + '" style="cursor:pointer' + (v < 0 ? ';color:var(--red)' : '') + '"><td>' + (on ? '▾ ' : '▸ ') + label + (c ? ' <small style="color:var(--text3)">(' + c + ')</small>' : '') + '</td><td>' + (v < 0 ? '−' + fmtRM(-v) : fmtRM(v)) + '</td></tr>';
+    if(on) h += '<tr><td colspan="2" style="padding:0"><div class="hdet" style="padding:6px 14px">' + (R.filter(r => Math.abs(f(r)) > 0.004).sort((a, b) => Math.abs(f(b)) - Math.abs(f(a))).map(r => '<div><span>' + esc(r.w.name) + '</span><span>' + fmtRM(Math.abs(f(r))) + '</span></div>').join('') || '<div>Nobody</div>') + '</div></td></tr>'; });
+  h += '<tr class="t"><td>Total</td><td>' + fmtRM(t.total) + '</td></tr></table>'
+    + (t.ok ? '<div class="sm-res ok">✓ Every ringgit of salary is accounted for</div>' : '<div class="sm-res no">✗ Off by ' + fmtRM(r2(t.gross - t.total)) + '</div>');
+  const RL = holdReleases(mk); if(RL.length){ const bank = sumBy(RL.filter(x => x.t.how === 'transfer'), x => x.t.amount), cash = sumBy(RL.filter(x => x.t.how === 'cash'), x => x.t.amount);
+    h += '<div class="ad-lock" style="margin-top:10px">Also paid in ' + MONTHS[m-1] + ', not part of this month\'s salary: HOLD released from earlier months ' + fmtRM(r2(bank + cash)) + (bank ? ' · bank ' + fmtRM(bank) : '') + (cash ? ' · cash ' + fmtRM(cash) : '') + '</div>'; }
+  return h + '<p style="font-size:12px;color:var(--text3);margin-top:8px">Tap a line to see which workers.</p></div>';
+}
+function smYearTable(y){
+  const ms = []; for(let i = 1; i <= 12; i++){ const mk = y + '-' + pad2(i); if(mk > THIS_MK) break; const R = mvRows(smRows(mk), mk); if(R.length) ms.push([mk, mvSum(R), holdReleases(mk)]); }
+  if(!ms.length) return '<div class="empty"><p>No salary in ' + y + '</p></div>';
+  const cell = v => v < 0 ? '−' + fmtNum2(-v) : fmtNum2(v), tot = k => r2(ms.reduce((a, x) => a + x[1][k], 0));
+  const row = (label, k, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td style="white-space:nowrap;position:sticky;left:0;background:#fff">' + label + '</td>' + ms.map(x => '<td>' + cell(x[1][k]) + '</td>').join('') + '<td><b>' + cell(tot(k)) + '</b></td></tr>';
+  let h = '<b style="font-size:14px">Where the salary goes · ' + y + '</b><div style="overflow-x:auto;margin-top:8px"><table style="font-size:12px;min-width:' + (220 + ms.length * 95) + 'px"><tr class="h"><td style="position:sticky;left:0;background:#fff"></td>' + ms.map(x => '<td>' + MONTHS[Number(x[0].slice(5))-1].slice(0,3) + (isLocked(x[0]) ? ' 🔒' : '') + '</td>').join('') + '<td>Total</td></tr>'
+    + row('Salary of all workers', 'gross', 't');
+  MV_LINES.forEach(([k, label]) => { h += row(label, k, k === 'minus' ? 'm' : ''); });
+  h += '<tr class="t"><td style="position:sticky;left:0;background:#fff">Check</td>' + ms.map(x => '<td style="color:' + (x[1].ok ? 'var(--grn)' : 'var(--red)') + '">' + (x[1].ok ? '✓' : '✗ ' + cell(r2(x[1].gross - x[1].total))) + '</td>').join('') + '<td></td></tr>';
+  const rel = ms.map(x => sumBy(x[2], r => r.t.amount));
+  if(rel.some(v => v > 0)) h += '<tr><td style="position:sticky;left:0;background:#fff;color:var(--text3)">HOLD released (earlier months)</td>' + rel.map(v => '<td style="color:var(--text3)">' + (v ? fmtNum2(v) : '—') + '</td>').join('') + '<td>' + fmtNum2(r2(rel.reduce((a, b) => a + b, 0))) + '</td></tr>';
+  return h + '</table></div><p style="font-size:12px;color:var(--text3);margin-top:8px">RM. Months before Sep 2026 come from the old system; cash workers then are shown as cash. The current month is not finished until it is locked.</p>';
+}
+const fmtNum2 = v => Number(v || 0).toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2});
+document.getElementById('summary-totals').addEventListener('click', e => {
+  const t = e.target.closest('[data-mv]'); if(t){ SM.mv = t.dataset.mv; SM.open = null; return renderSummary(); }
+  const k = e.target.closest('[data-mvk]'); if(k){ SM.open = SM.open === k.dataset.mvk ? null : k.dataset.mvk; return renderSummary(); }
+});
 function smFullTable(rows, mk){
   const lock = isLocked(mk), sum = f => r2(rows.reduce((a, r) => a + r2(f(r)), 0));
   const body = rows.map(r => { const s = r.s; return '<tr data-wid="' + r.w.id + '" style="cursor:pointer"><td><strong>' + esc(r.w.name) + '</strong>' + (r.pm==='cash'?' <span class="sm-tag c">CASH</span>':'') + (r.pm==='unpaid'?' <span class="sm-tag u">HOLD</span>':'') + '<br><span style="font-size:10px;color:var(--text3)">' + esc(homeFarm(r.w, mk) || r.w.title || '') + '</span></td>'
