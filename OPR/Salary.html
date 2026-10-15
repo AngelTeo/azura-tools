@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v86</title>
+<title>Salary v88</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -623,7 +623,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 87;
+const APP_VERSION = 88;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -2157,6 +2157,9 @@ function pushToRemittance(){
 }
 
 
+// v88 薪水单 PDF 档名：工人全名_薪水月份_下载日（Owner 2026-10-15，例：KYAW MIM HTET_Sep 2026_15-10-2026）
+function slipFileName(w, mo, y){ const d = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'}).split('-');
+  return (w.name || '').trim().replace(/[\\/:*?"<>|]+/g, ' ') + '_' + MONTHS[mo-1].slice(0,3) + ' ' + y + '_' + d[2] + '-' + d[1] + '-' + d[0]; }
 function printReceipt(wid, mk){
   const w = getWorker(wid);
   if(!w){ toast('Worker not found'); return; }
@@ -2234,7 +2237,7 @@ function printReceipt(wid, mk){
 
   const html = '<!DOCTYPE html><html><head>'
     + '<meta charset="UTF-8">'
-    + '<title>Salary Receipt - ' + w.name + ' - ' + monthLabel + '</title>'
+    + '<title>' + esc(slipFileName(w, mo, y)) + '</title>'
     + '<style>'
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
     + 'html, body { '
