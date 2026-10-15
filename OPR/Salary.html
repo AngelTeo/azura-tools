@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v92</title>
+<title>Salary v93</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -365,10 +365,10 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
   <div class="hdr-right" style="display:flex;align-items:center;gap:10px;">
     <div class="month-bar">
       <select id="gMonth">
-        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
-        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
-        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
-        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        <option value="1">Jan salary</option><option value="2">Feb salary</option><option value="3">Mar salary</option>
+        <option value="4">Apr salary</option><option value="5">May salary</option><option value="6">Jun salary</option>
+        <option value="7">Jul salary</option><option value="8">Aug salary</option><option value="9">Sep salary</option>
+        <option value="10">Oct salary</option><option value="11">Nov salary</option><option value="12">Dec salary</option>
       </select>
       <select id="gYear"></select>
     </div>
@@ -632,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 92;
+const APP_VERSION = 93;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -2277,7 +2277,7 @@ function printReceipt(wid, mk){
     + '</style></head><body>'
 
     + '<div class="hdr1">OFFICIAL SALARY RECEIPT</div>'
-    + '<div class="hdr2">SALARY RECEIPT &nbsp;--&nbsp; ' + monthLabel + '</div>'
+    + '<div class="hdr2">SALARY RECEIPT &nbsp;--&nbsp; ' + monthLabel + ' salary &nbsp;·&nbsp; paid in ' + MONTHS[Number(nextMk(mk).slice(5))-1] + ' ' + nextMk(mk).slice(0,4) + '</div>'
     + '<div style="height:8px"></div>'
 
     + '<table style="margin-bottom:8px;width:auto">'
@@ -3381,18 +3381,18 @@ function updateLockStrip(){
   if(isLocked(mk)){
     const t = LOCKS[mk].locked_at ? new Date(LOCKS[mk].locked_at).toLocaleString('en-GB',{timeZone:'Asia/Kuala_Lumpur',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     el.style.background = '#e3eee5'; el.style.color = '#2f5d3f';
-    el.innerHTML = '🔒 <b>' + mk + ' locked</b> (' + t + ') · Salaries are final and ready for Remittance.'
+    el.innerHTML = '🔒 <b>' + salName(mk) + ' locked</b> (' + t + ') · paid in ' + mShort(nextMk(mk)) + ' · Salaries are final and ready for Remittance.'
       + (CAN_APPROVE ? ' <button class="btn btn-sm" style="margin-left:10px;" onclick="openUnlockModal()">Unlock</button>' : '');
   }else{
     el.style.background = '#fff6e0'; el.style.color = '#7a5600';
-    el.innerHTML = '✏️ <b>' + mk + ' not locked</b> · Lock the month before sending to Remittance.'
+    el.innerHTML = '✏️ <b>' + salName(mk) + ' not locked</b> · paid in ' + mShort(nextMk(mk)) + ' · Lock it before sending to Remittance.'
       + (CAN_APPROVE ? ' <button class="btn btn-sm btn-pri" style="margin-left:10px;" onclick="openLockModal()">Check &amp; lock month</button>' : '');
   }
 }
 function requireLocked(m, y){
   const mk = y + '-' + pad2(m);
   if(isLocked(mk)) return true;
-  toast('⚠ ' + mk + ' is not locked. Press "Check & lock month" first.', 4000);
+  toast('⚠ ' + salName(mk) + ' is not locked. Press "Check & lock month" first.', 4000);
   return false;
 }
 
@@ -3717,14 +3717,14 @@ function smCheck(rows){ const sum = f => r2(rows.reduce((a, r) => a + f(r), 0));
     bad: rows.filter(r => Math.abs(r.diff) > 0.02) }; }
 function renderSummary(){
   const mk = monthKey(), [y, m] = mk.split('-').map(Number), lock = isLocked(mk);
-  document.getElementById('sum-month-label').textContent = MONTHS[m-1] + ' ' + y;
+  document.getElementById('sum-month-label').textContent = salPaid(mk);
   document.getElementById('sum-view-btn').textContent = SM.view === 'table' ? '☰ List' : '▦ Full table';
   const rows = smRows(mk);
   if(!rows.length){ document.getElementById('summary-table').innerHTML = '<div class="empty"><div class="icon">📋</div><p>No workers this month</p></div>'; document.getElementById('summary-totals').innerHTML = ''; return; }
   const txR = rows.filter(r => r.tx > 0), cashR = rows.filter(r => r.cash > 0), unR = rows.filter(r => r.pm === 'unpaid'), nbR = rows.filter(r => r.noBank), miR = rows.filter(r => r.minus > 0);
   const sum = (a, f) => r2(a.reduce((t, r) => t + f(r), 0));
   let h = '';
-  if(lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is locked. You can look, but not change.</div>';
+  if(lock) h += '<div class="ad-lock">' + salName(mk) + ' is locked. You can look, but not change.</div>';
   h += '<div class="sm-top"><div class="l">To transfer · ' + txR.length + ' worker' + (txR.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(txR, r => r.tx)) + '</div>'
     + '<div class="g3"><div>Paid in cash<b>' + fmtRM(sum(cashR, r => r.cash)) + '</b></div><div>HOLD<b>' + unR.length + '</b></div><div>Bank fees<b>' + fmtRM(sum(rows, r => r.fee)) + '</b></div></div></div>';
   // 月初大家薪水还没满，负数不准；25 号起（或月份已过 / 已锁）才提醒
@@ -3781,11 +3781,11 @@ function mvSum(rows){
   return o; }
 const mvMoney = v => Math.abs(v) < 0.005 ? '<span style="color:var(--text3)">—</span>' : (v < 0 ? '−' + fmtRM(-v) : fmtRM(v));
 function smMoneyCard(rows, mk){
-  const [y, m] = mk.split('-').map(Number), tabs = '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);max-width:360px;margin-bottom:10px"><button class="ad-opt' + (SM.mv === 'month' ? ' on' : '') + '" data-mv="month">' + MONTHS[m-1] + ' ' + y + '</button><button class="ad-opt' + (SM.mv === 'year' ? ' on' : '') + '" data-mv="year">Whole year ' + y + '</button></div>';
+  const [y, m] = mk.split('-').map(Number), tabs = '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);max-width:360px;margin-bottom:10px"><button class="ad-opt' + (SM.mv === 'month' ? ' on' : '') + '" data-mv="month">' + salName(mk) + '</button><button class="ad-opt' + (SM.mv === 'year' ? ' on' : '') + '" data-mv="year">Whole year ' + y + ' salary</button></div>';
   if(SM.mv === 'year') return '<div class="card sm-ck">' + tabs + smYearTable(y) + '</div>';
   const R = mvRows(rows, mk), t = mvSum(R), n = f => R.filter(r => Math.abs(f(r)) > 0.004).length;
   const th = 'style="text-align:right;font-size:11px;font-weight:700"';
-  let h = '<div class="card sm-ck">' + tabs + '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Where the salary goes · ' + MONTHS[m-1] + ' ' + y + '</b><span class="sm-badge ' + (t.ok ? 'ok' : 'no') + '">' + (t.ok ? '✓ BALANCED' : '✗ CHECK') + '</span></div>'
+  let h = '<div class="card sm-ck">' + tabs + '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Where the salary goes · ' + salPaid(mk) + '</b><span class="sm-badge ' + (t.ok ? 'ok' : 'no') + '">' + (t.ok ? '✓ BALANCED' : '✗ CHECK') + '</span></div>'
     + '<table style="margin-top:8px"><tr class="h"><td></td><td ' + th + '><span style="color:var(--amb)">HX</span></td><td ' + th + '><span style="color:var(--grn)">AD</span></td><td ' + th + '>Total</td></tr>'
     + '<tr class="t" style="border-top:0"><td>Salary of all workers (' + R.length + ')</td><td>' + fmtRM(t.hx) + '</td><td>' + fmtRM(t.ad) + '</td><td>' + fmtRM(t.gross) + '</td></tr>';
   MV_LINES.forEach(([k, label, f]) => { const v = t[k], c = n(f), on = SM.open === k, sp = t.split[k];
@@ -3807,7 +3807,7 @@ function smYearTable(y){
   if(!ms.length) return tabs + '<div class="empty"><p>No salary in ' + y + '</p></div>';
   const cell = v => Math.abs(v) < 0.005 ? '0.00' : v < 0 ? '−' + fmtNum2(-v) : fmtNum2(v), tot = k => r2(ms.reduce((a, x) => a + pick(x[1], k), 0));
   const row = (label, k, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td style="white-space:nowrap;position:sticky;left:0;background:#fff">' + label + '</td>' + ms.map(x => '<td>' + cell(pick(x[1], k)) + '</td>').join('') + '<td><b>' + cell(tot(k)) + '</b></td></tr>';
-  let h = '<b style="font-size:14px">Where the salary goes · ' + y + (co === 'all' ? '' : ' · ' + co.toUpperCase()) + '</b>' + tabs + '<div style="overflow-x:auto"><table style="font-size:12px;min-width:' + (220 + ms.length * 95) + 'px"><tr class="h"><td style="position:sticky;left:0;background:#fff"></td>' + ms.map(x => '<td>' + MONTHS[Number(x[0].slice(5))-1].slice(0,3) + (isLocked(x[0]) ? ' 🔒' : '') + '</td>').join('') + '<td>Total</td></tr>'
+  let h = '<b style="font-size:14px">Where the salary goes · ' + y + (co === 'all' ? '' : ' · ' + co.toUpperCase()) + '</b>' + tabs + '<div style="overflow-x:auto"><table style="font-size:12px;min-width:' + (220 + ms.length * 95) + 'px"><tr class="h"><td style="position:sticky;left:0;background:#fff"></td>' + ms.map(x => '<td>' + MONTHS[Number(x[0].slice(5))-1].slice(0,3) + ' salary' + (isLocked(x[0]) ? ' 🔒' : '') + '<br><small style="font-weight:400;color:var(--text3)">paid ' + MONTHS[Number(nextMk(x[0]).slice(5))-1].slice(0,3) + '</small></td>').join('') + '<td>Total</td></tr>'
     + row(co === 'all' ? 'Salary of all workers' : co.toUpperCase() + ' salary', 'gross', 't');
   MV_LINES.forEach(([k, label]) => { h += row(label, k, k === 'minus' ? 'm' : ''); });
   if(co !== 'all') h += row('Paid from the other company\'s account', 'cross', '');
@@ -3904,6 +3904,10 @@ document.getElementById('sm-sheet').addEventListener('click', e => {
 // ---------- v87 Hold：工钱先扣住不发 · 记住欠多少 · 之后放行（可放一部分，自己选哪个月汇）或不发了 · 每一步写原因、记谁按的 ----------
 const holdsOf = wid => (S.holds||{})[wid] || [];
 const mName = m => MONTHS[Number(m.slice(5))-1] + ' ' + m.slice(0,4);
+// v93 月份命名（Owner 2026-10-15）：系统的月份 = 做工的月份；薪水在下一个月发。例：Sep 2026 salary · paid in Oct 2026
+function mShort(m){ return MONTHS[Number(m.slice(5))-1].slice(0,3) + ' ' + m.slice(0,4); }
+function salName(m){ return mShort(m) + ' salary'; }
+function salPaid(m){ return salName(m) + ' · paid in ' + mShort(nextMk(m)); }
 function holdList(){
   const out = [];
   for(const m in (S.paymentMethod||{})) for(const wid in S.paymentMethod[m]){ if(S.paymentMethod[m][wid] !== 'unpaid') continue; const w = getWorker(wid); if(!w) continue;
@@ -3919,7 +3923,7 @@ function holdCard(mk){
   h += L.length ? '<div class="av-alert sm-card" data-held="1"><span>See ›</span><b>HOLD · ' + nW + ' worker' + (nW > 1 ? 's' : '') + ' · ' + fmtRM(sumBy(L, x => x.owed)) + ' still owed</b><small>From all months, not only this one. Release it or mark it as not paid.</small></div>'
     : '<div class="av-alert sm-card" data-held="1" style="background:var(--bg2);border-color:var(--border);color:var(--text2)"><span>See ›</span><b>HOLD · nothing owed</b><small>All months. Tap to see past HOLD records.</small></div>';
   if(R.length){ const bank = sumBy(R.filter(x => x.t.how === 'transfer'), x => x.t.amount), cash = sumBy(R.filter(x => x.t.how === 'cash'), x => x.t.amount);
-    h += '<div class="av-alert sm-card" data-held="1" style="background:var(--grnl);border-color:#9cc8a6;color:var(--grn)"><span>See ›</span><b>HOLD released into ' + MONTHS[Number(mk.slice(5))-1] + ' · ' + fmtRM(r2(bank + cash)) + '</b><small>' + (bank ? 'Bank ' + fmtRM(bank) + ' (in Remittance)' : '') + (bank && cash ? ' · ' : '') + (cash ? 'Cash ' + fmtRM(cash) : '') + ' · not part of this month\'s salary</small></div>'; }
+    h += '<div class="av-alert sm-card" data-held="1" style="background:var(--grnl);border-color:#9cc8a6;color:var(--grn)"><span>See ›</span><b>HOLD released with ' + salName(mk) + ' · ' + fmtRM(r2(bank + cash)) + '</b><small>' + (bank ? 'Bank ' + fmtRM(bank) + ' (in Remittance)' : '') + (bank && cash ? ' · ' : '') + (cash ? 'Cash ' + fmtRM(cash) : '') + ' · not part of this month\'s salary</small></div>'; }
   return h;
 }
 let HF = null;   // 表单状态
@@ -3940,9 +3944,9 @@ function smHeld(){ goPage('hold'); }
 function renderHold(){
   SM.wid = null; HF = {act:'list'}; const el = document.getElementById('hold-app'); if(!el) return;
   const L = holdList(), open = L.filter(x => x.owed > 0.004), done = L.filter(x => x.owed <= 0.004);
-  const evLine = t => '<div><span>' + (t.kind === 'RELEASE' ? 'Released ' + fmtRM(t.amount) + ' → ' + mName(t.payMonth) + ' (' + (t.how === 'cash' ? 'cash' : 'bank') + ')' : 'Not paid ' + fmtRM(t.amount)) + ' · ' + esc(t.note) + ' <small>· ' + esc(t.by || '—') + ' · ' + fmtDay(t.at) + '</small></span>'
+  const evLine = t => '<div><span>' + (t.kind === 'RELEASE' ? 'Released ' + fmtRM(t.amount) + ' → with ' + salName(t.payMonth) + ', paid in ' + mShort(nextMk(t.payMonth)) + ' (' + (t.how === 'cash' ? 'cash' : 'bank') + ')' : 'Not paid ' + fmtRM(t.amount)) + ' · ' + esc(t.note) + ' <small>· ' + esc(t.by || '—') + ' · ' + fmtDay(t.at) + '</small></span>'
     + (CAN_EDIT ? '<a data-hact="void" data-id="' + t.id + '" style="color:var(--red);cursor:pointer;white-space:nowrap">Void</a>' : '') + '</div>';
-  const item = x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.w.name) + '<small>' + mName(x.m) + ' pay · HOLD ' + fmtRM(x.held) + (x.hold ? ' · ' + esc(x.hold.note) + ' · ' + esc(x.hold.by || '—') + ' · ' + fmtDay(x.hold.at) : '') + '</small></div><div class="fd-amt">' + fmtRM(x.owed) + '<small>' + (x.owed > 0.004 ? 'owed' : 'settled') + '</small></div></div>'
+  const item = x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.w.name) + '<small>' + salName(x.m) + ' · HOLD ' + fmtRM(x.held) + (x.hold ? ' · ' + esc(x.hold.note) + ' · ' + esc(x.hold.by || '—') + ' · ' + fmtDay(x.hold.at) : '') + '</small></div><div class="fd-amt">' + fmtRM(x.owed) + '<small>' + (x.owed > 0.004 ? 'owed' : 'settled') + '</small></div></div>'
     + (x.ev.length ? '<div class="hdet" style="padding-left:14px">' + x.ev.map(evLine).join('') + '</div>' : '')
     + (x.owed > 0.004 && CAN_EDIT ? '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin:6px 0 12px"><button class="ad-opt" data-hact="rel" data-w="' + x.w.id + '" data-m="' + x.m + '">Release</button><button class="ad-opt" style="color:var(--red)" data-hact="wo" data-w="' + x.w.id + '" data-m="' + x.m + '">Don\'t pay</button></div>' : '');
   let h = '<p style="font-size:12px;color:var(--text3);margin:0 0 10px">Pay on HOLD and not sent yet, from all months. Release all or part of it into a month\'s transfers, or mark it as not paid. Every step needs a reason.</p>'
@@ -3958,7 +3962,7 @@ function holdMoveForm(kind, wid, m){
   HF = {act:kind, wid, m, how: HF && HF.how || 'transfer'};
   let h = '<div class="ad-grab"></div><h3>' + (kind === 'rel' ? 'Release ' : 'Don\'t pay ') + esc(x.w.name) + '</h3><p>' + mName(m) + ' pay · still owed ' + fmtRM(x.owed) + '</p>'
     + '<div class="ad-lbl">Amount (RM)</div><input class="fd-in big" id="hf-amt" inputmode="decimal" value="' + x.owed + '">';
-  if(kind === 'rel') h += '<div class="ad-lbl">Pay it with which month?</div><input class="fd-in" type="month" id="hf-month" value="' + def + '" min="' + nextMk(m) + '" style="padding:8px">'
+  if(kind === 'rel') h += '<div class="ad-lbl">Send it with which month\'s salary?</div><input class="fd-in" type="month" id="hf-month" value="' + def + '" min="' + nextMk(m) + '" style="padding:8px"><p style="margin-top:4px">e.g. pick Oct 2026 = sent together with Oct 2026 salary, in Nov 2026.</p>'
     + '<div class="ad-lbl">How</div><div class="ad-g" style="grid-template-columns:repeat(2,1fr)">' + [['transfer','Bank'],['cash','Cash']].map(o => '<button class="ad-opt' + (HF.how === o[0] ? ' on' : '') + '" data-hact="how" data-how="' + o[0] + '">' + o[1] + '</button>').join('') + '</div>'
     + (HF.how === 'transfer' && !(x.w.bankAccount && x.w.beneficiary) ? '<div class="ad-lock" style="margin-top:8px">No bank account. Add it in Workers, or pick Cash.</div>' : '')
     + '<p style="margin-top:6px">' + (HF.how === 'transfer' ? 'It shows in that month\'s Remittance as its own transfer. Bank fee RM 11 is taken from it.' : 'Pay him the cash yourself; it is only recorded here.') + '</p>';
@@ -3997,7 +4001,7 @@ function holdAct(b){
       if(!/^\d{4}-\d{2}$/.test(pm) || pm <= HF.m) return err('Pick a month after ' + mName(HF.m) + '.');
       if(HF.how === 'transfer' && amt <= BANK_CHARGE) return err('By bank it must be more than RM 11. Pick Cash for small amounts.');
       if(HF.how === 'transfer' && !(x.w.bankAccount && x.w.beneficiary)) return err('No bank account. Add it in Workers, or pick Cash.');
-      L.push({id:uid(), from:HF.m, kind:'RELEASE', amount:amt, payMonth:pm, how:HF.how, note:r, by:MY_NAME, at:TODAY_KL}); toast('Released ' + fmtRM(amt) + ' into ' + mName(pm)); }
+      L.push({id:uid(), from:HF.m, kind:'RELEASE', amount:amt, payMonth:pm, how:HF.how, note:r, by:MY_NAME, at:TODAY_KL}); toast('Released ' + fmtRM(amt) + ' with ' + salName(pm)); }
     else { L.push({id:uid(), from:HF.m, kind:'WRITE_OFF', amount:amt, payMonth:'', how:'', note:r, by:MY_NAME, at:TODAY_KL}); toast('Marked not paid: ' + fmtRM(amt)); }
     saveAll(); renderSummary(); return smHeld(); }
 }
@@ -4065,9 +4069,9 @@ function rpRender(){
   const el = document.getElementById('rp-app'); if(!el) return;
   const mk = monthKey(), [y, m] = mk.split('-').map(Number), lock = isLocked(mk), items = rpItems(mk), P = rpPlan(items), today = TODAY_KL;
   const sum = a => r2(a.reduce((s, i) => s + i.send, 0)), sent = items.filter(i => i.sent);
-  let h = '<div class="sm-top"><div class="l">To send in ' + MONTHS[m-1] + ' · ' + items.length + ' transfer' + (items.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(items)) + '</div>'
+  let h = '<div class="sm-top"><div class="l">' + salName(mk) + ' · send in ' + mShort(nextMk(mk)) + ' · ' + items.length + ' transfer' + (items.length===1?'':'s') + '</div><div class="b">' + fmtRM(sum(items)) + '</div>'
     + '<div class="g3"><div>Days needed<b>' + P.days.length + (P.days.length===1?' day':' days') + '</b></div><div>Sent<b>' + sent.length + ' / ' + items.length + '</b></div><div>No bank yet<b>' + P.nob.length + '</b></div></div></div>';
-  if(!lock) h += '<div class="ad-lock">' + MONTHS[m-1] + ' ' + y + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
+  if(!lock) h += '<div class="ad-lock">' + salName(mk) + ' is not locked. You can see the plan, but lock the month (Check & lock month) before you start sending.</div>';
   h += '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button class="ad-opt" data-act="stars">⭐ Pick who goes first</button><button class="ad-opt" data-act="phone">📱 Saved in phone</button></div>';
   const row = (i, done) => '<div class="rp-it" data-key="' + i.key + '"><span class="rp-ck' + (done ? ' on' : '') + '" data-tick="' + i.key + '">' + (done ? '✓' : '') + '</span><div class="n">' + (i.star ? '<span style="color:#d49a00">⭐ </span>' : '') + esc(i.w.name) + (i.slot === 2 ? ' <small style="display:inline">· payee 2</small>' : '') + (i.rel ? ' <small style="display:inline;color:var(--amb)">· HOLD from ' + i.rel.map(m => MONTHS[Number(m.slice(5))-1].slice(0,3)).join(', ') + '</small>' : '')
     + (i.over ? '<span class="rp-warn">over RM 5,000</span>' : '') + '<small>to ' + esc(i.ben) + '</small><small>' + esc(i.acc) + (!done && !rpSaved(i) ? ' · <b style="color:var(--amb)">⚠ not in phone</b>' : '') + '</small></div><div class="fd-amt">' + fmtRM(i.send) + '<small style="color:var(--text3)">gets ' + fmtRM(r2(i.send - BANK_CHARGE)) + '</small></div></div>';
