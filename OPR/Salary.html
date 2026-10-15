@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v89</title>
+<title>Salary v90</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -179,7 +179,8 @@ tr:hover td{background:#fafaf8;}
   .ad-sheet.side .ad-grab{display:none}
   #ad-sheet{top:50%;bottom:auto;transform:translate(-50%,-50%);border-radius:18px}
   #food-app,#personal-list,#advance-list{max-width:580px!important}
-  #summary-table > div{max-width:580px!important}
+  #summary-table > div:not(.tbl-wrap){max-width:580px!important}
+  #hold-app{max-width:580px}
   .ad-row.sel{background:var(--accl)}
 }
 .rp-acc{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
@@ -380,6 +381,7 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
       <button class="ntab" onclick="goPage('advance')">💳 Advance</button>
       <button class="ntab" onclick="goPage('summary')">📋 Summary</button>
       <button class="ntab" onclick="goPage('remittance')">💸 Remittance</button>
+      <button class="ntab" onclick="goPage('hold')">⏸ HOLD</button>
     </div>
     <div class="hdr-tools" style="display:flex;gap:6px;margin-left:8px;padding-left:10px;border-left:1px solid rgba(255,255,255,.15);">
       <button onclick="exportData()" title="Export all data to file" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;">⬇ Export</button>
@@ -498,6 +500,13 @@ select.inline{border:1px solid var(--border);border-radius:5px;padding:5px 6px;f
     <div id="summary-table"></div>
   </div>
   <div style="margin-top:12px;" id="summary-totals"></div>
+</div>
+<!-- HOLD (v90)：所有月份的 HOLD 都在这一页 -->
+<div class="page" id="page-hold">
+  <div class="card" style="padding:12px 16px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;">HOLD <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px;">All months</span></div>
+    <div id="hold-app"></div>
+  </div>
 </div>
 <div class="ad-dim side" id="sm-dim" onclick="smClose()"></div>
 <div class="ad-sheet side" id="sm-sheet"></div>
@@ -623,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 89;
+const APP_VERSION = 90;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1054,7 +1063,7 @@ function workersInMonthLive(mk){
 function getWorker(id){return S.workers.find(w=>w.id===id);}
 
 // -- NAVIGATION -----------------------------------------
-const PAGE_MAP={dashboard:0,workers:1,attendance:2,food:3,personal:4,advance:5,summary:6,remittance:7};
+const PAGE_MAP={dashboard:0,workers:1,attendance:2,food:3,personal:4,advance:5,summary:6,remittance:7,hold:8};
 let workerFilter='all';
 function setWorkerFilter(f){
   workerFilter=f;
@@ -1074,7 +1083,7 @@ function goPage(p){
   document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('on'));
   document.getElementById('page-'+p).classList.add('on');
   document.querySelectorAll('.ntab')[PAGE_MAP[p]].classList.add('on');
-  const renders={dashboard:renderDashboard,workers:renderWorkers,attendance:renderAttendance,food:renderFood,personal:renderPersonal,advance:renderAdvance,summary:renderSummary,remittance:renderRemittance};
+  const renders={dashboard:renderDashboard,workers:renderWorkers,attendance:renderAttendance,food:renderFood,personal:renderPersonal,advance:renderAdvance,summary:renderSummary,remittance:renderRemittance,hold:renderHold};
   if(renders[p])renders[p]();
   updateLockStrip();
 }
@@ -1096,7 +1105,7 @@ function initMonthSel(){
 function refreshCurrentPage(){
   const active=document.querySelector('.ntab.on');
   if(!active)return;
-  const pages=['dashboard','workers','attendance','food','personal','advance','summary','remittance'];
+  const pages=['dashboard','workers','attendance','food','personal','advance','summary','remittance','hold'];
   const idx=Array.from(document.querySelectorAll('.ntab')).indexOf(active);
   if(pages[idx])goPage(pages[idx]);
 }
@@ -3865,20 +3874,21 @@ function holdForm(wid, on, to){
     + '<button class="fd-save" data-hact="save">' + (on ? 'HOLD his pay' : 'Remove HOLD') + '</button><button class="ad-cancel" data-hact="back">Cancel</button>';
   document.getElementById('sm-sheet').innerHTML = h; smShow(); setTimeout(() => { const i = document.getElementById('hf-note'); if(i) i.focus(); }, 50);
 }
-function smHeld(){
-  SM.wid = null; HF = {act:'list'};
+function smHeld(){ goPage('hold'); }
+function renderHold(){
+  SM.wid = null; HF = {act:'list'}; const el = document.getElementById('hold-app'); if(!el) return;
   const L = holdList(), open = L.filter(x => x.owed > 0.004), done = L.filter(x => x.owed <= 0.004);
   const evLine = t => '<div><span>' + (t.kind === 'RELEASE' ? 'Released ' + fmtRM(t.amount) + ' → ' + mName(t.payMonth) + ' (' + (t.how === 'cash' ? 'cash' : 'bank') + ')' : 'Not paid ' + fmtRM(t.amount)) + ' · ' + esc(t.note) + ' <small>· ' + esc(t.by || '—') + ' · ' + fmtDay(t.at) + '</small></span>'
     + (CAN_EDIT ? '<a data-hact="void" data-id="' + t.id + '" style="color:var(--red);cursor:pointer;white-space:nowrap">Void</a>' : '') + '</div>';
   const item = x => '<div class="ad-row" style="cursor:default"><div class="n">' + esc(x.w.name) + '<small>' + mName(x.m) + ' pay · HOLD ' + fmtRM(x.held) + (x.hold ? ' · ' + esc(x.hold.note) + ' · ' + esc(x.hold.by || '—') + ' · ' + fmtDay(x.hold.at) : '') + '</small></div><div class="fd-amt">' + fmtRM(x.owed) + '<small>' + (x.owed > 0.004 ? 'owed' : 'settled') + '</small></div></div>'
     + (x.ev.length ? '<div class="hdet" style="padding-left:14px">' + x.ev.map(evLine).join('') + '</div>' : '')
     + (x.owed > 0.004 && CAN_EDIT ? '<div class="ad-g" style="grid-template-columns:repeat(2,1fr);margin:6px 0 12px"><button class="ad-opt" data-hact="rel" data-w="' + x.w.id + '" data-m="' + x.m + '">Release</button><button class="ad-opt" style="color:var(--red)" data-hact="wo" data-w="' + x.w.id + '" data-m="' + x.m + '">Don\'t pay</button></div>' : '');
-  let h = '<div class="ad-grab"></div><h3>HOLD</h3><p>Pay on HOLD and not sent yet, from all months. Release all or part of it into a month\'s transfers, or mark it as not paid. Every step needs a reason.</p>'
+  let h = '<p style="font-size:12px;color:var(--text3);margin:0 0 10px">Pay on HOLD and not sent yet, from all months. Release all or part of it into a month\'s transfers, or mark it as not paid. Every step needs a reason.</p>'
     + '<div class="sm-top"><div class="l">Still owed · ' + open.length + '</div><div class="b">' + fmtRM(sumBy(open, x => x.owed)) + '</div></div>'
     + (open.length ? '<div class="ad-list">' + open.map(item).join('') + '</div>' : '<div class="empty"><p>Nothing held</p></div>')
     + (done.length ? '<div class="ad-fm"><span>SETTLED · ' + done.length + '</span><span></span></div><div class="ad-list">' + done.map(item).join('') + '</div>' : '')
-    + '<button class="ad-cancel" data-hact="close">Close</button>';
-  document.getElementById('sm-sheet').innerHTML = h; smShow();
+    ;
+  el.innerHTML = h;
 }
 function holdMoveForm(kind, wid, m){
   const x = holdList().find(i => i.w.id === wid && i.m === m); if(!x) return smHeld();
@@ -3929,6 +3939,7 @@ function holdAct(b){
     else { L.push({id:uid(), from:HF.m, kind:'WRITE_OFF', amount:amt, payMonth:'', how:'', note:r, by:MY_NAME, at:TODAY_KL}); toast('Marked not paid: ' + fmtRM(amt)); }
     saveAll(); renderSummary(); return smHeld(); }
 }
+document.getElementById('hold-app').addEventListener('click', e => { const hb = e.target.closest('[data-hact]'); if(hb && !hb.disabled) holdAct(hb); });
 // 锁月：净薪负数 → 下个月的借款（同一个月重锁不会重复）
 function minusToLoans(mk){
   const tag = '[minus ' + mk + ']', nm = nextMk(mk); let n = 0;
