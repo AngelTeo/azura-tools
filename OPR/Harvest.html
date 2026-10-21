@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v2</title>
+<title>Harvest v3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -145,6 +145,12 @@ input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var
 .sea dt{color:var(--mut)}.sea dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 .sea table{width:100%;font-size:12px;border-collapse:collapse}.sea th,.sea td{padding:4px;border-top:.5px solid var(--bdr)}.sea th{text-align:left;color:var(--mut);font-weight:500}.sea td.num,.sea th.num{text-align:right}
 .sec-t{font-size:14px;font-weight:700;margin:18px 0 8px}
+.ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:12px}
+.ms .stat b{font-size:17px}.ms .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
+tr.fut td{color:var(--mut)}tr.now td{background:#FFF9E6}
+.st-up{color:var(--ok);font-weight:700}.st-dn{color:var(--danger);font-weight:700}.st-ok{font-weight:700}
+.rules{margin:0;padding-left:20px;font-size:14px;line-height:1.7}.rules b{font-variant-numeric:tabular-nums}
+.fc-chart{height:340px;background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:10px;margin-bottom:12px}
 .b-planned{background:#E8F0F7;color:var(--info)}
 textarea{width:100%;min-height:64px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px}
 input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
@@ -188,7 +194,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v2</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v3</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -198,9 +204,11 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v2</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v3</span></div>
     <button class="ntab on" data-p="compare" onclick="go('compare')">Compare</button>
     <button class="ntab" data-p="seasons" onclick="go('seasons')">Seasons</button>
+    <button class="ntab" data-p="forecast" onclick="go('forecast')">Forecast</button>
+    <button class="ntab" data-p="bench" onclick="go('bench')">Benchmark</button>
     <button class="ntab" data-p="reports" onclick="go('reports')">Reports</button>
     <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
     <div class="nav-r">
@@ -249,6 +257,22 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
     <div id="seaView"></div>
   </div>
 
+  <!-- Forecast -->
+  <div class="page" id="page-forecast">
+    <h1 class="pt">Forecast vs actual</h1>
+    <div class="row-inline" style="margin-bottom:12px">
+      <select id="fcCycle" onchange="renderForecast()" style="max-width:240px"></select>
+      <select id="fcBench" onchange="renderForecast()" style="max-width:280px"></select>
+    </div>
+    <div id="fcView"></div>
+  </div>
+
+  <!-- Benchmark -->
+  <div class="page" id="page-bench">
+    <h1 class="pt">Benchmark <select id="bnVer" onchange="renderBench()" style="max-width:300px;font-size:13px;font-weight:400"></select></h1>
+    <div id="bnView"></div>
+  </div>
+
   <!-- Reports -->
   <div class="page" id="page-reports">
     <h1 class="pt">Reports <button class="btn btn-pri" onclick="openAdd()">+ Add report</button></h1>
@@ -284,7 +308,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -295,6 +319,7 @@ let sb = null, ME = null, LOADED = false, lastErr = '', loadedAt = null, chart =
 const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], reports:[] };
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
+let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null;
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -358,6 +383,8 @@ async function loadAll(){
     if(!H.farms.length || !H.grades.length) throw new Error('Master data is empty');
     H.grades.sort((a, b) => a.sort - b.sort); H.grades.forEach(g => GRADE_LABEL[g.code] = g.label);
     H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
+    const bq = await sb.rpc('harvest_owner_benchmarks');
+    BENCH = bq.error ? [] : (bq.data || []); BENCH_ERR = bq.error ? nice(bq.error) : '';
     LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
     $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
   }catch(err){
@@ -376,6 +403,8 @@ function go(p){
 function renderAll(){
   if($('page-compare').classList.contains('on')) renderCompare();
   if($('page-seasons').classList.contains('on')) renderSeasons();
+  if($('page-forecast').classList.contains('on')) renderForecast();
+  if($('page-bench').classList.contains('on')) renderBench();
   if($('page-reports').classList.contains('on')) renderReports();
   if($('page-manage').classList.contains('on')) renderManage();
 }
@@ -566,6 +595,209 @@ function renderSeasons(){
     <div class="hint" style="margin-top:8px">kg per polybag = total harvest kg of the season ÷ polybags planted that season. Target comes from the planting standard in Crops. ${$('seaConfirmed').checked ? 'Only confirmed reports are counted.' : 'Pending and confirmed reports are counted; voided ones are not.'}${unassigned ? ` ${unassigned} report(s) fall outside any season's dates and are not counted here.` : ''}</div>`;
 }
 
+/* ══════ Benchmark ══════
+   A benchmark = the average week-by-week harvest of chosen finished seasons, per polybag.
+   Saved versions live in the database (owner only); no benchmark numbers are written in this page. */
+const nonVoid = cid => H.reports.filter(r => r.cycle_id === cid && r.status !== 'VOID').sort((a, b) => a.date.localeCompare(b.date));
+const r3 = v => Math.round(v * 1000) / 1000, r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
+function buildBenchmark(cids){
+  const S = cids.map(id => cycleOf(id)).filter(Boolean).map(c => {
+    const rs = nonVoid(c.id); if(!rs.length) return null;
+    const f = rs[0].date, W = {};
+    rs.forEach(r => { const w = Math.floor((dnum(r.date) - dnum(f)) / 7) + 1; W[w] = W[w] || [0, 0]; W[w][0] += r.kg; W[w][1] += r.aa; });
+    const kg = Object.values(W).reduce((s, v) => s + v[0], 0), aa = Object.values(W).reduce((s, v) => s + v[1], 0);
+    return {c, label:cycleLabel(c).text, bags:bagsFor(c), kg, aa, first:f, last:rs[rs.length - 1].date,
+      first_days: c.transplant_date ? dnum(f) - dnum(c.transplant_date) : null, tp_to_last: c.transplant_date ? dnum(rs[rs.length - 1].date) - dnum(c.transplant_date) : null,
+      weeks: Math.max(...Object.keys(W).map(Number)), hdays: new Set(rs.map(r => r.date)).size, W};
+  }).filter(Boolean);
+  if(!S.length) return null;
+  const maxW = Math.max(...S.map(x => x.weeks)), weeks = [];
+  for(let w = 1; w <= maxW; w++){
+    const kpb = S.reduce((t, x) => t + (x.W[w] ? x.W[w][0] : 0) / x.bags, 0) / S.length;
+    const k = S.reduce((t, x) => t + (x.W[w] ? x.W[w][0] : 0), 0), a = S.reduce((t, x) => t + (x.W[w] ? x.W[w][1] : 0), 0);
+    weeks.push({w, kg_per_bag: r3(kpb), aa_pct: k ? r1(a / k * 100) : null});
+  }
+  const tot = r3(weeks.reduce((t, x) => t + x.kg_per_bag, 0));
+  let cum = 0, half = null; weeks.forEach(x => { cum += x.kg_per_bag; if(half == null && cum >= tot / 2) half = x.w; });
+  const peak = weeks.reduce((m, x) => x.kg_per_bag > m.kg_per_bag ? x : m, weeks[0]);
+  const fd = S.filter(x => x.first_days != null), tl = S.filter(x => x.tp_to_last != null);
+  return {weeks, total_per_bag: tot,
+    first_days: fd.length ? Math.round(fd.reduce((t, x) => t + x.first_days, 0) / fd.length) : null,
+    first_days_min: fd.length ? Math.min(...fd.map(x => x.first_days)) : null, first_days_max: fd.length ? Math.max(...fd.map(x => x.first_days)) : null,
+    peak_week: peak.w, half_week: half, season_weeks_min: Math.min(...S.map(x => x.weeks)), season_weeks_max: maxW,
+    tp_to_last_min: tl.length ? Math.min(...tl.map(x => x.tp_to_last)) : null, tp_to_last_max: tl.length ? Math.max(...tl.map(x => x.tp_to_last)) : null,
+    harvest_days_per_week: r1(S.reduce((t, x) => t + x.hdays / x.weeks, 0) / S.length),
+    aa_pct: r1(S.reduce((t, x) => t + x.aa, 0) / S.reduce((t, x) => t + x.kg, 0) * 100),
+    sources: S.map(x => ({cycle_id:x.c.id, label:x.label, bags:x.bags, kg:x.kg, first:x.first, last:x.last, first_days:x.first_days, weeks:x.weeks, per_bag:r2(x.kg / x.bags), aa_pct:r1(x.aa / x.kg * 100)}))};
+}
+function liveBench(){ return BENCH.filter(b => !b.retired_at); }
+function targetOf(c){ const pr = H.protocols.find(p => p.id === (c && c.protocol_id)) || H.protocols[0] || {}; return Number(pr.expected_kg_per_bag || 0); }
+function benchRules(b){
+  const W = b.weeks, n = W.length, pk = b.peak_week;
+  const avg = (a, z) => { const xs = W.filter(x => x.w >= a && x.w <= z); return xs.length ? xs.reduce((t, x) => t + x.kg_per_bag, 0) / xs.length : 0; };
+  const after = W.filter(x => x.w > pk), med = after.length ? [...after].map(x => x.kg_per_bag).sort((a, b) => a - b)[Math.floor(after.length / 2)] : 0;
+  let tailFrom = n + 1; for(let w = n; w > pk; w--){ if(W[w - 1].kg_per_bag < med / 2) tailFrom = w; else break; }
+  const plat = W.filter(x => x.w > pk && x.w < tailFrom), tail = W.filter(x => x.w >= tailFrom);
+  const tailPct = tail.reduce((t, x) => t + x.kg_per_bag, 0) / b.total_per_bag * 100;
+  const tailAA = tail.length ? tail.reduce((t, x) => t + (x.aa_pct || 0) * x.kg_per_bag, 0) / tail.reduce((t, x) => t + x.kg_per_bag, 0) : null;
+  const lowAA = W.filter(x => x.aa_pct != null && x.aa_pct < 70).map(x => x.w);
+  const tg = targetOf(H.cycles.find(c => c.status === 'ACTIVE'));
+  const L = [];
+  if(b.first_days != null) L.push(`First harvest comes about <b>${b.first_days} days after transplant</b>${b.first_days_min !== b.first_days_max ? ` (seen ${b.first_days_min}–${b.first_days_max} days)` : ` (all ${b.sources.length} seasons)`}.`);
+  if(pk > 1) L.push(`Weeks 1–${pk - 1}: slow start, about <b>${fmt(avg(1, pk - 1), 2)} kg per polybag a week</b>.`);
+  L.push(`<b>Week ${pk} is the peak</b>: ${fmt(W[pk - 1].kg_per_bag, 2)} kg per polybag in one week.`);
+  if(b.half_week) L.push(`<b>Half of the season's harvest</b> is in by the end of <b>week ${b.half_week}</b>.`);
+  if(plat.length) L.push(`Weeks ${plat[0].w}–${plat[plat.length - 1].w}: steady, <b>${fmt(Math.min(...plat.map(x => x.kg_per_bag)), 2)}–${fmt(Math.max(...plat.map(x => x.kg_per_bag)), 2)} kg per polybag a week</b>.`);
+  if(tail.length) L.push(`Last ${tail.length === 1 ? 'week' : tail.length + ' weeks'} (week ${tail[0].w}${tail.length > 1 ? '–' + tail[tail.length - 1].w : ''}): only <b>${fmt(tailPct, 1)}% of the season</b>${tailAA != null ? `, mostly low grade (AA ${fmt(tailAA)}%)` : ''}.`);
+  L.push(`Harvest about <b>${fmt(b.harvest_days_per_week, 1)} days a week</b> (about every 2 days).`);
+  L.push(`Whole season: <b>${fmt(b.total_per_bag, 2)} kg per polybag</b> over ${b.season_weeks_min === b.season_weeks_max ? b.season_weeks_max : b.season_weeks_min + '–' + b.season_weeks_max} weeks of harvest${b.tp_to_last_min != null ? `; transplant to last harvest ${b.tp_to_last_min === b.tp_to_last_max ? b.tp_to_last_max : b.tp_to_last_min + '–' + b.tp_to_last_max} days` : ''}.`);
+  if(tg) L.push(`Target in Crops is ${fmt(tg)} kg per polybag — this benchmark is <b>${fmt(b.total_per_bag / tg * 100)}% of target</b>.`);
+  L.push(`AA share <b>${fmt(b.aa_pct, 1)}%</b>${lowAA.length ? `. Weeks with AA below 70%: ${lowAA.join(', ')}` : ''}.`);
+  return L;
+}
+function fillBenchSel(id){
+  const el = $(id), v = el.value;
+  el.innerHTML = BENCH.length ? BENCH.map(b => `<option value="${b.version}">Benchmark v${b.version} · ${esc(b.name)}${b.retired_at ? ' (retired)' : ''}</option>`).join('') : '<option value="">No benchmark yet</option>';
+  if(v && BENCH.some(b => String(b.version) === v)) el.value = v; else if(liveBench()[0]) el.value = liveBench()[0].version;
+}
+function renderBench(){
+  const v = $('bnView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  fillBenchSel('bnVer');
+  const B = BENCH.find(b => String(b.version) === $('bnVer').value);
+  const closed = H.cycles.filter(c => c.status === 'CLOSED' && nonVoid(c.id).length);
+  const maker = `<div class="sec-t">Make a new benchmark</div><div class="card">
+    <div class="hint" style="margin-bottom:8px">Pick finished seasons. The new benchmark is the average of them, week by week, per polybag. A saved benchmark can never be changed; you can always make a newer one.</div>
+    ${closed.length ? closed.map(c => `<label class="chk" style="margin-right:14px"><input type="checkbox" class="bnSrc" value="${c.id}" checked onchange="bnPreview()"> ${esc(cycleLabel(c).text)}</label>`).join('') : '<span class="hint">No finished season yet</span>'}
+    <div class="row-inline" style="margin-top:10px"><input id="bnName" placeholder="Name, e.g. Season 1 + 2 · AD 1 + AD 2" style="max-width:340px"><button class="btn btn-pri" onclick="bnSave()" ${closed.length ? '' : 'disabled'}>Save as new version</button></div>
+    <div class="hint" id="bnPrev" style="margin-top:6px"></div></div>`;
+  if(BENCH_ERR){ v.innerHTML = `<div class="alert alert-danger"><span>⚠</span><div>Cannot read benchmarks. ${esc(BENCH_ERR)}</div></div>` + maker; return; }
+  if(!B){ v.innerHTML = '<div class="card empty">No benchmark saved yet.</div>' + maker; bnPreview(); return; }
+  const b = B.data; let cum = 0;
+  v.innerHTML = `
+    <div class="hint" style="margin:-6px 0 10px">Saved ${esc(String(B.created_at).slice(0, 10))} · made from ${b.sources.map(x => esc(x.label)).join(' + ')}${B.retired_at ? ' · <b>retired</b>' : ''}</div>
+    <div class="sec-t" style="margin-top:0">The pattern (use this to judge every season)</div>
+    <div class="card"><ol class="rules">${benchRules(b).map(x => '<li>' + x + '</li>').join('')}</ol></div>
+    <div class="sec-t">Made from</div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th class="num">Polybags</th><th>First harvest</th><th>Last harvest</th><th class="num">Days to first harvest</th><th class="num">Weeks</th><th class="num">Total kg</th><th class="num">kg per polybag</th><th class="num">AA %</th></tr></thead><tbody>
+      ${b.sources.map(x => `<tr><td><b>${esc(x.label)}</b></td><td class="num">${fmt(x.bags)}</td><td>${dLong(x.first)}</td><td>${dLong(x.last)}</td><td class="num">${x.first_days ?? '—'}</td><td class="num">${x.weeks}</td><td class="num">${fmt(x.kg)}</td><td class="num">${fmt(x.per_bag, 2)}</td><td class="num">${fmt(x.aa_pct, 1)}%</td></tr>`).join('')}
+      <tr><td><b>Benchmark (average)</b></td><td></td><td></td><td></td><td class="num"><b>${b.first_days ?? '—'}</b></td><td class="num">${b.season_weeks_max}</td><td></td><td class="num"><b>${fmt(b.total_per_bag, 2)}</b></td><td class="num"><b>${fmt(b.aa_pct, 1)}%</b></td></tr></tbody></table></div></div>
+    <div class="sec-t">Week by week (week 1 = first harvest week)</div>
+    <div class="fc-chart"><canvas id="bnChart"></canvas></div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th class="num">Days after transplant</th><th class="num">kg per polybag</th><th class="num">Season so far</th><th class="num">AA %</th><th></th></tr></thead><tbody>
+      ${b.weeks.map(x => { cum += x.kg_per_bag; return `<tr><td><b>Week ${x.w}</b></td><td class="num">${b.first_days != null ? (b.first_days + (x.w - 1) * 7) + '–' + (b.first_days + x.w * 7 - 1) : '—'}</td><td class="num">${fmt(x.kg_per_bag, 3)}</td><td class="num">${fmt(cum / b.total_per_bag * 100)}%</td><td class="num" ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct, 1) + '%' : '—'}</td><td>${x.w === b.peak_week ? '<span class="badge b-active">Peak</span>' : ''}${x.w === b.half_week ? ' <span class="badge b-planned">Half way</span>' : ''}</td></tr>`; }).join('')}
+    </tbody></table></div></div>
+    <div class="sec-t">My notes</div>
+    <div class="card"><textarea id="bnNote" rows="4" style="width:100%">${esc(B.note || '')}</textarea>
+      <div class="row-inline" style="margin-top:8px"><button class="btn btn-pri" onclick="bnNote(${B.version}, false)">Save notes</button>
+      <button class="btn" onclick="bnNote(${B.version}, ${!B.retired_at})">${B.retired_at ? 'Use this benchmark again' : 'Retire this benchmark'}</button></div>
+      <div class="hint">Only notes can be changed. The numbers stay as saved.</div></div>` + maker;
+  bnPreview();
+  if(window.Chart){
+    const cfg = {type:'bar', data:{labels:b.weeks.map(x => 'W' + x.w), datasets:[{label:'kg per polybag', data:b.weeks.map(x => x.kg_per_bag), backgroundColor:b.weeks.map(x => x.w === b.peak_week ? '#8B6C2A' : '#C9B37E')}]},
+      options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => ` ${fmt(c.parsed.y, 3)} kg per polybag`}}}, scales:{y:{beginAtZero:true, title:{display:true, text:'kg per polybag per week'}}}}};
+    if(bchart) bchart.destroy(); bchart = new Chart($('bnChart'), cfg);
+  }
+}
+function bnPreview(){
+  const el = $('bnPrev'); if(!el) return;
+  const ids = [...document.querySelectorAll('.bnSrc:checked')].map(x => x.value), b = buildBenchmark(ids);
+  el.innerHTML = b ? `Preview: ${fmt(b.total_per_bag, 2)} kg per polybag · first harvest ${b.first_days ?? '—'} days after transplant · peak week ${b.peak_week} · ${b.season_weeks_max} weeks · AA ${fmt(b.aa_pct, 1)}%` : 'Pick at least one season.';
+}
+function bnSave(){
+  const ids = [...document.querySelectorAll('.bnSrc:checked')].map(x => x.value), b = buildBenchmark(ids), name = $('bnName').value.trim();
+  if(!b){ toast('Pick at least one finished season'); return; }
+  if(!name){ toast('Give the benchmark a name'); $('bnName').focus(); return; }
+  openModal('Save new benchmark', `<p>Save <b>${esc(name)}</b> as benchmark v${Math.max(0, ...BENCH.map(x => x.version)) + 1}?</p><p class="hint">${$('bnPrev').textContent}</p><p class="hint">Once saved, the numbers cannot be changed. Forecasts will use the newest benchmark unless you pick another.</p><div class="alert alert-danger" id="merr" style="display:none"></div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="bnDoSave()">Save</button>`);
+  window.__bnPending = {name, b};
+}
+async function bnDoSave(){
+  const p = window.__bnPending; if(!p) return;
+  const {error} = await sb.rpc('harvest_owner_benchmark_save', {p_name:p.name, p_data:p.b, p_note:null});
+  if(error) return merr(nice(error));
+  closeModal(); toast('✓ Benchmark saved'); await loadAll(); go('bench');
+}
+async function bnNote(ver, retire){
+  const {error} = await sb.rpc('harvest_owner_benchmark_note', {p_version:ver, p_note:$('bnNote').value, p_retire:retire});
+  if(error){ toast(nice(error)); return; }
+  toast(retire ? '✓ Benchmark retired' : '✓ Saved'); await loadAll();
+}
+
+/* ══════ Forecast ══════ */
+function forecast(c, b){
+  const rs = nonVoid(c.id), bags = bagsFor(c), tg = targetOf(c), t = today();
+  const tp = c.transplant_date, predFirst = tp && b.first_days != null ? addDays(tp, b.first_days) : null;
+  const actFirst = rs.length ? rs[0].date : null, start = actFirst || predFirst;
+  if(!start) return null;
+  const actW = {}; rs.forEach(r => { const w = Math.floor((dnum(r.date) - dnum(start)) / 7) + 1; actW[w] = actW[w] || {kg:0, aa:0, n:0}; actW[w].kg += r.kg; actW[w].aa += r.aa; actW[w].n++; });
+  const nW = Math.max(b.weeks.length, ...Object.keys(actW).map(Number));
+  const done = c.status === 'CLOSED' ? nW : Math.max(0, Math.floor((dnum(t) - dnum(start) + 1) / 7));
+  const scale = tg && b.total_per_bag ? tg / b.total_per_bag : null;
+  let bc = 0, ac = 0, tc = 0; const rows = [];
+  for(let w = 1; w <= nW; w++){
+    const bw = b.weeks[w - 1] || {kg_per_bag:0, aa_pct:null}, from = addDays(start, (w - 1) * 7), to = addDays(start, w * 7 - 1);
+    const bk = bw.kg_per_bag * bags; bc += bk; tc += scale ? bk * scale : 0;
+    const a = actW[w], st = from > t ? 'fut' : (to >= t && c.status !== 'CLOSED') ? 'now' : 'past';
+    if(st !== 'fut') ac += a ? a.kg : 0;
+    rows.push({w, from, to, bk, bc, tc, aaB:bw.aa_pct, ak: st === 'fut' ? null : (a ? a.kg : 0), ac: st === 'fut' ? null : ac, aaA: a && a.kg ? a.aa / a.kg * 100 : null, st});
+  }
+  const last = rows[Math.min(done, rows.length) - 1];
+  const ratio = last && last.bc ? last.ac / last.bc : null;
+  const benchTotal = b.total_per_bag * bags;
+  const best = rows.filter(r => r.ak).reduce((m, r) => !m || r.ak > m.ak ? r : m, null);
+  const halfAct = rows.find(r => r.ac != null && r.ac >= benchTotal / 2);
+  return {c, b, bags, tg, rows, done, ratio, last, benchTotal, predFirst, actFirst, start, best, halfAct, tp, total:rs.reduce((s, r) => s + r.kg, 0), n:rs.length};
+}
+const stTxt = r => r == null ? '—' : r >= 1.1 ? `<span class="st-up">Ahead · ${fmt(r * 100)}%</span>` : r >= 0.9 ? `<span class="st-ok">On track · ${fmt(r * 100)}%</span>` : `<span class="st-dn">Behind · ${fmt(r * 100)}%</span>`;
+function renderForecast(){
+  const v = $('fcView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const cyc = H.cycles.slice().sort((a, b) => (a.status === 'ACTIVE' ? 0 : 1) - (b.status === 'ACTIVE' ? 0 : 1) || cycleLabel(a).text.localeCompare(cycleLabel(b).text));
+  const cv = $('fcCycle').value;
+  $('fcCycle').innerHTML = cyc.map(c => `<option value="${c.id}">${esc(cycleLabel(c).text)} · ${c.status === 'ACTIVE' ? 'Growing' : c.status === 'CLOSED' ? 'Finished' : esc(c.status)}</option>`).join('');
+  if(cv && cyc.some(c => c.id === cv)) $('fcCycle').value = cv;
+  fillBenchSel('fcBench');
+  if(BENCH_ERR){ v.innerHTML = `<div class="alert alert-danger"><span>⚠</span><div>Cannot read benchmarks. ${esc(BENCH_ERR)}</div></div>`; return; }
+  const B = BENCH.find(x => String(x.version) === $('fcBench').value), c = cycleOf($('fcCycle').value);
+  if(!B){ v.innerHTML = '<div class="card empty">No benchmark yet. Make one in the Benchmark tab.</div>'; return; }
+  if(!c){ v.innerHTML = '<div class="card empty">No season</div>'; return; }
+  const F = forecast(c, B.data);
+  if(!F){ v.innerHTML = '<div class="card empty">This season has no transplant date and no harvest yet. Add the transplant date in Farms → Cycles.</div>'; return; }
+  const b = B.data, col = FARM_COLOR[cycleLabel(c).farm] || '#555', dd = n => n > 0 ? `${n} days later` : n < 0 ? `${-n} days earlier` : 'same day';
+  const peakRow = F.rows[b.peak_week - 1], halfRow = F.rows[(b.half_week || 1) - 1], endRow = F.rows[b.weeks.length - 1];
+  const proj = F.ratio != null && F.done >= 2 && c.status !== 'CLOSED' ? F.benchTotal * F.ratio : null;
+  v.innerHTML = `
+    <div class="ms">
+      <div class="stat"><small>Now vs benchmark</small><b>${c.status === 'CLOSED' ? stTxt(F.ratio) : F.done ? stTxt(F.ratio) : '<span class="hint">No full week yet</span>'}</b><div class="d">${F.last ? `${fmt(F.last.ac)} kg vs ${fmt(F.last.bc)} kg by end of week ${F.last.w}` : ''}</div></div>
+      <div class="stat"><small>First harvest</small><b>${F.actFirst ? dLong(F.actFirst) : F.predFirst ? '~ ' + dLong(F.predFirst) : '—'}</b><div class="d">${F.predFirst ? (F.actFirst ? `Forecast ${dLong(F.predFirst)} · ${dd(dnum(F.actFirst) - dnum(F.predFirst))}` : `Forecast: transplant + ${b.first_days} days`) : ''}${c.transplant_is_estimate ? ' · transplant date is an estimate' : ''}</div></div>
+      <div class="stat"><small>Peak (week ${b.peak_week})</small><b>${peakRow ? dShort(peakRow.from) + ' – ' + dShort(peakRow.to) : '—'}</b><div class="d">${peakRow ? `Benchmark ${fmt(peakRow.bk)} kg that week` : ''}${F.best ? ` · best so far week ${F.best.w}: ${fmt(F.best.ak)} kg` : ''}</div></div>
+      <div class="stat"><small>Half of season (${fmt(F.benchTotal / 2)} kg)</small><b>${F.halfAct ? 'Reached week ' + F.halfAct.w : halfRow ? '~ ' + dShort(halfRow.to) : '—'}</b><div class="d">Benchmark: end of week ${b.half_week}${halfRow ? ' (' + dLong(halfRow.to) + ')' : ''}</div></div>
+      <div class="stat"><small>Season ends about</small><b>${c.actual_end ? dLong(c.actual_end) : endRow ? dLong(endRow.to) : '—'}</b><div class="d">${c.actual_end ? 'Finished' : `After ${b.season_weeks_min === b.season_weeks_max ? b.season_weeks_max : b.season_weeks_min + '–' + b.season_weeks_max} weeks of harvest`}</div></div>
+      <div class="stat"><small>Season total</small><b>${fmt(F.benchTotal)} kg</b><div class="d">Benchmark ${fmt(b.total_per_bag, 2)} kg × ${fmt(F.bags)} polybags${F.tg ? ` · target ${fmt(F.tg * F.bags)} kg` : ''}${proj ? `<br>At the current pace: <b>${fmt(proj)} kg</b> (${fmt(proj / F.bags, 2)} kg per polybag)` : ''}${c.status === 'CLOSED' ? `<br>Actual: <b>${fmt(F.total)} kg</b> (${fmt(F.total / F.bags, 2)} kg per polybag)` : ''}</div></div>
+    </div>
+    <div class="fc-chart"><canvas id="fcChart"></canvas></div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th>Dates</th><th class="num">Forecast kg</th><th class="num">Forecast total</th>${F.tg ? '<th class="num">Target pace total</th>' : ''}<th class="num">Actual kg</th><th class="num">Actual total</th><th class="num">vs forecast</th><th class="num">AA % forecast</th><th class="num">AA % actual</th></tr></thead><tbody>
+      ${F.rows.map(r => `<tr class="${r.st}"><td><b>Week ${r.w}</b>${r.w === b.peak_week ? ' <span class="badge b-active">Peak</span>' : ''}${r.st === 'now' ? ' <span class="badge b-pending">This week</span>' : ''}</td>
+        <td>${dShort(r.from)} – ${dShort(r.to)}</td><td class="num">${fmt(r.bk)}</td><td class="num">${fmt(r.bc)}</td>${F.tg ? `<td class="num">${fmt(r.tc)}</td>` : ''}
+        <td class="num">${r.ak == null ? '' : fmt(r.ak)}</td><td class="num">${r.ac == null ? '' : '<b>' + fmt(r.ac) + '</b>'}</td>
+        <td class="num">${r.ac == null || !r.bc ? '' : r.st === 'now' ? '<span class="hint">week not over</span>' : stTxt(r.ac / r.bc)}</td>
+        <td class="num">${r.aaB != null ? fmt(r.aaB) + '%' : '—'}</td><td class="num" ${r.aaA != null && r.aaA < 70 ? 'style="color:var(--danger);font-weight:700"' : ''}>${r.aaA != null ? fmt(r.aaA) + '%' : ''}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="hint" style="margin-top:8px">Week 1 starts on the ${F.actFirst ? 'actual first harvest day' : 'forecast first harvest day (transplant + ' + b.first_days + ' days)'}. Forecast kg = benchmark v${B.version} kg per polybag for that week × ${fmt(F.bags)} polybags. "vs forecast" compares the totals so far. Pending and confirmed reports are counted; voided ones are not. AA % in red = below 70%.</div>`;
+  if(window.Chart){
+    const upto = F.rows.filter(r => r.ac != null);
+    const ds = [{label:'Forecast (benchmark v' + B.version + ')', data:F.rows.map(r => r.bc), borderColor:'#8a8a8a', borderDash:[6, 4], borderWidth:2, pointRadius:0}];
+    if(F.tg) ds.push({label:'Target pace', data:F.rows.map(r => r.tc), borderColor:'#2E8B57', borderDash:[2, 3], borderWidth:2, pointRadius:0});
+    ds.push({label:'Actual', data:F.rows.map(r => r.ac), borderColor:col, backgroundColor:col, borderWidth:3, pointRadius:3, spanGaps:false});
+    const cfg = {type:'line', data:{labels:F.rows.map(r => 'W' + r.w + ' · ' + dShort(r.from)), datasets:ds},
+      options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+        plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:x => x.parsed.y == null ? '' : ` ${x.dataset.label}: ${fmt(x.parsed.y)} kg`}}},
+        scales:{y:{beginAtZero:true, title:{display:true, text:'Season total so far (kg)'}, ticks:{callback:x => fmt(x)}}}}};
+    if(fchart) fchart.destroy(); fchart = new Chart($('fcChart'), cfg);
+  }
+}
+
 /* ══════ Reports ══════ */
 function cycleText(id){ const c = cycleOf(id); return c ? 'Season ' + c.cycle_no : '<span class="hint">—</span>'; }
 function stBadge(s){ return s === 'CONFIRMED' ? '<span class="badge b-active">Confirmed</span>' : s === 'PENDING' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-void">Voided</span>'; }
@@ -699,7 +931,7 @@ async function renderManage(){
 function exportAll(){
   if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
   const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
-  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports}};
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH}};
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
   a.download = `Harvest_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('✓ Backup downloaded');
 }
