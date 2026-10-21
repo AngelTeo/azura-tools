@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v3</title>
+<title>Harvest v4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -145,6 +145,18 @@ input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var
 .sea dt{color:var(--mut)}.sea dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 .sea table{width:100%;font-size:12px;border-collapse:collapse}.sea th,.sea td{padding:4px;border-top:.5px solid var(--bdr)}.sea th{text-align:left;color:var(--mut);font-weight:500}.sea td.num,.sea th.num{text-align:right}
 .sec-t{font-size:14px;font-weight:700;margin:18px 0 8px}
+.ov-top{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:12px}
+.ov-top .stat b{font-size:22px}.ov-top .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
+.fm{background:var(--sur);border:.5px solid var(--bdr);border-left:6px solid var(--c);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.fm-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:8px}.fm-h h3{margin:0;font-size:17px}.fm-h .hint{font-size:12px}
+.tlbar{position:relative;height:30px;background:#EFEDE7;border-radius:6px;margin:6px 0 4px;overflow:hidden}
+.tlbar .seg{position:absolute;top:0;bottom:0}.tlbar .now{position:absolute;top:-2px;bottom:-2px;width:3px;background:#111}
+.tlbar .lbl{position:absolute;top:7px;font-size:11px;color:#333;white-space:nowrap}
+.tl-ax{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-bottom:10px}
+.fm-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.fm-g>div{background:var(--sur2,#F6F4EF);border-radius:10px;padding:9px 12px}.fm-g small{display:block;font-size:11px;color:var(--mut)}
+.fm-g b{font-size:18px;font-variant-numeric:tabular-nums}.fm-g .d{font-size:12px;color:var(--mut);margin-top:2px}.fm-g .d b{font-size:12px}
+.pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pr-grid label{font-size:12px;color:var(--mut)}.pr-grid input{width:100%}
 .ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:12px}
 .ms .stat b{font-size:17px}.ms .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
 tr.fut td{color:var(--mut)}tr.now td{background:#FFF9E6}
@@ -194,7 +206,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v3</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v4</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -204,8 +216,9 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v3</span></div>
-    <button class="ntab on" data-p="compare" onclick="go('compare')">Compare</button>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v4</span></div>
+    <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
+    <button class="ntab" data-p="compare" onclick="go('compare')">Compare</button>
     <button class="ntab" data-p="seasons" onclick="go('seasons')">Seasons</button>
     <button class="ntab" data-p="forecast" onclick="go('forecast')">Forecast</button>
     <button class="ntab" data-p="bench" onclick="go('bench')">Benchmark</button>
@@ -223,7 +236,10 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
   </div>
 
   <!-- Compare -->
-  <div class="page on" id="page-compare">
+  <div class="page on" id="page-home"><div id="homeView"></div></div>
+
+  <!-- Compare -->
+  <div class="page" id="page-compare">
     <h1 class="pt">Compare harvests</h1>
     <div class="ctl">
       <div class="grp"><span>Line up by</span><div class="seg" id="segX">
@@ -308,7 +324,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -319,7 +335,7 @@ let sb = null, ME = null, LOADED = false, lastErr = '', loadedAt = null, chart =
 const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], reports:[] };
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
-let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null;
+let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null, hchart = null, PRICES = [], PRICE_ERR = '';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -385,6 +401,8 @@ async function loadAll(){
     H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
     const bq = await sb.rpc('harvest_owner_benchmarks');
     BENCH = bq.error ? [] : (bq.data || []); BENCH_ERR = bq.error ? nice(bq.error) : '';
+    const pq = await sb.rpc('harvest_owner_prices');
+    PRICES = pq.error ? [] : (pq.data || []); PRICE_ERR = pq.error ? nice(pq.error) : '';
     LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
     $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
   }catch(err){
@@ -401,6 +419,7 @@ function go(p){
   renderAll(); window.scrollTo(0, 0);
 }
 function renderAll(){
+  if($('page-home').classList.contains('on')) renderHome();
   if($('page-compare').classList.contains('on')) renderCompare();
   if($('page-seasons').classList.contains('on')) renderSeasons();
   if($('page-forecast').classList.contains('on')) renderForecast();
@@ -798,6 +817,121 @@ function renderForecast(){
   }
 }
 
+/* ══════ Overview ══════
+   One screen: where each growing season is today, this week / next week, target, and money (with the owner's price assumptions). */
+const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const mondayOf = d => addDays(d, -((new Date(dnum(d) * 864e5).getUTCDay() + 6) % 7));
+const curPrice = () => (PRICES[0] && PRICES[0].prices) || {};
+function gradeMix(cid){
+  const by = {}; let t = 0;
+  const add = rs => rs.forEach(r => r.lines.forEach(l => { by[l.grade] = (by[l.grade] || 0) + Number(l.kg || 0); t += Number(l.kg || 0); }));
+  add(nonVoid(cid)); if(t < 1){ add(H.reports.filter(r => r.status !== 'VOID')); }
+  const m = {}; Object.keys(by).forEach(g => m[g] = t ? by[g] / t : 0); return m;
+}
+function rmPerKg(mix){ const P = curPrice(); let v = 0, miss = []; Object.entries(mix).forEach(([g, sh]) => { if(P[g] == null){ if(sh > 0.001) miss.push(g); } else v += sh * P[g]; }); return {v, miss}; }
+function rmActual(rs){ const P = curPrice(); return rs.reduce((s, r) => s + r.lines.reduce((t, l) => t + Number(l.kg || 0) * (P[l.grade] || 0), 0), 0); }
+const hasPrice = () => Object.keys(curPrice()).length > 0;
+const rm = v => 'RM ' + fmt(v);
+function farmPlan(c, b){
+  const F = forecast(c, b); if(!F) return null;
+  const pace = F.done >= 2 && F.ratio ? F.ratio : 1, t = today(), nW = F.rows.length;
+  const end = F.rows[nW - 1].to, cur = F.rows.find(r => r.from <= t && r.to >= t), nxt = cur ? F.rows[cur.w] : (F.start > t ? F.rows[0] : null);
+  const mix = gradeMix(c.id), rpk = rmPerKg(mix), rs = nonVoid(c.id), soFar = rs.reduce((s, r) => s + r.kg, 0);
+  const left = F.rows.filter(r => r.from > t).reduce((s, r) => s + r.bk * pace, 0) + (cur ? Math.max(0, cur.bk * pace - (cur.ak || 0)) : 0);
+  const projTotal = soFar + left;
+  const doneRow = F.done ? F.rows[Math.min(F.done, nW) - 1] : null;
+  return {c, b, F, pace, cur, nxt, end, mix, rpk, rs, soFar, left, projTotal, doneRow, L:cycleLabel(c), col:FARM_COLOR[cycleLabel(c).farm] || '#555'};
+}
+function dailyFc(P, d){
+  const w = Math.floor((dnum(d) - dnum(P.F.start)) / 7) + 1, bw = P.b.weeks[w - 1];
+  return bw ? bw.kg_per_bag * P.F.bags * P.pace / 7 : 0;
+}
+function splitTxt(kg){ return `Sun / Tue / Thu ≈ ${fmt(kg * 2 / 7)} kg each · Fri ≈ ${fmt(kg / 7)} kg`; }
+function renderHome(){
+  const v = $('homeView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const B = liveBench()[0];
+  if(!B){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
+  const t = today(), td = new Date(dnum(t) * 864e5);
+  const plans = H.cycles.filter(c => c.status === 'ACTIVE').map(c => farmPlan(c, B.data)).filter(Boolean).sort((a, b) => a.L.farm.localeCompare(b.L.farm));
+  const money = hasPrice();
+  const sumW = (P, which) => { const r = P[which]; return r ? r.bk * P.pace : 0; };
+  const thisWk = plans.reduce((s, P) => s + sumW(P, 'cur'), 0), nextWk = plans.reduce((s, P) => s + sumW(P, 'nxt'), 0);
+  const rmW = which => plans.reduce((s, P) => s + sumW(P, which) * P.rpk.v, 0);
+  const leftAll = plans.reduce((s, P) => s + P.left, 0), leftRM = plans.reduce((s, P) => s + P.left * P.rpk.v, 0);
+  const miss = [...new Set(plans.flatMap(P => P.rpk.miss))];
+  let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)} · benchmark v${B.version}</span></h1>
+  <div class="ov-top">
+    <div class="stat"><small>This harvest week · all farms</small><b>${fmt(thisWk)} kg</b><div class="d">${money ? rm(rmW('cur')) + ' at your prices' : 'Set prices below to see RM'}</div></div>
+    <div class="stat"><small>Next harvest week · all farms</small><b>${fmt(nextWk)} kg</b><div class="d">${money ? rm(rmW('nxt')) : ''}</div></div>
+    <div class="stat"><small>Still to harvest this season · all farms</small><b>${fmt(leftAll)} kg</b><div class="d">${money ? rm(leftRM) : ''}</div></div>
+    <div class="stat"><small>Harvested so far this season</small><b>${fmt(plans.reduce((s, P) => s + P.soFar, 0))} kg</b><div class="d">${money ? rm(plans.reduce((s, P) => s + rmActual(P.rs), 0)) : ''}</div></div>
+  </div>
+  ${miss.length && money ? `<div class="alert alert-warn"><span>⚠</span><div>No price set for ${miss.map(g => esc(GRADE_LABEL[g] || g)).join(', ')} — counted as RM 0.</div></div>` : ''}
+  <div class="sec-t">Week by week · all farms (Mon–Sun)</div>
+  <div class="fc-chart"><canvas id="homeChart"></canvas></div>
+  <div class="sec-t">Each farm now</div>`;
+  plans.forEach(P => {
+    const F = P.F, b = P.b, tp = P.c.transplant_date, x0 = tp || F.start, span = dnum(P.end) - dnum(x0) + 1;
+    const pos = d => Math.max(0, Math.min(100, (dnum(d) - dnum(x0)) / span * 100));
+    const pk = F.rows[b.peak_week - 1];
+    const started = !!F.actFirst, daysTo = dnum(F.start) - dnum(t);
+    const st = !started ? `<span class="badge b-planned">Not harvesting yet</span>` : F.done >= 2 ? stTxt(F.ratio) : '<span class="hint">Too early to judge</span>';
+    const tgtNow = P.doneRow && P.doneRow.tc ? P.doneRow.ac / P.doneRow.tc : null;
+    const perBag = P.projTotal / F.bags;
+    h += `<div class="fm" style="--c:${P.col}">
+      <div class="fm-h"><h3>${esc(P.L.text)}</h3>${st}<span class="hint">${fmt(F.bags)} polybags · transplant ${tp ? dLong(tp) + (P.c.transplant_is_estimate ? ' (estimate)' : '') : '—'}</span></div>
+      <div class="tlbar">
+        ${tp ? `<div class="seg" style="left:0;width:${pos(F.start)}%;background:#DCEFD0"></div><span class="lbl" style="left:6px">Growing</span>` : ''}
+        <div class="seg" style="left:${pos(F.start)}%;width:${100 - pos(F.start)}%;background:${P.col}33"></div>
+        ${pk ? `<div class="seg" style="left:${pos(pk.from)}%;width:${pos(pk.to) - pos(pk.from) + 100 / span}%;background:${P.col}99"></div><span class="lbl" style="left:calc(${pos(pk.from)}% + 3px)">Peak</span>` : ''}
+        <span class="lbl" style="left:calc(${pos(F.start)}% + 3px);top:${pk && pos(pk.from) - pos(F.start) < 8 ? 18 : 7}px">${started ? '1st harvest' : 'Harvest starts'}</span>
+        <div class="now" style="left:${pos(t)}%" title="Today"></div>
+      </div>
+      <div class="tl-ax"><span>${tp ? dShort(tp) : dShort(F.start)}</span><span>▲ today: ${started ? `harvest week ${P.cur ? P.cur.w : '—'} of ${b.season_weeks_min}–${b.season_weeks_max}` : `first harvest in about ${daysTo} days (${dLong(F.start)})`}</span><span>ends about ${dShort(P.end)}</span></div>
+      <div class="fm-g">
+        <div><small>This week${P.cur ? ` (week ${P.cur.w} · ${dShort(P.cur.from)}–${dShort(P.cur.to)})` : ''}</small><b>${P.cur ? fmt(P.cur.bk * P.pace) + ' kg' : '—'}</b><div class="d">${P.cur ? `${money ? '≈ ' + rm(P.cur.bk * P.pace * P.rpk.v) + ' · ' : ''}harvested so far ${fmt(P.cur.ak || 0)} kg` : 'not harvesting this week'}</div></div>
+        <div><small>${started ? 'Next week' : 'First harvest week'}${P.nxt ? ` (week ${P.nxt.w} · ${dShort(P.nxt.from)}–${dShort(P.nxt.to)})` : ''}</small><b>${P.nxt ? fmt(P.nxt.bk * P.pace) + ' kg' : '—'}</b><div class="d">${P.nxt ? splitTxt(P.nxt.bk * P.pace) + (money ? ' · ' + rm(P.nxt.bk * P.pace * P.rpk.v) : '') : ''}</div></div>
+        <div><small>Season so far</small><b>${fmt(P.soFar)} kg</b><div class="d">${fmt(P.soFar / F.bags, 2)} kg per polybag${tgtNow != null ? ` · <b style="color:${tgtNow < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${fmt(tgtNow * 100)}% of target pace</b>` : ''}${money ? ' · ' + rm(rmActual(P.rs)) : ''}</div></div>
+        <div><small>Whole season (expected)</small><b>${fmt(P.projTotal)} kg</b><div class="d">${fmt(perBag, 2)} kg per polybag → <b style="color:${F.tg && perBag / F.tg < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${F.tg ? fmt(perBag / F.tg * 100) + '% of target ' + fmt(F.tg) + ' kg' : ''}</b>${money ? '<br>' + rm(rmActual(P.rs) + P.left * P.rpk.v) : ''}</div></div>
+      </div>
+      <div class="hint" style="margin-top:6px">${F.done >= 2 ? `Forecast uses benchmark × current pace (${fmt(P.pace * 100)}%).` : 'Forecast uses the benchmark as is (less than 2 full weeks of harvest).'}${money ? ` Money uses your prices × this season's grade mix (≈ RM ${fmt(P.rpk.v, 2)} per kg).` : ''}</div>
+    </div>`;
+  });
+  const P0 = curPrice();
+  h += `<div class="sec-t">Prices for estimates (RM per kg)</div>
+  <div class="card">${PRICE_ERR ? `<div class="alert alert-danger"><span>⚠</span><div>${esc(PRICE_ERR)}</div></div>` : ''}
+    <div class="pr-grid">${H.grades.filter(g => g.shown !== false).map(g => `<div><label>${esc(g.label || g.code)}</label><input type="number" step="0.01" min="0" class="prIn" data-g="${g.code}" value="${P0[g.code] ?? ''}" placeholder="RM / kg"></div>`).join('')}</div>
+    <div class="row-inline" style="margin-top:10px"><input id="prNote" placeholder="Note, e.g. buyer price this week" style="max-width:320px"><button class="btn btn-pri" onclick="savePrices()">Save prices</button></div>
+    <div class="hint" style="margin-top:6px">${PRICES[0] ? 'Last set ' + esc(String(PRICES[0].set_at).slice(0, 16).replace('T', ' ')) + (PRICES[0].note ? ' · ' + esc(PRICES[0].note) : '') + '. ' : 'No prices yet. '}These are your own estimates for planning, not actual sales. Every change is kept as history.</div></div>`;
+  v.innerHTML = h;
+  /* chart: calendar weeks, 4 back → 8 ahead, actual solid + forecast faded, stacked by farm */
+  if(window.Chart){
+    const m0 = addDays(mondayOf(t), -28), weeks = Array.from({length:13}, (_, i) => addDays(m0, i * 7));
+    const ds = [];
+    plans.forEach(P => {
+      const act = weeks.map(w => { let s = 0; for(let i = 0; i < 7; i++){ const d = addDays(w, i); if(d <= t) s += P.rs.filter(r => r.date === d).reduce((a, r) => a + r.kg, 0); } return s || null; });
+      const fc = weeks.map(w => { let s = 0; for(let i = 0; i < 7; i++){ const d = addDays(w, i); if(d > t) s += dailyFc(P, d); } return s ? Math.round(s) : null; });
+      ds.push({label:P.L.text + ' · actual', data:act, backgroundColor:P.col, stack:'s'});
+      ds.push({label:P.L.text + ' · forecast', data:fc, backgroundColor:P.col + '55', borderColor:P.col, borderWidth:1, borderDash:[3, 3], stack:'s'});
+    });
+    const labels = weeks.map(w => (w <= t && addDays(w, 6) >= t ? '▶ ' : '') + dShort(w) + '–' + dShort(addDays(w, 6)));
+    const cfg = {type:'bar', data:{labels, datasets:ds}, options:{responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}, tooltip:{callbacks:{label:x => x.parsed.y ? ` ${x.dataset.label}: ${fmt(x.parsed.y)} kg` : '', footer:it => { const tot = it.reduce((s, x) => s + (x.parsed.y || 0), 0); return 'Total ' + fmt(tot) + ' kg'; }}}},
+      scales:{x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, title:{display:true, text:'kg per week'}, ticks:{callback:x => fmt(x)}}}}};
+    if(hchart) hchart.destroy(); hchart = new Chart($('homeChart'), cfg);
+  }
+}
+async function savePrices(){
+  const p = {}; let bad = '';
+  document.querySelectorAll('.prIn').forEach(i => { if(i.value === '') return; const n = Number(i.value); if(!(n >= 0 && n <= 100)) bad = i.dataset.g; else p[i.dataset.g] = n; });
+  if(bad){ toast('Price must be between 0 and 100'); return; }
+  if(!Object.keys(p).length){ toast('Enter at least one price'); return; }
+  const {error} = await sb.rpc('harvest_owner_price_set', {p_prices:p, p_note:$('prNote').value});
+  if(error){ toast(nice(error)); return; }
+  toast('✓ Prices saved'); await loadAll();
+}
+
 /* ══════ Reports ══════ */
 function cycleText(id){ const c = cycleOf(id); return c ? 'Season ' + c.cycle_no : '<span class="hint">—</span>'; }
 function stBadge(s){ return s === 'CONFIRMED' ? '<span class="badge b-active">Confirmed</span>' : s === 'PENDING' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-void">Voided</span>'; }
@@ -931,7 +1065,7 @@ async function renderManage(){
 function exportAll(){
   if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
   const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
-  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH}};
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH, prices:PRICES}};
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
   a.download = `Harvest_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('✓ Backup downloaded');
 }
