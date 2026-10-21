@@ -50,7 +50,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .err-msg.on{display:block;}
 
 /* ── FARM BUTTONS ── */
-.farm-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.farm-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .farm-btn{border:1px solid var(--bdr);background:var(--sur);border-radius:10px;
   padding:14px;font-size:17px;font-weight:700;cursor:pointer;text-align:center;
   font-family:'DM Sans',sans-serif;color:var(--txt2);transition:.15s;}
@@ -152,6 +152,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .copy-btn:active{background:var(--bdr);}
 
 /* ── TOAST ── */
+.save-st{font-size:11px;text-align:center;margin-top:8px;color:var(--mut);}
+.save-st.ok{color:var(--g);}.save-st.wait{color:#8a6100;}
 #toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(8px);
   background:#1a1e17;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;
   font-weight:600;opacity:0;transition:all .2s;z-index:999;pointer-events:none;white-space:nowrap;}
@@ -166,7 +168,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     <div class="hdr-icon">🌿</div>
     <div class="hdr-text">
       <h1>Harvest WhatsApp Report</h1>
-      <p>Azura Delta Farm — AD1 &amp; AD2</p>
+      <p id="hdr-farms">Azura Delta Farm — AD1, AD2 &amp; AD3</p>
     </div>
   </div>
 
@@ -182,14 +184,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     <!-- FARM -->
     <div class="frow">
       <label>Farm <span class="req">*</span></label>
-      <div class="farm-pick">
-        <button class="farm-btn" id="fb-ad1" onclick="pickFarm('AD1')">
-          AD1<small>Farm 1</small>
-        </button>
-        <button class="farm-btn" id="fb-ad2" onclick="pickFarm('AD2')">
-          AD2<small>Farm 2</small>
-        </button>
-      </div>
+      <div class="farm-pick" id="farm-pick"></div>
       <div class="err-msg" id="err-farm">Please select a farm</div>
     </div>
 
@@ -215,6 +210,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   <div class="prev-body">
     <div class="msg-card" id="msg-out"></div>
     <div class="prev-note">Tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
+    <div class="save-st" id="save-st"></div>
   </div>
   <div class="send-bar">
     <button class="wa-btn" onclick="sendWA()">
@@ -245,9 +241,19 @@ const WEIGHTS = [
   { label:'30/27', factor:27   },
 ];
 
+// Farms shown as buttons. Read from the farm list (FarmHub); this is only the fallback when offline.
+// The WhatsApp text keeps the old spelling (AD1, no space) so the group looks the same as before.
+let FARMS = ['AD 1','AD 2','AD 3'];
+const GRADE_CODE = { aa:'AA', aak:'AA_KULIT', aap:'AA_PUTIH', a:'A', ak:'A_KULIT', apb:'A_PUTIH', b:'B' };
+const UNIT_CODE  = { 'kg':'KG', '34/30':'B30', '30/27':'B27' };
+const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+const QKEY = 'harvest_outbox_v1', FKEY = 'harvest_farms_v1';
+const short = code => code.replace(/\s+/g, '');
+
 // ══ STATE ════════════════════════════════════
 // Each grade = array of rows: [{ weight:30, baskets:0 }, ...]
-const S = { farm:'', grades:{} };
+const S = { farm:'', grades:{}, pending:null };
 GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'kg', baskets:0 }]; });
 
 // ══ INIT ═════════════════════════════════════
@@ -257,7 +263,28 @@ function init() {
   const dd = String(t.getDate()).padStart(2,'0');
   const mm = String(t.getMonth()+1).padStart(2,'0');
   document.getElementById('f-date').value = `${dd}/${mm}`;
+  try { const f = JSON.parse(localStorage.getItem(FKEY) || 'null'); if (Array.isArray(f) && f.length) FARMS = f; } catch(e) {}
+  buildFarms();
   buildAllCards();
+  loadFarms();
+  flushOutbox();
+}
+
+// ══ FARMS (from the farm list) ════════════════
+function buildFarms() {
+  document.getElementById('farm-pick').innerHTML = FARMS.map(code => `
+    <button class="farm-btn${S.farm===short(code)?' on':''}" data-farm="${short(code)}" onclick="pickFarm('${short(code)}')">
+      ${short(code)}<small>Farm ${code.split(' ').pop()}</small>
+    </button>`).join('');
+  document.getElementById('hdr-farms').textContent = 'Azura Delta Farm — ' + FARMS.map(short).join(', ');
+}
+async function loadFarms() {
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/rpc/harvest_form_options', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body:'{}' });
+    if (!r.ok) return;
+    const j = await r.json(); const list = (j.farms || []).map(f => f.code);
+    if (list.length) { FARMS = list; try { localStorage.setItem(FKEY, JSON.stringify(list)); } catch(e) {} buildFarms(); }
+  } catch(e) {}
 }
 
 // ══ BUILD ALL CARDS ═══════════════════════════
@@ -384,8 +411,7 @@ function autoSlash(el) {
 // ══ FARM ═════════════════════════════════════
 function pickFarm(farm) {
   S.farm = farm;
-  document.getElementById('fb-ad1').classList.toggle('on', farm==='AD1');
-  document.getElementById('fb-ad2').classList.toggle('on', farm==='AD2');
+  document.querySelectorAll('#farm-pick .farm-btn').forEach(b => b.classList.toggle('on', b.dataset.farm === farm));
   document.getElementById('err-farm').classList.remove('on');
 }
 
@@ -431,14 +457,63 @@ function generate() {
   const msg  = `Date: ${date}\nFarm: ${S.farm}\n————————————\n${lines.join('\n')}`;
 
   document.getElementById('msg-out').textContent = msg;
+  S.pending = buildRecord(date, msg);
+  setSaveSt('');
   document.getElementById('scr-form').classList.remove('on');
   document.getElementById('scr-prev').classList.add('on');
 }
 
 // ══ SEND / COPY ══════════════════════════════
 function sendWA() {
+  // WhatsApp opens first, every time. Saving never blocks it.
   window.open('https://wa.me/?text=' + encodeURIComponent(document.getElementById('msg-out').textContent), '_blank');
+  if (S.pending) { queue(S.pending); flushOutbox(); }
 }
+
+// ══ SAVE TO THE FARM SYSTEM (outbox: kept on the phone until the cloud says OK) ══
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); });
+}
+function isoDate(ddmm) {
+  const [d, m] = ddmm.split('/').map(Number), t = new Date();
+  let y = t.getFullYear();
+  if (m > t.getMonth() + 2) y -= 1;                       // e.g. typing 31/12 on 2 January
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function buildRecord(ddmm, msg) {
+  const sum = {};
+  GRADES.forEach(g => S.grades[g.key].forEach(row => {
+    if (row.baskets > 0) { const k = GRADE_CODE[g.key] + '|' + UNIT_CODE[row.wLabel]; sum[k] = (sum[k] || 0) + row.baskets; }
+  }));
+  const farm = FARMS.find(f => short(f) === S.farm) || S.farm;
+  return { client_id: uuid(), date: isoDate(ddmm), farm, wa_text: msg,
+           lines: Object.entries(sum).map(([k, qty]) => { const [grade, unit] = k.split('|'); return { grade, unit, qty }; }) };
+}
+function readQ() { try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch(e) { return []; } }
+function writeQ(q) { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch(e) {} }
+function queue(rec) { const q = readQ(); if (!q.some(x => x.client_id === rec.client_id)) { q.push(rec); writeQ(q); } }
+function setSaveSt(t, cls) { const el = document.getElementById('save-st'); if (el) { el.textContent = t; el.className = 'save-st' + (cls ? ' ' + cls : ''); } }
+let flushing = false;
+async function flushOutbox() {
+  if (flushing) return; flushing = true;
+  let q = readQ();
+  for (const rec of [...q]) {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/rpc/harvest_submit', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p: rec }) });
+      if (r.ok) { q = q.filter(x => x.client_id !== rec.client_id); writeQ(q); if (S.pending && rec.client_id === S.pending.client_id) setSaveSt('✓ Saved to farm system', 'ok'); }
+      else if (r.status >= 400 && r.status < 500) {        // the cloud refused it (e.g. date too old): do not retry forever
+        q = q.filter(x => x.client_id !== rec.client_id); writeQ(q);
+        let m = ''; try { m = (await r.json()).message || ''; } catch(e) {}
+        if (S.pending && rec.client_id === S.pending.client_id) setSaveSt('Not saved: ' + m + ' — WhatsApp is still fine', 'wait');
+      } else break;
+    } catch(e) { break; }                                   // no signal: keep it, try again later
+  }
+  if (readQ().length && S.pending && readQ().some(x => x.client_id === S.pending.client_id)) setSaveSt('Saved on this phone — will upload when there is signal', 'wait');
+  flushing = false;
+}
+window.addEventListener('online', flushOutbox);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) flushOutbox(); });
 
 function copyMsg() {
   const txt = document.getElementById('msg-out').textContent;
