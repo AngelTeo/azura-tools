@@ -179,7 +179,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="gate">
   <div class="card">
     <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v1</span></div>
-    <div class="hint" style="margin-bottom:14px">Azura Delta · Operations · Owner only</div>
+    <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
   </div>
@@ -263,7 +263,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <script>
 /* ══════════════════════════════════════════════════════════════
-   Harvest — Azura Delta Operations (Owner only)
+   Harvest — Azura Delta Operations
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
@@ -294,16 +294,16 @@ const farmOf = id => H.farms.find(f => f.id === id) || {};
 const cycleOf = id => H.cycles.find(c => c.id === id);
 const blockOf = id => H.blocks.find(b => b.id === id) || {};
 function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('show'), 2200); }
-const nice = e => { const m = (e && (e.message || String(e))) || ''; if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.'; if(/Not allowed/i.test(m)) return 'Only the owner can use Harvest.'; return m; };
+const nice = e => { const m = (e && (e.message || String(e))) || ''; if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.'; if(/Not allowed/i.test(m)) return 'Harvest is not ready yet.'; return m; };
 
 const GATE_MSG = {
   no_login:  'You are not signed in. Go back to the Home page, sign in, then open Harvest.',
-  no_access: 'Harvest is for the owner only.',
+  no_access: 'Harvest is not ready yet. Please check back later.',
   offline:   'Cannot reach the cloud — check your connection and refresh.'
 };
 function gate(kind, extra){
   $('app').style.display = 'none'; $('gate').style.display = 'block';
-  $('gateMsg').innerHTML = `<div class="alert ${kind === 'no_access' ? 'alert-danger' : 'alert-warn'}"><span>⚠</span><div>${GATE_MSG[kind] || esc(kind)}${extra ? '<div class="hint">' + esc(extra) + '</div>' : ''}</div></div>`;
+  $('gateMsg').innerHTML = `<div class="alert ${kind === 'no_access' ? 'alert-info' : 'alert-warn'}"><span>${kind === 'no_access' ? 'ℹ' : '⚠'}</span><div>${GATE_MSG[kind] || esc(kind)}${extra ? '<div class="hint">' + esc(extra) + '</div>' : ''}</div></div>`;
   $('gateHome').style.display = 'inline-flex';
 }
 async function boot(){
