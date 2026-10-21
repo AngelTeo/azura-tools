@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v1</title>
+<title>Harvest v2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -135,6 +135,16 @@ input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var
 
 .stat.click{cursor:pointer}.stat.click:hover{background:#FFF9E6}.stat.on{outline:2px solid var(--layer)}
 .stat.warn b{color:var(--warn)}
+.sea-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-bottom:6px}
+.sea{background:var(--sur);border:.5px solid var(--bdr);border-left:5px solid var(--c);border-radius:12px;padding:14px 16px}
+.sea h3{margin:0 0 2px;font-size:15px}.sea .sub{font-size:12px;color:var(--mut);margin-bottom:10px}
+.sea .big{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.sea .big small{font-size:13px;font-weight:500;color:var(--mut)}
+.sea .tgt{font-size:12px;margin:3px 0 10px;color:var(--mut)}
+.sea dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 10px;font-size:13px}
+.sea dt{color:var(--mut)}.sea dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.sea table{width:100%;font-size:12px;border-collapse:collapse}.sea th,.sea td{padding:4px;border-top:.5px solid var(--bdr)}.sea th{text-align:left;color:var(--mut);font-weight:500}.sea td.num,.sea th.num{text-align:right}
+.sec-t{font-size:14px;font-weight:700;margin:18px 0 8px}
 .b-planned{background:#E8F0F7;color:var(--info)}
 textarea{width:100%;min-height:64px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px}
 input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
@@ -178,7 +188,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v1</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v2</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -188,8 +198,9 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v1</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v2</span></div>
     <button class="ntab on" data-p="compare" onclick="go('compare')">Compare</button>
+    <button class="ntab" data-p="seasons" onclick="go('seasons')">Seasons</button>
     <button class="ntab" data-p="reports" onclick="go('reports')">Reports</button>
     <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
     <div class="nav-r">
@@ -232,6 +243,12 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
     <div class="hint" id="cmpNote"></div>
   </div>
 
+  <!-- Seasons -->
+  <div class="page" id="page-seasons">
+    <h1 class="pt">Seasons <label class="chk" style="font-size:13px;font-weight:400"><input type="checkbox" id="seaConfirmed" onchange="renderSeasons()"> Confirmed only</label></h1>
+    <div id="seaView"></div>
+  </div>
+
   <!-- Reports -->
   <div class="page" id="page-reports">
     <h1 class="pt">Reports <button class="btn btn-pri" onclick="openAdd()">+ Add report</button></h1>
@@ -267,7 +284,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -275,7 +292,7 @@ const LEADER_LINK = 'https://angelteo.github.io/azura-tools/worker_harvest_form_
 const FARM_COLOR = {'AD 1':'#D32F2F', 'AD 2':'#E8A800', 'AD 3':'#1F6FD1', 'HX A':'#6A3FB5', 'HX B':'#2E8B57', 'HX C':'#8B4513'};
 const GRADE_LABEL = {};
 let sb = null, ME = null, LOADED = false, lastErr = '', loadedAt = null, chart = null;
-const H = { farms:[], blocks:[], cycles:[], grades:[], units:[], reports:[] };
+const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], reports:[] };
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
 
@@ -329,13 +346,15 @@ async function loadAll(){
     const res = await Promise.all([
       sb.from('hub_farm').select('id,code,status'),
       sb.from('hub_farm_block').select('id,farm_id,code,active,bag_capacity'),
-      sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,bag_count,sowing_is_estimate,transplant_is_estimate'),
+      sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,expected_end,bag_count,sowing_is_estimate,transplant_is_estimate,protocol_id,voided_at'),
+      sb.from('hub_crop_protocol').select('id,expected_kg_per_bag,cycle_days'),
       sb.from('hub_grade').select('id,code,label,sort,shown'),
       sb.from('hub_unit').select('id,code,kind,to_kg,usage,shown'),
       sb.rpc('harvest_owner_list', {p_from: from, p_to: to})
     ]);
     const bad = res.find(r => r.error); if(bad) throw bad.error;
-    [H.farms, H.blocks, H.cycles, H.grades, H.units, H.reports] = res.map(r => r.data || []);
+    [H.farms, H.blocks, H.cycles, H.protocols, H.grades, H.units, H.reports] = res.map(r => r.data || []);
+    H.cycles = H.cycles.filter(c => !c.voided_at);
     if(!H.farms.length || !H.grades.length) throw new Error('Master data is empty');
     H.grades.sort((a, b) => a.sort - b.sort); H.grades.forEach(g => GRADE_LABEL[g.code] = g.label);
     H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
@@ -356,6 +375,7 @@ function go(p){
 }
 function renderAll(){
   if($('page-compare').classList.contains('on')) renderCompare();
+  if($('page-seasons').classList.contains('on')) renderSeasons();
   if($('page-reports').classList.contains('on')) renderReports();
   if($('page-manage').classList.contains('on')) renderManage();
 }
@@ -469,6 +489,81 @@ function renderCmpTable(S){
         <td class="num">${s === ref ? '—' : vs != null ? '<b style="color:' + (vs < 90 ? 'var(--danger)' : vs > 110 ? 'var(--ok)' : 'inherit') + '">' + fmt(vs) + '%</b>' : '—'}</td>
         <td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`; }).join('') + '</tbody>';
   $('cmpNote').innerHTML = `Compared at the same day ${N} of each line (the furthest day every ticked line has reached). ` + (OPT.from === 'tp' ? 'Day 1 = transplant day. ' + (vis.some(s => s.est) ? 'Some transplant dates are estimates. ' : '') : 'Day 1 = first harvest of that season. ') + 'Untick lines on the right to compare others.';
+}
+
+/* ══════ Seasons ══════
+   One season = one cycle of one block. kg per polybag = total kg ÷ polybags of that cycle. */
+function seasonStats(c){
+  const oc = $('seaConfirmed').checked;
+  const rs = H.reports.filter(r => r.cycle_id === c.id && (r.status === 'CONFIRMED' || (!oc && r.status === 'PENDING'))).sort((a, b) => a.date.localeCompare(b.date));
+  const L = cycleLabel(c), bags = bagsFor(c), kg = rs.reduce((s, r) => s + r.kg, 0);
+  const byG = {}; rs.forEach(r => r.lines.forEach(l => byG[l.grade] = (byG[l.grade] || 0) + Number(l.kg || 0)));
+  const byD = {}; rs.forEach(r => byD[r.date] = (byD[r.date] || 0) + r.kg);
+  let best = 0, bestEnd = null; const days = Object.keys(byD).sort();
+  days.forEach(d => { let t = 0; days.forEach(x => { if(x <= d && x > addDays(d, -7)) t += byD[x]; }); if(t > best){ best = t; bestEnd = d; } });
+  const pr = H.protocols.find(p => p.id === c.protocol_id) || {};
+  const first = rs.length ? rs[0].date : null, last = rs.length ? rs[rs.length - 1].date : null;
+  return { c, L, bags, kg, rs, per: bags && rs.length ? kg / bags : null, n: rs.length, hdays: days.length, first, last,
+    span: first ? dnum(last) - dnum(first) + 1 : 0, tpToLast: c.transplant_date && last ? dnum(last) - dnum(c.transplant_date) : null,
+    best, bestEnd, byG, aa: byG['AA'] || 0, target: Number(pr.expected_kg_per_bag || 0), pending: rs.filter(r => r.status === 'PENDING').length,
+    closed: c.status === 'CLOSED' };
+}
+const kgb = v => v == null ? '—' : fmt(v, 2);
+function seasonCard(x, other){
+  const col = FARM_COLOR[x.L.farm] || '#555', tg = x.target && x.per != null ? x.per / x.target * 100 : null;
+  const grades = H.grades.filter(g => x.byG[g.code]).map(g => `<tr><td>${esc(g.label || g.code)}</td><td class="num">${fmt(x.byG[g.code])}</td><td class="num">${fmt(x.byG[g.code] / x.kg * 100, 1)}%</td><td class="num">${kgb(x.bags ? x.byG[g.code] / x.bags : null)}</td></tr>`).join('');
+  let cmp = '';
+  if(other && other.per != null && x.per != null){
+    if(!x.closed && other.first){ /* growing season: compare with the other season at the same harvest day */
+      const lim = addDays(other.first, x.span - 1), okg = other.rs.filter(r => r.date <= lim).reduce((s, r) => s + r.kg, 0), oper = other.bags ? okg / other.bags : 0;
+      const d = oper ? x.per / oper * 100 : null;
+      cmp = `<div class="tgt">Season ${other.c.cycle_no} at the same day ${x.span}: ${kgb(oper)} kg per polybag${d != null ? ` → now <b style="color:${d < 90 ? 'var(--danger)' : d > 110 ? 'var(--ok)' : 'inherit'}">${fmt(d)}%</b>` : ''}<br>Season ${other.c.cycle_no} full season: ${kgb(other.per)} kg per polybag</div>`;
+    } else cmp = `<div class="tgt">Season ${other.c.cycle_no}${other.closed ? '' : ' so far'}: ${kgb(other.per)} kg per polybag</div>`;
+  }
+  return `<div class="sea" style="--c:${col}">
+    <h3>${esc(x.L.text)} ${x.closed ? '<span class="badge b-void">Finished</span>' : '<span class="badge b-active">Growing · so far</span>'}</h3>
+    <div class="sub">${x.c.transplant_date ? 'Transplant ' + dLong(x.c.transplant_date) + (x.c.transplant_is_estimate ? ' (estimate)' : '') + ' · ' : ''}${x.first ? 'harvest ' + dLong(x.first) + ' → ' + dLong(x.last) : 'no harvest yet'}</div>
+    <div class="big">${kgb(x.per)} <small>kg per polybag</small></div>
+    <div class="tgt">${!x.n ? 'No ' + ($('seaConfirmed').checked ? 'confirmed ' : '') + 'harvest reports in this season yet' : tg != null ? `Target ${fmt(x.target)} kg per polybag → <b style="color:${tg < 90 ? 'var(--danger)' : 'var(--ok)'}">${fmt(tg)}% of target</b>` : ''}</div>${cmp}
+    ${x.n ? `<dl><dt>Total harvest</dt><dd><b>${fmt(x.kg)} kg</b></dd>
+      <dt>Polybags</dt><dd>${fmt(x.bags)}</dd>
+      <dt>Harvest days</dt><dd>${x.hdays} days (over ${x.span} days)</dd>
+      <dt>Average per harvest day</dt><dd>${x.hdays ? fmt(x.kg / x.hdays) : '—'} kg</dd>
+      <dt>Best 7 days</dt><dd>${x.bestEnd ? fmt(x.best) + ' kg (to ' + dShort(x.bestEnd) + ')' : '—'}</dd>
+      ${x.tpToLast != null ? `<dt>Transplant → last harvest</dt><dd>${x.tpToLast} days</dd>` : ''}
+      <dt>AA share</dt><dd>${x.kg ? fmt(x.aa / x.kg * 100, 1) + '%' : '—'}</dd>
+      ${x.pending ? `<dt>Not yet confirmed</dt><dd style="color:var(--warn)">${x.pending} reports</dd>` : ''}</dl>` : ''}
+    ${grades ? `<table><thead><tr><th>Grade</th><th class="num">kg</th><th class="num">Share</th><th class="num">kg per polybag</th></tr></thead><tbody>${grades}</tbody></table>` : ''}
+  </div>`;
+}
+function renderSeasons(){
+  const v = $('seaView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const all = H.cycles.map(seasonStats).filter(x => x.n || x.c.status === 'ACTIVE' || x.closed)
+    .sort((a, b) => a.L.farm.localeCompare(b.L.farm) || a.c.cycle_no - b.c.cycle_no);
+  const lastClosed = {}; all.filter(x => x.closed).forEach(x => { const k = x.c.block_id; if(!lastClosed[k] || (x.last || '') > (lastClosed[k].last || '')) lastClosed[k] = x; });
+  const fin = Object.values(lastClosed).sort((a, b) => a.L.farm.localeCompare(b.L.farm));
+  const nowOf = x => all.find(y => y.c.block_id === x.c.block_id && y.c.cycle_no === x.c.cycle_no + 1);
+  const prevOf = x => all.find(y => y.c.block_id === x.c.block_id && y.c.cycle_no === x.c.cycle_no - 1);
+  const growing = all.filter(x => !x.closed && x.n);
+  const unassigned = H.reports.filter(r => !r.cycle_id && r.status !== 'VOID').length;
+  const gCols = H.grades.filter(g => all.some(x => x.byG[g.code]));
+  v.innerHTML = `
+    <div class="sec-t">Last finished season</div>
+    ${fin.length ? `<div class="sea-grid">${fin.map(x => seasonCard(x, nowOf(x))).join('')}</div>` : '<div class="card empty">No finished season yet</div>'}
+    ${growing.length ? `<div class="sec-t">Growing now (so far)</div><div class="sea-grid">${growing.map(x => seasonCard(x, prevOf(x))).join('')}</div>` : ''}
+    <div class="sec-t">All seasons · kg per polybag</div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th>First harvest</th><th>Last harvest</th><th class="num">Harvest days</th><th class="num">Total kg</th><th class="num">kg per polybag</th><th class="num">vs target</th><th class="num">AA %</th></tr></thead><tbody>
+    ${all.map(x => `<tr><td><span class="sw ${x.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[x.L.farm] || '#555'}"></span> <b>${esc(x.L.text)}</b></td>
+      <td>${x.closed ? 'Finished' : 'Growing'}</td><td class="num">${fmt(x.bags)}</td><td>${x.first ? dLong(x.first) : '—'}</td><td>${x.last ? dLong(x.last) : '—'}</td>
+      <td class="num">${x.hdays || '—'}</td><td class="num">${x.n ? fmt(x.kg) : '—'}</td><td class="num"><b>${x.n ? kgb(x.per) : '—'}</b>${!x.closed && x.n ? ' <small class="hint">so far</small>' : ''}</td>
+      <td class="num">${x.n && x.target ? fmt(x.per / x.target * 100) + '%' : '—'}</td><td class="num">${x.kg ? fmt(x.aa / x.kg * 100, 1) + '%' : '—'}</td></tr>`).join('')}
+    </tbody></table></div></div>
+    ${gCols.length ? `<div class="sec-t">kg per polybag by grade</div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th>${gCols.map(g => `<th class="num">${esc(g.label || g.code)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+    ${all.filter(x => x.n).map(x => `<tr><td><b>${esc(x.L.text)}</b>${x.closed ? '' : ' <small class="hint">so far</small>'}</td>${gCols.map(g => `<td class="num">${x.byG[g.code] && x.bags ? kgb(x.byG[g.code] / x.bags) : '—'}</td>`).join('')}<td class="num"><b>${kgb(x.per)}</b></td></tr>`).join('')}
+    </tbody></table></div></div>` : ''}
+    <div class="hint" style="margin-top:8px">kg per polybag = total harvest kg of the season ÷ polybags planted that season. Target comes from the planting standard in Crops. ${$('seaConfirmed').checked ? 'Only confirmed reports are counted.' : 'Pending and confirmed reports are counted; voided ones are not.'}${unassigned ? ` ${unassigned} report(s) fall outside any season's dates and are not counted here.` : ''}</div>`;
 }
 
 /* ══════ Reports ══════ */
