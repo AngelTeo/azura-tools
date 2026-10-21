@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harvest v1</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<style>
+:root{
+  --layer:#8B6C2A;
+  --c-ad:#0E6B4A; --c-hx:#B7791F;
+  --sur:#ffffff; --sur2:#f7f6f2; --bdr:#e0ddd6;
+  --txt:#1a1a1a; --mut:#888888; --hint:#bbbbbb;
+  --ok:#0F6E56; --warn:#854F0B; --danger:#A32D2D; --info:#236FAD;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,"Microsoft YaHei",sans-serif;
+  background:var(--sur2);color:var(--txt);font-size:13px;line-height:1.4}
+
+/* ══════ NAV (TOPBAR) ══════ */
+.nav{background:var(--layer);border-bottom:.5px solid rgba(0,0,0,.2);
+  display:flex;align-items:center;padding:0 16px;position:sticky;top:0;z-index:50;
+  overflow-x:auto;gap:0;min-height:56px}
+.nav-home{background:none;border:none;color:rgba(255,255,255,.75);font-size:18px;cursor:pointer;padding:0 12px 0 0;flex-shrink:0;min-height:44px;min-width:44px}
+.nav-home:hover{color:#fff}
+.nav-logo{font-size:13px;font-weight:600;padding:0 14px 0 0;
+  border-right:.5px solid rgba(255,255,255,.2);margin-right:4px;white-space:nowrap;
+  flex-shrink:0;color:#fff;display:flex;align-items:center;min-height:44px}
+.ver{background:#F9CB42;color:var(--layer);border-radius:4px;padding:1px 6px;
+  font-size:10px;font-weight:700;margin-left:6px}
+.ntab{padding:0 14px;font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;
+  border:none;background:transparent;border-bottom:2.5px solid transparent;
+  transition:all .15s;white-space:nowrap;flex-shrink:0;font-family:inherit;min-height:44px}
+.ntab:hover{color:#fff}
+.ntab.on{color:#fff;border-bottom-color:#fff;font-weight:600}
+.nav-r{margin-left:auto;display:flex;gap:6px;align-items:center;padding-left:24px;flex-shrink:0}
+.saved{font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap}
+.sync{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;border-radius:22px;
+  background:rgba(255,255,255,.14);color:#fff;font-size:11px;border:.5px solid rgba(255,255,255,.3);cursor:pointer;font-family:inherit}
+.sync i{width:8px;height:8px;border-radius:50%;background:#7CD4A8;display:inline-block}
+.sync.bad i{background:#FF8A8A}.sync.busy i{background:#F9CB42}
+.btn-nav{padding:0 12px;border-radius:6px;border:.5px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.12);color:#fff;font-size:11px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}
+.btn-nav:hover{opacity:.85}
+
+/* ══════ PAGES ══════ */
+.page{display:none;padding:16px;max-width:1200px;margin:0 auto}
+.page.on{display:block}
+h1.pt{font-size:18px;margin:4px 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ══════ BUTTONS ══════ */
+.btn{padding:0 14px;min-height:44px;border-radius:6px;border:.5px solid var(--bdr);
+  background:var(--sur);color:var(--txt);font-size:12px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--sur2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-pri{background:var(--layer);color:#fff;border-color:var(--layer);font-weight:600}
+.btn-pri:hover{opacity:.85;background:var(--layer)}
+.btn-sm{min-height:36px;padding:0 10px;font-size:11px}
+
+/* ══════ CARDS ══════ */
+.card{background:var(--sur);border:.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+.mg-line{font-size:12px;line-height:2}
+.mg-val{background:var(--sur2);border-radius:4px;font-size:11px;padding:1px 6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:10px 14px}
+.stat small{display:block;font-size:11px;color:var(--mut)}.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+
+/* ══════ ALERT ══════ */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+.alert-warn{background:#FFF3CD;color:var(--warn);border-left:3px solid var(--warn)}
+.alert-danger{background:#FCEBEB;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-info{background:#E8F0F7;color:var(--info);border-left:3px solid var(--info)}
+
+/* ══════ TABLES ══════ */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.data{width:100%;border-collapse:collapse;font-size:12px}
+table.data thead th{background:#2d2d2d;color:#fff;padding:9px 10px;text-align:left;
+  font-size:10px;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+table.data tbody td{padding:7px 10px;border-bottom:.5px solid var(--bdr);height:36px;vertical-align:middle}
+table.data tbody tr:nth-child(even){background:var(--sur2)}
+table.data tbody tr.click{cursor:pointer}
+table.data tbody tr.click:hover{background:#FFF9E6}
+table.data td.num,table.data th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.data tfoot td{padding:8px 10px;font-weight:700;border-top:1px solid var(--txt)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-active{background:#E1F5EE;color:var(--ok)}
+.b-pending{background:#FFF3CD;color:var(--warn)}
+.b-archived{background:var(--sur2);color:var(--mut)}
+.co{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:#777}
+.co.AD{background:var(--c-ad)}.co.HX{background:var(--c-hx)}
+.empty{text-align:center;padding:40px 20px;color:var(--mut);font-size:12px}
+.code{font-family:ui-monospace,Consolas,monospace;font-weight:600;color:var(--layer);white-space:nowrap}
+
+/* ══════ FORM ══════ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld>span{font-size:11px;color:var(--mut)}
+.fld>span b{color:var(--danger)}
+.fld.wide{grid-column:1/-1}
+input[type=text],input[type=number],select{
+  width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;
+  font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+input:disabled,select:disabled{background:var(--sur2);color:var(--mut)}
+input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var(--layer)}
+.hint{font-size:11px;color:var(--mut);line-height:1.5}
+.row-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:12px;cursor:pointer}
+.chk input{width:18px;height:18px}
+
+/* ══════ ACCORDION ══════ */
+.acc{border:.5px solid var(--bdr);border-radius:16px;overflow:hidden;background:var(--sur);margin-bottom:12px}
+.acc-hdr{padding:16px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;letter-spacing:.05em;color:var(--mut);min-height:44px}
+.acc-body{display:none;padding:0 16px 16px}
+.acc.open .acc-body{display:block}
+
+/* ══════ MODAL ══════ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 12px;overflow-y:auto}
+.ov.on{display:flex}
+.modal{background:var(--sur);border-radius:14px;width:560px;max-width:100%;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+.modal-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:.5px solid var(--bdr);font-weight:700}
+.modal-b{padding:16px 18px}
+.modal-f{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:.5px solid var(--bdr);flex-wrap:wrap}
+.modal-f .left{margin-right:auto}
+.x{background:none;border:none;font-size:18px;cursor:pointer;color:var(--mut);min-width:44px;min-height:44px}
+.merr{color:var(--danger);font-size:12px;margin-top:10px;display:none}
+
+/* ══════ TOAST ══════ */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:10px 16px;border-radius:6px;font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9999}
+.toast.show{opacity:1}
+#saveBanner{display:none}#saveBanner.on{display:flex}
+
+.stat.click{cursor:pointer}.stat.click:hover{background:#FFF9E6}.stat.on{outline:2px solid var(--layer)}
+.stat.warn b{color:var(--warn)}
+.b-planned{background:#E8F0F7;color:var(--info)}
+textarea{width:100%;min-height:64px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px}
+input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+.dw{font-style:normal;color:var(--layer);font-weight:600;margin-left:4px}
+#gate{max-width:380px;margin:60px auto;padding:0 16px}
+@media (max-width:640px){
+  .page{padding:12px}
+  .grid{grid-template-columns:1fr}
+  .toast{left:12px;right:12px;bottom:12px}
+  table.data td,table.data th{white-space:nowrap}
+}
+
+.seg{display:inline-flex;border:.5px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--sur)}
+.seg button{border:none;background:transparent;padding:0 12px;min-height:40px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--txt)}
+.seg button.on{background:var(--layer);color:#fff;font-weight:600}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:12px}
+.ctl .grp{display:flex;flex-direction:column;gap:4px}
+.ctl .grp>span{font-size:11px;color:var(--mut)}
+.chart-wrap{display:grid;grid-template-columns:1fr 230px;gap:12px;align-items:start}
+.chart-box{position:relative;height:440px;background:var(--sur);border:.5px solid var(--bdr);border-radius:16px;padding:12px}
+.lines{background:var(--sur);border:.5px solid var(--bdr);border-radius:16px;padding:12px}
+.ln{display:flex;align-items:center;gap:8px;min-height:40px;cursor:pointer;font-size:12px;border-bottom:.5px solid var(--bdr)}
+.ln:last-child{border-bottom:none}
+.ln input{width:18px;height:18px}
+.sw{width:26px;height:0;border-top:3px solid;flex-shrink:0}
+.sw.dash{border-top-style:dashed}
+.ln small{color:var(--mut);display:block}
+input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+.qt{width:100%;border-collapse:collapse;font-size:12px}
+.qt td,.qt th{padding:4px 6px;border-bottom:.5px solid var(--bdr);text-align:right}
+.qt th:first-child,.qt td:first-child{text-align:left}
+.qt input{width:70px;min-height:36px;padding:4px 6px;text-align:right}
+.wa{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--sur2);border-radius:8px;padding:8px 10px}
+.b-void{background:#FCEBEB;color:var(--danger)}
+.chk-col{width:34px}
+.stat.click{cursor:pointer}.stat.click:hover{background:#FFF9E6}.stat.on{outline:2px solid var(--layer)}
+@media (max-width:900px){.chart-wrap{grid-template-columns:1fr}.chart-box{height:360px}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v1</span></div>
+    <div class="hint" style="margin-bottom:14px">Azura Delta · Operations · Owner only</div>
+    <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
+    <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <nav class="nav">
+    <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v1</span></div>
+    <button class="ntab on" data-p="compare" onclick="go('compare')">Compare</button>
+    <button class="ntab" data-p="reports" onclick="go('reports')">Reports</button>
+    <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
+    <div class="nav-r">
+      <span class="saved" id="savedAt">Loaded --:--</span>
+      <button class="sync" id="syncBadge" onclick="loadAll()"><i></i><span id="syncTxt">Cloud</span></button>
+      <button class="btn-nav" onclick="exportAll()">↓ Export</button>
+    </div>
+  </nav>
+
+  <div style="max-width:1200px;margin:0 auto;padding:12px 16px 0">
+    <div class="alert alert-danger" id="loadBanner" style="display:none"><span>⚠</span><div>Cannot read the cloud data, <b>no data has been changed</b>. <span id="loadErr"></span> <button class="btn btn-sm" onclick="loadAll()">Reload</button></div></div>
+  </div>
+
+  <!-- Compare -->
+  <div class="page on" id="page-compare">
+    <h1 class="pt">Compare harvests</h1>
+    <div class="ctl">
+      <div class="grp"><span>Line up by</span><div class="seg" id="segX">
+        <button data-v="day" class="on" onclick="setOpt('x','day')">Day of cycle</button>
+        <button data-v="date" onclick="setOpt('x','date')">Calendar date</button></div></div>
+      <div class="grp" id="grpFrom"><span>Day 1 =</span><div class="seg" id="segFrom">
+        <button data-v="first" class="on" onclick="setOpt('from','first')">First harvest</button>
+        <button data-v="tp" onclick="setOpt('from','tp')">Transplant</button></div></div>
+      <div class="grp"><span>Show</span><div class="seg" id="segM">
+        <button data-v="cum" class="on" onclick="setOpt('m','cum')">Total so far</button>
+        <button data-v="day" onclick="setOpt('m','day')">Each harvest</button>
+        <button data-v="week" onclick="setOpt('m','week')">Per 7 days</button></div></div>
+      <div class="grp"><span>Unit</span><div class="seg" id="segU">
+        <button data-v="kg" class="on" onclick="setOpt('u','kg')">kg</button>
+        <button data-v="bag" onclick="setOpt('u','bag')">kg per 1,000 bags</button></div></div>
+      <div class="grp" id="grpDates" style="display:none"><span>Dates</span><div class="row-inline"><input type="date" id="dFrom" onchange="renderCompare()"><input type="date" id="dTo" onchange="renderCompare()"></div></div>
+      <label class="chk" id="grpSame"><input type="checkbox" id="sameDays" checked onchange="renderCompare()"> Same days only</label>
+      <label class="chk"><input type="checkbox" id="onlyConfirmed" onchange="renderCompare()"> Confirmed only</label>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-box"><canvas id="chart"></canvas></div>
+      <div class="lines"><div class="card-title" style="margin-bottom:4px">Lines</div><div id="lineList"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px;padding:0"><div class="tw"><table class="data" id="cmpTable"></table></div></div>
+    <div class="hint" id="cmpNote"></div>
+  </div>
+
+  <!-- Reports -->
+  <div class="page" id="page-reports">
+    <h1 class="pt">Reports <button class="btn btn-pri" onclick="openAdd()">+ Add report</button></h1>
+    <div class="stats" id="repStats"></div>
+    <div class="row-inline" style="margin-bottom:10px">
+      <select id="repFarm" onchange="renderReports()" style="max-width:160px"></select>
+      <select id="repSt" onchange="renderReports()" style="max-width:180px">
+        <option value="">Pending &amp; confirmed</option><option value="PENDING">Pending only</option><option value="CONFIRMED">Confirmed only</option><option value="VOID">Voided</option><option value="ALL">All</option></select>
+      <select id="repMonth" onchange="renderReports()" style="max-width:160px"></select>
+      <button class="btn" id="btnConfirmSel" onclick="confirmSelected()" disabled>Confirm selected</button>
+    </div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th class="chk-col"><input type="checkbox" id="selAll" onchange="selAllPending(this.checked)"></th><th>Date</th><th>Farm</th><th>Cycle</th><th class="num">Baskets</th><th class="num">kg</th><th class="num">AA %</th><th>From</th><th>Status</th></tr></thead>
+      <tbody id="repRows"></tbody><tfoot id="repFoot"></tfoot></table></div></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="page" id="page-manage"><div id="manageView"></div></div>
+</div>
+
+<div class="ov" id="ov" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-h"><span id="mTitle"></span><button class="x" onclick="closeModal()">✕</button></div>
+    <div class="modal-b" id="mBody"></div>
+    <div class="modal-f" id="mFoot"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Harvest — Azura Delta Operations (Owner only)
+   收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
+   主资料（场、区块、周期、等级、单位）只读
+   ══════════════════════════════════════════════════════════════ */
+const APP_VERSION = 1;
+const SYS = 'Harvest';
+const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+const LEADER_LINK = 'https://angelteo.github.io/azura-tools/worker_harvest_form_11.html';
+const FARM_COLOR = {'AD 1':'#D32F2F', 'AD 2':'#E8A800', 'AD 3':'#1F6FD1', 'HX A':'#6A3FB5', 'HX B':'#2E8B57', 'HX C':'#8B4513'};
+const GRADE_LABEL = {};
+let sb = null, ME = null, LOADED = false, lastErr = '', loadedAt = null, chart = null;
+const H = { farms:[], blocks:[], cycles:[], grades:[], units:[], reports:[] };
+const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
+let HIDDEN = new Set(), REPF = '', SEL = new Set();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmt = (n, d = 0) => Number(n || 0).toLocaleString('en', {minimumFractionDigits:d, maximumFractionDigits:d});
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const dnum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const addDays = (s, n) => { const t = new Date((dnum(s) + n) * 864e5); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dShort = s => { const [y, m, d] = s.split('-'); return `${+d} ${MON[m - 1]}`; };
+const dLong = s => { const [y, m, d] = s.split('-'); return `${+d} ${MON[m - 1]} ${y}`; };
+const farmOf = id => H.farms.find(f => f.id === id) || {};
+const cycleOf = id => H.cycles.find(c => c.id === id);
+const blockOf = id => H.blocks.find(b => b.id === id) || {};
+function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('show'), 2200); }
+const nice = e => { const m = (e && (e.message || String(e))) || ''; if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.'; if(/Not allowed/i.test(m)) return 'Only the owner can use Harvest.'; return m; };
+
+const GATE_MSG = {
+  no_login:  'You are not signed in. Go back to the Home page, sign in, then open Harvest.',
+  no_access: 'Harvest is for the owner only.',
+  offline:   'Cannot reach the cloud — check your connection and refresh.'
+};
+function gate(kind, extra){
+  $('app').style.display = 'none'; $('gate').style.display = 'block';
+  $('gateMsg').innerHTML = `<div class="alert ${kind === 'no_access' ? 'alert-danger' : 'alert-warn'}"><span>⚠</span><div>${GATE_MSG[kind] || esc(kind)}${extra ? '<div class="hint">' + esc(extra) + '</div>' : ''}</div></div>`;
+  $('gateHome').style.display = 'inline-flex';
+}
+async function boot(){
+  if(!window.supabase){ gate('offline'); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY);
+  let ss = null;
+  try{ ss = (await sb.auth.getSession()).data.session; }catch(e){ gate('offline', e.message); return; }
+  if(!ss){ gate('no_login'); return; }
+  const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,status').eq('id', ss.user.id).maybeSingle();
+  if(e1){ gate('offline', e1.message); return; }
+  if(!me || me.status !== 'ACTIVE' || me.role !== 'OWNER'){ gate('no_access'); return; }
+  ME = {...me, id: ss.user.id, email: ss.user.email};
+  $('gate').style.display = 'none'; $('app').style.display = 'block';
+  await loadAll();
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+/* ══════ Load ══════ */
+async function loadAll(){
+  setSync('busy', 'Loading');
+  try{
+    const from = addDays(today(), -399), to = addDays(today(), 1);
+    const res = await Promise.all([
+      sb.from('hub_farm').select('id,code,status'),
+      sb.from('hub_farm_block').select('id,farm_id,code,active,bag_capacity'),
+      sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,bag_count,sowing_is_estimate,transplant_is_estimate'),
+      sb.from('hub_grade').select('id,code,label,sort,shown'),
+      sb.from('hub_unit').select('id,code,kind,to_kg,usage,shown'),
+      sb.rpc('harvest_owner_list', {p_from: from, p_to: to})
+    ]);
+    const bad = res.find(r => r.error); if(bad) throw bad.error;
+    [H.farms, H.blocks, H.cycles, H.grades, H.units, H.reports] = res.map(r => r.data || []);
+    if(!H.farms.length || !H.grades.length) throw new Error('Master data is empty');
+    H.grades.sort((a, b) => a.sort - b.sort); H.grades.forEach(g => GRADE_LABEL[g.code] = g.label);
+    H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
+    LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
+    $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
+  }catch(err){
+    LOADED = false; lastErr = nice(err); $('loadErr').textContent = lastErr; $('loadBanner').style.display = 'flex'; setSync('bad', 'Offline');
+  }
+  fillSelects(); renderAll();
+}
+function setSync(st, txt){ const b = $('syncBadge'); b.classList.remove('bad', 'busy'); if(st !== 'ok') b.classList.add(st); $('syncTxt').textContent = txt; }
+
+function go(p){
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('on'));
+  $('page-' + p).classList.add('on');
+  document.querySelectorAll('.ntab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  renderAll(); window.scrollTo(0, 0);
+}
+function renderAll(){
+  if($('page-compare').classList.contains('on')) renderCompare();
+  if($('page-reports').classList.contains('on')) renderReports();
+  if($('page-manage').classList.contains('on')) renderManage();
+}
+function fillSelects(){
+  const farms = [...new Set(H.reports.map(r => r.farm))].sort();
+  const v1 = $('repFarm').value; $('repFarm').innerHTML = '<option value="">All farms</option>' + farms.map(f => `<option>${esc(f)}</option>`).join(''); $('repFarm').value = v1;
+  const months = [...new Set(H.reports.map(r => r.date.slice(0, 7)))].sort().reverse();
+  const v2 = $('repMonth').value; $('repMonth').innerHTML = '<option value="">All months</option>' + months.map(m => `<option value="${m}">${MON[+m.slice(5) - 1]} ${m.slice(0, 4)}</option>`).join(''); $('repMonth').value = v2;
+  if(!$('dFrom').value && H.reports.length){ $('dFrom').value = H.reports.map(r => r.date).sort()[0]; $('dTo').value = today(); }
+}
+
+/* ══════ Compare ══════ */
+function setOpt(k, v){
+  OPT[k] = v;
+  ({x:'segX', from:'segFrom', m:'segM', u:'segU'})[k] && document.querySelectorAll('#' + ({x:'segX', from:'segFrom', m:'segM', u:'segU'})[k] + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  renderCompare();
+}
+function liveReports(){ const oc = $('onlyConfirmed').checked; return H.reports.filter(r => r.status === 'CONFIRMED' || (!oc && r.status === 'PENDING')); }
+function cycleLabel(c){ const b = blockOf(c.block_id), f = farmOf(b.farm_id); return {farm:f.code || '?', text:`${f.code} · Season ${c.cycle_no}`}; }
+function bagsFor(c){ return Number(c.bag_count || blockOf(c.block_id).bag_capacity || 0); }
+/* Build the series. Day-of-cycle: one line per cycle (season); calendar: one line per farm. */
+function buildSeries(){
+  const reps = liveReports(), S = [];
+  if(OPT.x === 'day'){
+    const byC = {};
+    reps.forEach(r => { if(r.cycle_id){ (byC[r.cycle_id] = byC[r.cycle_id] || []).push(r); } });
+    Object.entries(byC).forEach(([cid, rs]) => {
+      const c = cycleOf(cid); if(!c) return;
+      rs.sort((a, b) => a.date.localeCompare(b.date));
+      const first = rs[0].date, base = OPT.from === 'tp' && c.transplant_date ? c.transplant_date : first;
+      const L = cycleLabel(c), bags = bagsFor(c);
+      const pts = {}; rs.forEach(r => { const d = dnum(r.date) - dnum(base) + 1; pts[d] = (pts[d] || 0) + r.kg; });
+      S.push({key:cid, farm:L.farm, label:L.text, season:c.cycle_no, bags, pts, first, base, est: OPT.from === 'tp' && c.transplant_is_estimate,
+              aa: rs.reduce((s, r) => s + r.aa, 0), kg: rs.reduce((s, r) => s + r.kg, 0), n: rs.length, last: rs[rs.length - 1].date});
+    });
+  } else {
+    const from = $('dFrom').value || '2000-01-01', to = $('dTo').value || today();
+    const byF = {};
+    reps.filter(r => r.date >= from && r.date <= to).forEach(r => (byF[r.farm] = byF[r.farm] || []).push(r));
+    Object.entries(byF).forEach(([farm, rs]) => {
+      const f = H.farms.find(x => x.code === farm) || {};
+      const bags = H.blocks.filter(b => b.farm_id === f.id && b.active).reduce((s, b) => s + Number(b.bag_capacity || 0), 0);
+      const pts = {}; rs.forEach(r => pts[r.date] = (pts[r.date] || 0) + r.kg);
+      S.push({key:'F:' + farm, farm, label:farm, season:1, bags, pts, aa: rs.reduce((s, r) => s + r.aa, 0), kg: rs.reduce((s, r) => s + r.kg, 0), n: rs.length});
+    });
+  }
+  S.sort((a, b) => a.label.localeCompare(b.label));
+  return S;
+}
+function axisKeys(S){
+  if(OPT.x === 'day'){
+    const vis = S.filter(s => !HIDDEN.has(s.key)), ends = vis.map(s => Math.max(...Object.keys(s.pts).map(Number)));
+    const mx = Math.max(1, $('sameDays').checked && ends.length ? Math.min(...ends) : Math.max(1, ...ends));
+    return Array.from({length: mx}, (_, i) => i + 1); }
+  const from = $('dFrom').value, to = $('dTo').value || today(); const out = []; if(!from) return out;
+  for(let d = from; d <= to; d = addDays(d, 1)) out.push(d); return out;
+}
+function valuesFor(s, keys){
+  const div = OPT.u === 'bag' && s.bags ? s.bags / 1000 : 1;
+  let cum = 0; const raw = keys.map(k => s.pts[k] || 0);
+  return keys.map((k, i) => {
+    if(OPT.m === 'cum'){ cum += raw[i]; const lastKey = OPT.x === 'day' ? Math.max(...Object.keys(s.pts).map(Number)) : Object.keys(s.pts).sort().pop(); return (OPT.x === 'day' ? k > lastKey : k > lastKey) ? null : cum / div; }
+    if(OPT.m === 'week'){ let t = 0; for(let j = Math.max(0, i - 6); j <= i; j++) t += raw[j]; const lastKey = OPT.x === 'day' ? Math.max(...Object.keys(s.pts).map(Number)) : Object.keys(s.pts).sort().pop(); return k > lastKey ? null : t / div; }
+    return s.pts[k] ? s.pts[k] / div : null;
+  });
+}
+function renderCompare(){
+  $('grpFrom').style.display = OPT.x === 'day' ? '' : 'none';
+  $('grpDates').style.display = OPT.x === 'date' ? '' : 'none';
+  $('grpSame').style.display = OPT.x === 'day' ? '' : 'none';
+  if(!LOADED){ $('lineList').innerHTML = '<div class="hint">Cloud not loaded</div>'; $('cmpTable').innerHTML = ''; return; }
+  const S = buildSeries();
+  $('lineList').innerHTML = S.length ? S.map(s => `<label class="ln"><input type="checkbox" ${HIDDEN.has(s.key) ? '' : 'checked'} onchange="toggleLine('${s.key}', this.checked)">
+     <span class="sw ${s.season > 1 && OPT.x === 'day' ? 'dash' : ''}" style="border-color:${FARM_COLOR[s.farm] || '#555'}"></span>
+     <span><b>${esc(s.label)}</b><small>${OPT.x === 'day' ? 'from ' + dLong(s.first) + ' · ' + s.n + ' harvests' : s.n + ' harvests'}</small></span></label>`).join('') : '<div class="hint">No harvest data</div>';
+  const keys = axisKeys(S);
+  const ds = S.filter(s => !HIDDEN.has(s.key)).map(s => ({
+    label: s.label, data: valuesFor(s, keys), borderColor: FARM_COLOR[s.farm] || '#555', backgroundColor: FARM_COLOR[s.farm] || '#555',
+    borderDash: s.season > 1 && OPT.x === 'day' ? [7, 5] : [], borderWidth: 2.5, pointRadius: OPT.m === 'day' ? 3 : 0, pointHoverRadius: 5, spanGaps: true, tension: .15
+  }));
+  const yTitle = (OPT.m === 'cum' ? 'Total so far' : OPT.m === 'week' ? 'Last 7 days' : 'Each harvest') + (OPT.u === 'bag' ? ' (kg per 1,000 bags)' : ' (kg)');
+  const xTitle = OPT.x === 'day' ? (OPT.from === 'tp' ? 'Day after transplant' : 'Day of harvest season (day 1 = first harvest)') : 'Date';
+  const labels = OPT.x === 'day' ? keys.map(String) : keys.map(dShort);
+  const cfg = { type:'line', data:{labels, datasets:ds}, options:{ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title: it => OPT.x === 'day' ? 'Day ' + it[0].label : dLong(keys[it[0].dataIndex]), label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y, OPT.u === 'bag' ? 1 : 0)}` } } },
+    scales:{ x:{ title:{display:true, text:xTitle}, ticks:{maxTicksLimit:14, autoSkip:true} }, y:{ beginAtZero:true, title:{display:true, text:yTitle}, ticks:{ callback: v => fmt(v) } } } } };
+  if(window.Chart){
+    if(chart){ chart.data = cfg.data; chart.options = cfg.options; chart.update(); }
+    else chart = new Chart($('chart'), cfg);
+  }
+  renderCmpTable(S);
+}
+function toggleLine(k, on){ if(on) HIDDEN.delete(k); else HIDDEN.add(k); renderCompare(); }
+/* Same-day table: every visible line at the same day N (the last day all visible lines have reached) */
+function renderCmpTable(S){
+  const vis = S.filter(s => !HIDDEN.has(s.key));
+  if(!vis.length){ $('cmpTable').innerHTML = ''; $('cmpNote').textContent = ''; return; }
+  if(OPT.x !== 'day'){
+    $('cmpTable').innerHTML = `<thead><tr><th>Farm</th><th class="num">Harvests</th><th class="num">kg</th><th class="num">kg per 1,000 bags</th><th class="num">AA %</th></tr></thead><tbody>` +
+      vis.map(s => `<tr><td><span class="sw" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[s.farm]}"></span> <b>${esc(s.label)}</b></td><td class="num">${s.n}</td><td class="num">${fmt(s.kg)}</td><td class="num">${s.bags ? fmt(s.kg / s.bags * 1000) : '—'}</td><td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`).join('') + '</tbody>';
+    $('cmpNote').textContent = 'Totals for the dates chosen above.'; return;
+  }
+  const N = Math.min(...vis.map(s => Math.max(...Object.keys(s.pts).map(Number))));
+  const ref = vis[0];
+  const row = s => { let kg = 0, n = 0; Object.entries(s.pts).forEach(([d, v]) => { if(+d <= N){ kg += v; n++; } }); return {kg, n, per: s.bags ? kg / s.bags * 1000 : null}; };
+  const refR = row(ref);
+  $('cmpTable').innerHTML = `<thead><tr><th>Line (same day ${N})</th><th class="num">Harvests</th><th class="num">kg by day ${N}</th><th class="num">Bags</th><th class="num">kg per 1,000 bags</th><th class="num">vs ${esc(ref.label)}</th><th class="num">AA % (whole season)</th></tr></thead><tbody>` +
+    vis.map(s => { const r = row(s); const vs = refR.per && r.per ? (r.per / refR.per * 100) : null;
+      return `<tr><td><span class="sw ${s.season > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[s.farm]}"></span> <b>${esc(s.label)}</b></td>
+        <td class="num">${r.n}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(s.bags)}</td><td class="num">${r.per != null ? fmt(r.per) : '—'}</td>
+        <td class="num">${s === ref ? '—' : vs != null ? '<b style="color:' + (vs < 90 ? 'var(--danger)' : vs > 110 ? 'var(--ok)' : 'inherit') + '">' + fmt(vs) + '%</b>' : '—'}</td>
+        <td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`; }).join('') + '</tbody>';
+  $('cmpNote').innerHTML = `Compared at the same day ${N} of each line (the furthest day every ticked line has reached). ` + (OPT.from === 'tp' ? 'Day 1 = transplant day. ' + (vis.some(s => s.est) ? 'Some transplant dates are estimates. ' : '') : 'Day 1 = first harvest of that season. ') + 'Untick lines on the right to compare others.';
+}
+
+/* ══════ Reports ══════ */
+function cycleText(id){ const c = cycleOf(id); return c ? 'Season ' + c.cycle_no : '<span class="hint">—</span>'; }
+function stBadge(s){ return s === 'CONFIRMED' ? '<span class="badge b-active">Confirmed</span>' : s === 'PENDING' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-void">Voided</span>'; }
+const SRC = {FORM:'Leader form', WHATSAPP_IMPORT:'WhatsApp import', MANUAL:'Added here'};
+function filtered(){
+  const f = $('repFarm').value, st = $('repSt').value, m = $('repMonth').value;
+  return H.reports.filter(r => (!f || r.farm === f) && (!m || r.date.startsWith(m)) && (REPF === 'pending' ? r.status === 'PENDING' : st === 'ALL' ? true : st ? r.status === st : r.status !== 'VOID'))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.farm.localeCompare(b.farm));
+}
+function renderReports(){
+  if(!LOADED){ $('repRows').innerHTML = '<tr><td colspan="9" class="empty">Cloud not loaded</td></tr>'; $('repStats').innerHTML = ''; $('repFoot').innerHTML = ''; return; }
+  const pend = H.reports.filter(r => r.status === 'PENDING'), t = today(), y = addDays(t, -1);
+  const kgOn = d => H.reports.filter(r => r.date === d && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0);
+  $('repStats').innerHTML = `<div class="stat click ${REPF === 'pending' ? 'on' : ''}" onclick="REPF = REPF === 'pending' ? '' : 'pending'; renderReports()"><small>Pending</small><b style="color:${pend.length ? 'var(--warn)' : 'inherit'}">${pend.length}</b></div>
+    <div class="stat"><small>Today (${dShort(t)})</small><b>${fmt(kgOn(t))} kg</b></div>
+    <div class="stat"><small>Yesterday (${dShort(y)})</small><b>${fmt(kgOn(y))} kg</b></div>
+    <div class="stat"><small>Last 7 days</small><b>${fmt(H.reports.filter(r => r.date > addDays(t, -7) && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0))} kg</b></div>`;
+  const rows = filtered();
+  $('repRows').innerHTML = rows.length ? rows.map(r => `<tr class="click" onclick="openReport('${r.id}')" ${r.status === 'VOID' ? 'style="opacity:.55"' : ''}>
+    <td class="chk-col" onclick="event.stopPropagation()">${r.status === 'PENDING' ? `<input type="checkbox" ${SEL.has(r.id) ? 'checked' : ''} onchange="selOne('${r.id}', this.checked)">` : ''}</td>
+    <td>${dLong(r.date)}</td><td class="code">${esc(r.farm)}</td><td>${cycleText(r.cycle_id)}</td>
+    <td class="num">${fmt(r.baskets)}</td><td class="num"><b>${fmt(r.kg)}</b></td><td class="num">${r.kg ? fmt(r.aa / r.kg * 100) + '%' : '—'}</td>
+    <td>${SRC[r.source] || r.source}</td><td>${stBadge(r.status)}</td></tr>`).join('') : '<tr><td colspan="9" class="empty">No report</td></tr>';
+  const live = rows.filter(r => r.status !== 'VOID');
+  $('repFoot').innerHTML = rows.length ? `<tr><td></td><td colspan="3">Total (${live.length} reports, voided not counted)</td><td class="num">${fmt(live.reduce((s, r) => s + r.baskets, 0))}</td><td class="num">${fmt(live.reduce((s, r) => s + r.kg, 0))}</td><td colspan="3"></td></tr>` : '';
+  $('btnConfirmSel').disabled = !SEL.size; $('btnConfirmSel').textContent = SEL.size ? `Confirm selected (${SEL.size})` : 'Confirm selected';
+}
+function selOne(id, on){ if(on) SEL.add(id); else SEL.delete(id); renderReports(); }
+function selAllPending(on){ filtered().filter(r => r.status === 'PENDING').forEach(r => on ? SEL.add(r.id) : SEL.delete(r.id)); renderReports(); }
+async function confirmSelected(){
+  if(!SEL.size) return;
+  openModal('Confirm ' + SEL.size + ' report(s)?', `<div class="hint">After confirming, the numbers are locked. A mistake can still be fixed by voiding the report and entering it again.</div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="doConfirm([...SEL])">Confirm</button>`);
+}
+async function doConfirm(ids){
+  closeModal(); setSync('busy', 'Saving');
+  const {data, error} = await sb.rpc('harvest_owner_confirm', {p_ids: ids});
+  if(error){ setSync('bad', 'Save failed'); toast('⚠ ' + nice(error)); return; }
+  SEL.clear(); toast('✓ Confirmed ' + data); await loadAll();
+}
+function linesTable(r){
+  return `<table class="qt"><thead><tr><th>Grade</th><th>Basket</th><th>Qty</th><th>kg</th></tr></thead><tbody>` +
+    r.lines.map(l => `<tr><td>${esc(GRADE_LABEL[l.grade] || l.grade)}</td><td>${l.unit === 'B30' ? '34/30' : l.unit === 'B27' ? '30/27' : 'kg'}</td><td>${fmt(l.qty, Number(l.qty) % 1 ? 1 : 0)}</td><td>${fmt(l.kg)}</td></tr>`).join('') +
+    `<tr><td colspan="3"><b>Total</b></td><td><b>${fmt(r.kg)}</b></td></tr></tbody></table>`;
+}
+function openReport(id){
+  const r = H.reports.find(x => x.id === id); if(!r) return;
+  const c = cycleOf(r.cycle_id);
+  openModal(`${r.farm} · ${dLong(r.date)}`, `
+    <div class="row-inline" style="margin-bottom:8px">${stBadge(r.status)} <span class="hint">${SRC[r.source] || r.source} · received ${esc((r.submitted_at || '').slice(0, 16).replace('T', ' '))}${c ? ' · Season ' + c.cycle_no : ''}</span></div>
+    ${linesTable(r)}
+    ${r.wa_text ? `<div class="card-title" style="margin-top:12px">Sent to WhatsApp</div><div class="wa">${esc(r.wa_text)}</div>` : ''}
+    ${r.note ? `<div class="card-title" style="margin-top:12px">Note</div><div class="hint">${esc(r.note)}</div>` : ''}
+    ${r.status === 'VOID' ? `<div class="alert alert-warn" style="margin-top:12px"><span>⚠</span><div>Voided: ${esc(r.void_reason)}</div></div>` : ''}
+    <div class="merr" id="merr"></div>`,
+    `${r.status !== 'VOID' ? `<button class="btn btn-sm left" onclick="askVoid('${r.id}', false)">Void</button><button class="btn btn-sm" onclick="askVoid('${r.id}', true)">Fix (void &amp; re-enter)</button>` : ''}
+     <button class="btn" onclick="closeModal()">Close</button>${r.status === 'PENDING' ? `<button class="btn btn-pri" onclick="doConfirm(['${r.id}'])">Confirm</button>` : ''}`);
+}
+function askVoid(id, fix){
+  const r = H.reports.find(x => x.id === id);
+  openModal(`${fix ? 'Fix' : 'Void'} ${r.farm} · ${dLong(r.date)}`, `<div class="hint" style="margin-bottom:8px">${fix ? 'This report will be voided, then a form opens with the same numbers for you to correct.' : 'The report stays in the records but no longer counts.'}</div>
+    <label class="fld"><span>Reason <b>*</b></span><input type="text" id="vdWhy" placeholder="e.g. Wrong farm / wrong count"></label><div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="openReport('${id}')">Cancel</button><button class="btn btn-pri" data-noenter style="background:var(--danger);border-color:var(--danger)" onclick="doVoid('${id}', ${fix})">${fix ? 'Void & re-enter' : 'Void'}</button>`);
+}
+async function doVoid(id, fix){
+  const why = $('vdWhy').value.trim(); if(!why) return merr('Please enter the reason');
+  const r = H.reports.find(x => x.id === id);
+  const {error} = await sb.rpc('harvest_owner_void', {p_id: id, p_reason: why});
+  if(error) return merr(nice(error));
+  toast('✓ Voided'); await loadAll();
+  if(fix) openAdd({...r, replaces_id: id});
+}
+function openAdd(pre){
+  const farms = H.farms.filter(f => f.status === 'ACTIVE').sort((a, b) => a.code.localeCompare(b.code));
+  const units = [['B30', '34/30'], ['B27', '30/27'], ['KG', 'kg']];
+  const val = (g, u) => { const l = pre && pre.lines.find(x => x.grade === g && x.unit === u); return l ? Number(l.qty) : ''; };
+  openModal(pre && pre.replaces_id ? 'Re-enter (fix)' : 'Add report', `<div class="grid">
+    <label class="fld"><span>Harvest date <b>*</b></span><input type="date" id="adDate" value="${pre ? pre.date : today()}" max="${today()}"></label>
+    <label class="fld"><span>Farm <b>*</b></span><select id="adFarm">${farms.map(f => `<option ${pre && pre.farm === f.code ? 'selected' : ''}>${esc(f.code)}</option>`).join('')}</select></label></div>
+    <div class="card-title" style="margin-top:12px">Baskets per grade</div>
+    <table class="qt"><thead><tr><th>Grade</th>${units.map(u => `<th>${u[1]}</th>`).join('')}</tr></thead><tbody>
+    ${H.grades.filter(g => g.shown).map(g => `<tr><td>${esc(g.label)}</td>${units.map(u => `<td><input type="number" min="0" step="1" data-g="${g.code}" data-u="${u[0]}" value="${val(g.code, u[0])}"></td>`).join('')}</tr>`).join('')}
+    </tbody></table>
+    <label class="fld wide" style="margin-top:10px"><span>Note</span><input type="text" id="adNote" value="${pre && pre.replaces_id ? 'Re-entered after voiding a wrong report' : ''}"></label>
+    <div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="doAdd('${pre && pre.replaces_id ? pre.replaces_id : ''}')">Save</button>`);
+}
+async function doAdd(replaces){
+  const lines = [...document.querySelectorAll('#mBody input[data-g]')].filter(i => Number(i.value) > 0).map(i => ({grade:i.dataset.g, unit:i.dataset.u, qty:Number(i.value)}));
+  const date = $('adDate').value;
+  if(!date) return merr('Please enter the date');
+  if(date > today()) return merr('The date is in the future');
+  if(!lines.length) return merr('Please enter at least one grade');
+  const p = {date, farm:$('adFarm').value, note:$('adNote').value.trim() || null, lines};
+  if(replaces) p.replaces_id = replaces;
+  const {error} = await sb.rpc('harvest_owner_add', {p, p_source:'MANUAL'});
+  if(error) return merr(nice(error));
+  closeModal(); toast('✓ Saved'); await loadAll();
+}
+
+/* ══════ Modal ══════ */
+function openModal(t, b, f){ $('mTitle').textContent = t; $('mBody').innerHTML = b; $('mFoot').innerHTML = f; $('ov').classList.add('on'); }
+function closeModal(){ $('ov').classList.remove('on'); }
+function merr(t){ const e = $('merr'); if(e){ e.textContent = t; e.style.display = 'block'; } return false; }
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && $('ov').classList.contains('on') && !['TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)){ const b = $('mFoot').querySelector('.btn-pri:not([data-noenter])'); if(b){ e.preventDefault(); b.click(); } }
+});
+
+/* ══════ Settings ══════ */
+async function renderManage(){
+  const v = $('manageView'); if(!ME){ v.innerHTML = ''; return; }
+  const n = s => H.reports.filter(r => r.status === s).length;
+  v.innerHTML = `<h1 class="pt">Settings</h1>
+  <div class="card"><div class="card-title">① My identity</div>
+    <div class="mg-line">Signed in: <span class="mg-val">${esc(ME.display_name || '')}</span> · Role: <span class="mg-val">${esc(ME.role)}</span></div>
+    <div class="hint">Harvest is for the owner only. This is fixed inside the database, not by the switches in Users &amp; Access.</div></div>
+  <div class="card"><div class="card-title">② System info</div>
+    <div class="mg-line">System: <span class="mg-val">Harvest</span> (Operations) · Version: <span class="mg-val">v${APP_VERSION}</span></div>
+    <div class="mg-line">Reports: pending ${n('PENDING')} · confirmed ${n('CONFIRMED')} · voided ${n('VOID')}</div>
+    <div class="mg-line">Leader form: <span class="mg-val">${esc(LEADER_LINK)}</span> — Leaders do not sign in; they can only send reports, never read them</div></div>
+  <div class="card"><div class="card-title">③ Cloud connection</div>
+    <div class="mg-line">Status: ${LOADED ? '<span class="badge b-active">Connected</span>' : '<span class="badge b-archived">Offline</span>'} · Last loaded: ${loadedAt ? hhmm(loadedAt) : '—'}</div>
+    ${lastErr ? `<div class="alert alert-danger" style="margin-top:8px">Last error: ${esc(lastErr)}</div>` : ''}
+    <div class="row-inline" style="margin-top:8px"><button class="btn" onclick="loadAll()">Reload</button></div></div>
+  <div class="card"><div class="card-title">④ Who opened harvest data</div><div id="logBox" class="hint">Loading…</div></div>
+  <div class="card"><div class="card-title">⑤ Data backup</div>
+    <div class="mg-line">↓ Export: all harvest reports and lines as one JSON file. Keep it in <span class="mg-val">P:\\Teo\\azura-delta\\1. Harvest System\\03_EVIDENCE\\</span></div></div>`;
+  const {data, error} = await sb.rpc('harvest_owner_access_log', {p_limit: 30});
+  $('logBox').innerHTML = error ? esc(nice(error)) : `<table class="qt"><thead><tr><th>When</th><th>What</th><th>Who</th></tr></thead><tbody>${(data || []).map(x => `<tr><td>${esc(String(x.at).slice(0, 16).replace('T', ' '))}</td><td>${esc(x.action)}</td><td>${x.user_id === ME.id ? 'You' : esc(String(x.user_id || '—').slice(0, 8))}</td></tr>`).join('')}</tbody></table>`;
+}
+function exportAll(){
+  if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
+  const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports}};
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
+  a.download = `Harvest_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('✓ Backup downloaded');
+}
+
+boot();
+</script>
+</body>
+</html>
