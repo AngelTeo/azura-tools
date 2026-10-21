@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Farms v2</title>
+<title>Farms v3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -132,6 +132,12 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
 .toast.show{opacity:1}
 #saveBanner{display:none}#saveBanner.on{display:flex}
 
+.stat.click{cursor:pointer}.stat.click:hover{background:#FFF9E6}.stat.on{outline:2px solid var(--layer)}
+.stat.warn b{color:var(--warn)}
+.b-planned{background:#E8F0F7;color:var(--info)}
+textarea{width:100%;min-height:64px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px}
+input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
+.dw{font-style:normal;color:var(--layer);font-weight:600;margin-left:4px}
 #gate{max-width:380px;margin:60px auto;padding:0 16px}
 @media (max-width:640px){
   .page{padding:12px}
@@ -146,7 +152,7 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
 <!-- ══════ GATE ══════ -->
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Farms <span class="ver">v2</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Farms <span class="ver">v3</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Master Data</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -157,9 +163,10 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🌱 Farms <span class="ver">v2</span></div>
+    <div class="nav-logo">🌱 Farms <span class="ver">v3</span></div>
     <button class="ntab on" data-p="farms" onclick="go('farms')">Farms</button>
     <button class="ntab" data-p="blocks" onclick="go('blocks')">Blocks</button>
+    <button class="ntab" data-p="cycles" onclick="go('cycles')">Cycles</button>
     <button class="ntab" data-p="titles" onclick="go('titles')">Land titles</button>
     <button class="ntab" data-p="manage" onclick="go('manage')">Settings</button>
     <div class="nav-r">
@@ -197,8 +204,22 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
       <label class="chk"><input type="checkbox" id="blockShowOff" onchange="renderBlocks()"> Show stopped</label>
     </div>
     <div class="card" style="padding:0"><div class="tw"><table class="data">
-      <thead><tr><th>Code</th><th>Name</th><th>Farm</th><th>Type</th><th class="num">Polybags</th><th>Status</th></tr></thead>
+      <thead><tr><th>Code</th><th>Name</th><th>Farm</th><th>Type</th><th class="num">Polybags</th><th>Current cycle</th><th>Status</th></tr></thead>
       <tbody id="blockRows"></tbody><tfoot id="blockFoot"></tfoot></table></div></div>
+  </div>
+
+  <!-- Cycles -->
+  <div class="page" id="page-cycles">
+    <h1 class="pt">Cycles <button class="btn btn-pri edit-only" onclick="openCycle(null)">+ New cycle</button></h1>
+    <div class="stats" id="cycleStats"></div>
+    <div class="row-inline" style="margin-bottom:10px">
+      <select id="cycleFarm" onchange="renderCycles()" style="max-width:200px"></select>
+      <label class="chk"><input type="checkbox" id="cycleShowOld" onchange="renderCycles()"> Show closed &amp; voided</label>
+    </div>
+    <div id="cycleList"></div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data">
+      <thead><tr><th>Block</th><th class="num">Cycle</th><th class="num">Day</th><th>Stage</th><th>Status</th><th>Sowing</th><th>Expected end</th><th class="num">Polybags</th><th>Variety</th></tr></thead>
+      <tbody id="cycleRows"></tbody><tfoot id="cycleFoot"></tfoot></table></div></div>
   </div>
 
   <!-- Land titles -->
@@ -234,7 +255,7 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
    农场、区块、地契只在这里改；Workers、Salary、Harvest 等只读
    不删资料：区块、地契只能停用；农场只能改状态
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const SYS = 'Farms';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -245,8 +266,14 @@ const T = {
   hub_farm:       {pk:'id', cols:['id','code','company_id','name','location','status','active']},
   hub_farm_block: {pk:'id', cols:['id','farm_id','code','name','block_type','bag_capacity','active']},
   hub_farm_title: {pk:'id', cols:['id','farm_id','title_no','acres','active']},
+  hub_crop:       {pk:'id', ro:true, cols:['id','code','name']},
+  hub_crop_variety:{pk:'id', ro:true, cols:['id','crop_id','code','name','active']},
+  hub_crop_protocol:{pk:'id', ro:true, cols:['id','crop_id','variety_id','version','effective_from','cycle_days','expected_kg_per_bag','voided_at']},
+  hub_crop_protocol_stage:{pk:'id', ro:true, cols:['id','protocol_id','stage_code','stage_name','day_from','day_to','sort','voided_at']},
+  hub_cycle:      {pk:'id', cols:['id','block_id','crop_id','variety_id','protocol_id','cycle_no','sowing_date','expected_end','bag_count','status','actual_end','note','voided_at','void_reason']},
 };
-const ORDER = ['hub_company','hub_farm','hub_farm_block','hub_farm_title'];
+const ORDER = ['hub_company','hub_farm','hub_farm_block','hub_farm_title','hub_crop','hub_crop_variety','hub_crop_protocol','hub_crop_protocol_stage','hub_cycle'];
+const CSTATUS = {PLANNED:'Planned', ACTIVE:'Growing', CLOSED:'Finished', VOID:'Voided'};
 const STATUS = {ACTIVE:'Active', NOT_STARTED:'Not started', STOPPED:'Stopped'};
 const BTYPE = {PRODUCTION:'Production', TRIAL:'Trial', CONTROL:'Control'};
 
@@ -307,6 +334,7 @@ async function boot(){
 }
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape') closeModal();
+  if(e.key === 'Enter' && $('ov').classList.contains('on') && !['TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)){ const b = $('mFoot').querySelector('.btn-pri:not([disabled]):not([data-noenter])'); if(b){ e.preventDefault(); b.click(); } }
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){ e.preventDefault(); flushNow(); }
 });
 
@@ -365,6 +393,9 @@ function nice(e){
   const m = (e && (e.message || String(e))) || '';
   if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.';
   if(/row-level security|permission denied/i.test(m)) return 'You do not have permission to edit.';
+  if(/hub_cycle_one_active/i.test(m)) return 'This block already has a growing cycle.';
+  if(/hub_cycle_block_no_live/i.test(m)) return 'This block already has that cycle number.';
+  if(/cycle is voided|cannot be changed after the cycle/i.test(m)) return m;
   if(/duplicate key/i.test(m)) return 'This code already exists.';
   if(/code cannot be changed|code/i.test(m) && /locked|change/i.test(m)) return 'The code cannot be changed after it is created.';
   return m;
@@ -378,9 +409,9 @@ function go(p){
   document.querySelectorAll('.ntab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
   renderAll(); window.scrollTo(0, 0);
 }
-function renderAll(){ fillFarmSelects(); renderFarms(); renderBlocks(); renderTitles(); if($('page-manage').classList.contains('on')) renderManage(); }
+function renderAll(){ fillFarmSelects(); renderFarms(); renderBlocks(); renderCycles(); renderTitles(); if($('page-manage').classList.contains('on')) renderManage(); }
 function fillFarmSelects(){
-  ['blockFarm', 'titleFarm'].forEach(id => { const s = $(id), v = s.value;
+  ['blockFarm', 'titleFarm', 'cycleFarm'].forEach(id => { const s = $(id), v = s.value;
     s.innerHTML = '<option value="">All farms</option>' + farmsSorted().map(f => `<option value="${f.id}">${esc(f.code)}</option>`).join(''); s.value = v; });
 }
 
@@ -434,15 +465,15 @@ function saveFarm(id){
 
 /* ══════ Blocks ══════ */
 function renderBlocks(){
-  if(!LOADED){ $('blockRows').innerHTML = '<tr><td colspan="6" class="empty">Cloud not loaded</td></tr>'; $('blockFoot').innerHTML = ''; return; }
+  if(!LOADED){ $('blockRows').innerHTML = '<tr><td colspan="7" class="empty">Cloud not loaded</td></tr>'; $('blockFoot').innerHTML = ''; return; }
   const fid = $('blockFarm').value, all = $('blockShowOff').checked;
   const rows = S.hub_farm_block.filter(b => (!fid || b.farm_id === fid) && (all || b.active)).sort((a, b) => a.code.localeCompare(b.code));
   $('blockRows').innerHTML = rows.length ? rows.map(b => `<tr class="click" onclick="openBlock('${b.id}')">
     <td class="code">${esc(b.code)}</td><td><b>${esc(b.name)}</b></td><td>${esc(farmCode(b.farm_id))}</td><td>${BTYPE[b.block_type] || esc(b.block_type)}</td>
-    <td class="num">${b.bag_capacity != null ? fmt(b.bag_capacity) : '<span class="hint">Not set</span>'}</td><td>${onOff(b.active)}</td></tr>`).join('')
-    : `<tr><td colspan="6" class="empty">No block</td></tr>`;
+    <td class="num">${b.bag_capacity != null ? fmt(b.bag_capacity) : '<span class="hint">Not set</span>'}</td><td>${curCycleTxt(b.id)}</td><td>${onOff(b.active)}</td></tr>`).join('')
+    : `<tr><td colspan="7" class="empty">No block</td></tr>`;
   const live = rows.filter(b => b.active);
-  $('blockFoot').innerHTML = rows.length ? `<tr><td colspan="4">Total in use (${live.length} blocks)</td><td class="num">${fmt(live.reduce((s, b) => s + (b.bag_capacity || 0), 0))}</td><td></td></tr>` : '';
+  $('blockFoot').innerHTML = rows.length ? `<tr><td colspan="4">Total in use (${live.length} blocks)</td><td class="num">${fmt(live.reduce((s, b) => s + (b.bag_capacity || 0), 0))}</td><td colspan="2"></td></tr>` : '';
 }
 function nextBlockCode(f){ const n = S.hub_farm_block.filter(b => b.farm_id === f.id).map(b => parseInt(b.code.split('-').pop(), 10) || 0); return f.code + '-' + pad(Math.max(0, ...n) + 1); }
 function openBlock(id){
@@ -474,6 +505,160 @@ function toggleBlock(id){
   const b = by('hub_farm_block', id);
   if(b.active && blocksOf(b.farm_id).length <= 1) return merr('This is the only block of the farm in use — it cannot be stopped');
   b.active = !b.active; touch('hub_farm_block', b); closeModal(); renderAll();
+}
+
+/* ══════ Cycles ══════ */
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const dnum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const addDays = (s, n) => { const t = new Date((dnum(s) + n) * 864e5); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+const dmy = s => s ? s.split('-').reverse().join('/') : '';
+let CYF = '';
+function blockOf(id){ return by('hub_farm_block', id); }
+function cyclesOf(bid){ return S.hub_cycle.filter(c => c.block_id === bid && c.status !== 'VOID'); }
+function curCycle(bid){ return S.hub_cycle.find(c => c.block_id === bid && c.status === 'ACTIVE'); }
+function cycleDay(c){ if(!c.sowing_date) return null; const end = c.status === 'CLOSED' && c.actual_end ? c.actual_end : today(); return dnum(end) - dnum(c.sowing_date); }
+function protoOf(c){ return by('hub_crop_protocol', c.protocol_id); }
+function stageOf(c){
+  const d = cycleDay(c), p = protoOf(c); if(d == null || !p) return '';
+  if(d < 0) return 'Not sown yet';
+  if(d > p.cycle_days) return '<span class="badge b-pending">Past cycle end</span>';
+  const st = S.hub_crop_protocol_stage.filter(s => s.protocol_id === p.id && !s.voided_at && d >= s.day_from && d <= s.day_to).sort((a, b) => a.sort - b.sort)[0];
+  return st ? esc(STAGE_EN[st.stage_code] || st.stage_name) : '';
+}
+const STAGE_EN = {SEEDING:'Seeding', NURSERY:'Nursery', FIRST_HARVEST:'First harvest', PEAK:'Peak', CYCLE_END:'Cycle end'};
+function curCycleTxt(bid){ const c = curCycle(bid); if(!c) return '<span class="hint">None</span>'; const d = cycleDay(c); return `Cycle ${c.cycle_no}${d != null ? ' · day ' + d : ''}`; }
+function overdue(c){ return c.status === 'ACTIVE' && c.expected_end && c.expected_end < today(); }
+function cStBadge(c){ const cls = {PLANNED:'b-planned', ACTIVE:'b-active', CLOSED:'b-archived', VOID:'b-archived'}[c.status]; return `<span class="badge ${cls}">${CSTATUS[c.status]}</span>`; }
+function liveBlocks(fid){ return S.hub_farm_block.filter(b => b.active && (!fid || b.farm_id === fid)).filter(b => { const f = by('hub_farm', b.farm_id); return f && f.status !== 'STOPPED'; }); }
+function cyFilter(k){ CYF = CYF === k ? '' : k; renderCycles(); }
+function renderCycles(){
+  if(!LOADED){ $('cycleRows').innerHTML = '<tr><td colspan="9" class="empty">Cloud not loaded</td></tr>'; $('cycleFoot').innerHTML = ''; $('cycleStats').innerHTML = ''; $('cycleList').innerHTML = ''; return; }
+  const fid = $('cycleFarm').value, old = $('cycleShowOld').checked;
+  const inFarm = c => { const b = blockOf(c.block_id); return b && (!fid || b.farm_id === fid); };
+  const act = S.hub_cycle.filter(c => c.status === 'ACTIVE' && inFarm(c));
+  const noCyc = liveBlocks(fid).filter(b => !S.hub_cycle.some(c => c.block_id === b.id && (c.status === 'ACTIVE' || c.status === 'PLANNED')));
+  const late = act.filter(overdue);
+  $('cycleStats').innerHTML = `<div class="stat"><small>Growing now</small><b>${act.length}</b></div>
+    <div class="stat"><small>Polybags growing</small><b>${fmt(act.reduce((s, c) => s + (c.bag_count || 0), 0))}</b></div>
+    <div class="stat click ${noCyc.length ? 'warn' : ''} ${CYF === 'none' ? 'on' : ''}" onclick="cyFilter('none')"><small>Blocks with no cycle</small><b>${noCyc.length}</b></div>
+    <div class="stat click ${late.length ? 'warn' : ''} ${CYF === 'late' ? 'on' : ''}" onclick="cyFilter('late')"><small>Past expected end</small><b>${late.length}</b></div>`;
+  let list = '';
+  if(CYF === 'none') list = `<div class="card"><div class="card-title">Blocks with no cycle</div>${noCyc.length ? noCyc.sort((a, b) => a.code.localeCompare(b.code)).map(b => `<div class="row-inline" style="justify-content:space-between;border-bottom:.5px solid var(--bdr)"><span><span class="code">${esc(b.code)}</span> · ${fmt(b.bag_capacity)} polybags</span>${CAN_EDIT ? `<button class="btn btn-sm" onclick="openCycle(null,'${b.id}')">+ Cycle</button>` : ''}</div>`).join('') : '<div class="hint">Every block has a cycle.</div>'}</div>`;
+  if(CYF === 'late') list = `<div class="card"><div class="card-title">Past expected end</div>${late.length ? late.map(c => `<div class="row-inline" style="justify-content:space-between;border-bottom:.5px solid var(--bdr)"><span><span class="code">${esc(blockOf(c.block_id).code)}</span> · Cycle ${c.cycle_no} · expected end ${dmy(c.expected_end)}</span><span class="row-inline"><button class="btn btn-sm" onclick="openCycle('${c.id}')">Open</button>${CAN_EDIT ? `<button class="btn btn-sm" onclick="openNext('${c.id}')">Finish &amp; start next</button>` : ''}</span></div>`).join('') : '<div class="hint">None.</div>'}</div>`;
+  $('cycleList').innerHTML = list;
+  const ord = {ACTIVE:0, PLANNED:1, CLOSED:2, VOID:3};
+  const rows = S.hub_cycle.filter(c => inFarm(c) && (old || c.status === 'ACTIVE' || c.status === 'PLANNED'))
+    .sort((a, b) => ord[a.status] - ord[b.status] || blockOf(a.block_id).code.localeCompare(blockOf(b.block_id).code) || b.cycle_no - a.cycle_no);
+  $('cycleRows').innerHTML = rows.length ? rows.map(c => { const d = cycleDay(c), v = by('hub_crop_variety', c.variety_id);
+    return `<tr class="click" onclick="openCycle('${c.id}')" ${c.status === 'VOID' ? 'style="opacity:.55"' : ''}>
+    <td class="code">${esc(blockOf(c.block_id).code)}</td><td class="num">${c.cycle_no}</td>
+    <td class="num">${d != null && c.status !== 'VOID' ? d : '—'}</td><td>${c.status === 'ACTIVE' ? stageOf(c) : ''}</td><td>${cStBadge(c)}</td>
+    <td>${c.sowing_date ? dmy(c.sowing_date) : '<span class="hint">Not set</span>'}</td>
+    <td>${c.status === 'CLOSED' ? 'Ended ' + dmy(c.actual_end) : c.expected_end ? (overdue(c) ? '<b style="color:var(--warn)">' + dmy(c.expected_end) + '</b>' : dmy(c.expected_end)) : '—'}</td>
+    <td class="num">${c.bag_count != null ? fmt(c.bag_count) : '—'}</td><td>${v ? esc(v.name) : '<span class="hint">—</span>'}</td></tr>`; }).join('')
+    : `<tr><td colspan="9" class="empty">No cycle yet${CAN_EDIT ? ' — use “+ Cycle” on a block above' : ''}</td></tr>`;
+  $('cycleFoot').innerHTML = act.length ? `<tr><td colspan="7">Growing now (${act.length} cycles)</td><td class="num">${fmt(act.reduce((s, c) => s + (c.bag_count || 0), 0))}</td><td></td></tr>` : '';
+  if(!S.hub_cycle.length && CYF === '' && noCyc.length) cyFilter('none');
+}
+function protoFor(cropId, varietyId, sowing){
+  const ok = S.hub_crop_protocol.filter(p => !p.voided_at && p.crop_id === cropId && (!p.variety_id || p.variety_id === varietyId));
+  const live = ok.filter(p => !sowing || p.effective_from <= sowing).sort((a, b) => (b.variety_id ? 1 : 0) - (a.variety_id ? 1 : 0) || b.version - a.version)[0];
+  return live || ok.sort((a, b) => a.version - b.version)[0];   /* 播种日比第一版还早：用第一版 */
+}
+function nextCycleNo(bid){ return Math.max(0, ...cyclesOf(bid).map(c => c.cycle_no)) + 1; }
+function openCycle(id, blockId){
+  const c = id ? by('hub_cycle', id) : {status:'ACTIVE', block_id: blockId || ''}, dis = CAN_EDIT && c.status !== 'VOID' ? '' : 'disabled';
+  const crop = S.hub_crop[0], vars = S.hub_crop_variety.filter(v => v.active || v.id === c.variety_id);
+  const blocks = id ? [blockOf(c.block_id)] : liveBlocks('').sort((a, b) => a.code.localeCompare(b.code));
+  const p = id ? protoOf(c) : null;
+  openModal(id ? `${blockOf(c.block_id).code} · Cycle ${c.cycle_no}` : 'New cycle', `<div class="grid">
+    <label class="fld"><span>Block <b>*</b></span><select id="cyBlock" ${id ? 'disabled' : dis} onchange="cyHint()"><option value="">—</option>${blocks.map(b => `<option value="${b.id}" ${c.block_id === b.id ? 'selected' : ''}>${esc(b.code)} · ${fmt(b.bag_capacity)} bags</option>`).join('')}</select></label>
+    <label class="fld"><span>Cycle no. <b>*</b></span><input type="number" min="1" step="1" id="cyNo" value="${c.cycle_no ?? ''}" ${dis}></label>
+    <label class="fld"><span>Variety</span><select id="cyVar" ${dis} onchange="cyHint(false)">${vars.map(v => `<option value="${v.id}" ${(c.variety_id || vars[0]?.id) === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>
+    <label class="fld"><span>Status</span><select id="cySt" ${dis} onchange="cyHint(false)">${['PLANNED', 'ACTIVE', 'CLOSED'].map(k => `<option value="${k}" ${c.status === k ? 'selected' : ''}>${CSTATUS[k]}</option>`).join('')}${c.status === 'VOID' ? '<option selected>Voided</option>' : ''}</select></label>
+    <label class="fld"><span>Sowing date <b id="cySowReq">*</b> <i class="dw" id="cySowW"></i></span><input type="date" id="cySow" value="${c.sowing_date || ''}" ${dis} onchange="cyHint(false)"></label>
+    <label class="fld"><span>Polybags</span><input type="number" min="0" step="1" id="cyBags" value="${c.bag_count ?? ''}" ${dis}></label>
+    <label class="fld"><span>Expected end <i class="dw" id="cyExpW"></i></span><input type="date" id="cyExp" value="${c.expected_end || ''}" ${dis} oninput="dwAll()"></label>
+    <label class="fld" id="cyEndF"><span>Actual end <b>*</b> <i class="dw" id="cyEndW"></i></span><input type="date" id="cyEnd" value="${c.actual_end || ''}" ${dis} oninput="dwAll()"></label>
+    <label class="fld wide"><span>Note</span><textarea id="cyNote" ${dis}>${esc(c.note || '')}</textarea></label>
+  </div>
+  <div class="hint" id="cyProto" style="margin-top:10px">${p ? `Protocol v${p.version}: ${p.cycle_days} days · ${Number(p.expected_kg_per_bag)} kg per bag (locked for this cycle)` : ''}</div>
+  ${c.status === 'VOID' ? `<div class="alert alert-warn" style="margin-top:10px"><span>⚠</span><div>Voided ${esc((c.voided_at || '').slice(0, 10))}: ${esc(c.void_reason)}</div></div>` : ''}
+  <div class="merr" id="merr"></div>`,
+    `${id && CAN_EDIT && c.status !== 'VOID' ? `<button class="btn btn-sm left" onclick="askVoid('${id}')">Void (entered by mistake)</button>` : ''}${id && CAN_EDIT && c.status === 'ACTIVE' ? `<button class="btn btn-sm" onclick="openNext('${id}')">Finish &amp; start next</button>` : ''}<button class="btn" onclick="closeModal()">${dis ? 'Close' : 'Cancel'}</button>${!dis ? `<button class="btn btn-pri" onclick="saveCycle('${id || ''}')">Save</button>` : ''}`);
+  cyHint(!id);
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const words = s => { if(!s) return ''; const [y, m, d] = s.split('-'); return `${+d} ${MON[m - 1]} ${y}`; };
+function dwAll(){ [['cySow','cySowW'],['cyExp','cyExpW'],['cyEnd','cyEndW'],['nxEnd','nxEndW'],['nxSow','nxSowW']].forEach(([i, w]) => { if($(w)) $(w).textContent = $(i) && $(i).value ? '= ' + words($(i).value) : ''; }); }
+function cyHint(fill){
+  setTimeout(dwAll);
+  const id = $('cyBlock').value, st = $('cySt').value; $('cyEndF').style.display = st === 'CLOSED' ? '' : 'none';
+  $('cySowReq').style.display = st === 'PLANNED' ? 'none' : '';
+  if($('cyBlock').disabled) return;
+  const b = blockOf(id); if(!b){ $('cyProto').textContent = ''; return; }
+  if(fill !== false){ $('cyBags').value = ''; $('cyNo').value = nextCycleNo(id); if(!$('cyBags').value) $('cyBags').value = b.bag_capacity ?? ''; }
+  const p = protoFor(S.hub_crop[0]?.id, $('cyVar').value, $('cySow').value || null);
+  if(p && $('cySow').value) $('cyExp').value = addDays($('cySow').value, p.cycle_days);
+  $('cyProto').textContent = p ? `Protocol v${p.version}: ${p.cycle_days} days · ${Number(p.expected_kg_per_bag)} kg per bag. Expected end = sowing + ${p.cycle_days} days.` : 'No protocol for this date — set one in Crops first.';
+}
+function saveCycle(id){
+  const no = parseInt($('cyNo').value, 10), st = $('cySt').value, sow = $('cySow').value || null, end = $('cyEnd').value || null;
+  const rb = $('cyBags').value.trim(), bags = rb === '' ? null : parseInt(rb, 10), exp = $('cyExp').value || null;
+  const bid = id ? by('hub_cycle', id).block_id : $('cyBlock').value;
+  if(!bid) return merr('Please choose the block');
+  if(!(no >= 1)) return merr('Please enter the cycle number');
+  if(cyclesOf(bid).some(x => x.cycle_no === no && x.id !== id)) return merr(`${blockOf(bid).code} already has cycle ${no}`);
+  if(st !== 'PLANNED' && !sow) return merr('Please enter the sowing date');
+  if(st === 'CLOSED' && !end) return merr('Please enter the actual end date');
+  if(end && sow && end < sow) return merr('Actual end is before the sowing date');
+  if(exp && sow && exp < sow) return merr('Expected end is before the sowing date');
+  if(rb !== '' && !(bags >= 0)) return merr('Please enter the number of polybags');
+  if(st === 'ACTIVE' && S.hub_cycle.some(x => x.block_id === bid && x.status === 'ACTIVE' && x.id !== id)) return merr(`${blockOf(bid).code} already has a growing cycle — finish it first`);
+  let c;
+  if(id){ c = by('hub_cycle', id); }
+  else{
+    const crop = S.hub_crop[0]; const p = protoFor(crop?.id, $('cyVar').value, sow);
+    if(!crop) return merr('No crop set up — add it in Crops first');
+    if(!p) return merr('No protocol for this sowing date — set one in Crops first');
+    c = {id:uid(), block_id:bid, crop_id:crop.id, protocol_id:p.id}; S.hub_cycle.push(c);
+  }
+  Object.assign(c, {cycle_no:no, variety_id:$('cyVar').value || null, status:st, sowing_date:sow, expected_end:exp, bag_count:bags, actual_end:st === 'CLOSED' ? end : null, note:$('cyNote').value.trim() || null});
+  touch('hub_cycle', c); closeModal(); renderAll();
+}
+/* 结束这一造 + 开下一造：一次存 */
+function openNext(id){
+  const c = by('hub_cycle', id), b = blockOf(c.block_id), no = nextCycleNo(c.block_id);
+  openModal(`${b.code}: finish cycle ${c.cycle_no}, start cycle ${no}`, `<div class="grid">
+    <label class="fld"><span>Cycle ${c.cycle_no} actual end <b>*</b> <i class="dw" id="nxEndW"></i></span><input type="date" id="nxEnd" value="${today()}" oninput="dwAll()"></label>
+    <label class="fld"><span>Cycle ${no} sowing date <i class="dw" id="nxSowW"></i></span><input type="date" id="nxSow" oninput="dwAll()"></label>
+    <label class="fld"><span>Cycle ${no} polybags</span><input type="number" min="0" step="1" id="nxBags" value="${b.bag_capacity ?? ''}"></label>
+  </div><div class="hint" style="margin-top:10px">No sowing date yet? Leave it empty — cycle ${no} is saved as Planned and you add the date later.</div><div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="openCycle('${id}')">Cancel</button><button class="btn btn-pri" onclick="saveNext('${id}')">Save</button>`);
+  dwAll();
+}
+function saveNext(id){
+  const c = by('hub_cycle', id), end = $('nxEnd').value, sow = $('nxSow').value || null, rb = $('nxBags').value.trim(), bags = rb === '' ? null : parseInt(rb, 10);
+  if(!end) return merr('Please enter the actual end date');
+  if(c.sowing_date && end < c.sowing_date) return merr('Actual end is before the sowing date of cycle ' + c.cycle_no);
+  if(sow && sow < end) return merr('The new sowing date is before the old cycle ended');
+  if(rb !== '' && !(bags >= 0)) return merr('Please enter the number of polybags');
+  const p = protoFor(c.crop_id, c.variety_id, sow); if(!p) return merr('No protocol — set one in Crops first');
+  Object.assign(c, {status:'CLOSED', actual_end:end}); touch('hub_cycle', c);
+  const n = {id:uid(), block_id:c.block_id, crop_id:c.crop_id, protocol_id:p.id, variety_id:c.variety_id, cycle_no:nextCycleNo(c.block_id),
+    status:sow ? 'ACTIVE' : 'PLANNED', sowing_date:sow, expected_end:sow ? addDays(sow, p.cycle_days) : null, bag_count:bags, actual_end:null, note:null};
+  S.hub_cycle.push(n); touch('hub_cycle', n); closeModal(); renderAll();
+}
+function askVoid(id){
+  const c = by('hub_cycle', id);
+  openModal(`Void ${blockOf(c.block_id).code} · Cycle ${c.cycle_no}?`, `<div class="hint" style="margin-bottom:10px">Only for a cycle entered by mistake. It stays in the records but can no longer be changed. To end a real cycle, set the status to Finished instead.</div>
+    <label class="fld"><span>Reason <b>*</b></span><input type="text" id="vdWhy" placeholder="e.g. Entered on the wrong block"></label><div class="merr" id="merr"></div>`,
+    `<button class="btn" onclick="openCycle('${id}')">Cancel</button><button class="btn btn-pri" data-noenter style="background:var(--danger);border-color:var(--danger)" onclick="doVoid('${id}')">Void</button>`);
+}
+function doVoid(id){
+  const why = $('vdWhy').value.trim(); if(!why) return merr('Please enter the reason');
+  const c = by('hub_cycle', id); Object.assign(c, {status:'VOID', voided_at:new Date().toISOString(), void_reason:why});
+  touch('hub_cycle', c); closeModal(); renderAll();
 }
 
 /* ══════ Land titles ══════ */
@@ -525,20 +710,20 @@ function renderManage(){
     <div class="hint">Sign-in is shared with the Home page; to sign out or switch user, press “Sign out” on the Home page.</div></div>
   <div class="card"><div class="card-title">② System info</div>
     <div class="mg-line">System: <span class="mg-val">Farms</span> (Master Data) · Version: <span class="mg-val">v${APP_VERSION}</span> · Layer: <span class="mg-val">HUB #2F5D3F</span></div>
-    <div class="mg-line">Record counts: farms ${S.hub_farm.length} · blocks ${S.hub_farm_block.length} · land titles ${S.hub_farm_title.length}</div>
-    <div class="mg-line">Who reads this: Workers, Salary, and later Harvest, Revenue, Crop Monitoring and the reports</div></div>
+    <div class="mg-line">Record counts: farms ${S.hub_farm.length} · blocks ${S.hub_farm_block.length} · cycles ${S.hub_cycle.length} · land titles ${S.hub_farm_title.length}</div>
+    <div class="mg-line">Who reads this: Workers, Salary, and later Harvest (cycles), Revenue, Crop Monitoring and the reports</div></div>
   <div class="card"><div class="card-title">③ Cloud connection</div>
     <div class="mg-line">Status: ${LOADED ? '<span class="badge b-active">Connected</span>' : '<span class="badge b-archived">Offline</span>'} · Pending upload: <b>${dirty.size}</b> · Last saved: ${lastSaved ? hhmm(lastSaved) : '—'}</div>
     ${lastErr ? `<div class="alert alert-danger" style="margin-top:8px">Last error: ${esc(lastErr)}</div>` : ''}
     <div class="row-inline" style="margin-top:8px"><button class="btn" onclick="flushNow()">Upload now</button><button class="btn" onclick="loadAll()">Reload</button></div></div>
   <div class="card"><div class="card-title">④ Data backup</div>
     <div class="alert alert-warn"><span>⚠</span><div>The cloud is on the free plan — <b>no automatic backup</b>. After big changes, press “↓ Export” and keep the file in <span class="mg-val">P:\\Teo\\azura-delta\\FarmHub\\03_EVIDENCE\\</span></div></div>
-    <div class="mg-line">↓ Export: farms, blocks, land titles as one JSON file</div>
+    <div class="mg-line">↓ Export: farms, blocks, cycles, land titles as one JSON file</div>
     <div class="mg-line">↑ Import: restore from a backup file (add / update only, never delete); shows how many rows will change first</div></div>
   <div class="acc" onclick="if(event.target.closest('.acc-hdr'))this.classList.toggle('open')"><div class="acc-hdr">⑤ Advanced <span>▼</span></div>
     <div class="acc-body">
       <div class="mg-line">Tables: ${ORDER.map(t => `<span class="mg-val">${t}</span>`).join(' ')}</div>
-      <div class="mg-line">Nothing is ever deleted: blocks and land titles are stopped, farms change status.</div>
+      <div class="mg-line">Nothing is ever deleted: blocks and land titles are stopped, farms change status, cycles are voided with a reason.</div>
       <div class="mg-line">Free plan pauses after a week of no use: supabase.com → AzuraDelta-Main → Restore project.</div>
     </div></div>`;
 }
