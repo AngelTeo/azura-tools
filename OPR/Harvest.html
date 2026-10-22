@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v20</title>
+<title>Harvest v21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -195,6 +195,23 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-pin{position:absolute;top:38px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;white-space:nowrap}
 .cy-pin span{background:var(--c);color:#fff;font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
 .cy-pin s{text-decoration:none;font-size:11px;color:#444;margin-top:3px;background:rgba(255,255,255,.85);padding:0 4px;border-radius:4px}
+.cy-f.trial{border-left-style:dashed;background:#F7F3FB;cursor:pointer}.cy-f.trial:hover{background:#EFE6F8}.cy-f.trial b::before{content:'Trial · ';font-size:11px;font-weight:700;color:#6A3FB5}
+.cy-tr.trial{background:repeating-linear-gradient(90deg,#F6F2FA 0,#F6F2FA calc(10% - 6px),#fff calc(10% - 6px),#fff 10%);outline:1.5px dashed #B9A3DA;outline-offset:-1px}
+.cy-tr.trial .cy-fill{background:repeating-linear-gradient(90deg,var(--c) 0 8px,transparent 8px 13px);opacity:.55}
+.cy-mk.mk-std b{color:#5b4a86}.cy-mk.mk-std small{color:#8a7bb0}.cy-dot.mk-std{background:#fff;border-color:#8a7bb0}
+.cy-add{grid-column:1 / span 11;display:flex;gap:10px;align-items:center;padding:4px 0}
+.hv-best{background:#F3EEF9;border:1px solid #D9CBEE;border-radius:14px;padding:12px 16px;margin:6px 0 12px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.hv-best b.big{font-size:22px;color:#4B2C86;display:block}.hv-best small{color:#555;display:block;font-size:12px}
+.hv-alt{font-size:12.5px;color:#444}.hv-alt span{display:inline-block;background:#fff;border:1px solid #D9CBEE;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0}
+.hv-wrap{overflow-x:auto;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px;padding:10px 10px 6px}
+.hv{display:grid;grid-template-columns:200px repeat(var(--n),18px);row-gap:4px;width:max-content}
+.hv-l{position:sticky;left:0;z-index:2;background:var(--sur);font-size:12.5px;padding:2px 8px 2px 6px;border-left:5px solid var(--c);display:flex;flex-direction:column;justify-content:center;line-height:15px}
+.hv-l small{font-size:10.5px;color:var(--mut)}.hv-l.next{border-left-style:dotted}.hv-l.trial{border-left-style:dashed;background:#F7F3FB;cursor:pointer}
+.hv-m{font-size:10.5px;font-weight:700;color:#6b5b2d;white-space:nowrap;border-left:1px solid #d8d2c2;padding-left:3px;height:16px}
+.hv-c{height:26px;position:relative}.hv-c i{position:absolute;inset:3px 1px;border-radius:3px;background:var(--c)}
+.hv-c.next i{background:repeating-linear-gradient(45deg,var(--c) 0 3px,transparent 3px 6px)}.hv-c.trial i{outline:1.5px dashed #4B2C86;outline-offset:-1px}
+.hv-c.now{box-shadow:inset 2px 0 0 #222}
+.hv-t{height:64px;display:flex;align-items:flex-end;justify-content:center}.hv-t i{width:13px;border-radius:3px 3px 0 0;background:#8B6B2E}.hv-t.clash i{background:#C62828}.hv-t.gap{background:repeating-linear-gradient(0deg,#fff 0 4px,#F2D7D5 4px 6px)}
 .ot{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .ot-c{background:var(--sur);border:.5px solid var(--bdr);border-top:6px solid var(--c);border-radius:14px;padding:12px 14px}
 .ot-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.ot-h b{font-size:17px}
@@ -424,7 +441,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -436,6 +453,7 @@ const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], r
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
 let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null, hchart = null, OCH = [], PRICES = [], PRICE_ERR = '';
+let TRIALS = [], TRIAL_ERR = '', HV = {next:true, bags:10000};
 let COSTS = [], COST_ERR = '', PLANS = [], PLAN_ERR = '', MONEY = {price:'pl', farm:'', st:'', view:'money', ver:null, draft:null, dirty:false}, PIN = null, PLAN_FROM = null;
 
 const $ = id => document.getElementById(id);
@@ -507,6 +525,8 @@ async function loadAll(){
     const [cq, plq] = await Promise.all([sb.rpc('harvest_owner_cost_profiles'), sb.rpc('harvest_owner_plans')]);
     COSTS = cq.error ? [] : (cq.data || []); COST_ERR = cq.error ? nice(cq.error) : '';
     PLANS = plq.error ? [] : (plq.data || []); PLAN_ERR = plq.error ? nice(plq.error) : '';
+    const tq = await sb.rpc('harvest_owner_trials');
+    TRIALS = tq.error ? [] : (tq.data || []); TRIAL_ERR = tq.error ? nice(tq.error) : '';
     const [kq, mq] = await Promise.all([sb.rpc('harvest_owner_knowledge'), sb.from('hub_crop_protocol_milestone').select('code,name,day,sort,voided_at,protocol_id')]);
     KN = kq.error ? [] : (kq.data || []); KN_ERR = kq.error ? nice(kq.error) : ''; H.milestones = mq.error ? [] : (mq.data || []);
     LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
@@ -1052,13 +1072,125 @@ function cyPin(F, t){
   else { big = 'Changeover'; small = 'next transplant ≈ ' + dShort(B.end); }
   return {P, big, small};
 }
+/* ---------- Trial farms (试算新场) + harvest calendar ---------- */
+function stdOff(){ const o = {tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), ta:msOff('TAIL_START'), end:msOff('CYCLE_END')}; return o.tp != null && o.h1 != null && o.end != null ? o : null; }
+/* a trial farm follows the standard formula exactly, from its sowing date */
+function trialBounds(T, O){
+  const s = T.sowing_date, a = n => n == null ? null : addDays(s, n);
+  const tp = a(O.tp), fh = a(O.h1), hEnd = a(O.end);
+  return {sow:s, tp, fh, hEnd, end:addDays(hEnd, 28), starts:[s, tp, addDays(tp, 1), a(O.fl) || tp, a(O.fr) || tp, fh, a(O.pk) || fh, a(O.st) || fh, a(O.ta) || hEnd, hEnd], rs:[], harvesting:false};
+}
+function trialRow(T, O, t){
+  const B = trialBounds(T, O), col = '#6A3FB5';
+  let big, small, x = 0;
+  if(t < B.sow){ const n = dnum(B.sow) - dnum(t); big = 'Sow in ' + n + ' day' + (n === 1 ? '' : 's'); small = '1st harvest ≈ ' + dShort(B.fh); }
+  else { const p = cyPin({B}, t); big = p.big; small = p.small; x = p.P.x; }
+  const tags = [[0, B.sow, 'D0'], [1, B.tp, 'D' + O.tp], [5, B.fh, 'D' + O.h1], [9, B.hEnd, 'D' + O.end]]
+    .map(([i, d, l]) => `<div class="cy-dot mk-std" style="left:${i * 10}%"></div><div class="cy-mk mk-std${i === 0 ? ' first' : ''}" style="left:${i * 10}%"><b>${dShort(d)}</b><small>${l}</small></div>`).join('');
+  return `<div class="cy-f trial" style="--c:${col}" onclick="trialEdit(${T.id})" title="Click to change or remove"><b>${esc(T.name)}</b><small>Sow ${dLong(T.sowing_date)} · ${fmt(T.bags)} bags</small></div>
+    <div class="cy-tr trial" style="--c:${col}" data-trial="${T.id}"><div class="cy-fill" style="width:${x}%"></div>
+    <div class="cy-pin" style="left:${t < B.sow ? 25 : Math.min(96, Math.max(4, x))}%"><span>${esc(big)}</span><s>${esc(small)}</s></div>${tags}</div>`;
+}
+/* every harvest period we know or expect: each farm now, its next season (estimate), and the trial farms */
+function hvLanes(b, R, O, skipTrial){
+  const tg = targetOf(), sc = tg && b.total_per_bag ? tg / b.total_per_bag : 1, out = [];
+  const lane = (o, fh, end, bags) => { const W = []; for(let w = 1; w <= R.wk; w++){ const d = addDays(fh, (w - 1) * 7); if(d > end) break; const bw = b.weeks[w - 1]; W.push({w, d, kg:(bw ? bw.kg_per_bag : 0) * sc * bags, hot: w <= R.pk}); } out.push({...o, fh, end, bags, W}); };
+  cyFarms(b, R).filter(F => F.c.status === 'ACTIVE').forEach(F => {
+    lane({name:F.farm, sub:'Season ' + F.c.cycle_no, col:F.col, kind:'real'}, F.B.fh, F.B.hEnd, F.bags);
+    if(HV.next){
+      const nx = H.cycles.find(x => x.block_id === F.c.block_id && x.cycle_no === F.c.cycle_no + 1);
+      const ntp = nx && nx.transplant_date ? nx.transplant_date : nx && nx.sowing_date ? addDays(nx.sowing_date, O.tp) : F.B.end;
+      const nfh = addDays(ntp, O.h1 - O.tp);
+      lane({name:F.farm, sub:'Season ' + (F.c.cycle_no + 1) + ' · estimate', col:F.col, kind:'next'}, nfh, addDays(nfh, O.end - O.h1), nx ? bagsFor(nx) : F.bags);
+    }
+  });
+  TRIALS.filter(T => T.id !== skipTrial).forEach(T => lane({name:T.name, sub:'Trial · sow ' + dShort(T.sowing_date), col:'#6A3FB5', kind:'trial', id:T.id}, addDays(T.sowing_date, O.h1), addDays(T.sowing_date, O.end), Number(T.bags)));
+  return out;
+}
+const wkOf = d => Math.floor(dnum(d) / 7);
+function hvBuckets(L){ const m = {}; L.forEach(l => l.W.forEach(x => { const k = wkOf(x.d); m[k] = m[k] || {kg:0, hot:0, n:0}; m[k].kg += x.kg; m[k].n++; if(x.hot) m[k].hot++; })); return m; }
+/* best sowing date: the new farm's harvest weeks should land where the other farms give the least */
+function hvSuggest(b, R, O, bags, skipTrial){
+  const base = hvBuckets(hvLanes(b, R, O, skipTrial)), t = today(), tg = targetOf(), sc = tg && b.total_per_bag ? tg / b.total_per_bag : 1, C = [];
+  for(let i = 0; i <= 120; i++){
+    const s = addDays(t, i), fh = addDays(s, O.h1); let sc2 = 0, own = 0, hot = 0;
+    for(let w = 1; w <= R.wk; w++){ const d = addDays(fh, (w - 1) * 7); if(dnum(d) > dnum(s) + O.end) break; const bw = b.weeks[w - 1], kg = (bw ? bw.kg_per_bag : 0) * sc * bags, B = base[wkOf(d)] || {kg:0, hot:0};
+      sc2 += B.kg * kg; own += kg; if(w <= R.pk && B.hot) hot++; }
+    C.push({s, fh, end:addDays(s, O.end), score:own ? sc2 / own : 0, avg:own ? sc2 / own : 0, hot});   /* avg = other farms' kg a week, counted more in this farm's big weeks */
+  }
+  const sorted = [...C].sort((a, c) => a.score - c.score || a.s.localeCompare(c.s)), best = sorted[0], alt = [];
+  for(const c of sorted){ if(alt.length >= 2) break; if([best, ...alt].every(x => Math.abs(dnum(x.s) - dnum(c.s)) >= 21)) alt.push(c); }
+  const worst = sorted[sorted.length - 1];
+  return {best, alt, worst};
+}
+function renderHvCal(b, R, O){
+  const L = hvLanes(b, R, O), t = today();
+  if(!L.length) return '<div class="card empty">No farm is harvesting or planned yet.</div>';
+  const k0 = wkOf(t) - 2, k1 = Math.min(k0 + 90, Math.max(...L.filter(l => l.W.length).map(l => wkOf(l.W[l.W.length - 1].d)))), N = k1 - k0 + 1, M = hvBuckets(L);
+  const kd = k => { const d = new Date(k * 7 * 864e5); return d; };
+  let months = '', last = -1;
+  for(let k = k0; k <= k1; k++){ const d = kd(k), m = d.getUTCMonth(); if(m !== last){ const span = Math.min(5, k1 - k + 1); months += `<div class="hv-m" style="grid-column:${k - k0 + 2} / span ${span};grid-row:1">${MON[m]}${m === 0 || last === -1 ? ' ' + String(d.getUTCFullYear()).slice(2) : ''}</div>`; last = m; } }
+  let rows = '', r = 2;
+  L.forEach(l => {
+    rows += `<div class="hv-l ${l.kind}" style="--c:${l.col};grid-row:${r}"${l.kind === 'trial' ? ` onclick="trialEdit(${l.id})"` : ''}><b>${esc(l.name)}</b><small>${esc(l.sub)}</small><small>harvest ${dShort(l.fh)} → ${dShort(l.end)}</small></div>`;
+    const mx = Math.max(...l.W.map(x => x.kg), 1);
+    l.W.forEach(x => { const k = wkOf(x.d); if(k < k0 || k > k1) return;
+      rows += `<div class="hv-c ${l.kind}${k === wkOf(t) ? ' now' : ''}" style="--c:${l.col};grid-column:${k - k0 + 2};grid-row:${r}" title="${esc(l.name)} · week ${x.w} · from ${dLong(x.d)} · ≈ ${fmt(x.kg)} kg"><i style="opacity:${(0.3 + 0.7 * x.kg / mx).toFixed(2)}"></i></div>`; });
+    r++;
+  });
+  const mxT = Math.max(...Object.values(M).map(x => x.kg), 1);
+  let tot = `<div class="hv-l" style="--c:#8B6B2E;grid-row:${r}"><b>All farms</b><small>kg a week · <span style="color:#C62828">red</span> = 2+ farms in 1st harvest/peak</small></div>`;
+  for(let k = k0; k <= k1; k++){ const x = M[k] || {kg:0, hot:0}, d = kd(k), ds = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    tot += `<div class="hv-t${x.hot >= 2 ? ' clash' : ''}${!x.kg ? ' gap' : ''}" style="grid-column:${k - k0 + 2};grid-row:${r}" title="Week from ${dLong(ds)} · ≈ ${fmt(x.kg)} kg${x.hot >= 2 ? ' · ' + x.hot + ' farms in 1st harvest/peak' : ''}${!x.kg ? ' · no harvest' : ''}"><i style="height:${Math.round(60 * x.kg / mxT)}px"></i></div>`; }
+  return `<div class="hv-wrap"><div class="hv" style="--n:${N}"><div class="hv-m" style="grid-column:1;grid-row:1;border:0"></div>${months}${rows}${tot}</div></div>`;
+}
+function hvBestBox(b, R, O){
+  const bags = Math.max(1, Number(HV.bags) || 10000), S = hvSuggest(b, R, O, bags), B = S.best;
+  return `<div class="hv-best"><div><small>Best sowing date for a new farm of <input type="number" min="1" step="500" value="${bags}" style="width:90px" onchange="HV.bags=this.value;renderHome()"> bags (next 120 days)</small><b class="big">${dLong(B.s)}</b>
+    <small>1st harvest ≈ ${dLong(B.fh)} · last harvest ≈ ${dLong(B.end)} · other farms give ≈ ${fmt(B.avg)} kg a week during its big weeks${S.worst.avg > B.avg ? ` (worst date: ≈ ${fmt(S.worst.avg)} kg — ${dLong(S.worst.s)})` : ''}</small></div>
+    <div class="hv-alt">${S.alt.length ? 'Also good: ' + S.alt.map(a => `<span>${dLong(a.s)} · ≈ ${fmt(a.avg)} kg</span>`).join('') : ''}</div>
+    <div style="margin-left:auto"><button class="btn btn-pri" onclick="trialEdit(null,'${B.s}',${bags})">+ Add as trial farm</button></div></div>`;
+}
+function trialEdit(id, sow, bags){
+  const T = id ? TRIALS.find(x => x.id === id) : {name:'New farm ' + (TRIALS.length + 1), sowing_date:sow || addDays(today(), 30), bags:bags || HV.bags || 10000, note:''};
+  if(!T) return;
+  openModal(id ? 'Trial farm · ' + T.name : 'New trial farm', `<p class="hint" style="margin-top:0">Only you see trial farms. They follow the standard formula from the sowing date. Nothing goes into Farms.</p>
+    <label class="hint">Name *</label><input id="tfName" style="width:100%" maxlength="40" value="${esc(T.name)}">
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap"><div><label class="hint">Sowing date *</label><br><input id="tfSow" type="date" value="${T.sowing_date}"></div>
+    <div><label class="hint">Polybags *</label><br><input id="tfBags" type="number" min="1" step="500" style="width:120px" value="${T.bags}"></div>
+    <div style="align-self:flex-end"><button class="btn" onclick="trialSuggest(${id || 'null'})">Suggest best date</button></div></div>
+    <div id="tfSug" class="hint" style="margin-top:6px"></div>
+    <label class="hint" style="margin-top:8px;display:block">Note</label><input id="tfNote" style="width:100%" value="${esc(T.note || '')}" placeholder="e.g. land near AD 2, 3 acres">
+    ${id ? '<div style="margin-top:12px;border-top:1px solid #eee;padding-top:10px"><label class="hint">Remove · why</label><input id="tfWhy" style="width:100%" placeholder="e.g. not opening this farm"></div>' : ''}
+    <div class="alert alert-danger" id="merr" style="display:none"></div>`,
+    `${id ? `<button class="btn btn-danger" onclick="trialVoid(${id})">Remove</button>` : ''}<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="trialSave(${id || 'null'})">Save</button>`);
+}
+function trialSuggest(id){
+  const B0 = liveBench()[0], O = stdOff(); if(!B0 || !O) return;
+  const bags = Number($('tfBags').value) || 10000, S = hvSuggest(B0.data, cyRules(B0.data), O, bags, id || undefined);
+  $('tfSow').value = S.best.s;
+  $('tfSug').innerHTML = `Best: <b>${dLong(S.best.s)}</b> → 1st harvest ≈ ${dLong(S.best.fh)}, other farms ≈ ${fmt(S.best.avg)} kg a week during its big weeks.${S.alt.length ? ' Also good: ' + S.alt.map(a => dLong(a.s)).join(', ') + '.' : ''}`;
+}
+async function trialSave(id){
+  const name = $('tfName').value.trim(), sow = $('tfSow').value, bags = parseInt($('tfBags').value, 10);
+  if(!name) return merr('Give the trial farm a name'); if(!sow) return merr('Enter the sowing date'); if(!(bags > 0)) return merr('Enter the number of polybags');
+  const {error} = await sb.rpc('harvest_owner_trial_save', {p_id:id, p_name:name, p_sowing:sow, p_bags:bags, p_note:$('tfNote').value});
+  if(error) return merr('Not saved. ' + nice(error));
+  closeModal(); toast('✓ Trial farm saved'); await loadAll();
+}
+async function trialVoid(id){
+  const why = ($('tfWhy').value || '').trim(); if(!why) return merr('Write why this trial farm is removed');
+  const {error} = await sb.rpc('harvest_owner_trial_void', {p_id:id, p_reason:why});
+  if(error) return merr('Not removed. ' + nice(error));
+  closeModal(); toast('✓ Trial farm removed'); await loadAll();
+}
 function renderHome(){
   const v = $('homeView');
   if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
   const B0 = liveBench()[0];
   if(!B0){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
   const b = B0.data, R = cyRules(b), t = today(), td = new Date(dnum(t) * 864e5);
-  const FS = cyFarms(b, R);
+  const FS = cyFarms(b, R), O = stdOff();
   /* Standard = the Crops growing plan (v3 formula). Absolute days from sowing = day 0. */
   const F = {sow:0, tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), end:msOff('CYCLE_END')};
   const dd2 = (a, z) => a != null && z != null ? z - a : null, du = v => v == null ? '—' : v + ' days';
@@ -1075,9 +1207,14 @@ function renderHome(){
     ${FS.map(F => { const p = cyPin(F, t); return `<div class="cy-f" style="--c:${F.col}"><b>${esc(F.farm)}</b><small>Season ${F.c.cycle_no} · ${fmt(F.bags)} bags</small></div>
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div>${cyMarks(F, PL)}</div>`; }).join('')}
+    ${O ? TRIALS.map(T => trialRow(T, O, t)).join('') : ''}
+    <div class="cy-add"><button class="btn" onclick="trialEdit(null)">+ Trial farm · 试算新场</button><span class="hint">${TRIAL_ERR ? esc(TRIAL_ERR) : 'Plan a new farm: it follows the standard formula from its sowing date. Only you see it.'}</span></div>
   </div></div>
   <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Each dot stays inside its own stage; the label shows how many days early or late; dates come from Farms → Cycles (1st harvest also from Leader reports). D30 = standard day 30 from sowing; <b style="color:#A32D2D">D30 +3</b> = done 3 days later than the standard, <b style="color:#236FAD">D60 −1</b> = 1 day earlier, <b style="color:#0F6E56">green</b> = on the standard (±2 days).</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
+  <div class="sec-t" style="margin-top:22px">2 · Harvest calendar · when each farm harvests</div>
+  ${O ? hvBestBox(b, R, O) + renderHvCal(b, R, O) : '<div class="card empty">The Crops growing plan has no transplant / 1st harvest / end day.</div>'}
+  <div class="hint" style="margin-top:6px"><label><input type="checkbox" ${HV.next ? 'checked' : ''} onchange="HV.next=this.checked;renderHome()"> Count each farm's next season (estimate)</label> · Each bar = harvest weeks, darker = more kg (standard curve × target ${fmt(targetOf())} kg per polybag). Striped = next season, estimated from the changeover; dashed = trial farm. The best date puts the new farm's harvest where the other farms give the least, so the harvest is spread out. Next seasons count only as estimates; enter real dates in Farms → Cycles.</div>
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
   v.innerHTML = h;
