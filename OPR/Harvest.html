@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v8</title>
+<title>Harvest v9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -208,6 +208,18 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-tot .cy-all{background:#8B6C2A!important;color:#fff}.cy-tot .cy-all small,.cy-tot .cy-all em{color:#F3E9D2}
 .cy-plus{align-self:center;font-size:22px;font-weight:800;color:#8B6C2A}
 .cy-d{display:inline-block;margin-top:6px;background:#fff;border-radius:6px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:800;color:#6b5b2d}
+.tk-wrap{overflow-x:auto;padding:12px;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px}
+.tk{display:grid;gap:4px;min-width:1080px}
+.tk-band{border-radius:8px;padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden}.tk-band small{font-weight:400;color:#555}
+.tk-tot{background:#8B6C2A!important;color:#fff!important}.tk-tot small,.tk-tot em{color:#F3E9D2!important}
+.tk-std{border-radius:8px;padding:4px 2px;text-align:center}.tk-std small{display:block;font-size:10px;color:#6b5b2d;font-weight:700}.tk-std b{display:block;font-size:14px;font-variant-numeric:tabular-nums}.tk-std em{display:block;font-style:normal;font-size:10px;color:#0F6E56}
+.tk-lab{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:6px solid var(--c,#8B6C2A);border-radius:8px;background:#FBFAF6;position:sticky;left:0;z-index:3;box-shadow:4px 0 6px -4px rgba(0,0,0,.15)}
+.tk-lab b{font-size:15px}.tk-lab small{font-size:10px;color:var(--mut);line-height:1.25}
+.tk-c{border-radius:8px;padding:6px 2px;text-align:center;background:#F4F2EC;min-height:46px}.tk-c b{display:block;font-size:14px;font-variant-numeric:tabular-nums}.tk-c small{display:block;font-size:9px;color:#666}
+.tk-ok{background:#CDEBDD}.tk-mid{background:#FBE7B5}.tk-bad{background:#F6CACA}
+.tk-now{background:#fff;outline:3px solid #111;outline-offset:-3px}.tk-fut{background:repeating-linear-gradient(135deg,#F4F2EC 0 6px,#ECE9E1 6px 12px);color:#777}.tk-fut b{font-weight:600;font-style:italic}
+.tk-sum b{font-size:16px}.tk-sum small{font-size:10px;color:#333}
+.tk-leg{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px;margin:8px 0 4px}.tk-leg i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
 details.ov-more{margin-top:18px}details.ov-more>summary{cursor:pointer;font-weight:700;font-size:15px;padding:8px 0}
 .pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pr-grid label{font-size:12px;color:var(--mut)}.pr-grid input{width:100%}
 .ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:12px}
@@ -259,7 +271,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v8</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v9</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -269,8 +281,9 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v8</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v9</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
+    <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
     <button class="ntab" data-p="plan" onclick="go('plan')">Planner</button>
     <button class="ntab" data-p="know" onclick="go('know')">Knowledge</button>
@@ -293,6 +306,9 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
   <!-- Compare -->
   <div class="page on" id="page-home"><div id="homeView"></div></div>
+
+  <!-- Tracking -->
+  <div class="page" id="page-track"><div id="trackView"></div></div>
 
   <!-- Money -->
   <div class="page" id="page-money"><div id="moneyView"></div></div>
@@ -389,7 +405,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -454,7 +470,7 @@ async function loadAll(){
       sb.from('hub_farm').select('id,code,status'),
       sb.from('hub_farm_block').select('id,farm_id,code,active,bag_capacity'),
       sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,expected_end,bag_count,sowing_is_estimate,transplant_is_estimate,protocol_id,voided_at'),
-      sb.from('hub_crop_protocol').select('id,expected_kg_per_bag,cycle_days'),
+      sb.from('hub_crop_protocol').select('id,expected_kg_per_bag,cycle_days,version,effective_from,voided_at'),
       sb.from('hub_grade').select('id,code,label,sort,shown'),
       sb.from('hub_unit').select('id,code,kind,to_kg,usage,shown'),
       sb.rpc('harvest_owner_list', {p_from: from, p_to: to})
@@ -491,6 +507,7 @@ function go(p){
 }
 function renderAll(){
   if($('page-home').classList.contains('on')) renderHome();
+  if($('page-track').classList.contains('on')) renderTrack();
   if($('page-money').classList.contains('on')) renderMoney();
   if($('page-plan').classList.contains('on')) renderPlan();
   if($('page-know').classList.contains('on')) renderKnow();
@@ -627,7 +644,7 @@ function seasonStats(c){
   const first = rs.length ? rs[0].date : null, last = rs.length ? rs[rs.length - 1].date : null;
   return { c, L, bags, kg, rs, per: bags && rs.length ? kg / bags : null, n: rs.length, hdays: days.length, first, last,
     span: first ? dnum(last) - dnum(first) + 1 : 0, tpToLast: c.transplant_date && last ? dnum(last) - dnum(c.transplant_date) : null,
-    best, bestEnd, byG, aa: byG['AA'] || 0, target: Number(pr.expected_kg_per_bag || 0), pending: rs.filter(r => r.status === 'PENDING').length,
+    best, bestEnd, byG, aa: byG['AA'] || 0, target: targetOf(c), pending: rs.filter(r => r.status === 'PENDING').length,
     closed: c.status === 'CLOSED' };
 }
 const kgb = v => v == null ? '—' : fmt(v, 2);
@@ -724,7 +741,9 @@ function buildBenchmark(cids){
     sources: S.map(x => ({cycle_id:x.c.id, label:x.label, bags:x.bags, kg:x.kg, first:x.first, last:x.last, first_days:x.first_days, weeks:x.weeks, per_bag:r2(x.kg / x.bags), aa_pct:r1(x.aa / x.kg * 100)}))};
 }
 function liveBench(){ return BENCH.filter(b => !b.retired_at); }
-function targetOf(c){ const pr = H.protocols.find(p => p.id === (c && c.protocol_id)) || H.protocols[0] || {}; return Number(pr.expected_kg_per_bag || 0); }
+/* Owner 2026-10-22: one target for all seasons = the current growing plan in Crops (today 10 kg per polybag) */
+function curProto(){ const t = today(); const L = H.protocols.filter(p => !p.voided_at && (!p.effective_from || p.effective_from <= t)).sort((a, b) => (b.effective_from || '').localeCompare(a.effective_from || '') || (b.version || 0) - (a.version || 0)); return L[0] || H.protocols[0] || {}; }
+function targetOf(c){ return Number(curProto().expected_kg_per_bag || 0); }
 function benchRules(b){
   const W = b.weeks, n = W.length, pk = b.peak_week;
   const avg = (a, z) => { const xs = W.filter(x => x.w >= a && x.w <= z); return xs.length ? xs.reduce((t, x) => t + x.kg_per_bag, 0) / xs.length : 0; };
@@ -926,7 +945,7 @@ const CY_ST = [
   {i:'🏗️', en:'Setup', zh:'设园准备'}, {i:'🌱', en:'Nursery', zh:'育苗'}, {i:'🪴', en:'Transplant', zh:'定植'},
   {i:'🌿', en:'Growing', zh:'营养生长'}, {i:'🌼', en:'Flowering', zh:'开花'}, {i:'🍆', en:'Fruit set', zh:'结果'},
   {i:'🧺', en:'First harvest', zh:'首采'}, {i:'📈', en:'Peak', zh:'高峰采收'}, {i:'📉', en:'Harvest → tail', zh:'持续 / 尾采'}, {i:'🧹', en:'Changeover', zh:'拔树换季'}];
-function msOff(code){ const pid = (H.protocols[0] || {}).id; const m = (H.milestones || []).find(x => !x.voided_at && x.code === code && (!pid || x.protocol_id === pid)) || (H.milestones || []).find(x => !x.voided_at && x.code === code); return m ? Number(m.day) : null; }
+function msOff(code){ const pid = curProto().id; const m = (H.milestones || []).find(x => !x.voided_at && x.code === code && (!pid || x.protocol_id === pid)) || (H.milestones || []).find(x => !x.voided_at && x.code === code); return m ? Number(m.day) : null; }
 function cyRules(b){
   const tp = msOff('TRANSPLANTING'), fl = msOff('FLOWERING'), fr = msOff('FRUIT_SET'), tn = turnaroundDays();
   return {nur: nurseryDays() ?? tp, flow: fl != null && tp != null ? fl - tp : null, fruit: fr != null && tp != null ? fr - tp : null,
@@ -999,17 +1018,60 @@ function renderHome(){
   </div></div>
   <div class="hint" style="margin-top:6px">* Seasons a year counts from transplant to next transplant (the nursery of the next season overlaps the changeover). Day numbers count from sowing = day 0; they come from your real cycles, benchmark and Crops standard.</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
-  <div class="sec-t">2 · On track? (vs benchmark v${B0.version})</div>
-  <div class="ot">`;
+`;
+  h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
+  v.innerHTML = h;
+  const cw = v.querySelector('.cy-wrap'), pins = [...v.querySelectorAll('.cy-pin')];
+  if(cw && pins.length && cw.scrollWidth > cw.clientWidth){ const L = Math.min(...pins.map(e => e.offsetLeft + e.parentElement.offsetLeft)); cw.scrollLeft = Math.max(0, L - 260); }
+}
+/* ---------- Tracking (page 2): standard harvest per week on top, each farm's actual + forecast below ---------- */
+function renderTrack(){
+  const v = $('trackView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const B0 = liveBench()[0];
+  if(!B0){ v.innerHTML = `<h1 class="pt">Tracking</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
+  const b = B0.data, R = cyRules(b), t = today(), W = b.weeks, n = W.length, tg = targetOf(), sc = tg && b.total_per_bag ? tg / b.total_per_bag : 1;
+  const FS = cyFarms(b, R).filter(F => F.c.status === 'ACTIVE');
+  const P = FS.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
   const cost = rates(curCost()), money = hasPrice();
-  const act = FS.filter(F => F.c.status === 'ACTIVE');
-  const P = act.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
+  const stg = w => w < R.pk ? 7 : w === R.pk ? 8 : 9;
+  const bands = [{s:7, from:1, to:R.pk - 1}, {s:8, from:R.pk, to:R.pk}, {s:9, from:R.pk + 1, to:n}].filter(x => x.to >= x.from);
+  const cell = (x, y) => `grid-column:${x};grid-row:${y}`;
+  let h = `<h1 class="pt">Tracking <span class="hint" style="font-size:13px;font-weight:400">Harvest per polybag, week by week · target ${fmt(tg)} kg per polybag a season</span></h1>
+  <div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${n},minmax(46px,1fr)) 88px">
+    <div style="${cell(1, 1)}"></div>
+    ${bands.map(x => { const st = CY_ST[x.s - 1]; return `<div class="tk-band s${x.s}" style="grid-column:${x.from + 1} / span ${x.to - x.from + 1};grid-row:1">${st.i} ${st.en} <small>${st.zh}</small></div>`; }).join('')}
+    <div class="tk-band tk-tot" style="${cell(n + 2, 1)}">Season</div>
+    <div class="tk-lab" style="${cell(1, 2)}"><b>Standard</b><small>kg per polybag · Season 1 (target)</small></div>
+    ${W.map((x, i) => `<div class="tk-std s${stg(x.w)}" style="${cell(i + 2, 2)}"><small>W${x.w}</small><b>${fmt(x.kg_per_bag, 2)}</b><em>${fmt(x.kg_per_bag * sc, 2)}</em></div>`).join('')}
+    <div class="tk-std tk-tot" style="${cell(n + 2, 2)}"><small>Total</small><b>${fmt(b.total_per_bag, 2)}</b><em>${fmt(tg, 2)}</em></div>`;
+  P.forEach(({F, X}, k) => {
+    const fc = X.F, y = k + 3, bags = fc.bags;
+    const perBag = X.projTotal / bags, pct = tg ? perBag / tg : null;
+    h += `<div class="tk-lab" style="${cell(1, y)};--c:${F.col}" data-farm="${esc(F.farm)}"><b>${esc(F.farm)}</b><small>S${F.c.cycle_no} · ${fmt(bags)} bags · ${fc.actFirst ? (X.cur ? 'now W' + X.cur.w : 'harvesting') : '1st ≈ ' + dShort(fc.start)}</small></div>`;
+    for(let i = 0; i < n; i++){
+      const r = fc.rows[i]; if(!r) continue;
+      const tw = (W[i] ? W[i].kg_per_bag : 0) * sc * bags;
+      let cls, val, tip;
+      if(r.st === 'fut'){ val = r.bk * X.pace; cls = 'tk-fut'; tip = 'Forecast'; }
+      else if(r.st === 'now'){ val = r.ak || 0; cls = 'tk-now'; tip = 'This week so far'; }
+      else { val = r.ak || 0; const q = tw ? val / tw : 1; cls = q >= 0.9 ? 'tk-ok' : q >= 0.75 ? 'tk-mid' : 'tk-bad'; tip = 'Actual · ' + fmt(q * 100) + '% of target'; }
+      h += `<div class="tk-c ${cls}" style="${cell(i + 2, y)}" title="${esc(F.farm)} · W${r.w} · ${dShort(r.from)}–${dShort(r.to)} · ${tip}: ${fmt(val)} kg (target ${fmt(tw)} kg)"><b>${fmt(val / bags, 2)}</b><small>${dShort(r.from)}</small></div>`;
+    }
+    h += `<div class="tk-c tk-sum ${pct == null ? '' : !fc.actFirst ? 'tk-fut' : pct >= 0.9 ? 'tk-ok' : pct >= 0.75 ? 'tk-mid' : 'tk-bad'}" style="${cell(n + 2, y)}" title="Harvested ${fmt(X.soFar)} kg + still to come ≈ ${fmt(X.left)} kg"><b>${fmt(perBag, 2)}</b><small>${pct != null ? fmt(pct * 100) + '% of ' + fmt(tg) : ''}</small></div>`;
+  });
+  h += `</div></div>
+  <div class="tk-leg"><span><i class="tk-ok"></i>≥ 90% of target</span><span><i class="tk-mid"></i>75–90%</span><span><i class="tk-bad"></i>below 75%</span><span><i class="tk-now"></i>this week (so far)</span><span><i class="tk-fut"></i>forecast</span>
+    <span class="hint">Top number in each standard box = Season 1 actual; small number = target ${fmt(tg)} kg. Farm boxes: kg per polybag that week, date = week start. Hover for kg.</span></div>
+  <div class="sec-t">Each farm · on target?</div>
+  <div class="ot">`;
   P.forEach(({F, X}) => {
     const fc = X.F, started = !!fc.actFirst, d = dnum(t);
+    const lr = fc.last, r = lr && lr.tc ? lr.ac / lr.tc : null;
     let cls = 'ot-wait', txt;
     if(!started) txt = `Not harvesting yet · 1st ≈ ${dShort(fc.start)} (${Math.max(0, dnum(fc.start) - d)} days)`;
-    else if(fc.done < 2) txt = `Too early · harvest week ${X.cur ? X.cur.w : 1}`;
-    else { const r = fc.ratio; cls = r >= 1.1 ? 'ot-up' : r >= 0.9 ? 'ot-ok' : 'ot-dn'; txt = (r >= 1.1 ? '▲ Ahead ' : r >= 0.9 ? '✓ On track ' : '▼ Behind ') + fmt(r * 100) + '%'; }
+    else if(fc.done < 2 || r == null) txt = `Too early · harvest week ${X.cur ? X.cur.w : 1}`;
+    else { cls = r >= 1.1 ? 'ot-up' : r >= 0.9 ? 'ot-ok' : 'ot-dn'; txt = (r >= 1.1 ? '▲ Ahead of target ' : r >= 0.9 ? '✓ On target ' : '▼ Behind target ') + fmt(r * 100) + '%'; }
     const pk = money ? X.rpk.v : (cost ? cost.plPrice : 0);
     const perBag = X.projTotal / fc.bags;
     const nx = started ? X.nxt : fc.rows[0];
@@ -1024,11 +1086,10 @@ function renderHome(){
       </div></div>`;
   });
   h += `</div>
-  <div class="hint" style="margin-top:6px">Grey = benchmark (Season 1) · dashed = target ${P[0] && P[0].X.F.tg ? fmt(P[0].X.F.tg) + ' kg / bag' : ''} · colour = actual. Money = expected kg × ${money ? 'your grade prices' : (cost ? 'RM ' + fmt(cost.plPrice, 2) + ' / kg (FY 2025/26 average)' : 'no price yet')}.</div>
-  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
+  <div class="hint" style="margin-top:6px">Line chart: grey = Season 1 · dashed = target ${fmt(tg)} kg · colour = actual (kg per polybag, added up). Forecast = standard × this season's pace so far. Money = expected kg × ${money ? 'your grade prices' : (cost ? 'RM ' + fmt(cost.plPrice, 2) + ' / kg (FY 2025/26 average)' : 'no price yet')}.</div>`;
   v.innerHTML = h;
-  const cw = v.querySelector('.cy-wrap'), pins = [...v.querySelectorAll('.cy-pin')];
-  if(cw && pins.length && cw.scrollWidth > cw.clientWidth){ const L = Math.min(...pins.map(e => e.offsetLeft + e.parentElement.offsetLeft)); cw.scrollLeft = Math.max(0, L - 260); }
+  const tw = v.querySelector('.tk-wrap'), now = v.querySelector('.tk-now');
+  if(tw && now && tw.scrollWidth > tw.clientWidth && window.innerWidth < 900) tw.scrollLeft = Math.max(0, now.offsetLeft - 330);
   OCH.forEach(c => c.destroy()); OCH = [];
   if(window.Chart){
     const cards = v.querySelectorAll('.ot-c canvas');
