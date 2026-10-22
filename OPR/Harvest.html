@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v19</title>
+<title>Harvest v20</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -290,7 +290,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v19</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v20</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -300,7 +300,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v19</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v20</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -424,7 +424,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1038,7 +1038,7 @@ function cyMarks(F, PL){
   return mk.map(([i, d, n, std, est]) => {
     const df = std == null ? 0 : n - std, cls = i === 0 || Math.abs(df) <= 2 ? 'mk-ok' : df > 0 ? 'mk-late' : 'mk-early';
     const gap = i === 0 || !df ? '' : ` <i>${df > 0 ? '+' : '−'}${Math.abs(df)}</i>`;
-    const x = Math.max(0, Math.min(100, dayX(n)));
+    const x = i === 0 ? 0 : Math.max(i * 10, Math.min(i * 10 + 7, dayX(n)));   /* stays inside its own stage column; the +/- label tells how late */
     return `<div class="cy-dot ${cls}" style="left:${x}%"></div><div class="cy-mk ${cls}${i === 0 ? ' first' : ''}" style="left:${x}%" title="${esc(F.farm)}: ${dLong(d)} = day ${n}${std != null && i ? ' · standard day ' + std : ''}"><b>${est ? '≈' : ''}${dShort(d)}</b><small>D${std != null && i ? std : n}${gap}</small></div>`;
   }).join('');
 }
@@ -1076,7 +1076,7 @@ function renderHome(){
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div>${cyMarks(F, PL)}</div>`; }).join('')}
   </div></div>
-  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Dots and tags sit on the real day (compare with the standard line above); dates come from Farms → Cycles (1st harvest also from Leader reports). D30 = standard day 30 from sowing; <b style="color:#A32D2D">D30 +3</b> = done 3 days later than the standard, <b style="color:#236FAD">D60 −1</b> = 1 day earlier, <b style="color:#0F6E56">green</b> = on the standard (±2 days).</div>
+  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Each dot stays inside its own stage; the label shows how many days early or late; dates come from Farms → Cycles (1st harvest also from Leader reports). D30 = standard day 30 from sowing; <b style="color:#A32D2D">D30 +3</b> = done 3 days later than the standard, <b style="color:#236FAD">D60 −1</b> = 1 day earlier, <b style="color:#0F6E56">green</b> = on the standard (±2 days).</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
