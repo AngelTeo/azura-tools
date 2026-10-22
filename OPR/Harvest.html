@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v14</title>
+<title>Harvest v15</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -190,7 +190,7 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-f{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:6px solid var(--c);border-radius:8px;background:#FBFAF6;position:sticky;left:0;z-index:3;box-shadow:4px 0 6px -4px rgba(0,0,0,.15)}
 @media (max-width:640px){.cy{grid-template-columns:96px repeat(10,minmax(84px,1fr))}.cy-f b{font-size:14px}.cy-f small{font-size:10px}.cy-st b{font-size:12.5px}}
 .cy-f b{font-size:16px}.cy-f small{font-size:11px;color:var(--mut)}
-.cy-tr{grid-column:2 / span 10;position:relative;height:58px;border-radius:10px;background:repeating-linear-gradient(90deg,#F4F2EC 0,#F4F2EC calc(10% - 6px),#fff calc(10% - 6px),#fff 10%)}
+.cy-tr{grid-column:2 / span 10;position:relative;height:78px;border-radius:10px;background:repeating-linear-gradient(90deg,#F4F2EC 0,#F4F2EC calc(10% - 6px),#fff calc(10% - 6px),#fff 10%)}
 .cy-fill{position:absolute;left:0;top:24px;height:10px;border-radius:5px;background:var(--c);opacity:.35}
 .cy-pin{position:absolute;top:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;white-space:nowrap}
 .cy-pin span{background:var(--c);color:#fff;font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
@@ -219,6 +219,12 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-s1r{border-bottom:2px solid var(--c);height:30px}.cy-s1r span::after{background:var(--c)}.cy-s1r b{background:#fff;border-color:var(--c);color:var(--c)}
 .cy-fm{border-bottom:2px dashed #2F6FA8;height:30px}.cy-fm span::after{background:#2F6FA8}.cy-fm b{background:#EAF2FB;border-color:#B9D1EA;color:#1F4E79}
 .cy-fm i{font-style:normal;font-size:10px;font-weight:800;margin-left:2px}.fm-e{color:#0F6E56}.fm-l{color:#A32D2D}
+.cy-mk{position:absolute;bottom:3px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:2}
+.cy-mk.first{transform:none;align-items:flex-start}
+.cy-mk::before{content:'';width:2px;height:7px;background:currentColor;order:2}
+.cy-mk b{font-size:11px;font-weight:800;white-space:nowrap;border-radius:5px;padding:0 5px;border:1px solid currentColor;background:#fff}
+.cy-mk i{font-style:normal}
+.mk-ok{color:#0F6E56}.mk-late{color:#A32D2D}.mk-early{color:#236FAD}
 .cy-d{display:inline-block;margin-top:6px;background:#fff;border-radius:6px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:800;color:#6b5b2d}
 .tk-wrap{overflow-x:auto;padding:12px;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px}
 .tk{display:grid;gap:4px;min-width:1080px}
@@ -283,7 +289,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v14</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v15</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -293,7 +299,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v14</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v15</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -417,7 +423,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1012,6 +1018,19 @@ function cyFarms(b, R){
   });
   return out.sort((a, b) => a.farm.localeCompare(b.farm));
 }
+/* real recorded dates on a farm row, placed on the stage line, with gap vs the standard formula */
+function cyMarks(F, PL){
+  const c = F.c, sow = c.sowing_date; if(!sow) return '';
+  const rs = nonVoid(c.id), mk = [[0, sow, 0, 0, c.sowing_is_estimate]];
+  if(c.transplant_date) mk.push([1, c.transplant_date, dnum(c.transplant_date) - dnum(sow), PL.tp, c.transplant_is_estimate]);
+  if(rs.length) mk.push([5, rs[0].date, dnum(rs[0].date) - dnum(sow), PL.h1, false]);
+  return mk.map(([i, d, n, std, est]) => {
+    const df = std == null ? 0 : n - std, cls = i === 0 || Math.abs(df) <= 2 ? 'mk-ok' : df > 0 ? 'mk-late' : 'mk-early';
+    const gap = i === 0 || !df ? '' : ` <i>${df > 0 ? '+' : '−'}${Math.abs(df)}</i>`;
+    const txt = i === 0 ? `${est ? '≈' : ''}${dShort(d)}` : `${est ? '≈' : ''}${dShort(d)} · D${n}${gap}`;
+    return `<div class="cy-mk ${cls}${i <= 1 ? ' first' : ''}" style="left:${i * 10}%" title="${esc(F.farm)}: ${dLong(d)} = day ${n}${std != null && i ? ' · standard day ' + std : ''}"><b>${txt}</b></div>`;
+  }).join('');
+}
 function cyPin(F, t){
   const B = F.B, P = cyPos(B, t), d = dnum(t);
   const dTp = d - dnum(B.tp), wk = Math.floor((d - dnum(B.fh)) / 7) + 1;
@@ -1032,7 +1051,7 @@ function renderHome(){
   /* Standard = the Crops growing plan (v3 formula). Absolute days from sowing = day 0. */
   const F = {sow:0, tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), end:msOff('CYCLE_END')};
   const dd2 = (a, z) => a != null && z != null ? z - a : null, du = v => v == null ? '—' : v + ' days';
-  const dLast = F.end;
+  const dLast = F.end, PL = F;
   const tpo = x => x != null && F.tp != null ? 'TP +' + (x - F.tp) : '—';
   const tim = [ du(dd2(F.sow, F.tp)), '1 day', tpo(F.fl), tpo(F.fr), tpo(F.h1),
     `Week 1–${R.pk - 1}`, `Week ${R.pk}`, R.tail - 1 > R.pk ? `Week ${R.pk + 1}–${R.tail - 1}` : `Week ${R.pk + 1}`, R.tail < R.wk ? `Week ${R.tail}–${R.wk}` : `Week ${R.wk}`, 'Uproot · clear'];
@@ -1044,9 +1063,9 @@ function renderHome(){
     <div class="cy-rl"><small>Standard · day from sowing</small></div><div class="cy-rul">${[[0, F.sow], [1, F.tp], [3, F.fl], [4, F.fr], [5, F.h1], [6, F.pk], [7, F.st], [9, F.end]].filter(x => x[1] != null).map(([i, d]) => `<span class="${i === 0 ? 'first' : ''}" style="left:${i * 10}%"><b>Day ${d}</b></span>`).join('')}</div>
     ${FS.map(F => { const p = cyPin(F, t); return `<div class="cy-f" style="--c:${F.col}"><b>${esc(F.farm)}</b><small>Season ${F.c.cycle_no} · ${fmt(F.bags)} bags</small></div>
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
-      <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div></div>`; }).join('')}
+      <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div>${cyMarks(F, PL)}</div>`; }).join('')}
   </div></div>
-  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now.</div>
+  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Tags on each bar = real dates recorded (D = day from sowing): <b style="color:#0F6E56">green</b> on the standard (±2 days), <b style="color:#A32D2D">red +n</b> = n days late, <b style="color:#236FAD">blue −n</b> = early.</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
