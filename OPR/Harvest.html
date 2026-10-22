@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v7</title>
+<title>Harvest v8</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -202,6 +202,12 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .ot-ch{height:130px;margin:6px 0}
 .ot-n{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ot-n div{background:#F6F4EF;border-radius:10px;padding:7px 9px}
 .ot-n small{display:block;font-size:11px;color:var(--mut)}.ot-n b{font-size:16px;font-variant-numeric:tabular-nums;display:block}.ot-n em{font-style:normal;font-size:11px;color:var(--mut)}
+.cy-tot{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-bottom:10px}
+.cy-tot>div:not(.cy-plus){background:var(--sur);border:.5px solid var(--bdr);border-radius:12px;padding:8px 14px;flex:1 1 200px}
+.cy-tot small{display:block;font-size:11px;color:var(--mut)}.cy-tot b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.cy-tot em{font-style:normal;font-size:12px;color:var(--mut)}
+.cy-tot .cy-all{background:#8B6C2A!important;color:#fff}.cy-tot .cy-all small,.cy-tot .cy-all em{color:#F3E9D2}
+.cy-plus{align-self:center;font-size:22px;font-weight:800;color:#8B6C2A}
+.cy-d{display:inline-block;margin-top:6px;background:#fff;border-radius:6px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:800;color:#6b5b2d}
 details.ov-more{margin-top:18px}details.ov-more>summary{cursor:pointer;font-weight:700;font-size:15px;padding:8px 0}
 .pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pr-grid label{font-size:12px;color:var(--mut)}.pr-grid input{width:100%}
 .ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:12px}
@@ -253,7 +259,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v7</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v8</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -263,7 +269,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v7</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v8</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
     <button class="ntab" data-p="plan" onclick="go('plan')">Planner</button>
@@ -383,7 +389,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -924,7 +930,7 @@ function msOff(code){ const pid = (H.protocols[0] || {}).id; const m = (H.milest
 function cyRules(b){
   const tp = msOff('TRANSPLANTING'), fl = msOff('FLOWERING'), fr = msOff('FRUIT_SET'), tn = turnaroundDays();
   return {nur: nurseryDays() ?? tp, flow: fl != null && tp != null ? fl - tp : null, fruit: fr != null && tp != null ? fr - tp : null,
-    fd: b.first_days, pk: b.peak_week, wk: b.season_weeks_max, turn: tn ? tn.avg : null};
+    fd: b.first_days, pk: b.peak_week, wk: b.season_weeks_max, turn: tn ? tn.avg : null, tlMin: b.tp_to_last_min, tlMax: b.tp_to_last_max};
 }
 /* stage start dates for one cycle (index 1..9 start, plus end) */
 function cyBounds(c, b, R){
@@ -974,16 +980,24 @@ function renderHome(){
   if(!B0){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
   const b = B0.data, R = cyRules(b), t = today(), td = new Date(dnum(t) * 864e5);
   const FS = cyFarms(b, R);
-  const tim = [ 'Before', `Day 0–${R.nur ?? '?'}`, `Day ${R.nur ?? '?'}`, `TP +0–${R.flow ?? '?'}d`, `TP +${R.flow ?? '?'}d`, `TP +${R.fruit ?? '?'}d`,
+  const tim = [ 'Before sowing', `${R.nur ?? '?'} days`, 'Transplant day', `TP +0–${R.flow ?? '?'}d`, `TP +${R.flow ?? '?'}d`, `TP +${R.fruit ?? '?'}d`,
     `TP +${R.fd}d · wk 1–${R.pk - 1}`, `Week ${R.pk}`, `Week ${R.pk + 1}–${R.wk}`, R.turn ? `≈ ${R.turn} days` : '—'];
+  /* cumulative day from sowing (day 0) */
+  const N = R.nur ?? 0, dFl = N + (R.flow ?? 0), dFr = N + (R.fruit ?? 0), dFh = N + R.fd, dPk = dFh + 7 * (R.pk - 1), dTl = dPk + 7;
+  const dLast = R.tlMax != null ? N + R.tlMax : dFh + 7 * R.wk - 1, dLastMin = R.tlMin != null ? N + R.tlMin : null, dNext = R.turn ? dLast + R.turn : null;
+  const cum = ['—', `Day 0–${N}`, `Day ${N}`, `Day ${N}–${dFl - 1}`, `Day ${dFl}`, `Day ${dFr}`, `Day ${dFh}–${dPk - 1}`, `Day ${dPk}–${dTl - 1}`, `Day ${dTl}–${dLast}`, dNext ? `Day ${dLast + 1}–${dNext}` : '—'];
   let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)}</span></h1>
   <div class="sec-t">1 · Where each farm is now</div>
+  <div class="cy-tot"><div><small>Sowing → last harvest</small><b>${dLast} days</b><em>≈ ${fmt(dLast / 30.4, 1)} months${dLastMin != null && dLastMin !== dLast ? ` · Season 1: ${dLastMin}–${dLast} days` : ''}</em></div>
+    <div class="cy-plus">+</div><div><small>Changeover (uproot → next transplant)</small><b>${R.turn ? '≈ ' + R.turn + ' days' : '—'}</b><em>clear, refill, replant</em></div>
+    <div class="cy-plus">=</div><div class="cy-all"><small>One full cycle on the same polybags</small><b>${dNext ? '≈ ' + dNext + ' days' : '—'}</b><em>${dNext ? '≈ ' + fmt(dNext / 30.4, 1) + ' months · about ' + fmt(365 / (dNext - N), 1) + ' seasons a year*' : ''}</em></div></div>
   <div class="cy-wrap"><div class="cy">
-    <div></div>${CY_ST.map((s, i) => `<div class="cy-st s${i + 1}"><div class="cy-n">STAGE ${pad(i + 1)}</div><i>${s.i}</i><b>${s.en}</b><small>${s.zh}</small><em>${tim[i]}</em></div>`).join('')}
+    <div></div>${CY_ST.map((s, i) => `<div class="cy-st s${i + 1}"><div class="cy-n">STAGE ${pad(i + 1)}</div><i>${s.i}</i><b>${s.en}</b><small>${s.zh}</small>${cum[i] !== '—' ? `<span class="cy-d">${cum[i]}</span>` : ''}<em>${tim[i]}</em></div>`).join('')}
     ${FS.map(F => { const p = cyPin(F, t); return `<div class="cy-f" style="--c:${F.col}"><b>${esc(F.farm)}</b><small>Season ${F.c.cycle_no} · ${fmt(F.bags)} bags</small></div>
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div></div>`; }).join('')}
   </div></div>
+  <div class="hint" style="margin-top:6px">* Seasons a year counts from transplant to next transplant (the nursery of the next season overlaps the changeover). Day numbers count from sowing = day 0; they come from your real cycles, benchmark and Crops standard.</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
   <div class="sec-t">2 · On track? (vs benchmark v${B0.version})</div>
   <div class="ot">`;
