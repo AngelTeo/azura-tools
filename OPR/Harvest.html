@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v26</title>
+<title>Harvest v27</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -213,6 +213,9 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .hv-c.next i{background:repeating-linear-gradient(45deg,var(--c) 0 3px,transparent 3px 6px)}.hv-c.trial i{outline:1.5px dashed #4B2C86;outline-offset:-1px}
 .hv-c.now{box-shadow:inset 2px 0 0 #222}
 .hv-t{height:64px;display:flex;align-items:flex-end;justify-content:center}.hv-t i{width:13px;border-radius:3px 3px 0 0;background:#8B6B2E}.hv-t.clash i{background:#C62828}.hv-t.gap{background:repeating-linear-gradient(0deg,#fff 0 4px,#F2D7D5 4px 6px)}
+.tk-tabs{display:flex;gap:6px;margin:0 0 12px}.tk-tabs button{border:1px solid var(--bdr);background:var(--sur);border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;font-size:14px}.tk-tabs button.on{background:var(--layer);color:#fff;border-color:var(--layer)}
+.tk-badge{display:inline-block;background:#C62828;color:#fff;border-radius:999px;font-size:11px;padding:0 7px;margin-left:4px}
+table.mini{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}table.mini th{font-size:11px;color:var(--mut);font-weight:600;text-align:left;border-bottom:1px solid var(--bdr);padding:3px 4px}table.mini td{padding:3px 4px;border-bottom:1px solid #f0ede4}table.mini .num{text-align:right}
 .ot{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .ot-c{background:var(--sur);border:.5px solid var(--bdr);border-top:6px solid var(--c);border-radius:14px;padding:12px 14px}
 .ot-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.ot-h b{font-size:17px}
@@ -308,7 +311,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v26</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v27</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -318,7 +321,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v26</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v27</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -411,8 +414,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
   <div class="page" id="page-reports">
     <h1 class="pt">Reports <button class="btn btn-pri" onclick="openAdd()">+ Add report</button></h1>
     <div class="stats" id="repStats"></div>
-    <div id="repCheck"></div>
-    <div class="hint" style="margin:-4px 0 10px">Why one day is big and one day small: the plants grow about the same every day, so kg depends on how many days since the last harvest. Sun, Tue, Thu come 2 days after the last harvest (big), Fri only 1 day after Thu (about half). So compare <b>kg a day</b> = kg ÷ gap, not kg. <b style="color:var(--danger)">Red ⚠</b> = below 70% of that farm's usual kg a day this season — ask why.</div>
+    <div class="hint" style="margin:-4px 0 10px">Every report in baskets of 30 kg. <b>Should be</b> = what this farm usually gives for that gap (Sun, Tue, Thu = 2 days, Fri = 1 day). <b style="color:var(--danger)">Red ⚠</b> = below that, ask why — the full check with charts is in Tracking → Each harvest. Open a report to see kg and basket types.</div>
     <div class="row-inline" style="margin-bottom:10px">
       <select id="repFarm" onchange="renderReports()" style="max-width:160px"></select>
       <select id="repSt" onchange="renderReports()" style="max-width:180px">
@@ -421,7 +423,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
       <button class="btn" id="btnConfirmSel" onclick="confirmSelected()" disabled>Confirm selected</button>
     </div>
     <div class="card" style="padding:0"><div class="tw"><table class="data">
-      <thead><tr><th class="chk-col"><input type="checkbox" id="selAll" onchange="selAllPending(this.checked)"></th><th>Date</th><th>Farm</th><th>Cycle</th><th class="num">Baskets</th><th class="num">kg</th><th class="num" title="Days since this farm's last harvest">Gap</th><th class="num" title="kg ÷ days since the last harvest = how much the plants grew a day">kg a day</th><th class="num" title="Usual baskets a day this season × days since the last harvest, ±30%">Should be</th><th class="num">AA %</th><th>From</th><th>Status</th></tr></thead>
+      <thead><tr><th class="chk-col"><input type="checkbox" id="selAll" onchange="selAllPending(this.checked)"></th><th>Date</th><th>Farm</th><th>Cycle</th><th class="num">Baskets</th><th class="num" title="Days since this farm's last harvest">Gap</th><th class="num" title="Usual baskets a day this season × days since the last harvest, ±30%">Should be</th><th class="num">AA %</th><th>From</th><th>Status</th></tr></thead>
       <tbody id="repRows"></tbody><tfoot id="repFoot"></tfoot></table></div></div>
   </div>
 
@@ -444,7 +446,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -520,7 +522,7 @@ async function loadAll(){
     H.cycles = H.cycles.filter(c => !c.voided_at);
     if(!H.farms.length || !H.grades.length) throw new Error('Master data is empty');
     H.grades.sort((a, b) => a.sort - b.sort); H.grades.forEach(g => GRADE_LABEL[g.code] = g.label);
-    H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
+    H.reports.forEach(r => { r.kg = r.lines.reduce((s, l) => s + Number(l.kg || 0), 0); r.bk = Math.round(r.lines.reduce((s, l) => s + (l.unit === 'B30' ? Number(l.qty) : Number(l.kg || 0) / 30), 0) * 10) / 10; r.bkApprox = r.lines.some(l => l.unit !== 'B30'); r.baskets = r.lines.filter(l => l.unit !== 'KG').reduce((s, l) => s + Number(l.qty), 0); r.aa = r.lines.filter(l => l.grade === 'AA').reduce((s, l) => s + Number(l.kg || 0), 0); });
     const bq = await sb.rpc('harvest_owner_benchmarks');
     BENCH = bq.error ? [] : (bq.data || []); BENCH_ERR = bq.error ? nice(bq.error) : '';
     const pq = await sb.rpc('harvest_owner_prices');
@@ -734,10 +736,10 @@ function renderSeasons(){
     ${fin.length ? `<div class="sea-grid">${fin.map(x => seasonCard(x, nowOf(x))).join('')}</div>` : '<div class="card empty">No finished season yet</div>'}
     ${growing.length ? `<div class="sec-t">Growing now (so far)</div><div class="sea-grid">${growing.map(x => seasonCard(x, prevOf(x))).join('')}</div>` : ''}
     <div class="sec-t">All seasons · kg per polybag</div>
-    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th>First harvest</th><th>Last harvest</th><th class="num">Harvest days</th><th class="num">Total kg</th><th class="num">kg per polybag</th><th class="num">vs target</th><th class="num">AA %</th></tr></thead><tbody>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th>First harvest</th><th>Last harvest</th><th class="num">Harvest days</th><th class="num">Baskets</th><th class="num">Total kg</th><th class="num">kg per polybag</th><th class="num">vs target</th><th class="num">AA %</th></tr></thead><tbody>
     ${all.map(x => `<tr><td><span class="sw ${x.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[x.L.farm] || '#555'}"></span> <b>${esc(x.L.text)}</b></td>
       <td>${x.closed ? 'Finished' : 'Growing'}</td><td class="num">${fmt(x.bags)}</td><td>${x.first ? dLong(x.first) : '—'}</td><td>${x.last ? dLong(x.last) : '—'}</td>
-      <td class="num">${x.hdays || '—'}</td><td class="num">${x.n ? fmt(x.kg) : '—'}</td><td class="num"><b>${x.n ? kgb(x.per) : '—'}</b>${!x.closed && x.n ? ' <small class="hint">so far</small>' : ''}</td>
+      <td class="num">${x.hdays || '—'}</td><td class="num"><b>${x.n ? fmt(x.kg / 30) : '—'}</b></td><td class="num">${x.n ? fmt(x.kg) : '—'}</td><td class="num"><b>${x.n ? kgb(x.per) : '—'}</b>${!x.closed && x.n ? ' <small class="hint">so far</small>' : ''}</td>
       <td class="num">${x.n && x.target ? fmt(x.per / x.target * 100) + '%' : '—'}</td><td class="num">${x.kg ? fmt(x.aa / x.kg * 100, 1) + '%' : '—'}</td></tr>`).join('')}
     </tbody></table></div></div>
     ${gCols.length ? `<div class="sec-t">kg per polybag by grade</div>
@@ -981,7 +983,7 @@ function dailyFc(P, d){
   const w = Math.floor((dnum(d) - dnum(P.F.start)) / 7) + 1, bw = P.b.weeks[w - 1];
   return bw ? bw.kg_per_bag * P.F.bags * P.pace / 7 : 0;
 }
-function splitTxt(kg){ return `Sun / Tue / Thu ≈ ${fmt(kg * 2 / 7)} kg each · Fri ≈ ${fmt(kg / 7)} kg`; }
+function splitTxt(kg){ return `Sun / Tue / Thu ≈ ${fmt(kg * 2 / 7 / 30)} baskets each · Fri ≈ ${fmt(kg / 7 / 30)} baskets`; }
 /* ---------- v7 Overview: Fig 1 (cycle map) + Fig 2 (on track?) ---------- */
 const CY_ST = [
   {i:'🌱', en:'Nursery', zh:'育苗'}, {i:'🪴', en:'Transplant', zh:'定植'}, {i:'🌿', en:'Growing', zh:'营养生长'},
@@ -1138,20 +1140,20 @@ function renderHvCal(b, R, O){
     rows += `<div class="hv-l ${l.kind}" style="--c:${l.col};grid-row:${r}"${l.kind === 'trial' ? ` onclick="trialEdit(${l.id})"` : ''}><b>${esc(l.name)}</b><small>${esc(l.sub)}</small><small>harvest ${dShort(l.fh)} → ${dShort(l.end)}</small></div>`;
     const mx = Math.max(...l.W.map(x => x.kg), 1);
     l.W.forEach(x => { const k = wkOf(x.d); if(k < k0 || k > k1) return;
-      rows += `<div class="hv-c ${l.kind}${k === wkOf(t) ? ' now' : ''}" style="--c:${l.col};grid-column:${k - k0 + 2};grid-row:${r}" title="${esc(l.name)} · week ${x.w} · from ${dLong(x.d)} · ≈ ${fmt(x.kg)} kg"><i style="opacity:${(0.3 + 0.7 * x.kg / mx).toFixed(2)}"></i></div>`; });
+      rows += `<div class="hv-c ${l.kind}${k === wkOf(t) ? ' now' : ''}" style="--c:${l.col};grid-column:${k - k0 + 2};grid-row:${r}" title="${esc(l.name)} · week ${x.w} · from ${dLong(x.d)} · ≈ ${fmt(x.kg / 30)} baskets"><i style="opacity:${(0.3 + 0.7 * x.kg / mx).toFixed(2)}"></i></div>`; });
     r++;
   });
   const mxT = Math.max(...Object.values(M).map(x => x.kg), 1);
-  let tot = `<div class="hv-l" style="--c:#8B6B2E;grid-row:${r}"><b>All farms</b><small>kg a week · <span style="color:#C62828">red</span> = 2+ farms in 1st harvest/peak</small></div>`;
+  let tot = `<div class="hv-l" style="--c:#8B6B2E;grid-row:${r}"><b>All farms</b><small>baskets a week · <span style="color:#C62828">red</span> = 2+ farms in 1st harvest/peak</small></div>`;
   for(let k = k0; k <= k1; k++){ const x = M[k] || {kg:0, hot:0}, d = kd(k), ds = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-    tot += `<div class="hv-t${x.hot >= 2 ? ' clash' : ''}${!x.kg ? ' gap' : ''}" style="grid-column:${k - k0 + 2};grid-row:${r}" title="Week from ${dLong(ds)} · ≈ ${fmt(x.kg)} kg${x.hot >= 2 ? ' · ' + x.hot + ' farms in 1st harvest/peak' : ''}${!x.kg ? ' · no harvest' : ''}"><i style="height:${Math.round(60 * x.kg / mxT)}px"></i></div>`; }
+    tot += `<div class="hv-t${x.hot >= 2 ? ' clash' : ''}${!x.kg ? ' gap' : ''}" style="grid-column:${k - k0 + 2};grid-row:${r}" title="Week from ${dLong(ds)} · ≈ ${fmt(x.kg / 30)} baskets${x.hot >= 2 ? ' · ' + x.hot + ' farms in 1st harvest/peak' : ''}${!x.kg ? ' · no harvest' : ''}"><i style="height:${Math.round(60 * x.kg / mxT)}px"></i></div>`; }
   return `<div class="hv-wrap"><div class="hv" style="--n:${N}"><div class="hv-m" style="grid-column:1;grid-row:1;border:0"></div>${months}${rows}${tot}</div></div>`;
 }
 function hvBestBox(b, R, O){
   const bags = Math.max(1, Number(HV.bags) || 10000), S = hvSuggest(b, R, O, bags), B = S.best;
   return `<div class="hv-best"><div><small>Best sowing date for a new farm of <input type="number" min="1" step="500" value="${bags}" style="width:90px" onchange="HV.bags=this.value;renderHome()"> bags (next 120 days)</small><b class="big">${dLong(B.s)}</b>
-    <small>1st harvest ≈ ${dLong(B.fh)} · last harvest ≈ ${dLong(B.end)} · other farms give ≈ ${fmt(B.avg)} kg a week during its big weeks${S.worst.avg > B.avg ? ` (worst date: ≈ ${fmt(S.worst.avg)} kg — ${dLong(S.worst.s)})` : ''}</small></div>
-    <div class="hv-alt">${S.alt.length ? 'Also good: ' + S.alt.map(a => `<span>${dLong(a.s)} · ≈ ${fmt(a.avg)} kg</span>`).join('') : ''}</div>
+    <small>1st harvest ≈ ${dLong(B.fh)} · last harvest ≈ ${dLong(B.end)} · other farms give ≈ ${fmt(B.avg / 30)} baskets a week during its big weeks${S.worst.avg > B.avg ? ` (worst date: ≈ ${fmt(S.worst.avg / 30)} baskets — ${dLong(S.worst.s)})` : ''}</small></div>
+    <div class="hv-alt">${S.alt.length ? 'Also good: ' + S.alt.map(a => `<span>${dLong(a.s)} · ≈ ${fmt(a.avg / 30)} baskets</span>`).join('') : ''}</div>
     <div style="margin-left:auto"><button class="btn btn-pri" onclick="trialEdit(null,'${B.s}',${bags})">+ Add as trial farm</button></div></div>`;
 }
 function trialEdit(id, sow, bags){
@@ -1171,7 +1173,7 @@ function trialSuggest(id){
   const B0 = liveBench()[0], O = stdOff(); if(!B0 || !O) return;
   const bags = Number($('tfBags').value) || 10000, S = hvSuggest(B0.data, cyRules(B0.data), O, bags, id || undefined);
   $('tfSow').value = S.best.s;
-  $('tfSug').innerHTML = `Best: <b>${dLong(S.best.s)}</b> → 1st harvest ≈ ${dLong(S.best.fh)}, other farms ≈ ${fmt(S.best.avg)} kg a week during its big weeks.${S.alt.length ? ' Also good: ' + S.alt.map(a => dLong(a.s)).join(', ') + '.' : ''}`;
+  $('tfSug').innerHTML = `Best: <b>${dLong(S.best.s)}</b> → 1st harvest ≈ ${dLong(S.best.fh)}, other farms ≈ ${fmt(S.best.avg / 30)} baskets a week during its big weeks.${S.alt.length ? ' Also good: ' + S.alt.map(a => dLong(a.s)).join(', ') + '.' : ''}`;
 }
 async function trialSave(id){
   const name = $('tfName').value.trim(), sow = $('tfSow').value, bags = parseInt($('tfBags').value, 10);
@@ -1215,103 +1217,156 @@ function renderHome(){
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
   <div class="sec-t" style="margin-top:22px">2 · Harvest calendar · when each farm harvests</div>
   ${O ? hvBestBox(b, R, O) + renderHvCal(b, R, O) : '<div class="card empty">The Crops growing plan has no transplant / 1st harvest / end day.</div>'}
-  <div class="hint" style="margin-top:6px"><label><input type="checkbox" ${HV.next ? 'checked' : ''} onchange="HV.next=this.checked;renderHome()"> Count each farm's next season (estimate)</label> · Each bar = harvest weeks, darker = more kg (standard curve × target ${fmt(targetOf())} kg per polybag). Striped = next season, estimated from the changeover; dashed = trial farm. The best date puts the new farm's harvest where the other farms give the least, so the harvest is spread out. Next seasons count only as estimates; enter real dates in Farms → Cycles.</div>
+  <div class="hint" style="margin-top:6px"><label><input type="checkbox" ${HV.next ? 'checked' : ''} onchange="HV.next=this.checked;renderHome()"> Count each farm's next season (estimate)</label> · Each bar = harvest weeks, darker = more baskets (standard curve × target ${fmt(targetOf())} kg per polybag). Striped = next season, estimated from the changeover; dashed = trial farm. The best date puts the new farm's harvest where the other farms give the least, so the harvest is spread out. Next seasons count only as estimates; enter real dates in Farms → Cycles.</div>
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
   v.innerHTML = h;
   const cw = v.querySelector('.cy-wrap'), pins = [...v.querySelectorAll('.cy-pin')];
   if(cw && pins.length && cw.scrollWidth > cw.clientWidth){ const L = Math.min(...pins.map(e => e.offsetLeft + e.parentElement.offsetLeft)); cw.scrollLeft = Math.max(0, L - 260); }
 }
-/* ---------- Tracking (page 2): standard harvest per week on top, each farm's actual + forecast below ---------- */
+/* ---------- Tracking (page 2) · one unit: baskets of 30 kg ----------
+   Weekly: target per week (Season 1 shape, formula weeks, adds up to target kg per polybag) vs each farm.
+   Each harvest: every report checked against what the farm should give that day. */
+const BK = 30, bkN = kg => kg / BK, bkF = kg => fmt(kg / BK);
+let TRK = 'week', RCH = [];
+/* the weekly target model, shared by both sub-tabs and the cards */
+function trackModel(){
+  const B0 = liveBench()[0]; if(!B0) return null;
+  const b = B0.data, R = cyRules(b), W = b.weeks, n = W.length, tg = targetOf();
+  const NW = Math.min(R.wk || n, n), shp = W.slice(0, NW).map(x => x.kg_per_bag), shS = shp.reduce((a, c) => a + c, 0) || 1;
+  const tW = (i, bags) => i >= 0 && i < NW ? shp[i] / shS * tg * bags : 0;   /* kg */
+  const farms = cyFarms(b, R).filter(F => F.c.status === 'ACTIVE').map(F => {
+    const X = farmPlan(F.c, b); if(!X) return null;
+    const fc = X.F, bags = fc.bags; let aSum = 0, tSum = 0;
+    fc.rows.slice(0, NW).forEach((r, i) => { if(r.st === 'past'){ aSum += r.ak || 0; tSum += tW(i, bags); } });
+    const pace = tSum > 0 ? aSum / tSum : 1, rows = [];
+    let proj = 0;
+    for(let i = 0; i < NW; i++){
+      const r = fc.rows[i]; if(!r) continue;
+      const tw = tW(i, bags), val = r.st === 'fut' ? tw * pace : (r.ak || 0);
+      proj += r.st === 'now' ? Math.max(val, tw * pace) : val;
+      rows.push({i, w:r.w, from:r.from, to:r.to, st:r.st, tw, val});
+    }
+    const soFar = X.rs.reduce((s, r) => s + r.kg, 0), fullWeeks = fc.rows.slice(0, NW).filter(r => r.st === 'past').length;
+    return {F, X, fc, bags, rows, pace, proj, soFar, tSum, aSum, fullWeeks, started: !!fc.actFirst, start: fc.start};
+  }).filter(Boolean);
+  return {b, R, W, NW, shp, shS, tg, tW, farms};
+}
 function renderTrack(){
   const v = $('trackView');
   if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
-  const B0 = liveBench()[0];
-  if(!B0){ v.innerHTML = `<h1 class="pt">Tracking</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
-  const b = B0.data, R = cyRules(b), t = today(), W = b.weeks, n = W.length, tg = targetOf(), sc = tg && b.total_per_bag ? tg / b.total_per_bag : 1;
-  const FS = cyFarms(b, R).filter(F => F.c.status === 'ACTIVE');
-  const P = FS.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
-  const cost = rates(curCost()), money = hasPrice();
+  const M = trackModel();
+  if(!M){ v.innerHTML = `<h1 class="pt">Tracking</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
+  OCH.forEach(c => c.destroy()); OCH = []; RCH.forEach(c => c.destroy()); RCH = [];
+  const head = `<h1 class="pt">Tracking <span class="hint" style="font-size:13px;font-weight:400">Everything in baskets of 30 kg · target ${fmt(M.tg)} kg per polybag = ${fmt(M.tg * 10000 / BK)} baskets per 10,000 polybags a season</span></h1>
+  <div class="tk-tabs"><button class="${TRK === 'week' ? 'on' : ''}" onclick="TRK='week';renderTrack()">Week by week</button><button class="${TRK === 'each' ? 'on' : ''}" onclick="TRK='each';renderTrack()">Each harvest ${(() => { const n = trackAsk().length; return n ? `<span class="tk-badge">${n}</span>` : ''; })()}</button></div>`;
+  v.innerHTML = head + (TRK === 'each' ? trackEachHTML(M) : trackWeekHTML(M));
+  if(TRK === 'each') trackEachCharts(M); else trackWeekCharts(M);
+  const tw = v.querySelector('.tk-wrap'), now = v.querySelector('.tk-now');
+  if(tw && now && tw.scrollWidth > tw.clientWidth && window.innerWidth < 900) tw.scrollLeft = Math.max(0, now.offsetLeft - 330);
+}
+function trackWeekHTML(M){
+  const {R, NW, shp, shS, tg, tW} = M, SB = 10000;
   const stg = w => w < R.pk ? 6 : w === R.pk ? 7 : w < R.tail ? 8 : 9;
-  const bands = [{s:6, from:1, to:R.pk - 1}, {s:7, from:R.pk, to:R.pk}, {s:8, from:R.pk + 1, to:R.tail - 1}, {s:9, from:R.tail, to:Math.min(n, R.wk || n)}].filter(x => x.to >= x.from);
+  const bands = [{s:6, from:1, to:R.pk - 1}, {s:7, from:R.pk, to:R.pk}, {s:8, from:R.pk + 1, to:R.tail - 1}, {s:9, from:R.tail, to:NW}].filter(x => x.to >= x.from);
   const cell = (x, y) => `grid-column:${x};grid-row:${y}`;
-  const BK = 30, SB = 10000, bk = kg => fmt(kg / BK);   /* everything in 30 kg baskets */
-  /* target per week: Season 1 shape (week 1..R.wk of the formula), scaled so the season adds up to target kg per polybag */
-  const NW = Math.min(R.wk || n, n), shp = W.slice(0, NW).map(x => x.kg_per_bag), shS = shp.reduce((a, c) => a + c, 0) || 1;
-  const tW = (i, bags) => shp[i] / shS * tg * bags;   /* kg */
-  const tWB = shp.map((x, i) => Math.round(tW(i, SB) / BK)); tWB[tWB.indexOf(Math.max(...tWB))] += Math.round(tg * SB / BK) - tWB.reduce((a, c) => a + c, 0);   /* rounded weeks add up exactly */
-  let h = `<h1 class="pt">Tracking <span class="hint" style="font-size:13px;font-weight:400">Baskets of 30 kg, week by week · target ${fmt(tg)} kg per polybag a season = ${fmt(tg * SB / BK)} baskets per ${fmt(SB)} polybags</span></h1>
-  <div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${NW},minmax(50px,1fr)) 88px">
+  const tWB = shp.map((x, i) => Math.round(tW(i, SB) / BK)); tWB[tWB.indexOf(Math.max(...tWB))] += Math.round(tg * SB / BK) - tWB.reduce((a, c) => a + c, 0);
+  let h = `<div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${NW},minmax(50px,1fr)) 88px">
     <div style="${cell(1, 1)}"></div>
     ${bands.map(x => { const st = CY_ST[x.s - 1]; return `<div class="tk-band s${x.s}" style="grid-column:${x.from + 1} / span ${x.to - x.from + 1};grid-row:1;text-align:${x.to === x.from ? 'center' : 'left'}">${x.to === x.from ? st.en : `${st.i} ${st.en} <small>${st.zh}</small>`}</div>`; }).join('')}
     <div class="tk-band tk-tot" style="${cell(NW + 2, 1)}">Season</div>
     <div class="tk-lab" style="${cell(1, 2)}"><b>Target</b><small>baskets a week for every ${fmt(SB)} polybags</small></div>
-    ${tWB.map((v, i) => `<div class="tk-std s${stg(i + 1)}" style="${cell(i + 2, 2)}" title="Week ${i + 1} · target ${fmt(v)} baskets = ${fmt(v * BK)} kg for ${fmt(SB)} polybags · ${fmt(shp[i] / shS * 100, 1)}% of the season (Season 1 pattern)"><small>W${i + 1}</small><b>${fmt(v)}</b></div>`).join('')}
+    ${tWB.map((v, i) => `<div class="tk-std s${stg(i + 1)}" style="${cell(i + 2, 2)}" title="Week ${i + 1} · target ${fmt(v)} baskets for ${fmt(SB)} polybags · ${fmt(shp[i] / shS * 100, 1)}% of the season (Season 1 pattern)"><small>W${i + 1}</small><b>${fmt(v)}</b></div>`).join('')}
     <div class="tk-std tk-tot" style="${cell(NW + 2, 2)}"><small>Total</small><b>${fmt(tWB.reduce((a, c) => a + c, 0))}</b></div>`;
-  P.forEach(({F, X}, k) => {
-    const fc = X.F, y = k + 3, bags = fc.bags;
-    let aSum = 0, tSum = 0; fc.rows.slice(0, NW).forEach((r, i) => { if(r.st === 'past'){ aSum += r.ak || 0; tSum += tW(i, bags); } });
-    const pace = tSum > 0 ? aSum / tSum : 1;   /* forecast = target × this farm's % of target so far */
-    let proj = 0;
-    h += `<div class="tk-lab" style="${cell(1, y)};--c:${F.col}" data-farm="${esc(F.farm)}"><b>${esc(F.farm)}</b><small>S${F.c.cycle_no} · ${fmt(bags)} bags · ${fc.actFirst ? (X.cur ? 'now W' + X.cur.w : 'harvesting') : '1st ≈ ' + dShort(fc.start)}</small></div>`;
-    for(let i = 0; i < NW; i++){
-      const r = fc.rows[i]; if(!r) continue;
-      const tw = tW(i, bags);
-      let cls, val, tip;
-      if(r.st === 'fut'){ val = tw * pace; cls = 'tk-fut'; tip = 'Forecast'; }
-      else if(r.st === 'now'){ val = r.ak || 0; cls = 'tk-now'; tip = 'This week so far'; }
-      else { val = r.ak || 0; const q = tw ? val / tw : 1; cls = q >= 0.9 ? 'tk-ok' : q >= 0.75 ? 'tk-mid' : 'tk-bad'; tip = 'Actual · ' + fmt(q * 100) + '% of target'; }
-      h += `<div class="tk-c ${cls}" style="${cell(i + 2, y)}" title="${esc(F.farm)} · W${r.w} · ${dShort(r.from)}–${dShort(r.to)} · ${tip}: ${bk(val)} baskets = ${fmt(val)} kg (target ${bk(tw)} baskets)"><b>${bk(val)}</b><em>target ${bk(tw)}</em><small>${dShort(r.from)}</small></div>`;
-      proj += r.st === 'now' ? Math.max(val, tw * pace) : val;
-    }
-    const pct = tg ? proj / (tg * bags) : null;
-    h += `<div class="tk-c tk-sum ${pct == null ? '' : !fc.actFirst ? 'tk-fut' : pct >= 0.9 ? 'tk-ok' : pct >= 0.75 ? 'tk-mid' : 'tk-bad'}" style="${cell(NW + 2, y)}" title="Harvested + expected for the ${NW} weeks ≈ ${bk(proj)} baskets (${fmt(proj)} kg)"><b>${bk(proj)}</b><em>target ${bk(tg * bags)}</em><small>${pct != null ? fmt(pct * 100) + '% of target' : ''}</small></div>`;
+  M.farms.forEach((P, k) => {
+    const {F, fc, bags} = P, y = k + 3, pct = tg ? P.proj / (tg * bags) : null, cur = P.rows.find(r => r.st === 'now');
+    h += `<div class="tk-lab" style="${cell(1, y)};--c:${F.col}" data-farm="${esc(F.farm)}"><b>${esc(F.farm)}</b><small>S${F.c.cycle_no} · ${fmt(bags)} bags · ${P.started ? (cur ? 'now W' + cur.w : 'harvesting') : '1st ≈ ' + dShort(P.start)}</small></div>`;
+    P.rows.forEach(r => {
+      let cls, tip;
+      if(r.st === 'fut'){ cls = 'tk-fut'; tip = 'Forecast'; }
+      else if(r.st === 'now'){ cls = 'tk-now'; tip = 'This week so far'; }
+      else { const q = r.tw ? r.val / r.tw : 1; cls = q >= 0.9 ? 'tk-ok' : q >= 0.75 ? 'tk-mid' : 'tk-bad'; tip = 'Actual · ' + fmt(q * 100) + '% of target'; }
+      h += `<div class="tk-c ${cls}" style="${cell(r.i + 2, y)}" title="${esc(F.farm)} · W${r.w} · ${dShort(r.from)}–${dShort(r.to)} · ${tip}: ${bkF(r.val)} baskets (target ${bkF(r.tw)})"><b>${bkF(r.val)}</b><em>target ${bkF(r.tw)}</em><small>${dShort(r.from)}</small></div>`;
+    });
+    h += `<div class="tk-c tk-sum ${pct == null ? '' : !P.started ? 'tk-fut' : pct >= 0.9 ? 'tk-ok' : pct >= 0.75 ? 'tk-mid' : 'tk-bad'}" style="${cell(NW + 2, y)}" title="Harvested + expected for the ${NW} weeks"><b>${bkF(P.proj)}</b><em>target ${bkF(tg * bags)}</em><small>${pct != null ? fmt(pct * 100) + '% of target' : ''}</small></div>`;
   });
   h += `</div></div>
   <div class="tk-leg"><span><i class="tk-ok"></i>≥ 90% of target</span><span><i class="tk-mid"></i>75–90%</span><span><i class="tk-bad"></i>below 75%</span><span><i class="tk-now"></i>this week (so far)</span><span><i class="tk-fut"></i>forecast</span>
-    <span class="hint">1 basket = 30 kg. Target row: baskets a week for every ${fmt(SB)} polybags, ${NW} harvest weeks, adds up to ${fmt(tg)} kg a polybag (${fmt(tg * SB / BK)} baskets); the ups and downs follow Season 1 (AD 1 + AD 2). Farm boxes: baskets that farm harvested that week, "target" = the same target for its own polybags, date = week start. Forecast = target × the farm's % of target so far.</span></div>
-  <div class="sec-t">Each farm · on target?</div>
-  <div class="ot">`;
-  P.forEach(({F, X}) => {
-    const fc = X.F, started = !!fc.actFirst, d = dnum(t);
-    const lr = fc.last, r = lr && lr.tc ? lr.ac / lr.tc : null;
+    <span class="hint">Target row: baskets a week for every ${fmt(SB)} polybags, ${NW} harvest weeks, the ups and downs follow Season 1 (AD 1 + AD 2). Farm boxes: baskets that farm harvested that week, "target" = the same target for its own polybags, date = week start. Forecast = target × the farm's % of target so far.</span></div>
+  <div class="sec-t">Each farm · on target?</div><div class="ot">`;
+  const money = hasPrice(), cost = rates(curCost());
+  M.farms.forEach(P => {
+    const {F, X, bags} = P, d = dnum(today()), r = P.tSum > 0 ? P.aSum / P.tSum : null;
     let cls = 'ot-wait', txt;
-    if(!started) txt = `Not harvesting yet · 1st ≈ ${dShort(fc.start)} (${Math.max(0, dnum(fc.start) - d)} days)`;
-    else if(fc.done < 2 || r == null) txt = `Too early · harvest week ${X.cur ? X.cur.w : 1}`;
+    if(!P.started) txt = `Not harvesting yet · 1st ≈ ${dShort(P.start)} (${Math.max(0, dnum(P.start) - d)} days)`;
+    else if(P.fullWeeks < 2 || r == null) txt = `Too early · harvest week ${(P.rows.find(x => x.st === 'now') || {w:1}).w}`;
     else { cls = r >= 1.1 ? 'ot-up' : r >= 0.9 ? 'ot-ok' : 'ot-dn'; txt = (r >= 1.1 ? '▲ Ahead of target ' : r >= 0.9 ? '✓ On target ' : '▼ Behind target ') + fmt(r * 100) + '%'; }
-    const pk = money ? X.rpk.v : (cost ? cost.plPrice : 0);
-    const perBag = X.projTotal / fc.bags;
-    const nx = started ? X.nxt : fc.rows[0];
+    const nx = P.rows.find(x => x.st === 'fut'), pk = money ? X.rpk.v : (cost ? cost.plPrice : 0), pct = M.tg ? P.proj / (M.tg * bags) : null;
     h += `<div class="ot-c" style="--c:${F.col}" data-farm="${esc(F.farm)}">
-      <div class="ot-h"><b>${esc(F.farm)} · Season ${F.c.cycle_no}</b><span class="hint">${fmt(fc.bags)} bags</span></div>
+      <div class="ot-h"><b>${esc(F.farm)} · Season ${F.c.cycle_no}</b><span class="hint">${fmt(bags)} bags</span></div>
       <div class="ot-s ${cls}">${txt}</div>
       <div class="ot-ch"><canvas></canvas></div>
       <div class="ot-n">
-        <div><small>Harvested</small><b>${fmt(X.soFar)} kg</b><em>${fmt(X.soFar / fc.bags, 2)} kg / bag</em></div>
-        <div><small>${started ? 'Next week' : 'First week'}</small><b>${nx ? fmt(nx.bk * X.pace) + ' kg' : '—'}</b><em>${nx ? dShort(nx.from) + '–' + dShort(nx.to) : ''}</em></div>
-        <div><small>Whole season</small><b>${pk ? rm(X.projTotal * pk) : fmt(X.projTotal) + ' kg'}</b><em>${fmt(perBag, 2)} kg / bag${fc.tg ? ' · <b style="font-size:11px;color:' + (perBag / fc.tg < 0.9 ? 'var(--danger)' : 'var(--ok)') + '">' + fmt(perBag / fc.tg * 100) + '% of ' + fmt(fc.tg) + ' kg</b>' : ''}</em></div>
+        <div><small>Harvested</small><b>${bkF(P.soFar)} baskets</b><em>${P.fullWeeks ? `finished weeks: ${bkF(P.aSum)} of ${bkF(P.tSum)} target` : 'no full week yet'}</em></div>
+        <div><small>${P.started ? 'Next week' : 'First week'}</small><b>${nx ? bkF(nx.val) + ' baskets' : '—'}</b><em>${nx ? dShort(nx.from) + '–' + dShort(nx.to) + ' · target ' + bkF(nx.tw) : ''}</em></div>
+        <div><small>Whole season</small><b>${bkF(P.proj)} baskets</b><em>${pct != null ? '<b style="font-size:11px;color:' + (pct < 0.9 ? 'var(--danger)' : 'var(--ok)') + '">' + fmt(pct * 100) + '% of ' + bkF(M.tg * bags) + '</b>' : ''}${pk ? ' · ≈ ' + rm(P.proj * pk) : ''}</em></div>
       </div></div>`;
   });
   h += `</div>
-  <div class="hint" style="margin-top:6px">Line chart: grey = Season 1 · dashed = target ${fmt(tg)} kg · colour = actual (kg per polybag, added up). Forecast = standard × this season's pace so far. Money = expected kg × ${money ? 'your grade prices' : (cost ? 'RM ' + fmt(cost.plPrice, 2) + ' / kg (FY 2025/26 average)' : 'no price yet')}.</div>`;
-  v.innerHTML = h;
-  const tw = v.querySelector('.tk-wrap'), now = v.querySelector('.tk-now');
-  if(tw && now && tw.scrollWidth > tw.clientWidth && window.innerWidth < 900) tw.scrollLeft = Math.max(0, now.offsetLeft - 330);
-  OCH.forEach(c => c.destroy()); OCH = [];
-  if(window.Chart){
-    const cards = v.querySelectorAll('.ot-c canvas');
-    P.forEach(({F, X}, i) => {
-      const fc = X.F, n = fc.rows.length, lab = fc.rows.map(r => 'W' + r.w);
-      const bench = fc.rows.map(r => r3(r.bc / fc.bags)), tgt = fc.rows.map(r => r.tc ? r3(r.tc / fc.bags) : null);
-      const actual = fc.rows.map(r => r.ac != null ? r3(r.ac / fc.bags) : null);
-      OCH.push(new Chart(cards[i], {type:'line', data:{labels:lab, datasets:[
-        {data:bench, borderColor:'#B9B4A8', borderWidth:2, pointRadius:0, tension:.25},
-        {data:tgt, borderColor:'#0F6E56', borderWidth:1.5, borderDash:[4, 4], pointRadius:0, tension:.25},
-        {data:actual, borderColor:F.col, backgroundColor:F.col + '22', fill:true, borderWidth:3, pointRadius:0, tension:.25}]},
-        options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:x => ' ' + ['Benchmark', 'Target', 'Actual'][x.datasetIndex] + ': ' + fmt(x.parsed.y, 2) + ' kg / bag'}}},
-          scales:{x:{ticks:{font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:9}, grid:{display:false}}, y:{beginAtZero:true, ticks:{font:{size:9}, maxTicksLimit:4}}}}}));
-    });
-  }
+  <div class="hint" style="margin-top:6px">Line chart (baskets, added up week by week): dashed = target, colour = actual. Money = expected baskets × 30 kg × ${money ? 'your grade prices' : (cost ? 'RM ' + fmt(cost.plPrice, 2) + ' / kg (FY 2025/26 average)' : 'no price yet')}.</div>`;
+  return h;
+}
+function trackWeekCharts(M){
+  if(!window.Chart) return;
+  const cards = $('trackView').querySelectorAll('.ot-c canvas');
+  M.farms.forEach((P, i) => {
+    let ct = 0, ca = 0;
+    const lab = P.rows.map(r => 'W' + r.w), tgt = P.rows.map(r => Math.round((ct += r.tw) / BK));
+    const act = P.rows.map(r => r.st === 'fut' ? null : Math.round((ca += r.val) / BK));
+    OCH.push(new Chart(cards[i], {type:'line', data:{labels:lab, datasets:[
+      {data:tgt, borderColor:'#0F6E56', borderWidth:1.5, borderDash:[4, 4], pointRadius:0, tension:.25},
+      {data:act, borderColor:P.F.col, backgroundColor:P.F.col + '22', fill:true, borderWidth:3, pointRadius:0, tension:.25}]},
+      options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:x => ' ' + ['Target', 'Actual'][x.datasetIndex] + ': ' + fmt(x.parsed.y) + ' baskets'}}},
+        scales:{x:{ticks:{font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:9}, grid:{display:false}}, y:{beginAtZero:true, ticks:{font:{size:9}, maxTicksLimit:4}}}}}));
+  });
+}
+/* ---- each harvest ---- */
+function trackAsk(){ const G = growth(), t = today(); return H.reports.filter(r => r.status !== 'VOID' && G[r.id] && G[r.id].low && r.date >= addDays(t, -14)).sort((a, b) => b.date.localeCompare(a.date)).map(r => ({r, g:G[r.id]})); }
+/* standard target for one harvest = that week's target × days grown / 7 (Sun, Tue, Thu = 2/7, Fri = 1/7) */
+function harvestTarget(M, P, r, gap){ if(!P || !gap) return null; const i = Math.floor((dnum(r.date) - dnum(P.start)) / 7); return i >= 0 && i < M.NW ? M.tW(i, P.bags) * Math.min(gap, 7) / 7 : null; }
+function trackEachHTML(M){
+  const G = growth(), ask = trackAsk(), wd = d => WD[new Date(dnum(d) * 864e5).getUTCDay()];
+  let h = `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:6px solid ${ask.length ? 'var(--danger)' : 'var(--ok)'}">
+    <b style="font-size:15px">${ask.length ? '⚠ Ask why · last 14 days · ' + ask.length + ' harvest' + (ask.length > 1 ? 's' : '') + ' below what the farm should give' : '✓ Last 14 days: every harvest is inside what the farm should give'}</b>
+    ${ask.map(({r, g}) => `<div style="margin-top:6px;cursor:pointer" onclick="openReport('${r.id}')"><b style="color:var(--danger)">${esc(r.farm)} · ${wd(r.date)} ${dShort(r.date)}</b> — ${fmt(r.bk)} baskets, should be ${bkF(g.lo)}–${bkF(g.hi)} (${g.gap} day${g.gap === 1 ? '' : 's'} since last × usual ${fmt(bkN(g.base), 1)} baskets a day) · only ${fmt(g.kd / g.base * 100)}% of usual</div>`).join('')}
+  </div>
+  <div class="hint" style="margin:-4px 0 10px">The plants grow about the same every day, so one harvest is big or small mostly because of the gap: Sun, Tue, Thu come 2 days after the last harvest, Fri only 1 day after Thu (about half). A week = 2 : 2 : 1 : 2.
+    <b>Grey band</b> = what this farm usually gives (its usual baskets a day this season × days since the last harvest, ±30%). Below the band = red, ask why. <b style="color:#0F6E56">Dashed</b> = the standard target for that harvest (week target × days grown ÷ 7).</div>
+  <div class="ot" style="margin-bottom:12px">`;
+  M.farms.filter(P => P.X.rs.length).forEach(P => {
+    const rs = P.X.rs.slice(-12).reverse();
+    h += `<div class="ot-c" style="--c:${P.F.col}"><div class="ot-h"><b>${esc(P.F.farm)} · S${P.F.c.cycle_no}</b><span class="hint">baskets each harvest</span></div><div style="height:200px"><canvas></canvas></div>
+      <table class="mini"><thead><tr><th>Day</th><th class="num">Baskets</th><th class="num">Should be</th><th class="num">Target</th></tr></thead><tbody>${rs.map(r => { const g = G[r.id] || {}, tt = harvestTarget(M, P, r, g.gap);
+        return `<tr onclick="openReport('${r.id}')" style="cursor:pointer"><td>${wd(r.date)} ${dShort(r.date)}${g.gap ? ` <span class="hint">· ${g.gap}d</span>` : ''}</td><td class="num" ${g.low ? 'style="color:var(--danger);font-weight:800"' : ''}>${fmt(r.bk)}${g.low ? ' ⚠' : ''}</td><td class="num hint">${g.lo != null ? bkF(g.lo) + '–' + bkF(g.hi) : g.first ? '1st' : '—'}</td><td class="num" style="color:#0F6E56">${tt != null ? bkF(tt) : '—'}</td></tr>`; }).join('')}</tbody></table></div>`;
+  });
+  return h + '</div>';
+}
+function trackEachCharts(M){
+  if(!window.Chart) return;
+  const G = growth(), cv = $('trackView').querySelectorAll('.ot-c canvas');
+  M.farms.filter(P => P.X.rs.length).forEach((P, i) => {
+    const rs = P.X.rs.slice(-24), col = P.F.col;
+    const lab = rs.map(r => WD[new Date(dnum(r.date) * 864e5).getUTCDay()].slice(0, 2) + ' ' + dShort(r.date));
+    const gv = (r, k) => G[r.id] && G[r.id][k] != null ? Math.round(G[r.id][k] / BK) : null;
+    const tg = rs.map(r => { const tt = harvestTarget(M, P, r, (G[r.id] || {}).gap); return tt != null ? Math.round(tt / BK) : null; });
+    RCH.push(new Chart(cv[i], {data:{labels:lab, datasets:[
+      {type:'line', data:rs.map(r => gv(r, 'hi')), borderWidth:0, pointRadius:0, fill:'+1', backgroundColor:'rgba(120,120,120,.18)', stepped:'middle'},
+      {type:'line', data:rs.map(r => gv(r, 'lo')), borderWidth:0, pointRadius:0, fill:false, stepped:'middle'},
+      {type:'line', data:tg, borderColor:'#0F6E56', borderWidth:1.5, borderDash:[4, 4], pointRadius:2, pointBackgroundColor:'#0F6E56', fill:false},
+      {type:'bar', data:rs.map(r => r.bk), backgroundColor:rs.map(r => G[r.id] && G[r.id].low ? '#C62828' : col), borderRadius:3}]},
+      options:{maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => c.raw == null ? '' : [' should be up to ', ' should be at least ', ' target ', ' harvested '][c.datasetIndex] + c.raw + ' baskets'}}},
+        scales:{x:{ticks:{font:{size:9}, maxRotation:60, minRotation:60}}, y:{beginAtZero:true, ticks:{font:{size:10}}}}}}));
+  });
 }
 function renderHomeDetail(){
   const v = $('homeDetail'); if(!v) return;
@@ -1327,10 +1382,10 @@ function renderHomeDetail(){
   const leftAll = plans.reduce((s, P) => s + P.left, 0), leftRM = plans.reduce((s, P) => s + P.left * P.rpk.v, 0);
   const miss = [...new Set(plans.flatMap(P => P.rpk.miss))];
   let h = `<div class="ov-top">
-    <div class="stat"><small>This harvest week · all farms</small><b>${fmt(thisWk)} kg</b><div class="d">${money ? rm(rmW('cur')) + ' at your prices' : 'Set prices below to see RM'}</div></div>
-    <div class="stat"><small>Next harvest week · all farms</small><b>${fmt(nextWk)} kg</b><div class="d">${money ? rm(rmW('nxt')) : ''}</div></div>
-    <div class="stat"><small>Still to harvest this season · all farms</small><b>${fmt(leftAll)} kg</b><div class="d">${money ? rm(leftRM) : ''}</div></div>
-    <div class="stat"><small>Harvested so far this season</small><b>${fmt(plans.reduce((s, P) => s + P.soFar, 0))} kg</b><div class="d">${money ? rm(plans.reduce((s, P) => s + rmActual(P.rs), 0)) : ''}</div></div>
+    <div class="stat"><small>This harvest week · all farms</small><b>${fmt(thisWk / 30)} baskets</b><div class="d">${money ? rm(rmW('cur')) + ' at your prices' : 'Set prices below to see RM'}</div></div>
+    <div class="stat"><small>Next harvest week · all farms</small><b>${fmt(nextWk / 30)} baskets</b><div class="d">${money ? rm(rmW('nxt')) : ''}</div></div>
+    <div class="stat"><small>Still to harvest this season · all farms</small><b>${fmt(leftAll / 30)} baskets</b><div class="d">${money ? rm(leftRM) : ''}</div></div>
+    <div class="stat"><small>Harvested so far this season</small><b>${fmt(plans.reduce((s, P) => s + P.soFar, 0) / 30)} baskets</b><div class="d">${money ? rm(plans.reduce((s, P) => s + rmActual(P.rs), 0)) : ''}</div></div>
   </div>
   ${miss.length && money ? `<div class="alert alert-warn"><span>⚠</span><div>No price set for ${miss.map(g => esc(GRADE_LABEL[g] || g)).join(', ')} — counted as RM 0.</div></div>` : ''}
   <div class="sec-t">Week by week · all farms (Mon–Sun)</div>
@@ -1355,10 +1410,10 @@ function renderHomeDetail(){
       </div>
       <div class="tl-ax"><span>${tp ? dShort(tp) : dShort(F.start)}</span><span>▲ today: ${started ? `harvest week ${P.cur ? P.cur.w : '—'} of ${b.season_weeks_min}–${b.season_weeks_max}` : `first harvest in about ${daysTo} days (${dLong(F.start)})`}</span><span>ends about ${dShort(P.end)}</span></div>
       <div class="fm-g">
-        <div><small>This week${P.cur ? ` (week ${P.cur.w} · ${dShort(P.cur.from)}–${dShort(P.cur.to)})` : ''}</small><b>${P.cur ? fmt(P.cur.bk * P.pace) + ' kg' : '—'}</b><div class="d">${P.cur ? `${money ? '≈ ' + rm(P.cur.bk * P.pace * P.rpk.v) + ' · ' : ''}harvested so far ${fmt(P.cur.ak || 0)} kg` : 'not harvesting this week'}</div></div>
-        <div><small>${started ? 'Next week' : 'First harvest week'}${P.nxt ? ` (week ${P.nxt.w} · ${dShort(P.nxt.from)}–${dShort(P.nxt.to)})` : ''}</small><b>${P.nxt ? fmt(P.nxt.bk * P.pace) + ' kg' : '—'}</b><div class="d">${P.nxt ? splitTxt(P.nxt.bk * P.pace) + (money ? ' · ' + rm(P.nxt.bk * P.pace * P.rpk.v) : '') : ''}</div></div>
-        <div><small>Season so far</small><b>${fmt(P.soFar)} kg</b><div class="d">${fmt(P.soFar / F.bags, 2)} kg per polybag${tgtNow != null ? ` · <b style="color:${tgtNow < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${fmt(tgtNow * 100)}% of target pace</b>` : ''}${money ? ' · ' + rm(rmActual(P.rs)) : ''}</div></div>
-        <div><small>Whole season (expected)</small><b>${fmt(P.projTotal)} kg</b><div class="d">${fmt(perBag, 2)} kg per polybag → <b style="color:${F.tg && perBag / F.tg < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${F.tg ? fmt(perBag / F.tg * 100) + '% of target ' + fmt(F.tg) + ' kg' : ''}</b>${money ? '<br>' + rm(rmActual(P.rs) + P.left * P.rpk.v) : ''}</div></div>
+        <div><small>This week${P.cur ? ` (week ${P.cur.w} · ${dShort(P.cur.from)}–${dShort(P.cur.to)})` : ''}</small><b>${P.cur ? fmt(P.cur.bk * P.pace / 30) + ' baskets' : '—'}</b><div class="d">${P.cur ? `${money ? '≈ ' + rm(P.cur.bk * P.pace * P.rpk.v) + ' · ' : ''}harvested so far ${fmt((P.cur.ak || 0) / 30)} baskets` : 'not harvesting this week'}</div></div>
+        <div><small>${started ? 'Next week' : 'First harvest week'}${P.nxt ? ` (week ${P.nxt.w} · ${dShort(P.nxt.from)}–${dShort(P.nxt.to)})` : ''}</small><b>${P.nxt ? fmt(P.nxt.bk * P.pace / 30) + ' baskets' : '—'}</b><div class="d">${P.nxt ? splitTxt(P.nxt.bk * P.pace) + (money ? ' · ' + rm(P.nxt.bk * P.pace * P.rpk.v) : '') : ''}</div></div>
+        <div><small>Season so far</small><b>${fmt(P.soFar / 30)} baskets</b><div class="d">${fmt(P.soFar / F.bags, 2)} kg per polybag${tgtNow != null ? ` · <b style="color:${tgtNow < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${fmt(tgtNow * 100)}% of target pace</b>` : ''}${money ? ' · ' + rm(rmActual(P.rs)) : ''}</div></div>
+        <div><small>Whole season (expected)</small><b>${fmt(P.projTotal / 30)} baskets</b><div class="d">${fmt(perBag, 2)} kg per polybag → <b style="color:${F.tg && perBag / F.tg < 0.9 ? 'var(--danger)' : 'var(--ok)'}">${F.tg ? fmt(perBag / F.tg * 100) + '% of target ' + fmt(F.tg) + ' kg' : ''}</b>${money ? '<br>' + rm(rmActual(P.rs) + P.left * P.rpk.v) : ''}</div></div>
       </div>
       <div class="hint" style="margin-top:6px">${F.done >= 2 ? `Forecast uses benchmark × current pace (${fmt(P.pace * 100)}%).` : 'Forecast uses the benchmark as is (less than 2 full weeks of harvest).'}${money ? ` Money uses your prices × this season's grade mix (≈ RM ${fmt(P.rpk.v, 2)} per kg).` : ''}</div>
     </div>`;
@@ -1382,8 +1437,8 @@ function renderHomeDetail(){
     });
     const labels = weeks.map(w => (w <= t && addDays(w, 6) >= t ? '▶ ' : '') + dShort(w) + '–' + dShort(addDays(w, 6)));
     const cfg = {type:'bar', data:{labels, datasets:ds}, options:{responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}, tooltip:{callbacks:{label:x => x.parsed.y ? ` ${x.dataset.label}: ${fmt(x.parsed.y)} kg` : '', footer:it => { const tot = it.reduce((s, x) => s + (x.parsed.y || 0), 0); return 'Total ' + fmt(tot) + ' kg'; }}}},
-      scales:{x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, title:{display:true, text:'kg per week'}, ticks:{callback:x => fmt(x)}}}}};
+      plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}, tooltip:{callbacks:{label:x => x.parsed.y ? ` ${x.dataset.label}: ${fmt(x.parsed.y / 30)} baskets` : '', footer:it => { const tot = it.reduce((s, x) => s + (x.parsed.y || 0), 0); return 'Total ' + fmt(tot / 30) + ' baskets'; }}}},
+      scales:{x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, title:{display:true, text:'kg per week (÷ 30 = baskets)'}, ticks:{callback:x => fmt(x)}}}}};
     if(hchart) hchart.destroy(); hchart = new Chart($('homeChart'), cfg);
   }
 }
@@ -1469,7 +1524,7 @@ function renderMoney(){
     <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th class="num">kg</th><th class="num">Revenue</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Profit per polybag</th><th>Source</th></tr></thead><tbody>
     ${shown.length ? shown.map(r => `<tr class="click" onclick="moneyDetail('${r.c.id}')"><td><span class="sw ${r.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${r.col}"></span> <b>${esc(r.L.text)}</b></td>
       <td>${r.status === 'Growing' ? `Growing · ${fmt(r.frac * 100)}% of season` : 'Finished'}</td><td class="num">${fmt(r.bags)}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(r.rev)}</td><td class="num">${fmt(r.cost)}</td>
-      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="12" class="empty">No season yet</td></tr>'}
+      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="10" class="empty">No season yet</td></tr>'}
     </tbody></table></div></div>
     <div class="hint" style="margin-top:8px">Cost = polybags × RM ${fmt(R.total, 2)} per polybag per season (cost rates v${R.cp.version}: running RM ${fmt(R.run, 2)} + depreciation RM ${fmt(R.dep, 2)}). Growing seasons use the Forecast for the whole season. Click a row to see how it is worked out. When Revenue and Costs are recorded, these become Actual.</div>`;
 }
@@ -1880,52 +1935,22 @@ function growth(){
   });
   return G;
 }
-let RCH = [];
-/* Reports check: each new report is matched against what that farm should give on that day.
-   should be = usual baskets a day (median of the last 6 harvests this season) × days since the last harvest; red = below 70% */
-function renderRepCheck(G){
-  const box = $('repCheck'); if(!box) return;
-  RCH.forEach(c => c.destroy()); RCH = [];
-  const t = today(), act = H.cycles.filter(c => c.status === 'ACTIVE').map(c => ({c, L:cycleLabel(c), rs:nonVoid(c.id)})).filter(x => x.rs.length).sort((a, b) => a.L.farm.localeCompare(b.L.farm));
-  const low = H.reports.filter(r => r.status !== 'VOID' && G[r.id] && G[r.id].low && r.date >= addDays(t, -14)).sort((a, b) => b.date.localeCompare(a.date));
-  box.innerHTML = `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:6px solid ${low.length ? 'var(--danger)' : 'var(--ok)'}">
-    <b style="font-size:15px">${low.length ? '⚠ Ask why · last 14 days · ' + low.length + ' harvest' + (low.length > 1 ? 's' : '') + ' below what the farm should give' : '✓ Last 14 days: every harvest is inside what the farm should give'}</b>
-    ${low.map(r => { const g = G[r.id]; return `<div style="margin-top:6px;cursor:pointer" onclick="openReport('${r.id}')"><b style="color:var(--danger)">${esc(r.farm)} · ${WD[new Date(dnum(r.date) * 864e5).getUTCDay()]} ${dShort(r.date)}</b> — ${fmt(r.baskets)} baskets, should be ${fmt(g.lo / 30)}–${fmt(g.hi / 30)} (${g.gap} day${g.gap === 1 ? '' : 's'} since last × usual ${fmt(g.base / 30, 1)} baskets a day) · only ${fmt(g.kd / g.base * 100)}% of usual</div>`; }).join('')}
-  </div>
-  <div class="ot" style="margin-bottom:12px">${act.map(x => `<div class="ot-c" style="--c:${FARM_COLOR[x.L.farm] || '#555'}"><div class="ot-h"><b>${esc(x.L.farm)} · S${x.c.cycle_no}</b><span class="hint">baskets each harvest · grey = should be</span></div><div style="height:190px"><canvas></canvas></div></div>`).join('')}</div>`;
-  if(!window.Chart) return;
-  const cv = box.querySelectorAll('canvas');
-  act.forEach((x, i) => {
-    const rs = x.rs.slice(-24), col = FARM_COLOR[x.L.farm] || '#555';
-    const lab = rs.map(r => WD[new Date(dnum(r.date) * 864e5).getUTCDay()].slice(0, 2) + ' ' + dShort(r.date));
-    const lo = rs.map(r => G[r.id] && G[r.id].lo != null ? Math.round(G[r.id].lo / 30) : null), hi = rs.map(r => G[r.id] && G[r.id].hi != null ? Math.round(G[r.id].hi / 30) : null);
-    RCH.push(new Chart(cv[i], {data:{labels:lab, datasets:[
-      {type:'line', data:hi, borderWidth:0, pointRadius:0, fill:'+1', backgroundColor:'rgba(120,120,120,.18)', stepped:'middle', spanGaps:false},
-      {type:'line', data:lo, borderWidth:0, pointRadius:0, fill:false, stepped:'middle', spanGaps:false},
-      {type:'bar', data:rs.map(r => r.baskets), backgroundColor:rs.map(r => G[r.id] && G[r.id].low ? '#C62828' : col), borderRadius:3}]},
-      options:{maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => c.datasetIndex === 2 ? c.raw + ' baskets' : (c.datasetIndex === 0 ? 'should be up to ' : 'should be at least ') + c.raw}}},
-        scales:{x:{ticks:{font:{size:9}, maxRotation:60, minRotation:60}}, y:{beginAtZero:true, ticks:{font:{size:10}}}}}}));
-  });
-}
 function renderReports(){
-  if(!LOADED){ $('repRows').innerHTML = '<tr><td colspan="12" class="empty">Cloud not loaded</td></tr>'; $('repStats').innerHTML = ''; $('repFoot').innerHTML = ''; return; }
+  if(!LOADED){ $('repRows').innerHTML = '<tr><td colspan="10" class="empty">Cloud not loaded</td></tr>'; $('repStats').innerHTML = ''; $('repFoot').innerHTML = ''; return; }
   const pend = H.reports.filter(r => r.status === 'PENDING'), t = today(), y = addDays(t, -1);
   const kgOn = d => H.reports.filter(r => r.date === d && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0);
   $('repStats').innerHTML = `<div class="stat click ${REPF === 'pending' ? 'on' : ''}" onclick="REPF = REPF === 'pending' ? '' : 'pending'; renderReports()"><small>Pending</small><b style="color:${pend.length ? 'var(--warn)' : 'inherit'}">${pend.length}</b></div>
-    <div class="stat"><small>Today (${dShort(t)})</small><b>${fmt(kgOn(t))} kg</b></div>
-    <div class="stat"><small>Yesterday (${dShort(y)})</small><b>${fmt(kgOn(y))} kg</b></div>
-    <div class="stat"><small>Last 7 days</small><b>${fmt(H.reports.filter(r => r.date > addDays(t, -7) && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0))} kg</b></div>`;
+    <div class="stat"><small>Today (${dShort(t)})</small><b>${fmt(kgOn(t) / 30)} baskets</b></div>
+    <div class="stat"><small>Yesterday (${dShort(y)})</small><b>${fmt(kgOn(y) / 30)} baskets</b></div>
+    <div class="stat"><small>Last 7 days</small><b>${fmt(H.reports.filter(r => r.date > addDays(t, -7) && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0) / 30)} baskets</b></div>`;
   const rows = filtered(), G = growth();
-  const act = H.cycles.filter(c => c.status === 'ACTIVE').map(c => { const L = nonVoid(c.id).map(r => G[r.id]).filter(g => g && g.kd != null).slice(-6).map(g => g.kd).sort((a, b) => a - b); return {L:cycleLabel(c), m: L.length ? L[Math.floor(L.length / 2)] : null}; }).filter(x => x.m != null);
-  if(act.length) $('repStats').innerHTML += act.map(x => `<div class="stat" title="Median of the last 6 harvests: kg ÷ days since the harvest before"><small>${esc(x.L.farm)} grows a day</small><b>${fmt(x.m)} kg</b></div>`).join('');
   $('repRows').innerHTML = rows.length ? rows.map(r => `<tr class="click" onclick="openReport('${r.id}')" ${r.status === 'VOID' ? 'style="opacity:.55"' : ''}>
     <td class="chk-col" onclick="event.stopPropagation()">${r.status === 'PENDING' ? `<input type="checkbox" ${SEL.has(r.id) ? 'checked' : ''} onchange="selOne('${r.id}', this.checked)">` : ''}</td>
     <td>${dLong(r.date)}</td><td class="code">${esc(r.farm)}</td><td>${cycleText(r.cycle_id)}</td>
-    <td class="num" ${(G[r.id] || {}).low && r.status !== 'VOID' ? 'style="color:var(--danger);font-weight:800"' : ''}>${fmt(r.baskets)}</td><td class="num"><b>${fmt(r.kg)}</b></td>${(g => !g || r.status === 'VOID' ? '<td class="num">—</td><td class="num">—</td><td class="num">—</td>' : g.first ? '<td class="num hint">1st</td><td class="num">—</td><td class="num">—</td>' : `<td class="num">${g.gap} day${g.gap === 1 ? '' : 's'}</td><td class="num" ${g.low ? `style="color:var(--danger);font-weight:700" title="Below 70% of this season's usual ${fmt(g.base)} kg a day — ask why"` : `title="Usual ≈ ${g.base != null ? fmt(g.base) : '—'} kg a day"`}>${g.kd != null ? fmt(g.kd) : '—'}${g.low ? ' ⚠' : ''}</td><td class="num hint" ${g.high ? 'title="More than usual — fine if the plants are still growing; check the numbers if not"' : ''}>${g.lo != null ? fmt(g.lo / 30) + '–' + fmt(g.hi / 30) : '—'}${g.high ? ' ↑' : ''}</td>`)(G[r.id])}<td class="num">${r.kg ? fmt(r.aa / r.kg * 100) + '%' : '—'}</td>
-    <td>${SRC[r.source] || r.source}</td><td>${stBadge(r.status)}</td></tr>`).join('') : '<tr><td colspan="12" class="empty">No report</td></tr>';
+    <td class="num" ${(G[r.id] || {}).low && r.status !== 'VOID' ? 'style="color:var(--danger);font-weight:800"' : ''} ${r.bkApprox ? 'title="Some lines were 27 kg baskets or kg — shown as 30 kg baskets"' : ''}>${r.bkApprox ? '≈ ' : ''}${fmt(r.bk, r.bk % 1 ? 1 : 0)}${(G[r.id] || {}).low && r.status !== 'VOID' ? ' ⚠' : ''}</td>${(g => !g || r.status === 'VOID' ? '<td class="num">—</td><td class="num">—</td>' : g.first ? '<td class="num hint">1st</td><td class="num">—</td>' : `<td class="num">${g.gap} day${g.gap === 1 ? '' : 's'}</td><td class="num hint">${g.lo != null ? fmt(g.lo / 30) + '–' + fmt(g.hi / 30) : '—'}${g.high ? ' ↑' : ''}</td>`)(G[r.id])}<td class="num">${r.kg ? fmt(r.aa / r.kg * 100) + '%' : '—'}</td>
+    <td>${SRC[r.source] || r.source}</td><td>${stBadge(r.status)}</td></tr>`).join('') : '<tr><td colspan="10" class="empty">No report</td></tr>';
   const live = rows.filter(r => r.status !== 'VOID');
-  $('repFoot').innerHTML = rows.length ? `<tr><td></td><td colspan="3">Total (${live.length} reports, voided not counted)</td><td class="num">${fmt(live.reduce((s, r) => s + r.baskets, 0))}</td><td class="num">${fmt(live.reduce((s, r) => s + r.kg, 0))}</td><td colspan="6"></td></tr>` : '';
-  renderRepCheck(G);
+  $('repFoot').innerHTML = rows.length ? `<tr><td></td><td colspan="3">Total (${live.length} reports, voided not counted)</td><td class="num">${fmt(live.reduce((s, r) => s + r.bk, 0))}</td><td colspan="5"></td></tr>` : '';
   $('btnConfirmSel').disabled = !SEL.size; $('btnConfirmSel').textContent = SEL.size ? `Confirm selected (${SEL.size})` : 'Confirm selected';
 }
 function selOne(id, on){ if(on) SEL.add(id); else SEL.delete(id); renderReports(); }
