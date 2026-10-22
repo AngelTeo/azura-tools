@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v16</title>
+<title>Harvest v17</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -291,7 +291,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v16</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v17</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -301,7 +301,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v16</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v17</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -425,7 +425,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -489,7 +489,7 @@ async function loadAll(){
     const res = await Promise.all([
       sb.from('hub_farm').select('id,code,status'),
       sb.from('hub_farm_block').select('id,farm_id,code,active,bag_capacity'),
-      sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,expected_end,bag_count,sowing_is_estimate,transplant_is_estimate,protocol_id,voided_at'),
+      sb.from('hub_cycle').select('id,block_id,cycle_no,status,sowing_date,transplant_date,actual_end,expected_end,bag_count,sowing_is_estimate,transplant_is_estimate,protocol_id,voided_at,germination_date,flowering_date,fruit_set_date,first_harvest_date,peak_date,steady_date,tail_date,uproot_date'),
       sb.from('hub_crop_protocol').select('id,expected_kg_per_bag,cycle_days,version,effective_from,voided_at'),
       sb.from('hub_grade').select('id,code,label,sort,shown'),
       sb.from('hub_unit').select('id,code,kind,to_kg,usage,shown'),
@@ -1024,8 +1024,15 @@ function cyFarms(b, R){
 function cyMarks(F, PL){
   const c = F.c, sow = c.sowing_date; if(!sow) return '';
   const rs = nonVoid(c.id), mk = [[0, sow, 0, 0, c.sowing_is_estimate]];
-  if(c.transplant_date) mk.push([1, c.transplant_date, dnum(c.transplant_date) - dnum(sow), PL.tp, c.transplant_is_estimate]);
-  if(rs.length) mk.push([5, rs[0].date, dnum(rs[0].date) - dnum(sow), PL.h1, false]);
+  const add = (slot, d, std, est) => { if(d) mk.push([slot, d, dnum(d) - dnum(sow), std, est]); };
+  add(1, c.transplant_date, PL.tp, c.transplant_is_estimate);
+  add(3, c.flowering_date, PL.fl, false);
+  add(4, c.fruit_set_date, PL.fr, false);
+  add(5, c.first_harvest_date || (rs.length ? rs[0].date : null), PL.h1, false);   /* typed in Farms, else first Leader report */
+  add(6, c.peak_date, PL.pk, false);
+  add(7, c.steady_date, PL.st, false);
+  add(8, c.tail_date, msOff('TAIL_START'), false);
+  add(9, c.status === 'CLOSED' ? c.actual_end : null, PL.end, false);
   return mk.map(([i, d, n, std, est]) => {
     const df = std == null ? 0 : n - std, cls = i === 0 || Math.abs(df) <= 2 ? 'mk-ok' : df > 0 ? 'mk-late' : 'mk-early';
     const gap = i === 0 || !df ? '' : ` <i>${df > 0 ? '+' : '−'}${Math.abs(df)}</i>`;
@@ -1066,7 +1073,7 @@ function renderHome(){
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div>${cyMarks(F, PL)}</div>`; }).join('')}
   </div></div>
-  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Tags on each bar = real dates recorded (D = day from sowing): <b style="color:#0F6E56">green</b> on the standard (±2 days), <b style="color:#A32D2D">red +n</b> = n days late, <b style="color:#236FAD">blue −n</b> = early.</div>
+  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Tags on each bar = real dates typed in Farms → Cycles (1st harvest also comes from Leader reports). D = day from sowing: <b style="color:#0F6E56">green</b> on the standard (±2 days), <b style="color:#A32D2D">red +n</b> = n days late, <b style="color:#236FAD">blue −n</b> = early.</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;

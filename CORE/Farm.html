@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Farms v3</title>
+<title>Farms v4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -138,6 +138,14 @@ input:focus,select:focus{outline:2px solid rgba(47,93,63,.25);border-color:var(-
 textarea{width:100%;min-height:64px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px}
 input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:13px;background:var(--sur);color:var(--txt)}
 .dw{font-style:normal;color:var(--layer);font-weight:600;margin-left:4px}
+.sd-box{margin-top:14px;border-top:.5px solid var(--bdr);padding-top:10px}
+.sd-t{font-weight:700;font-size:14px;margin-bottom:6px}.sd-t .hint{font-weight:400;font-size:12px}
+.sd-row{display:grid;grid-template-columns:150px 150px auto;gap:4px 10px;align-items:center;padding:5px 0;border-bottom:.5px dashed var(--bdr)}
+.sd-row>span:first-child{font-size:13px;font-weight:600}.sd-row small{font-weight:400;color:var(--mut)}
+.sd-row input[type=date]{width:100%}
+.sd-est{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:4px}
+.sd-h{grid-column:2 / -1;font-size:12px;color:var(--mut)}
+@media (max-width:640px){.sd-row{grid-template-columns:1fr 1fr}.sd-row>span:first-child{grid-column:1/-1}}
 #gate{max-width:380px;margin:60px auto;padding:0 16px}
 @media (max-width:640px){
   .page{padding:12px}
@@ -152,7 +160,7 @@ input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid v
 <!-- ══════ GATE ══════ -->
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Farms <span class="ver">v3</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Farms <span class="ver">v4</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Master Data</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -163,7 +171,7 @@ input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid v
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🌱 Farms <span class="ver">v3</span></div>
+    <div class="nav-logo">🌱 Farms <span class="ver">v4</span></div>
     <button class="ntab on" data-p="farms" onclick="go('farms')">Farms</button>
     <button class="ntab" data-p="blocks" onclick="go('blocks')">Blocks</button>
     <button class="ntab" data-p="cycles" onclick="go('cycles')">Cycles</button>
@@ -255,7 +263,7 @@ input[type=date]{width:100%;min-height:44px;padding:8px 10px;border:.5px solid v
    农场、区块、地契只在这里改；Workers、Salary、Harvest 等只读
    不删资料：区块、地契只能停用；农场只能改状态
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const SYS = 'Farms';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -270,9 +278,22 @@ const T = {
   hub_crop_variety:{pk:'id', ro:true, cols:['id','crop_id','code','name','active']},
   hub_crop_protocol:{pk:'id', ro:true, cols:['id','crop_id','variety_id','version','effective_from','cycle_days','expected_kg_per_bag','voided_at']},
   hub_crop_protocol_stage:{pk:'id', ro:true, cols:['id','protocol_id','stage_code','stage_name','day_from','day_to','sort','voided_at']},
-  hub_cycle:      {pk:'id', cols:['id','block_id','crop_id','variety_id','protocol_id','cycle_no','sowing_date','expected_end','bag_count','status','actual_end','note','voided_at','void_reason']},
+  hub_crop_protocol_milestone:{pk:'id', ro:true, cols:['id','protocol_id','code','day','voided_at']},
+  hub_cycle:      {pk:'id', cols:['id','block_id','crop_id','variety_id','protocol_id','cycle_no','sowing_date','expected_end','bag_count','status','actual_end','note','voided_at','void_reason',
+    'transplant_date','sowing_is_estimate','transplant_is_estimate','germination_date','flowering_date','fruit_set_date','first_harvest_date','peak_date','steady_date','tail_date','uproot_date']},
 };
-const ORDER = ['hub_company','hub_farm','hub_farm_block','hub_farm_title','hub_crop','hub_crop_variety','hub_crop_protocol','hub_crop_protocol_stage','hub_cycle'];
+const ORDER = ['hub_company','hub_farm','hub_farm_block','hub_farm_title','hub_crop','hub_crop_variety','hub_crop_protocol','hub_crop_protocol_stage','hub_crop_protocol_milestone','hub_cycle'];
+/* 每一季的实际阶段日期（跟 Crops 现行种植标准比） */
+const SD = [
+  ['germination_date', 'Germination', '发芽', 'GERMINATION'],
+  ['transplant_date', 'Transplant', '定植', 'TRANSPLANTING'],
+  ['flowering_date', 'First flowering', '第一次开花', 'FLOWERING'],
+  ['fruit_set_date', 'Fruit set (1st layer)', '第一层结果', 'FRUIT_SET'],
+  ['first_harvest_date', '1st harvest', '首采', 'HARVEST_1'],
+  ['peak_date', 'Peak start', '高峰开始', 'PEAK_START'],
+  ['steady_date', 'Steady start', '平稳开始', 'PEAK_END'],
+  ['tail_date', 'Tail start', '尾采开始', 'TAIL_START'],
+  ['uproot_date', 'Uproot', '拔树', null]];
 const CSTATUS = {PLANNED:'Planned', ACTIVE:'Growing', CLOSED:'Finished', VOID:'Voided'};
 const STATUS = {ACTIVE:'Active', NOT_STARTED:'Not started', STOPPED:'Stopped'};
 const BTYPE = {PRODUCTION:'Production', TRIAL:'Trial', CONTROL:'Control'};
@@ -512,6 +533,18 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.g
 const dnum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
 const addDays = (s, n) => { const t = new Date((dnum(s) + n) * 864e5); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
 const dmy = s => s ? s.split('-').reverse().join('/') : '';
+/* 现行种植标准（跟 Harvest 一样：今天有效的最新一版） */
+function curPlan(){ const t = today(); return S.hub_crop_protocol.filter(p => !p.voided_at && (!p.effective_from || p.effective_from <= t)).sort((a, b) => (b.effective_from || '').localeCompare(a.effective_from || '') || b.version - a.version)[0] || null; }
+function planDay(code){ const p = curPlan(); if(!p || !code) return null; const m = S.hub_crop_protocol_milestone.find(x => x.protocol_id === p.id && x.code === code && !x.voided_at); return m ? Number(m.day) : null; }
+function sdHint(f){
+  const el = $('sdH_' + f); if(!el) return;
+  const row = SD.find(x => x[0] === f), std = planDay(row[3]), sow = $('cySow').value, v = $('sd_' + f).value;
+  let h = std != null ? `Standard day ${std}${sow ? ' = ' + words(addDays(sow, std)) : ''}` : '';
+  if(v && sow){ const n = dnum(v) - dnum(sow), df = std == null ? null : n - std;
+    h += `${h ? ' · ' : ''}<b style="color:${df == null || Math.abs(df) <= 2 ? 'var(--ok)' : df > 0 ? 'var(--danger)' : 'var(--info)'}">Day ${n}${df ? (df > 0 ? ' · ' + df + (df === 1 ? ' day' : ' days') + ' late' : ' · ' + (-df) + (df === -1 ? ' day' : ' days') + ' early') : df === 0 ? ' · on time' : ''}</b>`; }
+  el.innerHTML = h;
+}
+function sdAll(){ SD.forEach(x => sdHint(x[0])); }
 let CYF = '';
 function blockOf(id){ return by('hub_farm_block', id); }
 function cyclesOf(bid){ return S.hub_cycle.filter(c => c.block_id === bid && c.status !== 'VOID'); }
@@ -576,17 +609,23 @@ function openCycle(id, blockId){
     <label class="fld"><span>Cycle no. <b>*</b></span><input type="number" min="1" step="1" id="cyNo" value="${c.cycle_no ?? ''}" ${dis}></label>
     <label class="fld"><span>Variety</span><select id="cyVar" ${dis} onchange="cyHint(false)">${vars.map(v => `<option value="${v.id}" ${(c.variety_id || vars[0]?.id) === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>
     <label class="fld"><span>Status</span><select id="cySt" ${dis} onchange="cyHint(false)">${['PLANNED', 'ACTIVE', 'CLOSED'].map(k => `<option value="${k}" ${c.status === k ? 'selected' : ''}>${CSTATUS[k]}</option>`).join('')}${c.status === 'VOID' ? '<option selected>Voided</option>' : ''}</select></label>
-    <label class="fld"><span>Sowing date <b id="cySowReq">*</b> <i class="dw" id="cySowW"></i></span><input type="date" id="cySow" value="${c.sowing_date || ''}" ${dis} onchange="cyHint(false)"></label>
+    <label class="fld"><span>Sowing date <b id="cySowReq">*</b> <i class="dw" id="cySowW"></i></span><input type="date" id="cySow" value="${c.sowing_date || ''}" ${dis} onchange="cyHint(false)" oninput="sdAll()"></label>
     <label class="fld"><span>Polybags</span><input type="number" min="0" step="1" id="cyBags" value="${c.bag_count ?? ''}" ${dis}></label>
     <label class="fld"><span>Expected end <i class="dw" id="cyExpW"></i></span><input type="date" id="cyExp" value="${c.expected_end || ''}" ${dis} oninput="dwAll()"></label>
     <label class="fld" id="cyEndF"><span>Actual end <b>*</b> <i class="dw" id="cyEndW"></i></span><input type="date" id="cyEnd" value="${c.actual_end || ''}" ${dis} oninput="dwAll()"></label>
     <label class="fld wide"><span>Note</span><textarea id="cyNote" ${dis}>${esc(c.note || '')}</textarea></label>
   </div>
+  <div class="sd-box">
+    <div class="sd-t">Stage dates · 实际日期 <span class="hint">fill in when it really happens · leave empty if not yet</span></div>
+    <div class="sd-row"><span>Sowing <small>播种</small></span><span class="hint">↑ sowing date above</span><label class="sd-est"><input type="checkbox" id="sd_sowEst" ${c.sowing_is_estimate ? 'checked' : ''} ${dis}> estimate</label></div>
+    ${SD.map(([f, en, zh]) => `<div class="sd-row"><span>${en} <small>${zh}</small></span><input type="date" id="sd_${f}" value="${c[f] || ''}" ${dis} oninput="sdHint('${f}')">${f === 'transplant_date' ? `<label class="sd-est"><input type="checkbox" id="sd_tpEst" ${c.transplant_is_estimate ? 'checked' : ''} ${dis}> estimate</label>` : '<span></span>'}<div class="sd-h" id="sdH_${f}"></div></div>`).join('')}
+    <div class="sd-row"><span>Last harvest <small>最后收成</small></span><span class="hint">= Actual end — fill it when you set the cycle to Finished</span><span></span></div>
+  </div>
   <div class="hint" id="cyProto" style="margin-top:10px">${p ? `Protocol v${p.version}: ${p.cycle_days} days · ${Number(p.expected_kg_per_bag)} kg per bag (locked for this cycle)` : ''}</div>
   ${c.status === 'VOID' ? `<div class="alert alert-warn" style="margin-top:10px"><span>⚠</span><div>Voided ${esc((c.voided_at || '').slice(0, 10))}: ${esc(c.void_reason)}</div></div>` : ''}
   <div class="merr" id="merr"></div>`,
     `${id && CAN_EDIT && c.status !== 'VOID' ? `<button class="btn btn-sm left" onclick="askVoid('${id}')">Void (entered by mistake)</button>` : ''}${id && CAN_EDIT && c.status === 'ACTIVE' ? `<button class="btn btn-sm" onclick="openNext('${id}')">Finish &amp; start next</button>` : ''}<button class="btn" onclick="closeModal()">${dis ? 'Close' : 'Cancel'}</button>${!dis ? `<button class="btn btn-pri" onclick="saveCycle('${id || ''}')">Save</button>` : ''}`);
-  cyHint(!id);
+  cyHint(!id); setTimeout(sdAll);
 }
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const words = s => { if(!s) return ''; const [y, m, d] = s.split('-'); return `${+d} ${MON[m - 1]} ${y}`; };
@@ -600,6 +639,7 @@ function cyHint(fill){
   if(fill !== false){ $('cyBags').value = ''; $('cyNo').value = nextCycleNo(id); if(!$('cyBags').value) $('cyBags').value = b.bag_capacity ?? ''; }
   const p = protoFor(S.hub_crop[0]?.id, $('cyVar').value, $('cySow').value || null);
   if(p && $('cySow').value) $('cyExp').value = addDays($('cySow').value, p.cycle_days);
+  sdAll();
   $('cyProto').textContent = p ? `Protocol v${p.version}: ${p.cycle_days} days · ${Number(p.expected_kg_per_bag)} kg per bag. Expected end = sowing + ${p.cycle_days} days.` : 'No protocol for this date — set one in Crops first.';
 }
 function saveCycle(id){
@@ -615,6 +655,11 @@ function saveCycle(id){
   if(exp && sow && exp < sow) return merr('Expected end is before the sowing date');
   if(rb !== '' && !(bags >= 0)) return merr('Please enter the number of polybags');
   if(st === 'ACTIVE' && S.hub_cycle.some(x => x.block_id === bid && x.status === 'ACTIVE' && x.id !== id)) return merr(`${blockOf(bid).code} already has a growing cycle — finish it first`);
+  const sd = {}; for(const [f, en] of SD){ const v = $('sd_' + f).value || null;
+    if(v && !sow) return merr('Enter the sowing date first, then the stage dates');
+    if(v && v < sow) return merr(`${en} is before the sowing date`);
+    if(v && v > today()) return merr(`${en} is in the future — only fill it in when it really happens`);
+    sd[f] = v; }
   let c;
   if(id){ c = by('hub_cycle', id); }
   else{
@@ -623,7 +668,8 @@ function saveCycle(id){
     if(!p) return merr('No protocol for this sowing date — set one in Crops first');
     c = {id:uid(), block_id:bid, crop_id:crop.id, protocol_id:p.id}; S.hub_cycle.push(c);
   }
-  Object.assign(c, {cycle_no:no, variety_id:$('cyVar').value || null, status:st, sowing_date:sow, expected_end:exp, bag_count:bags, actual_end:st === 'CLOSED' ? end : null, note:$('cyNote').value.trim() || null});
+  Object.assign(c, {cycle_no:no, variety_id:$('cyVar').value || null, status:st, sowing_date:sow, expected_end:exp, bag_count:bags, actual_end:st === 'CLOSED' ? end : null, note:$('cyNote').value.trim() || null},
+    sd, {sowing_is_estimate:$('sd_sowEst').checked, transplant_is_estimate:$('sd_tpEst').checked});
   touch('hub_cycle', c); closeModal(); renderAll();
 }
 /* 结束这一造 + 开下一造：一次存 */
