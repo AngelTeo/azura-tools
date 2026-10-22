@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v23</title>
+<title>Harvest v24</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -308,7 +308,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v23</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v24</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -318,7 +318,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v23</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v24</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -442,7 +442,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1231,35 +1231,43 @@ function renderTrack(){
   const P = FS.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
   const cost = rates(curCost()), money = hasPrice();
   const stg = w => w < R.pk ? 6 : w === R.pk ? 7 : w < R.tail ? 8 : 9;
-  const bands = [{s:6, from:1, to:R.pk - 1}, {s:7, from:R.pk, to:R.pk}, {s:8, from:R.pk + 1, to:R.tail - 1}, {s:9, from:R.tail, to:n}].filter(x => x.to >= x.from);
+  const bands = [{s:6, from:1, to:R.pk - 1}, {s:7, from:R.pk, to:R.pk}, {s:8, from:R.pk + 1, to:R.tail - 1}, {s:9, from:R.tail, to:Math.min(n, R.wk || n)}].filter(x => x.to >= x.from);
   const cell = (x, y) => `grid-column:${x};grid-row:${y}`;
   const BK = 30, SB = 10000, bk = kg => fmt(kg / BK);   /* everything in 30 kg baskets */
+  /* target per week: Season 1 shape (week 1..R.wk of the formula), scaled so the season adds up to target kg per polybag */
+  const NW = Math.min(R.wk || n, n), shp = W.slice(0, NW).map(x => x.kg_per_bag), shS = shp.reduce((a, c) => a + c, 0) || 1;
+  const tW = (i, bags) => shp[i] / shS * tg * bags;   /* kg */
+  const tWB = shp.map((x, i) => Math.round(tW(i, SB) / BK)); tWB[tWB.indexOf(Math.max(...tWB))] += Math.round(tg * SB / BK) - tWB.reduce((a, c) => a + c, 0);   /* rounded weeks add up exactly */
   let h = `<h1 class="pt">Tracking <span class="hint" style="font-size:13px;font-weight:400">Baskets of 30 kg, week by week · target ${fmt(tg)} kg per polybag a season = ${fmt(tg * SB / BK)} baskets per ${fmt(SB)} polybags</span></h1>
-  <div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${n},minmax(46px,1fr)) 88px">
+  <div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${NW},minmax(50px,1fr)) 88px">
     <div style="${cell(1, 1)}"></div>
     ${bands.map(x => { const st = CY_ST[x.s - 1]; return `<div class="tk-band s${x.s}" style="grid-column:${x.from + 1} / span ${x.to - x.from + 1};grid-row:1;text-align:${x.to === x.from ? 'center' : 'left'}">${x.to === x.from ? st.en : `${st.i} ${st.en} <small>${st.zh}</small>`}</div>`; }).join('')}
-    <div class="tk-band tk-tot" style="${cell(n + 2, 1)}">Season</div>
-    <div class="tk-lab" style="${cell(1, 2)}"><b>Standard</b><small>baskets a week for every ${fmt(SB)} polybags · <span style="color:#0F6E56">target</span></small></div>
-    ${W.map((x, i) => `<div class="tk-std s${stg(x.w)}" style="${cell(i + 2, 2)}" title="Week ${x.w} · Season 1: ${fmt(x.kg_per_bag * SB)} kg · target: ${fmt(x.kg_per_bag * sc * SB)} kg (for ${fmt(SB)} polybags)"><small>W${x.w}</small><b>${bk(x.kg_per_bag * SB)}</b><em>${bk(x.kg_per_bag * sc * SB)}</em></div>`).join('')}
-    <div class="tk-std tk-tot" style="${cell(n + 2, 2)}"><small>Total</small><b>${bk(b.total_per_bag * SB)}</b><em>${bk(tg * SB)}</em></div>`;
+    <div class="tk-band tk-tot" style="${cell(NW + 2, 1)}">Season</div>
+    <div class="tk-lab" style="${cell(1, 2)}"><b>Target</b><small>baskets a week for every ${fmt(SB)} polybags</small></div>
+    ${tWB.map((v, i) => `<div class="tk-std s${stg(i + 1)}" style="${cell(i + 2, 2)}" title="Week ${i + 1} · target ${fmt(v)} baskets = ${fmt(v * BK)} kg for ${fmt(SB)} polybags · ${fmt(shp[i] / shS * 100, 1)}% of the season (Season 1 pattern)"><small>W${i + 1}</small><b>${fmt(v)}</b></div>`).join('')}
+    <div class="tk-std tk-tot" style="${cell(NW + 2, 2)}"><small>Total</small><b>${fmt(tWB.reduce((a, c) => a + c, 0))}</b></div>`;
   P.forEach(({F, X}, k) => {
     const fc = X.F, y = k + 3, bags = fc.bags;
-    const perBag = X.projTotal / bags, pct = tg ? perBag / tg : null;
+    let aSum = 0, tSum = 0; fc.rows.slice(0, NW).forEach((r, i) => { if(r.st === 'past'){ aSum += r.ak || 0; tSum += tW(i, bags); } });
+    const pace = tSum > 0 ? aSum / tSum : 1;   /* forecast = target × this farm's % of target so far */
+    let proj = 0;
     h += `<div class="tk-lab" style="${cell(1, y)};--c:${F.col}" data-farm="${esc(F.farm)}"><b>${esc(F.farm)}</b><small>S${F.c.cycle_no} · ${fmt(bags)} bags · ${fc.actFirst ? (X.cur ? 'now W' + X.cur.w : 'harvesting') : '1st ≈ ' + dShort(fc.start)}</small></div>`;
-    for(let i = 0; i < n; i++){
+    for(let i = 0; i < NW; i++){
       const r = fc.rows[i]; if(!r) continue;
-      const tw = (W[i] ? W[i].kg_per_bag : 0) * sc * bags;
+      const tw = tW(i, bags);
       let cls, val, tip;
-      if(r.st === 'fut'){ val = r.bk * X.pace; cls = 'tk-fut'; tip = 'Forecast'; }
+      if(r.st === 'fut'){ val = tw * pace; cls = 'tk-fut'; tip = 'Forecast'; }
       else if(r.st === 'now'){ val = r.ak || 0; cls = 'tk-now'; tip = 'This week so far'; }
       else { val = r.ak || 0; const q = tw ? val / tw : 1; cls = q >= 0.9 ? 'tk-ok' : q >= 0.75 ? 'tk-mid' : 'tk-bad'; tip = 'Actual · ' + fmt(q * 100) + '% of target'; }
-      h += `<div class="tk-c ${cls}" style="${cell(i + 2, y)}" title="${esc(F.farm)} · W${r.w} · ${dShort(r.from)}–${dShort(r.to)} · ${tip}: ${bk(val)} baskets = ${fmt(val)} kg (target ${bk(tw)} baskets)"><b>${bk(val)}</b><em>of ${bk(tw)}</em><small>${dShort(r.from)}</small></div>`;
+      h += `<div class="tk-c ${cls}" style="${cell(i + 2, y)}" title="${esc(F.farm)} · W${r.w} · ${dShort(r.from)}–${dShort(r.to)} · ${tip}: ${bk(val)} baskets = ${fmt(val)} kg (target ${bk(tw)} baskets)"><b>${bk(val)}</b><em>target ${bk(tw)}</em><small>${dShort(r.from)}</small></div>`;
+      proj += r.st === 'now' ? Math.max(val, tw * pace) : val;
     }
-    h += `<div class="tk-c tk-sum ${pct == null ? '' : !fc.actFirst ? 'tk-fut' : pct >= 0.9 ? 'tk-ok' : pct >= 0.75 ? 'tk-mid' : 'tk-bad'}" style="${cell(n + 2, y)}" title="Harvested ${bk(X.soFar)} baskets + still to come ≈ ${bk(X.left)} baskets (${fmt(X.projTotal)} kg)"><b>${bk(X.projTotal)}</b><em>of ${bk(tg * bags)}</em><small>${pct != null ? fmt(pct * 100) + '% of target' : ''}</small></div>`;
+    const pct = tg ? proj / (tg * bags) : null;
+    h += `<div class="tk-c tk-sum ${pct == null ? '' : !fc.actFirst ? 'tk-fut' : pct >= 0.9 ? 'tk-ok' : pct >= 0.75 ? 'tk-mid' : 'tk-bad'}" style="${cell(NW + 2, y)}" title="Harvested + expected for the ${NW} weeks ≈ ${bk(proj)} baskets (${fmt(proj)} kg)"><b>${bk(proj)}</b><em>target ${bk(tg * bags)}</em><small>${pct != null ? fmt(pct * 100) + '% of target' : ''}</small></div>`;
   });
   h += `</div></div>
   <div class="tk-leg"><span><i class="tk-ok"></i>≥ 90% of target</span><span><i class="tk-mid"></i>75–90%</span><span><i class="tk-bad"></i>below 75%</span><span><i class="tk-now"></i>this week (so far)</span><span><i class="tk-fut"></i>forecast</span>
-    <span class="hint">1 basket = 30 kg. Standard boxes: big number = Season 1 actual, green = target, both for every ${fmt(SB)} polybags. Farm boxes: that farm's baskets that week, "of" = its target for its own polybags, date = week start. Hover for kg.</span></div>
+    <span class="hint">1 basket = 30 kg. Target row: baskets a week for every ${fmt(SB)} polybags, ${NW} harvest weeks, adds up to ${fmt(tg)} kg a polybag (${fmt(tg * SB / BK)} baskets); the ups and downs follow Season 1 (AD 1 + AD 2). Farm boxes: baskets that farm harvested that week, "target" = the same target for its own polybags, date = week start. Forecast = target × the farm's % of target so far.</span></div>
   <div class="sec-t">Each farm · on target?</div>
   <div class="ot">`;
   P.forEach(({F, X}) => {
