@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v12</title>
+<title>Harvest v13</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -283,7 +283,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v12</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v13</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -293,7 +293,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v12</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v13</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -417,7 +417,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1033,8 +1033,8 @@ function renderHome(){
   const F = {sow:0, tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), end:msOff('CYCLE_END')};
   const dd2 = (a, z) => a != null && z != null ? z - a : null, du = v => v == null ? '—' : v + ' days';
   const dLast = F.end;
-  const tpo = x => x != null && F.tp != null ? 'TP +' + (x - F.tp) + 'd' : '—';
-  const tim = [ du(dd2(F.sow, F.tp)), '1 day', `TP +0–${F.fl != null && F.tp != null ? F.fl - F.tp : '?'}d`, tpo(F.fl), tpo(F.fr),
+  const tpo = x => x != null && F.tp != null ? 'TP +' + (x - F.tp) : '—';
+  const tim = [ du(dd2(F.sow, F.tp)), '1 day', `TP 0 → ${F.fl != null && F.tp != null ? F.fl - F.tp : '?'}`, tpo(F.fl), tpo(F.fr),
     `Week 1–${R.pk - 1}`, `Week ${R.pk}`, R.tail - 1 > R.pk ? `Week ${R.pk + 1}–${R.tail - 1}` : `Week ${R.pk + 1}`, R.tail < R.wk ? `Week ${R.tail}–${R.wk}` : `Week ${R.wk}`, 'Uproot · clear'];
   let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)}</span></h1>
   <div class="sec-t">1 · Where each farm is now</div>
