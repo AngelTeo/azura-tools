@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v9</title>
+<title>Harvest v11</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -180,14 +180,15 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 /* v7 Overview: Fig 1 cycle map + Fig 2 on-track */
 .cy-wrap{overflow-x:auto;padding:12px;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px}
 .cy{display:grid;grid-template-columns:150px repeat(10,minmax(88px,1fr));gap:6px;min-width:1060px}
-.cy-st{border-radius:12px;padding:8px 8px 9px;border:1px solid rgba(0,0,0,.05)}
-.cy-st i{font-style:normal;font-size:24px;line-height:1;display:block}
-.cy-st b{display:block;font-size:14px;line-height:1.2;margin-top:4px}.cy-st small{display:block;font-size:11px;color:#555;line-height:1.25}
-.cy-st em{display:block;font-style:normal;font-size:12px;font-weight:700;margin-top:4px;color:#3a3a3a}
+.cy-st{border-radius:12px;padding:8px 4px 9px;border:1px solid rgba(0,0,0,.05);display:grid;grid-template-rows:14px 34px 20px 16px 20px;align-items:center;justify-items:center;text-align:center}
+.cy-st>*{white-space:nowrap;overflow:hidden;max-width:100%}
+.cy-st i{font-style:normal;font-size:26px;line-height:1;display:block}
+.cy-st b{display:block;font-size:14px;line-height:20px}.cy-st small{display:block;font-size:11px;color:#555;line-height:16px}
+.cy-st em{display:block;font-style:normal;font-size:12px;font-weight:700;line-height:20px;color:#3a3a3a}
 .cy-n{font-size:10px;font-weight:800;color:#6b5b2d;letter-spacing:.04em}
-.s1{background:#EAF6E7}.s2{background:#DFEEDA}.s3{background:#E4F3DA}.s4{background:#EEF5C8}.s5{background:#F9ECC6}.s6{background:#FBE1B7}.s7{background:#F9D6BC}.s8{background:#F6D8D3}.s9{background:#EED9D8}.s10{background:#ECECEC}
+.s1{background:#DFEEDA}.s2{background:#E4F3DA}.s3{background:#EEF5C8}.s4{background:#F9ECC6}.s5{background:#FBE1B7}.s6{background:#F9D6BC}.s7{background:#F2C4B8}.s8{background:#F6D8D3}.s9{background:#EED9D8}.s10{background:#ECECEC}
 .cy-f{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:6px solid var(--c);border-radius:8px;background:#FBFAF6;position:sticky;left:0;z-index:3;box-shadow:4px 0 6px -4px rgba(0,0,0,.15)}
-@media (max-width:640px){.cy{grid-template-columns:96px repeat(10,minmax(84px,1fr))}.cy-f b{font-size:14px}.cy-f small{font-size:10px}}
+@media (max-width:640px){.cy{grid-template-columns:96px repeat(10,minmax(84px,1fr))}.cy-f b{font-size:14px}.cy-f small{font-size:10px}.cy-st b{font-size:12.5px}}
 .cy-f b{font-size:16px}.cy-f small{font-size:11px;color:var(--mut)}
 .cy-tr{grid-column:2 / span 10;position:relative;height:58px;border-radius:10px;background:repeating-linear-gradient(90deg,#F4F2EC 0,#F4F2EC calc(10% - 6px),#fff calc(10% - 6px),#fff 10%)}
 .cy-fill{position:absolute;left:0;top:24px;height:10px;border-radius:5px;background:var(--c);opacity:.35}
@@ -207,10 +208,21 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-tot small{display:block;font-size:11px;color:var(--mut)}.cy-tot b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.cy-tot em{font-style:normal;font-size:12px;color:var(--mut)}
 .cy-tot .cy-all{background:#8B6C2A!important;color:#fff}.cy-tot .cy-all small,.cy-tot .cy-all em{color:#F3E9D2}
 .cy-plus{align-self:center;font-size:22px;font-weight:800;color:#8B6C2A}
+.cy-rl{display:flex;align-items:center;justify-content:flex-end;padding-right:8px}.cy-rl small{font-size:11px;color:var(--mut);text-align:right;line-height:1.2}
+.cy-rul{grid-column:2 / span 10;position:relative;height:34px;border-bottom:2px solid #8B6C2A;margin-bottom:2px}
+.cy-rul span{position:absolute;bottom:-2px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+.cy-rul span::after{content:'';width:2px;height:10px;background:#8B6C2A}
+.cy-rul span.last{transform:translateX(-100%);align-items:flex-end}.cy-rul span.first{transform:none;align-items:flex-start}
+.cy-rul b{font-size:12px;font-weight:800;color:#6b5b2d;background:#FFF7E3;border:1px solid #E5D3A6;border-radius:6px;padding:1px 6px;white-space:nowrap;margin-bottom:2px}
+.cy-s1l small{margin-top:2px}
+.cy-s1lab{font-weight:700;font-size:13px;color:var(--mut);margin:12px 0 6px}
+.cy-s1r{border-bottom:2px solid var(--c);height:30px}.cy-s1r span::after{background:var(--c)}.cy-s1r b{background:#fff;border-color:var(--c);color:var(--c)}
+.cy-fm{border-bottom:2px dashed #2F6FA8;height:30px}.cy-fm span::after{background:#2F6FA8}.cy-fm b{background:#EAF2FB;border-color:#B9D1EA;color:#1F4E79}
+.cy-fm i{font-style:normal;font-size:10px;font-weight:800;margin-left:2px}.fm-e{color:#0F6E56}.fm-l{color:#A32D2D}
 .cy-d{display:inline-block;margin-top:6px;background:#fff;border-radius:6px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:800;color:#6b5b2d}
 .tk-wrap{overflow-x:auto;padding:12px;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px}
 .tk{display:grid;gap:4px;min-width:1080px}
-.tk-band{border-radius:8px;padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden}.tk-band small{font-weight:400;color:#555}
+.tk-band{border-radius:8px;padding:5px 4px;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden}.tk-band small{font-weight:400;color:#555}
 .tk-tot{background:#8B6C2A!important;color:#fff!important}.tk-tot small,.tk-tot em{color:#F3E9D2!important}
 .tk-std{border-radius:8px;padding:4px 2px;text-align:center}.tk-std small{display:block;font-size:10px;color:#6b5b2d;font-weight:700}.tk-std b{display:block;font-size:14px;font-variant-numeric:tabular-nums}.tk-std em{display:block;font-style:normal;font-size:10px;color:#0F6E56}
 .tk-lab{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:6px solid var(--c,#8B6C2A);border-radius:8px;background:#FBFAF6;position:sticky;left:0;z-index:3;box-shadow:4px 0 6px -4px rgba(0,0,0,.15)}
@@ -271,7 +283,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v9</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v11</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -281,7 +293,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v9</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v11</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -405,7 +417,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 9;
+const APP_VERSION = 11;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -942,16 +954,23 @@ function dailyFc(P, d){
 function splitTxt(kg){ return `Sun / Tue / Thu ≈ ${fmt(kg * 2 / 7)} kg each · Fri ≈ ${fmt(kg / 7)} kg`; }
 /* ---------- v7 Overview: Fig 1 (cycle map) + Fig 2 (on track?) ---------- */
 const CY_ST = [
-  {i:'🏗️', en:'Setup', zh:'设园准备'}, {i:'🌱', en:'Nursery', zh:'育苗'}, {i:'🪴', en:'Transplant', zh:'定植'},
-  {i:'🌿', en:'Growing', zh:'营养生长'}, {i:'🌼', en:'Flowering', zh:'开花'}, {i:'🍆', en:'Fruit set', zh:'结果'},
-  {i:'🧺', en:'First harvest', zh:'首采'}, {i:'📈', en:'Peak', zh:'高峰采收'}, {i:'📉', en:'Harvest → tail', zh:'持续 / 尾采'}, {i:'🧹', en:'Changeover', zh:'拔树换季'}];
+  {i:'🌱', en:'Nursery', zh:'育苗'}, {i:'🪴', en:'Transplant', zh:'定植'}, {i:'🌿', en:'Growing', zh:'营养生长'},
+  {i:'🌼', en:'Flowering', zh:'开花'}, {i:'🍆', en:'Fruit set', zh:'结果'}, {i:'🧺', en:'1st harvest', zh:'首采'},
+  {i:'📈', en:'Peak', zh:'高峰采收'}, {i:'📊', en:'Steady', zh:'平稳采收'}, {i:'📉', en:'Tail', zh:'尾采'}, {i:'🧹', en:'Changeover', zh:'拔树换季'}];
+/* tail = last weeks where kg per polybag drops below half of the after-peak median (same rule as the Benchmark tab) */
+function tailWeek(b){
+  const W = b.weeks, n = W.length, pk = b.peak_week, after = W.filter(x => x.w > pk);
+  const med = after.length ? [...after].map(x => x.kg_per_bag).sort((a, c) => a - c)[Math.floor(after.length / 2)] : 0;
+  let tf = n + 1; for(let w = n; w > pk; w--){ if(W[w - 1].kg_per_bag < med / 2) tf = w; else break; }
+  return Math.max(pk + 1, Math.min(tf, n));
+}
 function msOff(code){ const pid = curProto().id; const m = (H.milestones || []).find(x => !x.voided_at && x.code === code && (!pid || x.protocol_id === pid)) || (H.milestones || []).find(x => !x.voided_at && x.code === code); return m ? Number(m.day) : null; }
 function cyRules(b){
   const tp = msOff('TRANSPLANTING'), fl = msOff('FLOWERING'), fr = msOff('FRUIT_SET'), tn = turnaroundDays();
   return {nur: nurseryDays() ?? tp, flow: fl != null && tp != null ? fl - tp : null, fruit: fr != null && tp != null ? fr - tp : null,
-    fd: b.first_days, pk: b.peak_week, wk: b.season_weeks_max, turn: tn ? tn.avg : null, tlMin: b.tp_to_last_min, tlMax: b.tp_to_last_max};
+    fd: b.first_days, pk: b.peak_week, tail: tailWeek(b), wk: b.season_weeks_max, turn: tn ? tn.avg : null, tlMin: b.tp_to_last_min, tlMax: b.tp_to_last_max};
 }
-/* stage start dates for one cycle (index 1..9 start, plus end) */
+/* stage start dates for one cycle (index 0..9 = CY_ST, plus end of changeover) */
 function cyBounds(c, b, R){
   const rs = nonVoid(c.id), tp = c.transplant_date, sow = c.sowing_date || (tp && R.nur != null ? addDays(tp, -R.nur) : null);
   if(!tp) return null;
@@ -959,17 +978,26 @@ function cyBounds(c, b, R){
   const cl = x => x < tp ? tp : x > fh ? fh : x;
   let g = addDays(tp, 7), fl = R.flow != null ? addDays(tp, R.flow) : null, fr = R.fruit != null ? addDays(tp, R.fruit) : null;
   g = cl(g); fl = fl ? cl(fl) : g; if(fl < g) fl = g; fr = fr ? cl(fr) : fl; if(fr < fl) fr = fl;
-  const pkS = addDays(fh, 7 * (R.pk - 1)), pkE = addDays(fh, 7 * R.pk);
   const end = c.status === 'CLOSED' && c.actual_end ? c.actual_end : addDays(fh, 7 * R.wk);
+  const cap = x => x > end ? end : x;
+  const pkS = cap(addDays(fh, 7 * (R.pk - 1))), stS = cap(addDays(fh, 7 * R.pk)), taS = cap(addDays(fh, 7 * (R.tail - 1)));
   const next = H.cycles.find(x => x.block_id === c.block_id && x.cycle_no === c.cycle_no + 1);
   const chE = next && next.transplant_date ? next.transplant_date : addDays(end, R.turn || 28);
-  return {sow, tp, fh, starts:[null, sow, tp, g, fl, fr, fh, pkS, pkE < end ? pkE : end, end], end:chE, rs, harvesting: rs.length > 0};
+  return {sow, tp, fh, starts:[sow, tp, g, fl, fr, fh, pkS, stS, taS, end], hEnd:end, end:chE, rs, harvesting: rs.length > 0};
 }
 function cyPos(B, t){
-  const st = B.starts, ends = [...st.slice(2), B.end];
-  if(!st[1] || t < st[1]) return {s:0, f:1, x:10};
-  for(let i = 9; i >= 1; i--){ const a = st[i]; if(a && t >= a){ const e = ends[i - 1]; const span = Math.max(1, dnum(e) - dnum(a)); const f = Math.min(1, (dnum(t) - dnum(a)) / span); return {s:i, f, x:(i + f) * 10}; } }
-  return {s:0, f:1, x:10};
+  const st = B.starts, ends = [...st.slice(1), B.end];
+  if(!st[0] || t < st[0]) return {s:0, f:0, x:0};
+  for(let i = 9; i >= 0; i--){ const a = st[i]; if(a && t >= a){ const e = ends[i]; const span = Math.max(1, dnum(e) - dnum(a)); const f = Math.min(1, (dnum(t) - dnum(a)) / span); return {s:i, f, x:(i + f) * 10}; } }
+  return {s:0, f:0, x:0};
+}
+function s1Rows(b){
+  return H.cycles.filter(c => c.status === 'CLOSED' && c.sowing_date && c.transplant_date).map(c => {
+    const rs = nonVoid(c.id); if(!rs.length) return null;
+    const sow = dnum(c.sowing_date), first = dnum(rs[0].date), last = dnum(rs[rs.length - 1].date), L = cycleLabel(c);
+    return {label: L.farm, col: FARM_COLOR[L.farm] || '#555', last: last - sow,
+      ms: [[0, 0], [1, dnum(c.transplant_date) - sow], [5, first - sow], [6, first - sow + (b.peak_week - 1) * 7], [9, last - sow]]};
+  }).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
 }
 function cyFarms(b, R){
   const out = [];
@@ -986,9 +1014,9 @@ function cyPin(F, t){
   const B = F.B, P = cyPos(B, t), d = dnum(t);
   const dTp = d - dnum(B.tp), wk = Math.floor((d - dnum(B.fh)) / 7) + 1;
   let big, small;
-  if(P.s === 1){ big = 'Day ' + (d - dnum(B.sow)); small = 'transplant ≈ ' + dShort(B.tp); }
-  else if(P.s >= 2 && P.s <= 5){ big = 'TP +' + dTp + 'd'; small = '1st harvest ≈ ' + dShort(B.fh) + ' (' + Math.max(0, dnum(B.fh) - d) + ' days)'; }
-  else if(P.s >= 6 && P.s <= 8){ big = 'Week ' + wk; small = 'ends ≈ ' + dShort(B.starts[9]); }
+  if(P.s === 0){ big = 'Day ' + (d - dnum(B.sow)); small = 'transplant ≈ ' + dShort(B.tp); }
+  else if(P.s >= 1 && P.s <= 4){ big = 'TP +' + dTp + 'd'; small = '1st harvest ≈ ' + dShort(B.fh) + ' (' + Math.max(0, dnum(B.fh) - d) + ' days)'; }
+  else if(P.s >= 5 && P.s <= 8){ big = 'Week ' + wk; small = 'ends ≈ ' + dShort(B.hEnd); }
   else { big = 'Changeover'; small = 'next transplant ≈ ' + dShort(B.end); }
   return {P, big, small};
 }
@@ -999,24 +1027,23 @@ function renderHome(){
   if(!B0){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
   const b = B0.data, R = cyRules(b), t = today(), td = new Date(dnum(t) * 864e5);
   const FS = cyFarms(b, R);
-  const tim = [ 'Before sowing', `${R.nur ?? '?'} days`, 'Transplant day', `TP +0–${R.flow ?? '?'}d`, `TP +${R.flow ?? '?'}d`, `TP +${R.fruit ?? '?'}d`,
-    `TP +${R.fd}d · wk 1–${R.pk - 1}`, `Week ${R.pk}`, `Week ${R.pk + 1}–${R.wk}`, R.turn ? `≈ ${R.turn} days` : '—'];
-  /* cumulative day from sowing (day 0) */
-  const N = R.nur ?? 0, dFl = N + (R.flow ?? 0), dFr = N + (R.fruit ?? 0), dFh = N + R.fd, dPk = dFh + 7 * (R.pk - 1), dTl = dPk + 7;
-  const dLast = R.tlMax != null ? N + R.tlMax : dFh + 7 * R.wk - 1, dLastMin = R.tlMin != null ? N + R.tlMin : null, dNext = R.turn ? dLast + R.turn : null;
-  const cum = ['—', `Day 0–${N}`, `Day ${N}`, `Day ${N}–${dFl - 1}`, `Day ${dFl}`, `Day ${dFr}`, `Day ${dFh}–${dPk - 1}`, `Day ${dPk}–${dTl - 1}`, `Day ${dTl}–${dLast}`, dNext ? `Day ${dLast + 1}–${dNext}` : '—'];
+  /* Standard = the Crops growing plan (v3 formula). Absolute days from sowing = day 0. */
+  const F = {sow:0, tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), end:msOff('CYCLE_END')};
+  const dd2 = (a, z) => a != null && z != null ? z - a : null, du = v => v == null ? '—' : v + ' days';
+  const dLast = F.end;
+  const tim = [ du(dd2(F.sow, F.tp)), '1 day', du(dd2(F.tp, F.fl)), du(dd2(F.fl, F.fr)), du(dd2(F.fr, F.h1)),
+    du(dd2(F.h1, F.pk)), du(dd2(F.pk, F.st)), du(dd2(F.st, F.end)), '—', 'Uproot · clear'];
   let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)}</span></h1>
   <div class="sec-t">1 · Where each farm is now</div>
-  <div class="cy-tot"><div><small>Sowing → last harvest</small><b>${dLast} days</b><em>≈ ${fmt(dLast / 30.4, 1)} months${dLastMin != null && dLastMin !== dLast ? ` · Season 1: ${dLastMin}–${dLast} days` : ''}</em></div>
-    <div class="cy-plus">+</div><div><small>Changeover (uproot → next transplant)</small><b>${R.turn ? '≈ ' + R.turn + ' days' : '—'}</b><em>clear, refill, replant</em></div>
-    <div class="cy-plus">=</div><div class="cy-all"><small>One full cycle on the same polybags</small><b>${dNext ? '≈ ' + dNext + ' days' : '—'}</b><em>${dNext ? '≈ ' + fmt(dNext / 30.4, 1) + ' months · about ' + fmt(365 / (dNext - N), 1) + ' seasons a year*' : ''}</em></div></div>
+  <div class="cy-tot"><div class="cy-all"><small>One season (standard) · sowing → last harvest</small><b>${dLast} days</b><em>≈ ${fmt(dLast / 30.4, 1)} months · Season 1 actual: 180–196 days</em></div></div>
   <div class="cy-wrap"><div class="cy">
-    <div></div>${CY_ST.map((s, i) => `<div class="cy-st s${i + 1}"><div class="cy-n">STAGE ${pad(i + 1)}</div><i>${s.i}</i><b>${s.en}</b><small>${s.zh}</small>${cum[i] !== '—' ? `<span class="cy-d">${cum[i]}</span>` : ''}<em>${tim[i]}</em></div>`).join('')}
+    <div></div>${CY_ST.map((s, i) => `<div class="cy-st s${i + 1}"><div class="cy-n">STAGE ${pad(i + 1)}</div><i>${s.i}</i><b>${s.en}</b><small>${s.zh}</small><em>${tim[i]}</em></div>`).join('')}
+    <div class="cy-rl"><small>Standard · day from sowing</small></div><div class="cy-rul">${[[0, F.sow], [1, F.tp], [3, F.fl], [4, F.fr], [5, F.h1], [6, F.pk], [7, F.st], [9, F.end]].filter(x => x[1] != null).map(([i, d]) => `<span class="${i === 0 ? 'first' : ''}" style="left:${i * 10}%"><b>Day ${d}</b></span>`).join('')}</div>
     ${FS.map(F => { const p = cyPin(F, t); return `<div class="cy-f" style="--c:${F.col}"><b>${esc(F.farm)}</b><small>Season ${F.c.cycle_no} · ${fmt(F.bags)} bags</small></div>
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div></div>`; }).join('')}
   </div></div>
-  <div class="hint" style="margin-top:6px">* Seasons a year counts from transplant to next transplant (the nursery of the next season overlaps the changeover). Day numbers count from sowing = day 0; they come from your real cycles, benchmark and Crops standard.</div>
+  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now.</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
@@ -1034,13 +1061,13 @@ function renderTrack(){
   const FS = cyFarms(b, R).filter(F => F.c.status === 'ACTIVE');
   const P = FS.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
   const cost = rates(curCost()), money = hasPrice();
-  const stg = w => w < R.pk ? 7 : w === R.pk ? 8 : 9;
-  const bands = [{s:7, from:1, to:R.pk - 1}, {s:8, from:R.pk, to:R.pk}, {s:9, from:R.pk + 1, to:n}].filter(x => x.to >= x.from);
+  const stg = w => w < R.pk ? 6 : w === R.pk ? 7 : w < R.tail ? 8 : 9;
+  const bands = [{s:6, from:1, to:R.pk - 1}, {s:7, from:R.pk, to:R.pk}, {s:8, from:R.pk + 1, to:R.tail - 1}, {s:9, from:R.tail, to:n}].filter(x => x.to >= x.from);
   const cell = (x, y) => `grid-column:${x};grid-row:${y}`;
   let h = `<h1 class="pt">Tracking <span class="hint" style="font-size:13px;font-weight:400">Harvest per polybag, week by week · target ${fmt(tg)} kg per polybag a season</span></h1>
   <div class="tk-wrap"><div class="tk" style="grid-template-columns:140px repeat(${n},minmax(46px,1fr)) 88px">
     <div style="${cell(1, 1)}"></div>
-    ${bands.map(x => { const st = CY_ST[x.s - 1]; return `<div class="tk-band s${x.s}" style="grid-column:${x.from + 1} / span ${x.to - x.from + 1};grid-row:1">${st.i} ${st.en} <small>${st.zh}</small></div>`; }).join('')}
+    ${bands.map(x => { const st = CY_ST[x.s - 1]; return `<div class="tk-band s${x.s}" style="grid-column:${x.from + 1} / span ${x.to - x.from + 1};grid-row:1;text-align:${x.to === x.from ? 'center' : 'left'}">${x.to === x.from ? st.en : `${st.i} ${st.en} <small>${st.zh}</small>`}</div>`; }).join('')}
     <div class="tk-band tk-tot" style="${cell(n + 2, 1)}">Season</div>
     <div class="tk-lab" style="${cell(1, 2)}"><b>Standard</b><small>kg per polybag · Season 1 (target)</small></div>
     ${W.map((x, i) => `<div class="tk-std s${stg(x.w)}" style="${cell(i + 2, 2)}"><small>W${x.w}</small><b>${fmt(x.kg_per_bag, 2)}</b><em>${fmt(x.kg_per_bag * sc, 2)}</em></div>`).join('')}
