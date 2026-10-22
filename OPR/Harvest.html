@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v5</title>
+<title>Harvest v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -159,6 +159,12 @@ input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var
 .fld-err{color:var(--danger);font-size:11px;margin-top:2px}
 table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.grid th:first-child{text-align:left}
 .cr-in{width:100%;min-width:70px}
+.kb-toc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.kb-toc a{font-size:12px;padding:4px 10px;border:.5px solid var(--bdr);border-radius:14px;background:var(--sur);color:inherit;text-decoration:none}.kb-toc a:hover{background:#FFF9E6}
+.kb-sec{margin-bottom:12px;scroll-margin-top:70px}.kb-lbl{font-size:11px;font-weight:700;color:var(--layer);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px}
+.kb-ul{margin:0;padding-left:20px;font-size:14px;line-height:1.75}.kb-body{white-space:pre-wrap;font-size:14px;line-height:1.7;background:#FBFAF6;border-radius:8px;padding:10px 12px}
+.kb-q{font-size:13px;background:#FFF9E6;border-radius:8px;padding:8px 12px}
+.kb-tl{position:relative;height:34px;background:#F2F0EA;border-radius:6px;overflow:hidden;margin:6px 0}.kb-seg{position:absolute;top:0;bottom:0}.kb-seg span{position:absolute;left:6px;top:9px;font-size:11px;white-space:nowrap}
+.kb-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin:8px 0}.kb-steps div{background:#FBFAF6;border-radius:8px;padding:6px 10px;font-size:12px}.kb-steps b{display:block}.kb-steps span{color:var(--mut)}
 @media print{.nav,.no-print,.ov{display:none!important}body{background:#fff}.page{display:none!important}.page.on{display:block!important}}
 .ov-top{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:12px}
 .ov-top .stat b{font-size:22px}.ov-top .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
@@ -221,7 +227,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v5</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v6</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -231,10 +237,11 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v5</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v6</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
     <button class="ntab" data-p="plan" onclick="go('plan')">Planner</button>
+    <button class="ntab" data-p="know" onclick="go('know')">Knowledge</button>
     <button class="ntab" data-p="compare" onclick="go('compare')">Compare</button>
     <button class="ntab" data-p="seasons" onclick="go('seasons')">Seasons</button>
     <button class="ntab" data-p="forecast" onclick="go('forecast')">Forecast</button>
@@ -260,6 +267,9 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
   <!-- Planner -->
   <div class="page" id="page-plan"><div id="planView"></div></div>
+
+  <!-- Knowledge -->
+  <div class="page" id="page-know"><div id="knowView"></div></div>
 
   <!-- Compare -->
   <div class="page" id="page-compare">
@@ -347,7 +357,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -430,6 +440,8 @@ async function loadAll(){
     const [cq, plq] = await Promise.all([sb.rpc('harvest_owner_cost_profiles'), sb.rpc('harvest_owner_plans')]);
     COSTS = cq.error ? [] : (cq.data || []); COST_ERR = cq.error ? nice(cq.error) : '';
     PLANS = plq.error ? [] : (plq.data || []); PLAN_ERR = plq.error ? nice(plq.error) : '';
+    const [kq, mq] = await Promise.all([sb.rpc('harvest_owner_knowledge'), sb.from('hub_crop_protocol_milestone').select('code,name,day,sort,voided_at,protocol_id')]);
+    KN = kq.error ? [] : (kq.data || []); KN_ERR = kq.error ? nice(kq.error) : ''; H.milestones = mq.error ? [] : (mq.data || []);
     LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
     $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
   }catch(err){
@@ -449,6 +461,7 @@ function renderAll(){
   if($('page-home').classList.contains('on')) renderHome();
   if($('page-money').classList.contains('on')) renderMoney();
   if($('page-plan').classList.contains('on')) renderPlan();
+  if($('page-know').classList.contains('on')) renderKnow();
   if($('page-compare').classList.contains('on')) renderCompare();
   if($('page-seasons').classList.contains('on')) renderSeasons();
   if($('page-forecast').classList.contains('on')) renderForecast();
@@ -1285,6 +1298,139 @@ async function planVoid(id){
   closeModal(); toast('✓ Plan voided'); await loadAll();
 }
 
+/* ══════ Knowledge ══════
+   The whole cycle in one place. Numbers are read live from the benchmark, cost rates, cycles and harvest reports.
+   "Our way" boxes are the owner's own notes, saved in the database (every save kept). No numbers are written in this page. */
+const KB_SECTIONS = [
+  {key:'overview', t:'Whole cycle · 整个周期'},
+  {key:'actual_dates', t:'Season 1 actual dates · 第 1 季实际日期', entryOnly:true},
+  {key:'land', t:'1 · Prepare the farm · 整地与设园', q:['每包 cocopeat 用多少？从哪里买？什么价钱？', 'Polybag 用新的还是旧的？一个能用几季？', '铁架、水管怎么排？一行几包？行距多少？', '整地要做哪些工作？要几天？要几个人？', '开新场前要准备哪些文件（租约、水电申请）？']},
+  {key:'nursery', t:'2 · Nursery · 育苗（播种 → 定植）', q:['种子从哪里买？什么品种？一包种子几粒、几钱？', '用什么育苗盘、什么介质？', '每天浇几次水？什么时间？', '育苗期要不要施肥、喷药？用什么？', '苗长到多高、几片叶才可以定植？']},
+  {key:'transplant', t:'3 · Transplant · 定植', q:['一包种几棵？', '定植当天怎么做（时间、浇水、遮阴）？', '定植后第一个礼拜要特别注意什么？', '死苗怎么补？']},
+  {key:'growing', t:'4 · Growing → flowering → fruit · 定植 → 开花 → 结果', q:['施肥时间表：第几天、用什么、多少？', '农药 / foliar 时间表：第几天、用什么、多少？', '浇水：一天几次、每次多久？下雨天怎么调？', '修枝、绑绳、搭架怎么做？什么时候做？', '常见病虫害有哪些？看到什么症状要处理？']},
+  {key:'harvest', t:'5 · Harvest · 采收', q:['每个等级（AA、AA Kulit、AA Putih、A、A Kulit、A Putih、B）怎么分？各有什么标准？', '几点开始采？一个工人一天采多少？', '篮子怎么装？一篮几 kg？', 'Leader 怎么报告？谁检查？', '采收期间施肥、喷药怎么调？']},
+  {key:'quality', t:'6 · Quality · 品质', q:['什么原因会变成 Kulit、Putih？', '要怎么预防品质往下掉？', '天气热、下大雨时要怎么做？']},
+  {key:'end', t:'7 · End of season & uproot · 收尾、拔树、换季', q:['什么情况决定拔树？谁决定？', '拔树怎么做？要几天、几个人？', '旧 cocopeat、旧包怎么处理？', '清园、消毒要做什么？', '下一季的苗什么时候开始育？']},
+  {key:'money', t:'8 · Money · 钱'},
+  {key:'records', t:'9 · What to record · 要记录什么', q:['还有什么是我们应该记录、但现在没有记录的？']},
+  {key:'lessons', t:'10 · Lessons · 经验教训', entryOnly:true},
+  {key:'to_check', t:'11 · To check · 待核对', entryOnly:true}
+];
+let KN = [], KN_ERR = '', KN_EDIT = null, KN_DIRTY = false;
+const knLatest = k => KN.find(x => x.section === k);
+const knCount = k => KN.filter(x => x.section === k).length;
+function gapStats(){
+  const by = {}, wd = [0, 0, 0, 0, 0, 0, 0];
+  H.cycles.forEach(c => {
+    const day = {}, aa = {}; nonVoid(c.id).forEach(r => { day[r.date] = (day[r.date] || 0) + r.kg; aa[r.date] = (aa[r.date] || 0) + r.aa; });
+    const ds = Object.keys(day).sort();
+    const k = 1000 / (bagsFor(c) || 1);
+    ds.forEach((d, i) => { wd[new Date(dnum(d) * 864e5).getUTCDay()] += day[d]; if(!i) return; const g = Math.min(3, dnum(d) - dnum(ds[i - 1])); by[g] = by[g] || {n:0, kg:0, aa:0, k1:0}; by[g].n++; by[g].kg += day[d]; by[g].aa += aa[d]; by[g].k1 += day[d] * k; });
+  });
+  return {by, wd, tot:wd.reduce((a, b) => a + b, 0)};
+}
+function kbFacts(key){
+  const B = liveBench()[0], b = B && B.data, R = rates(curCost()), nd = nurseryDays(), ta = turnaroundDays();
+  const M = (H.milestones || []).filter(m => !m.voided_at).sort((a, x) => a.sort - x.sort), ms = c => (M.find(m => m.code === c) || {}).day;
+  const tg = targetOf(H.cycles.find(c => c.status === 'ACTIVE'));
+  const li = xs => '<ul class="kb-ul">' + xs.filter(Boolean).map(x => '<li>' + x + '</li>').join('') + '</ul>';
+  if(key === 'overview'){
+    if(!b) return '<div class="hint">No benchmark yet.</div>';
+    const fh = (nd || 0) + b.first_days, steps = [
+      ['Sow 播种', 0], ['Transplant 定植', nd], ['First harvest 首采', fh], ['Peak week 高峰周', fh + (b.peak_week - 1) * 7], ['Half harvested 收到一半', fh + b.half_week * 7 - 1],
+      ['Last harvest 末采', fh + b.season_weeks_min * 7 - 1], ['Next transplant 下一造定植', ta ? fh + b.season_weeks_max * 7 - 1 + ta.avg : null]].filter(s => s[1] != null);
+    const span = Math.max(...steps.map(s => s[1])) + 5, pos = d => d / span * 100;
+    return `<div class="kb-tl">${[[0, nd, '#DCEFD0', '育苗'], [nd, fh, '#F6E7B8', '长大、开花、结果'], [fh, fh + b.season_weeks_max * 7 - 1, '#F3D2CC', '采收 ' + b.season_weeks_min + '–' + b.season_weeks_max + ' 周'], ta ? [fh + b.season_weeks_max * 7 - 1, fh + b.season_weeks_max * 7 - 1 + ta.avg, '#E6E6E6', '换季'] : null].filter(Boolean).filter(x => x[0] != null && x[1] != null).map(x => `<div class="kb-seg" style="left:${pos(x[0])}%;width:${pos(x[1] - x[0])}%;background:${x[2]}"><span>${x[3]}</span></div>`).join('')}</div>
+      <div class="kb-steps">${steps.map(s => `<div><b>${s[0]}</b><span>第 ${s[1]} 天</span></div>`).join('')}</div>
+      ${li([nd != null ? `育苗 <b>${nd} 天</b>（从真实周期算）` : null, `定植后约 <b>${b.first_days} 天</b>开始收（标杆 v${B.version}）`, `采收 <b>${b.season_weeks_min}–${b.season_weeks_max} 周</b>，第 <b>${b.peak_week}</b> 周最高峰，第 <b>${b.half_week}</b> 周结束时收到一半`,
+        `一包一季约 <b>${fmt(b.total_per_bag, 2)} kg</b>${tg ? `（目标 ${fmt(tg)} kg，做到 ${fmt(b.total_per_bag / tg * 100)}%）` : ''}`, ta ? `末采到下一造定植约 <b>${ta.min}–${ta.max} 天</b>，一块地一整轮约 ${fmt(((b.first_days + b.season_weeks_min * 7) + ta.min) / 30.4, 1)}–${fmt(((b.first_days + b.season_weeks_max * 7) + ta.max) / 30.4, 1)} 个月，一年约 2 季` : null])}`;
+  }
+  if(key === 'land'){
+    if(!R) return '<div class="hint">No cost rates yet.</div>';
+    const items = (R.d.items || []).filter(i => i.kind === 'asset' || i.kind === 'setup').sort((a, x) => x.rm - a.rm);
+    return li([`开新场设园费约 <b>RM ${fmt(R.setup, 2)} / 包</b>（费率 v${R.cp.version}：${esc(R.d.period || '')}，不含押金）`, `例：10,000 包约 RM ${fmt(R.setup * 10000)}`])
+      + `<table class="qt"><thead><tr><th>最大的几项</th><th>每包 RM</th></tr></thead><tbody>${items.slice(0, 6).map(i => `<tr><td>${esc(i.name)}</td><td>${fmt(i.rm / R.basis, 2)}</td></tr>`).join('')}</tbody></table>`;
+  }
+  if(key === 'nursery') return li([nd != null ? `播种到定植 <b>${nd} 天</b>（真实）${ms('TRANSPLANTING') != null ? `；Crops 标准写 ${ms('TRANSPLANTING')} 天` : ''}` : null, ms('GERMINATION') != null ? `发芽：标准第 ${ms('GERMINATION')} 天` : null, b && ta ? `下一季的苗要在<b>末采前后</b>就开始育（育苗 ${nd} 天 + 换季空档 ${ta.min}–${ta.max} 天）` : null]);
+  if(key === 'transplant') return li([b ? `定植那天就是预估的起点：<b>定植日 + ${b.first_days} 天 = 第一次收成</b>` : null, '定植日一定要记在 Farms → Cycles，估计的要勾「estimate」']);
+  if(key === 'growing') return li([b ? `定植后约 ${b.first_days} 天开始收（标杆 v${B.version}）；开花、结果的真实日子见上面「第 1 季实际日期」` : null,
+    M.length ? 'Crops 种植标准（播种后第几天）：' + M.map(m => `${esc(m.name)} ${m.day}`).join(' · ') : null]);
+  if(key === 'harvest'){
+    if(!b) return '';
+    const G = gapStats(), WDN = ['日', '一', '二', '三', '四', '五', '六'];
+    return li([`一周收约 <b>${fmt(b.harvest_days_per_week, 1)} 次</b>`, G.tot ? '一周收成分布：' + G.wd.map((v, i) => v / G.tot > 0.03 ? `星期${WDN[i]} ${fmt(v / G.tot * 100)}%` : null).filter(Boolean).join(' · ') : null,
+      Object.keys(G.by).length ? '收多少看<b>隔了几天</b>：' + Object.entries(G.by).map(([g, x]) => `隔 ${g}${g === '3' ? '+' : ''} 天：每 1,000 包每天约 ${fmt(x.k1 / x.n / Number(g))} kg（${x.n} 次）`).join('；') : null,
+      '要看有没有异常：看「kg ÷ 隔几天」，不要只看当天几 kg'])
+      + `<table class="qt"><thead><tr><th>采收周</th><th>每 1,000 包 kg</th><th>累计</th><th>AA %</th></tr></thead><tbody>${(() => { let c = 0; return b.weeks.map(x => { c += x.kg_per_bag; return `<tr><td>第 ${x.w} 周${x.w === b.peak_week ? '（高峰）' : ''}</td><td>${fmt(x.kg_per_bag * 1000)}</td><td>${fmt(c / b.total_per_bag * 100)}%</td><td ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct) + '%' : '—'}</td></tr>`; }).join(''); })()}</tbody></table>`;
+  }
+  if(key === 'quality'){
+    if(!b) return '';
+    const low = b.weeks.filter(x => x.aa_pct != null && x.aa_pct < 70).map(x => x.w), G = gapStats();
+    return li([`全季 AA 平均 <b>${fmt(b.aa_pct, 1)}%</b>（标杆 v${B.version}）`, low.length ? `AA 低于 70% 的周：第 ${low.join('、')} 周 —— 季中以后品质会往下掉` : null,
+      Object.keys(G.by).length ? '隔几天收跟品质：' + Object.entries(G.by).map(([g, x]) => `隔 ${g}${g === '3' ? '+' : ''} 天 AA ${fmt(x.aa / x.kg * 100)}%`).join('；') + '（差不多，隔久一点没有变差）' : null]);
+  }
+  if(key === 'end'){
+    if(!b) return '';
+    const after = b.weeks.filter(x => x.w > b.peak_week).map(x => x.kg_per_bag).sort((a, x) => a - x), med = after.length ? after[Math.floor(after.length / 2)] : 0;
+    let tf = b.weeks.length + 1; for(let w = b.weeks.length; w > b.peak_week; w--){ if(b.weeks[w - 1].kg_per_bag < med / 2) tf = w; else break; }
+    const tail = b.weeks.filter(x => x.w >= tf), tp = tail.reduce((s, x) => s + x.kg_per_bag, 0) / b.total_per_bag * 100;
+    return li([tail.length ? `最后 ${tail.length} 周（第 ${tf}${tail.length > 1 ? '–' + b.weeks.length : ''} 周）只占全季 <b>${fmt(tp, 1)}%</b>，而且多数是低等级` : null,
+      `拔树参考：每 1,000 包一周少于约 <b>${fmt(med / 2 * 1000)} kg</b> 时，可以考虑拔树换季（要比工钱划不划算）`, ta ? `第 1 季末采到下一造定植 <b>${ta.min}–${ta.max} 天</b>` : null, '拔树日期现在没有记录：以后一定要记']);
+  }
+  if(key === 'money'){
+    if(!R) return '<div class="hint">No cost rates yet.</div>';
+    const y = b ? b.total_per_bag : R.yieldAct, prof = y * R.plPrice - R.total;
+    return li([`每包每季成本 <b>RM ${fmt(R.total, 2)}</b>（经常费用 ${fmt(R.run, 2)} + 折旧 ${fmt(R.dep, 2)}）`, `真实平均卖价 <b>RM ${fmt(R.plPrice, 2)} / kg</b>`,
+      `保本卖价约 <b>RM ${fmt(R.total / y, 2)} / kg</b>；保本产量约 <b>${fmt(R.total / R.plPrice, 2)} kg / 包</b>`, `照标杆产量和真实卖价，每包每季约赚 <b>RM ${fmt(prof, 2)}</b>`,
+      `开新场设园费约 RM ${fmt(R.setup, 2)} / 包`, '要试不同包数、产量、卖价 → <a href="#" onclick="go(\'plan\');return false">Planner</a>；每个场每季赚多少 → <a href="#" onclick="go(\'money\');return false">Money</a>']);
+  }
+  if(key === 'records') return li(['日期：播种、发芽、定植、第一次开花、结果、第一次收成、最后一次收成、<b>拔树</b>（Farms → Cycles）', '每次收成：Leader 表单（日期、场、每个等级几篮 / 几 kg）',
+    '出货单：卖给谁、等级、kg、价钱（Revenue，待做）', '买了什么：cocopeat、肥料、农药、水电、租金，写明哪个场（Costs，待做）', '人工：Salary 系统', '病虫害、天气、施肥改变：什么时候、哪个场、做了什么（Crop Monitoring，待做）']);
+  return '';
+}
+function renderKnow(){
+  const v = $('knowView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  v.innerHTML = `<h1 class="pt">Knowledge · 知识库 <span class="no-print" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn btn-sm" onclick="window.print()">Print</button></span></h1>
+    ${KN_ERR ? `<div class="alert alert-danger"><span>⚠</span><div>Cannot read your notes, <b>no data has been changed</b>. ${esc(KN_ERR)} <button class="btn btn-sm" onclick="loadAll()">Reload</button></div></div>` : ''}
+    <div class="kb-toc no-print">${KB_SECTIONS.map(s => `<a href="#kb_${s.key}" onclick="document.getElementById('kb_${s.key}').scrollIntoView({behavior:'smooth'});return false">${esc(s.t)}${s.q && !knLatest(s.key) ? ' <span class="tag tag-est">to fill</span>' : ''}</a>`).join('')}</div>
+    ${KB_SECTIONS.map(s => kbSection(s)).join('')}
+    <div class="hint" style="margin-top:8px">Numbers on this page come from the benchmark, cost rates, cycles and harvest reports, so they update by themselves. "Our way" boxes are your own notes; every save is kept.</div>`;
+}
+function kbSection(s){
+  const f = s.entryOnly ? '' : kbFacts(s.key), E = knLatest(s.key), n = knCount(s.key), ed = KN_EDIT === s.key;
+  const box = ed ? `<textarea id="kbText" rows="10" style="width:100%" oninput="KN_DIRTY=true" placeholder="${s.q ? esc(s.q.map(x => '· ' + x).join('\n')) : ''}">${esc(E ? E.body : (s.q ? s.q.map(x => '· ' + x + '\n  ').join('\n') : ''))}</textarea>
+      <div class="row-inline" style="margin-top:6px"><button class="btn" onclick="kbCancel()">Cancel</button><button class="btn btn-pri" id="kbSave" onclick="kbSave('${s.key}')">Save</button><span class="hint" id="kbSt"></span></div>
+      <div class="hint">Enter = new line. Every save is kept as a new version.</div>`
+    : E ? `<div class="kb-body">${esc(E.body)}</div><div class="hint">Saved ${esc(String(E.created_at).slice(0, 16).replace('T', ' '))}${n > 1 ? ` · <a href="#" onclick="kbHistory('${s.key}');return false">${n} versions</a>` : ''}</div>`
+    : s.q ? `<div class="kb-q"><b>还没填。要回答：</b><ul class="kb-ul">${s.q.map(x => '<li>' + esc(x) + '</li>').join('')}</ul></div>` : '<div class="hint">Nothing yet.</div>';
+  const label = s.entryOnly ? '' : '<div class="kb-lbl">Our way · 我们的做法</div>';
+  return `<div class="card kb-sec" id="kb_${s.key}"><div class="card-title">${esc(s.t)}</div>
+    ${f ? `<div class="kb-lbl">From our data · 我们的数据</div>${f}` : ''}
+    ${s.q || s.entryOnly ? `${label}${box}${ed ? '' : `<div class="no-print" style="margin-top:6px"><button class="btn btn-sm" onclick="kbEdit('${s.key}')">${E ? 'Edit' : 'Fill in'}</button></div>`}` : ''}</div>`;
+}
+function kbEdit(k){
+  if(KN_EDIT && KN_EDIT !== k && KN_DIRTY && !confirmLeave()) return;
+  KN_EDIT = k; KN_DIRTY = false; renderKnow();
+  const el = $('kbText'); if(el){ el.focus(); document.getElementById('kb_' + k).scrollIntoView({block:'center'}); }
+}
+function kbCancel(){ if(KN_DIRTY && !confirmLeave()) return; KN_EDIT = null; KN_DIRTY = false; renderKnow(); }
+async function kbSave(k){
+  const t = $('kbText').value, st = $('kbSt'), btn = $('kbSave');
+  if(!t.trim()){ st.textContent = 'Write something first'; return; }
+  btn.disabled = true; st.textContent = 'Saving…';
+  const {error} = await sb.rpc('harvest_owner_knowledge_save', {p_section:k, p_body:t});
+  btn.disabled = false;
+  if(error){ st.innerHTML = `<span class="neg">Not saved — your text is still here. ${esc(nice(error))}</span>`; return; }
+  KN_EDIT = null; KN_DIRTY = false; toast('✓ Saved'); await loadAll(); go('know');
+  const el = document.getElementById('kb_' + k); if(el) el.scrollIntoView({block:'center'});
+}
+function kbHistory(k){
+  const xs = KN.filter(x => x.section === k), s = KB_SECTIONS.find(x => x.key === k);
+  openModal(s ? s.t : k, xs.map((x, i) => `<div class="mg-line"><b>${esc(String(x.created_at).slice(0, 16).replace('T', ' '))}</b>${i === 0 ? ' · current' : ''}</div><div class="kb-body" style="margin-bottom:12px">${esc(x.body)}</div>`).join(''), `<button class="btn" onclick="closeModal()">Close</button>`);
+}
+window.addEventListener('beforeunload', e => { if(KN_DIRTY){ e.preventDefault(); e.returnValue = ''; } });
+
 /* ══════ Reports ══════ */
 function cycleText(id){ const c = cycleOf(id); return c ? 'Season ' + c.cycle_no : '<span class="hint">—</span>'; }
 function stBadge(s){ return s === 'CONFIRMED' ? '<span class="badge b-active">Confirmed</span>' : s === 'PENDING' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-void">Voided</span>'; }
@@ -1418,7 +1564,7 @@ async function renderManage(){
 function exportAll(){
   if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
   const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
-  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH, prices:PRICES, cost_rates:COSTS, plans:PLANS}};
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH, prices:PRICES, cost_rates:COSTS, plans:PLANS, knowledge:KN}};
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
   a.download = `Harvest_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('✓ Backup downloaded');
 }
