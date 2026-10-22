@@ -1031,8 +1031,9 @@ function renderHome(){
   const F = {sow:0, tp:msOff('TRANSPLANTING'), fl:msOff('FLOWERING'), fr:msOff('FRUIT_SET'), h1:msOff('HARVEST_1'), pk:msOff('PEAK_START'), st:msOff('PEAK_END'), end:msOff('CYCLE_END')};
   const dd2 = (a, z) => a != null && z != null ? z - a : null, du = v => v == null ? '—' : v + ' days';
   const dLast = F.end;
-  const tim = [ du(dd2(F.sow, F.tp)), '1 day', du(dd2(F.tp, F.fl)), du(dd2(F.fl, F.fr)), du(dd2(F.fr, F.h1)),
-    du(dd2(F.h1, F.pk)), du(dd2(F.pk, F.st)), du(dd2(F.st, F.end)), '—', 'Uproot · clear'];
+  const tpo = x => x != null && F.tp != null ? 'TP +' + (x - F.tp) + 'd' : '—';
+  const tim = [ du(dd2(F.sow, F.tp)), '1 day', `TP +0–${F.fl != null && F.tp != null ? F.fl - F.tp : '?'}d`, tpo(F.fl), tpo(F.fr),
+    `Week 1–${R.pk - 1}`, `Week ${R.pk}`, R.tail - 1 > R.pk ? `Week ${R.pk + 1}–${R.tail - 1}` : `Week ${R.pk + 1}`, R.tail < R.wk ? `Week ${R.tail}–${R.wk}` : `Week ${R.wk}`, 'Uproot · clear'];
   let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)}</span></h1>
   <div class="sec-t">1 · Where each farm is now</div>
   <div class="cy-tot"><div class="cy-all"><small>One season (standard) · sowing → last harvest</small><b>${dLast} days</b><em>≈ ${fmt(dLast / 30.4, 1)} months · Season 1 actual: 180–196 days</em></div></div>
