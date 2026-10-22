@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v6</title>
+<title>Harvest v7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -177,6 +177,32 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .fm-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
 .fm-g>div{background:var(--sur2,#F6F4EF);border-radius:10px;padding:9px 12px}.fm-g small{display:block;font-size:11px;color:var(--mut)}
 .fm-g b{font-size:18px;font-variant-numeric:tabular-nums}.fm-g .d{font-size:12px;color:var(--mut);margin-top:2px}.fm-g .d b{font-size:12px}
+/* v7 Overview: Fig 1 cycle map + Fig 2 on-track */
+.cy-wrap{overflow-x:auto;padding:12px;background:var(--sur);border:.5px solid var(--bdr);border-radius:14px}
+.cy{display:grid;grid-template-columns:150px repeat(10,minmax(88px,1fr));gap:6px;min-width:1060px}
+.cy-st{border-radius:12px;padding:8px 8px 9px;border:1px solid rgba(0,0,0,.05)}
+.cy-st i{font-style:normal;font-size:24px;line-height:1;display:block}
+.cy-st b{display:block;font-size:14px;line-height:1.2;margin-top:4px}.cy-st small{display:block;font-size:11px;color:#555;line-height:1.25}
+.cy-st em{display:block;font-style:normal;font-size:12px;font-weight:700;margin-top:4px;color:#3a3a3a}
+.cy-n{font-size:10px;font-weight:800;color:#6b5b2d;letter-spacing:.04em}
+.s1{background:#EAF6E7}.s2{background:#DFEEDA}.s3{background:#E4F3DA}.s4{background:#EEF5C8}.s5{background:#F9ECC6}.s6{background:#FBE1B7}.s7{background:#F9D6BC}.s8{background:#F6D8D3}.s9{background:#EED9D8}.s10{background:#ECECEC}
+.cy-f{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:6px solid var(--c);border-radius:8px;background:#FBFAF6;position:sticky;left:0;z-index:3;box-shadow:4px 0 6px -4px rgba(0,0,0,.15)}
+@media (max-width:640px){.cy{grid-template-columns:96px repeat(10,minmax(84px,1fr))}.cy-f b{font-size:14px}.cy-f small{font-size:10px}}
+.cy-f b{font-size:16px}.cy-f small{font-size:11px;color:var(--mut)}
+.cy-tr{grid-column:2 / span 10;position:relative;height:58px;border-radius:10px;background:repeating-linear-gradient(90deg,#F4F2EC 0,#F4F2EC calc(10% - 6px),#fff calc(10% - 6px),#fff 10%)}
+.cy-fill{position:absolute;left:0;top:24px;height:10px;border-radius:5px;background:var(--c);opacity:.35}
+.cy-pin{position:absolute;top:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;white-space:nowrap}
+.cy-pin span{background:var(--c);color:#fff;font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.cy-pin s{text-decoration:none;font-size:11px;color:#444;margin-top:3px;background:rgba(255,255,255,.85);padding:0 4px;border-radius:4px}
+.ot{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ot-c{background:var(--sur);border:.5px solid var(--bdr);border-top:6px solid var(--c);border-radius:14px;padding:12px 14px}
+.ot-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.ot-h b{font-size:17px}
+.ot-s{display:inline-block;font-weight:800;font-size:15px;padding:6px 12px;border-radius:999px;margin:8px 0 4px}
+.ot-ok{background:#E1F5EE;color:var(--ok)}.ot-up{background:#DCEFFB;color:var(--info)}.ot-dn{background:#FBE3E3;color:var(--danger)}.ot-wait{background:#F1EFE8;color:#555}
+.ot-ch{height:130px;margin:6px 0}
+.ot-n{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ot-n div{background:#F6F4EF;border-radius:10px;padding:7px 9px}
+.ot-n small{display:block;font-size:11px;color:var(--mut)}.ot-n b{font-size:16px;font-variant-numeric:tabular-nums;display:block}.ot-n em{font-style:normal;font-size:11px;color:var(--mut)}
+details.ov-more{margin-top:18px}details.ov-more>summary{cursor:pointer;font-weight:700;font-size:15px;padding:8px 0}
 .pr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pr-grid label{font-size:12px;color:var(--mut)}.pr-grid input{width:100%}
 .ms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:12px}
 .ms .stat b{font-size:17px}.ms .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
@@ -227,7 +253,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v6</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v7</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -237,7 +263,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v6</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v7</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
     <button class="ntab" data-p="plan" onclick="go('plan')">Planner</button>
@@ -357,7 +383,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -368,7 +394,7 @@ let sb = null, ME = null, LOADED = false, lastErr = '', loadedAt = null, chart =
 const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], reports:[] };
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
-let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null, hchart = null, PRICES = [], PRICE_ERR = '';
+let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null, hchart = null, OCH = [], PRICES = [], PRICE_ERR = '';
 let COSTS = [], COST_ERR = '', PLANS = [], PLAN_ERR = '', MONEY = {price:'pl', farm:'', st:'', view:'money', ver:null, draft:null, dirty:false}, PIN = null, PLAN_FROM = null;
 
 const $ = id => document.getElementById(id);
@@ -889,8 +915,124 @@ function dailyFc(P, d){
   return bw ? bw.kg_per_bag * P.F.bags * P.pace / 7 : 0;
 }
 function splitTxt(kg){ return `Sun / Tue / Thu ≈ ${fmt(kg * 2 / 7)} kg each · Fri ≈ ${fmt(kg / 7)} kg`; }
+/* ---------- v7 Overview: Fig 1 (cycle map) + Fig 2 (on track?) ---------- */
+const CY_ST = [
+  {i:'🏗️', en:'Setup', zh:'设园准备'}, {i:'🌱', en:'Nursery', zh:'育苗'}, {i:'🪴', en:'Transplant', zh:'定植'},
+  {i:'🌿', en:'Growing', zh:'营养生长'}, {i:'🌼', en:'Flowering', zh:'开花'}, {i:'🍆', en:'Fruit set', zh:'结果'},
+  {i:'🧺', en:'First harvest', zh:'首采'}, {i:'📈', en:'Peak', zh:'高峰采收'}, {i:'📉', en:'Harvest → tail', zh:'持续 / 尾采'}, {i:'🧹', en:'Changeover', zh:'拔树换季'}];
+function msOff(code){ const pid = (H.protocols[0] || {}).id; const m = (H.milestones || []).find(x => !x.voided_at && x.code === code && (!pid || x.protocol_id === pid)) || (H.milestones || []).find(x => !x.voided_at && x.code === code); return m ? Number(m.day) : null; }
+function cyRules(b){
+  const tp = msOff('TRANSPLANTING'), fl = msOff('FLOWERING'), fr = msOff('FRUIT_SET'), tn = turnaroundDays();
+  return {nur: nurseryDays() ?? tp, flow: fl != null && tp != null ? fl - tp : null, fruit: fr != null && tp != null ? fr - tp : null,
+    fd: b.first_days, pk: b.peak_week, wk: b.season_weeks_max, turn: tn ? tn.avg : null};
+}
+/* stage start dates for one cycle (index 1..9 start, plus end) */
+function cyBounds(c, b, R){
+  const rs = nonVoid(c.id), tp = c.transplant_date, sow = c.sowing_date || (tp && R.nur != null ? addDays(tp, -R.nur) : null);
+  if(!tp) return null;
+  const fh = rs.length ? rs[0].date : addDays(tp, R.fd);
+  const cl = x => x < tp ? tp : x > fh ? fh : x;
+  let g = addDays(tp, 7), fl = R.flow != null ? addDays(tp, R.flow) : null, fr = R.fruit != null ? addDays(tp, R.fruit) : null;
+  g = cl(g); fl = fl ? cl(fl) : g; if(fl < g) fl = g; fr = fr ? cl(fr) : fl; if(fr < fl) fr = fl;
+  const pkS = addDays(fh, 7 * (R.pk - 1)), pkE = addDays(fh, 7 * R.pk);
+  const end = c.status === 'CLOSED' && c.actual_end ? c.actual_end : addDays(fh, 7 * R.wk);
+  const next = H.cycles.find(x => x.block_id === c.block_id && x.cycle_no === c.cycle_no + 1);
+  const chE = next && next.transplant_date ? next.transplant_date : addDays(end, R.turn || 28);
+  return {sow, tp, fh, starts:[null, sow, tp, g, fl, fr, fh, pkS, pkE < end ? pkE : end, end], end:chE, rs, harvesting: rs.length > 0};
+}
+function cyPos(B, t){
+  const st = B.starts, ends = [...st.slice(2), B.end];
+  if(!st[1] || t < st[1]) return {s:0, f:1, x:10};
+  for(let i = 9; i >= 1; i--){ const a = st[i]; if(a && t >= a){ const e = ends[i - 1]; const span = Math.max(1, dnum(e) - dnum(a)); const f = Math.min(1, (dnum(t) - dnum(a)) / span); return {s:i, f, x:(i + f) * 10}; } }
+  return {s:0, f:1, x:10};
+}
+function cyFarms(b, R){
+  const out = [];
+  H.blocks.forEach(bl => {
+    const cs = H.cycles.filter(c => c.block_id === bl.id).sort((x, y) => y.cycle_no - x.cycle_no); if(!cs.length) return;
+    const c = cs.find(x => x.status === 'ACTIVE') || cs[0], f = farmOf(bl.farm_id);
+    const multi = H.blocks.filter(x => x.farm_id === bl.farm_id && H.cycles.some(c2 => c2.block_id === x.id)).length > 1;
+    const B = cyBounds(c, b, R); if(!B) return;
+    out.push({c, B, farm:f.code + (multi ? ' · ' + bl.code : ''), col:FARM_COLOR[f.code] || '#555', bags:bagsFor(c)});
+  });
+  return out.sort((a, b) => a.farm.localeCompare(b.farm));
+}
+function cyPin(F, t){
+  const B = F.B, P = cyPos(B, t), d = dnum(t);
+  const dTp = d - dnum(B.tp), wk = Math.floor((d - dnum(B.fh)) / 7) + 1;
+  let big, small;
+  if(P.s === 1){ big = 'Day ' + (d - dnum(B.sow)); small = 'transplant ≈ ' + dShort(B.tp); }
+  else if(P.s >= 2 && P.s <= 5){ big = 'TP +' + dTp + 'd'; small = '1st harvest ≈ ' + dShort(B.fh) + ' (' + Math.max(0, dnum(B.fh) - d) + ' days)'; }
+  else if(P.s >= 6 && P.s <= 8){ big = 'Week ' + wk; small = 'ends ≈ ' + dShort(B.starts[9]); }
+  else { big = 'Changeover'; small = 'next transplant ≈ ' + dShort(B.end); }
+  return {P, big, small};
+}
 function renderHome(){
   const v = $('homeView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const B0 = liveBench()[0];
+  if(!B0){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
+  const b = B0.data, R = cyRules(b), t = today(), td = new Date(dnum(t) * 864e5);
+  const FS = cyFarms(b, R);
+  const tim = [ 'Before', `Day 0–${R.nur ?? '?'}`, `Day ${R.nur ?? '?'}`, `TP +0–${R.flow ?? '?'}d`, `TP +${R.flow ?? '?'}d`, `TP +${R.fruit ?? '?'}d`,
+    `TP +${R.fd}d · wk 1–${R.pk - 1}`, `Week ${R.pk}`, `Week ${R.pk + 1}–${R.wk}`, R.turn ? `≈ ${R.turn} days` : '—'];
+  let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)}</span></h1>
+  <div class="sec-t">1 · Where each farm is now</div>
+  <div class="cy-wrap"><div class="cy">
+    <div></div>${CY_ST.map((s, i) => `<div class="cy-st s${i + 1}"><div class="cy-n">STAGE ${pad(i + 1)}</div><i>${s.i}</i><b>${s.en}</b><small>${s.zh}</small><em>${tim[i]}</em></div>`).join('')}
+    ${FS.map(F => { const p = cyPin(F, t); return `<div class="cy-f" style="--c:${F.col}"><b>${esc(F.farm)}</b><small>Season ${F.c.cycle_no} · ${fmt(F.bags)} bags</small></div>
+      <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
+      <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div></div>`; }).join('')}
+  </div></div>
+  ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
+  <div class="sec-t">2 · On track? (vs benchmark v${B0.version})</div>
+  <div class="ot">`;
+  const cost = rates(curCost()), money = hasPrice();
+  const act = FS.filter(F => F.c.status === 'ACTIVE');
+  const P = act.map(F => ({F, X: farmPlan(F.c, b)})).filter(x => x.X);
+  P.forEach(({F, X}) => {
+    const fc = X.F, started = !!fc.actFirst, d = dnum(t);
+    let cls = 'ot-wait', txt;
+    if(!started) txt = `Not harvesting yet · 1st ≈ ${dShort(fc.start)} (${Math.max(0, dnum(fc.start) - d)} days)`;
+    else if(fc.done < 2) txt = `Too early · harvest week ${X.cur ? X.cur.w : 1}`;
+    else { const r = fc.ratio; cls = r >= 1.1 ? 'ot-up' : r >= 0.9 ? 'ot-ok' : 'ot-dn'; txt = (r >= 1.1 ? '▲ Ahead ' : r >= 0.9 ? '✓ On track ' : '▼ Behind ') + fmt(r * 100) + '%'; }
+    const pk = money ? X.rpk.v : (cost ? cost.plPrice : 0);
+    const perBag = X.projTotal / fc.bags;
+    const nx = started ? X.nxt : fc.rows[0];
+    h += `<div class="ot-c" style="--c:${F.col}" data-farm="${esc(F.farm)}">
+      <div class="ot-h"><b>${esc(F.farm)} · Season ${F.c.cycle_no}</b><span class="hint">${fmt(fc.bags)} bags</span></div>
+      <div class="ot-s ${cls}">${txt}</div>
+      <div class="ot-ch"><canvas></canvas></div>
+      <div class="ot-n">
+        <div><small>Harvested</small><b>${fmt(X.soFar)} kg</b><em>${fmt(X.soFar / fc.bags, 2)} kg / bag</em></div>
+        <div><small>${started ? 'Next week' : 'First week'}</small><b>${nx ? fmt(nx.bk * X.pace) + ' kg' : '—'}</b><em>${nx ? dShort(nx.from) + '–' + dShort(nx.to) : ''}</em></div>
+        <div><small>Whole season</small><b>${pk ? rm(X.projTotal * pk) : fmt(X.projTotal) + ' kg'}</b><em>${fmt(perBag, 2)} kg / bag${fc.tg ? ' · <b style="font-size:11px;color:' + (perBag / fc.tg < 0.9 ? 'var(--danger)' : 'var(--ok)') + '">' + fmt(perBag / fc.tg * 100) + '% of ' + fmt(fc.tg) + ' kg</b>' : ''}</em></div>
+      </div></div>`;
+  });
+  h += `</div>
+  <div class="hint" style="margin-top:6px">Grey = benchmark (Season 1) · dashed = target ${P[0] && P[0].X.F.tg ? fmt(P[0].X.F.tg) + ' kg / bag' : ''} · colour = actual. Money = expected kg × ${money ? 'your grade prices' : (cost ? 'RM ' + fmt(cost.plPrice, 2) + ' / kg (FY 2025/26 average)' : 'no price yet')}.</div>
+  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
+  v.innerHTML = h;
+  const cw = v.querySelector('.cy-wrap'), pins = [...v.querySelectorAll('.cy-pin')];
+  if(cw && pins.length && cw.scrollWidth > cw.clientWidth){ const L = Math.min(...pins.map(e => e.offsetLeft + e.parentElement.offsetLeft)); cw.scrollLeft = Math.max(0, L - 260); }
+  OCH.forEach(c => c.destroy()); OCH = [];
+  if(window.Chart){
+    const cards = v.querySelectorAll('.ot-c canvas');
+    P.forEach(({F, X}, i) => {
+      const fc = X.F, n = fc.rows.length, lab = fc.rows.map(r => 'W' + r.w);
+      const bench = fc.rows.map(r => r3(r.bc / fc.bags)), tgt = fc.rows.map(r => r.tc ? r3(r.tc / fc.bags) : null);
+      const actual = fc.rows.map(r => r.ac != null ? r3(r.ac / fc.bags) : null);
+      OCH.push(new Chart(cards[i], {type:'line', data:{labels:lab, datasets:[
+        {data:bench, borderColor:'#B9B4A8', borderWidth:2, pointRadius:0, tension:.25},
+        {data:tgt, borderColor:'#0F6E56', borderWidth:1.5, borderDash:[4, 4], pointRadius:0, tension:.25},
+        {data:actual, borderColor:F.col, backgroundColor:F.col + '22', fill:true, borderWidth:3, pointRadius:0, tension:.25}]},
+        options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:x => ' ' + ['Benchmark', 'Target', 'Actual'][x.datasetIndex] + ': ' + fmt(x.parsed.y, 2) + ' kg / bag'}}},
+          scales:{x:{ticks:{font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:9}, grid:{display:false}}, y:{beginAtZero:true, ticks:{font:{size:9}, maxTicksLimit:4}}}}}));
+    });
+  }
+}
+function renderHomeDetail(){
+  const v = $('homeDetail'); if(!v) return;
   if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
   const B = liveBench()[0];
   if(!B){ v.innerHTML = `<h1 class="pt">Overview</h1><div class="card empty">${BENCH_ERR ? esc(BENCH_ERR) : 'No benchmark yet. Make one in the Benchmark tab.'}</div>`; return; }
@@ -902,8 +1044,7 @@ function renderHome(){
   const rmW = which => plans.reduce((s, P) => s + sumW(P, which) * P.rpk.v, 0);
   const leftAll = plans.reduce((s, P) => s + P.left, 0), leftRM = plans.reduce((s, P) => s + P.left * P.rpk.v, 0);
   const miss = [...new Set(plans.flatMap(P => P.rpk.miss))];
-  let h = `<h1 class="pt">Overview <span class="hint" style="font-size:13px;font-weight:400">Today ${WD[td.getUTCDay()]} ${dLong(t)} · benchmark v${B.version}</span></h1>
-  <div class="ov-top">
+  let h = `<div class="ov-top">
     <div class="stat"><small>This harvest week · all farms</small><b>${fmt(thisWk)} kg</b><div class="d">${money ? rm(rmW('cur')) + ' at your prices' : 'Set prices below to see RM'}</div></div>
     <div class="stat"><small>Next harvest week · all farms</small><b>${fmt(nextWk)} kg</b><div class="d">${money ? rm(rmW('nxt')) : ''}</div></div>
     <div class="stat"><small>Still to harvest this season · all farms</small><b>${fmt(leftAll)} kg</b><div class="d">${money ? rm(leftRM) : ''}</div></div>
