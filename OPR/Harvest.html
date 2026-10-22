@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v21</title>
+<title>Harvest v22</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -196,6 +196,7 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-pin span{background:var(--c);color:#fff;font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
 .cy-pin s{text-decoration:none;font-size:11px;color:#444;margin-top:3px;background:rgba(255,255,255,.85);padding:0 4px;border-radius:4px}
 .cy-f.trial{border-left-style:dashed;background:#F7F3FB;cursor:pointer}.cy-f.trial:hover{background:#EFE6F8}.cy-f.trial b::before{content:'Trial · ';font-size:11px;font-weight:700;color:#6A3FB5}
+.cy-f.trial{position:sticky}.tf-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:1px solid #CDBDE6;background:#fff;color:#6A3FB5;font-size:12px;line-height:20px;padding:0;cursor:pointer}.tf-x:hover{background:#C62828;border-color:#C62828;color:#fff}
 .cy-tr.trial{background:repeating-linear-gradient(90deg,#F6F2FA 0,#F6F2FA calc(10% - 6px),#fff calc(10% - 6px),#fff 10%);outline:1.5px dashed #B9A3DA;outline-offset:-1px}
 .cy-tr.trial .cy-fill{background:repeating-linear-gradient(90deg,var(--c) 0 8px,transparent 8px 13px);opacity:.55}
 .cy-mk.mk-std b{color:#5b4a86}.cy-mk.mk-std small{color:#8a7bb0}.cy-dot.mk-std{background:#fff;border-color:#8a7bb0}
@@ -307,7 +308,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v21</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v22</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -317,7 +318,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v21</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v22</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -441,7 +442,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1087,7 +1088,7 @@ function trialRow(T, O, t){
   else { const p = cyPin({B}, t); big = p.big; small = p.small; x = p.P.x; }
   const tags = [[0, B.sow, 'D0'], [1, B.tp, 'D' + O.tp], [5, B.fh, 'D' + O.h1], [9, B.hEnd, 'D' + O.end]]
     .map(([i, d, l]) => `<div class="cy-dot mk-std" style="left:${i * 10}%"></div><div class="cy-mk mk-std${i === 0 ? ' first' : ''}" style="left:${i * 10}%"><b>${dShort(d)}</b><small>${l}</small></div>`).join('');
-  return `<div class="cy-f trial" style="--c:${col}" onclick="trialEdit(${T.id})" title="Click to change or remove"><b>${esc(T.name)}</b><small>Sow ${dLong(T.sowing_date)} · ${fmt(T.bags)} bags</small></div>
+  return `<div class="cy-f trial" style="--c:${col}" onclick="trialEdit(${T.id})" title="Click to change"><button class="tf-x" title="Remove this trial farm" onclick="event.stopPropagation();trialDrop(${T.id})">✕</button><b>${esc(T.name)}</b><small>Sow ${dLong(T.sowing_date)} · ${fmt(T.bags)} bags</small></div>
     <div class="cy-tr trial" style="--c:${col}" data-trial="${T.id}"><div class="cy-fill" style="width:${x}%"></div>
     <div class="cy-pin" style="left:${t < B.sow ? 25 : Math.min(96, Math.max(4, x))}%"><span>${esc(big)}</span><s>${esc(small)}</s></div>${tags}</div>`;
 }
@@ -1161,9 +1162,8 @@ function trialEdit(id, sow, bags){
     <div style="align-self:flex-end"><button class="btn" onclick="trialSuggest(${id || 'null'})">Suggest best date</button></div></div>
     <div id="tfSug" class="hint" style="margin-top:6px"></div>
     <label class="hint" style="margin-top:8px;display:block">Note</label><input id="tfNote" style="width:100%" value="${esc(T.note || '')}" placeholder="e.g. land near AD 2, 3 acres">
-    ${id ? '<div style="margin-top:12px;border-top:1px solid #eee;padding-top:10px"><label class="hint">Remove · why</label><input id="tfWhy" style="width:100%" placeholder="e.g. not opening this farm"></div>' : ''}
     <div class="alert alert-danger" id="merr" style="display:none"></div>`,
-    `${id ? `<button class="btn btn-danger" onclick="trialVoid(${id})">Remove</button>` : ''}<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="trialSave(${id || 'null'})">Save</button>`);
+    `${id ? `<button class="btn btn-danger" onclick="closeModal();trialDrop(${id})">Remove</button>` : ''}<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="trialSave(${id || 'null'})">Save</button>`);
 }
 function trialSuggest(id){
   const B0 = liveBench()[0], O = stdOff(); if(!B0 || !O) return;
@@ -1178,11 +1178,10 @@ async function trialSave(id){
   if(error) return merr('Not saved. ' + nice(error));
   closeModal(); toast('✓ Trial farm saved'); await loadAll();
 }
-async function trialVoid(id){
-  const why = ($('tfWhy').value || '').trim(); if(!why) return merr('Write why this trial farm is removed');
-  const {error} = await sb.rpc('harvest_owner_trial_void', {p_id:id, p_reason:why});
-  if(error) return merr('Not removed. ' + nice(error));
-  closeModal(); toast('✓ Trial farm removed'); await loadAll();
+async function trialDrop(id){
+  const {error} = await sb.rpc('harvest_owner_trial_void', {p_id:id, p_reason:'Removed from Overview'});
+  if(error) return toast('Not removed. ' + nice(error));
+  toast('✓ Trial farm removed'); await loadAll();
 }
 function renderHome(){
   const v = $('homeView');
