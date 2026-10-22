@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v11</title>
+<title>Harvest v12</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -283,7 +283,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v11</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v12</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -293,7 +293,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v11</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v12</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -417,7 +417,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -968,7 +968,9 @@ function msOff(code){ const pid = curProto().id; const m = (H.milestones || []).
 function cyRules(b){
   const tp = msOff('TRANSPLANTING'), fl = msOff('FLOWERING'), fr = msOff('FRUIT_SET'), tn = turnaroundDays();
   return {nur: nurseryDays() ?? tp, flow: fl != null && tp != null ? fl - tp : null, fruit: fr != null && tp != null ? fr - tp : null,
-    fd: b.first_days, pk: b.peak_week, tail: tailWeek(b), wk: b.season_weeks_max, turn: tn ? tn.avg : null, tlMin: b.tp_to_last_min, tlMax: b.tp_to_last_max};
+    fd: b.first_days, pk: b.peak_week,
+    tail: (msOff('TAIL_START') != null && msOff('HARVEST_1') != null) ? Math.floor((msOff('TAIL_START') - msOff('HARVEST_1')) / 7) + 1 : tailWeek(b),
+    wk: (msOff('CYCLE_END') != null && msOff('HARVEST_1') != null) ? Math.floor((msOff('CYCLE_END') - msOff('HARVEST_1')) / 7) : b.season_weeks_max, turn: tn ? tn.avg : null, tlMin: b.tp_to_last_min, tlMax: b.tp_to_last_max};
 }
 /* stage start dates for one cycle (index 0..9 = CY_ST, plus end of changeover) */
 function cyBounds(c, b, R){
