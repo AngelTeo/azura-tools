@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v28</title>
+<title>Harvest v29</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -213,6 +213,8 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .hv-c.next i{background:repeating-linear-gradient(45deg,var(--c) 0 3px,transparent 3px 6px)}.hv-c.trial i{outline:1.5px dashed #4B2C86;outline-offset:-1px}
 .hv-c.now{box-shadow:inset 2px 0 0 #222}
 .hv-t{height:64px;display:flex;align-items:flex-end;justify-content:center}.hv-t i{width:13px;border-radius:3px 3px 0 0;background:#8B6B2E}.hv-t.clash i{background:#C62828}.hv-t.gap{background:repeating-linear-gradient(0deg,#fff 0 4px,#F2D7D5 4px 6px)}
+.mn-std{background:var(--sur);border:.5px solid var(--bdr);border-top:6px solid #8B6B2E;border-radius:14px;padding:12px 14px;margin:0 0 4px}.mn-h{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.mn-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.mn-g small{display:block;color:var(--mut);font-size:11.5px}.mn-g b{display:block;font-size:19px}.mn-g em{display:block;font-style:normal;font-size:11px;color:var(--mut)}.mn-g .be{background:#FBEFEA;border-radius:10px;padding:6px 8px}
 .tk-tabs{display:flex;gap:6px;margin:0 0 12px}.tk-tabs button{border:1px solid var(--bdr);background:var(--sur);border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;font-size:14px}.tk-tabs button.on{background:var(--layer);color:#fff;border-color:var(--layer)}
 .hb{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto}
 .hb-d{border-radius:12px;padding:10px;border:1px solid var(--bdr);background:var(--sur);display:flex;flex-direction:column;gap:7px}
@@ -318,7 +320,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v28</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v29</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -328,7 +330,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v28</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v29</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -381,8 +383,8 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
         <button data-v="day" onclick="setOpt('m','day')">Each harvest</button>
         <button data-v="week" onclick="setOpt('m','week')">Per 7 days</button></div></div>
       <div class="grp"><span>Unit</span><div class="seg" id="segU">
-        <button data-v="kg" class="on" onclick="setOpt('u','kg')">kg</button>
-        <button data-v="bag" onclick="setOpt('u','bag')">kg per 1,000 bags</button></div></div>
+        <button data-v="kg" class="on" onclick="setOpt('u','kg')">Baskets</button>
+        <button data-v="bag" onclick="setOpt('u','bag')">Baskets per 10,000 bags</button></div></div>
       <div class="grp" id="grpDates" style="display:none"><span>Dates</span><div class="row-inline"><input type="date" id="dFrom" onchange="renderCompare()"><input type="date" id="dTo" onchange="renderCompare()"></div></div>
       <label class="chk" id="grpSame"><input type="checkbox" id="sameDays" checked onchange="renderCompare()"> Same days only</label>
       <label class="chk"><input type="checkbox" id="onlyConfirmed" onchange="renderCompare()"> Confirmed only</label>
@@ -403,7 +405,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
   <!-- Forecast -->
   <div class="page" id="page-forecast">
-    <h1 class="pt">Forecast vs actual</h1>
+    <h1 class="pt">Forecast · compared with Season 1 <span class="hint" style="font-size:13px;font-weight:400">Are we doing better or worse than last time? (the target is in Tracking)</span></h1>
     <div class="row-inline" style="margin-bottom:12px">
       <select id="fcCycle" onchange="renderForecast()" style="max-width:240px"></select>
       <select id="fcBench" onchange="renderForecast()" style="max-width:280px"></select>
@@ -453,7 +455,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 28;
+const APP_VERSION = 29;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -624,7 +626,7 @@ function axisKeys(S){
   for(let d = from; d <= to; d = addDays(d, 1)) out.push(d); return out;
 }
 function valuesFor(s, keys){
-  const div = OPT.u === 'bag' && s.bags ? s.bags / 1000 : 1;
+  const div = (OPT.u === 'bag' && s.bags ? s.bags / 10000 : 1) * 30;   /* baskets (30 kg), or baskets per 10,000 polybags */
   let cum = 0; const raw = keys.map(k => s.pts[k] || 0);
   return keys.map((k, i) => {
     if(OPT.m === 'cum'){ cum += raw[i]; const lastKey = OPT.x === 'day' ? Math.max(...Object.keys(s.pts).map(Number)) : Object.keys(s.pts).sort().pop(); return (OPT.x === 'day' ? k > lastKey : k > lastKey) ? null : cum / div; }
@@ -646,11 +648,11 @@ function renderCompare(){
     label: s.label, data: valuesFor(s, keys), borderColor: FARM_COLOR[s.farm] || '#555', backgroundColor: FARM_COLOR[s.farm] || '#555',
     borderDash: s.season > 1 && OPT.x === 'day' ? [7, 5] : [], borderWidth: 2.5, pointRadius: OPT.m === 'day' ? 3 : 0, pointHoverRadius: 5, spanGaps: true, tension: .15
   }));
-  const yTitle = (OPT.m === 'cum' ? 'Total so far' : OPT.m === 'week' ? 'Last 7 days' : 'Each harvest') + (OPT.u === 'bag' ? ' (kg per 1,000 bags)' : ' (kg)');
+  const yTitle = (OPT.m === 'cum' ? 'Total so far' : OPT.m === 'week' ? 'Last 7 days' : 'Each harvest') + (OPT.u === 'bag' ? ' (baskets per 10,000 polybags)' : ' (baskets)');
   const xTitle = OPT.x === 'day' ? (OPT.from === 'tp' ? 'Day after transplant' : 'Day of harvest season (day 1 = first harvest)') : 'Date';
   const labels = OPT.x === 'day' ? keys.map(String) : keys.map(dShort);
   const cfg = { type:'line', data:{labels, datasets:ds}, options:{ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
-    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title: it => OPT.x === 'day' ? 'Day ' + it[0].label : dLong(keys[it[0].dataIndex]), label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y, OPT.u === 'bag' ? 1 : 0)}` } } },
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title: it => OPT.x === 'day' ? 'Day ' + it[0].label : dLong(keys[it[0].dataIndex]), label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} baskets` } } },
     scales:{ x:{ title:{display:true, text:xTitle}, ticks:{maxTicksLimit:14, autoSkip:true} }, y:{ beginAtZero:true, title:{display:true, text:yTitle}, ticks:{ callback: v => fmt(v) } } } } };
   if(window.Chart){
     if(chart){ chart.data = cfg.data; chart.options = cfg.options; chart.update(); }
@@ -664,18 +666,18 @@ function renderCmpTable(S){
   const vis = S.filter(s => !HIDDEN.has(s.key));
   if(!vis.length){ $('cmpTable').innerHTML = ''; $('cmpNote').textContent = ''; return; }
   if(OPT.x !== 'day'){
-    $('cmpTable').innerHTML = `<thead><tr><th>Farm</th><th class="num">Harvests</th><th class="num">kg</th><th class="num">kg per 1,000 bags</th><th class="num">AA %</th></tr></thead><tbody>` +
-      vis.map(s => `<tr><td><span class="sw" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[s.farm]}"></span> <b>${esc(s.label)}</b></td><td class="num">${s.n}</td><td class="num">${fmt(s.kg)}</td><td class="num">${s.bags ? fmt(s.kg / s.bags * 1000) : '—'}</td><td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`).join('') + '</tbody>';
+    $('cmpTable').innerHTML = `<thead><tr><th>Farm</th><th class="num">Harvests</th><th class="num">Baskets</th><th class="num">Baskets per 10,000 bags</th><th class="num">AA %</th></tr></thead><tbody>` +
+      vis.map(s => `<tr><td><span class="sw" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[s.farm]}"></span> <b>${esc(s.label)}</b></td><td class="num">${s.n}</td><td class="num">${fmt(s.kg / 30)}</td><td class="num">${s.bags ? fmt(s.kg / s.bags * 10000 / 30) : '—'}</td><td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`).join('') + '</tbody>';
     $('cmpNote').textContent = 'Totals for the dates chosen above.'; return;
   }
   const N = Math.min(...vis.map(s => Math.max(...Object.keys(s.pts).map(Number))));
   const ref = vis[0];
-  const row = s => { let kg = 0, n = 0; Object.entries(s.pts).forEach(([d, v]) => { if(+d <= N){ kg += v; n++; } }); return {kg, n, per: s.bags ? kg / s.bags * 1000 : null}; };
+  const row = s => { let kg = 0, n = 0; Object.entries(s.pts).forEach(([d, v]) => { if(+d <= N){ kg += v; n++; } }); return {kg, n, per: s.bags ? kg / s.bags * 10000 / 30 : null}; };
   const refR = row(ref);
-  $('cmpTable').innerHTML = `<thead><tr><th>Line (same day ${N})</th><th class="num">Harvests</th><th class="num">kg by day ${N}</th><th class="num">Bags</th><th class="num">kg per 1,000 bags</th><th class="num">vs ${esc(ref.label)}</th><th class="num">AA % (whole season)</th></tr></thead><tbody>` +
+  $('cmpTable').innerHTML = `<thead><tr><th>Line (same day ${N})</th><th class="num">Harvests</th><th class="num">Baskets by day ${N}</th><th class="num">Bags</th><th class="num">Baskets per 10,000 bags</th><th class="num">vs ${esc(ref.label)}</th><th class="num">AA % (whole season)</th></tr></thead><tbody>` +
     vis.map(s => { const r = row(s); const vs = refR.per && r.per ? (r.per / refR.per * 100) : null;
       return `<tr><td><span class="sw ${s.season > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[s.farm]}"></span> <b>${esc(s.label)}</b></td>
-        <td class="num">${r.n}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(s.bags)}</td><td class="num">${r.per != null ? fmt(r.per) : '—'}</td>
+        <td class="num">${r.n}</td><td class="num">${fmt(r.kg / 30)}</td><td class="num">${fmt(s.bags)}</td><td class="num">${r.per != null ? fmt(r.per) : '—'}</td>
         <td class="num">${s === ref ? '—' : vs != null ? '<b style="color:' + (vs < 90 ? 'var(--danger)' : vs > 110 ? 'var(--ok)' : 'inherit') + '">' + fmt(vs) + '%</b>' : '—'}</td>
         <td class="num">${s.kg ? fmt(s.aa / s.kg * 100) + '%' : '—'}</td></tr>`; }).join('') + '</tbody>';
   $('cmpNote').innerHTML = `Compared at the same day ${N} of each line (the furthest day every ticked line has reached). ` + (OPT.from === 'tp' ? 'Day 1 = transplant day. ' + (vis.some(s => s.est) ? 'Some transplant dates are estimates. ' : '') : 'Day 1 = first harvest of that season. ') + 'Untick lines on the right to compare others.';
@@ -715,11 +717,11 @@ function seasonCard(x, other){
     <div class="sub">${x.c.transplant_date ? 'Transplant ' + dLong(x.c.transplant_date) + (x.c.transplant_is_estimate ? ' (estimate)' : '') + ' · ' : ''}${x.first ? 'harvest ' + dLong(x.first) + ' → ' + dLong(x.last) : 'no harvest yet'}</div>
     <div class="big">${kgb(x.per)} <small>kg per polybag</small></div>
     <div class="tgt">${!x.n ? 'No ' + ($('seaConfirmed').checked ? 'confirmed ' : '') + 'harvest reports in this season yet' : tg != null ? `Target ${fmt(x.target)} kg per polybag → <b style="color:${tg < 90 ? 'var(--danger)' : 'var(--ok)'}">${fmt(tg)}% of target</b>` : ''}</div>${cmp}
-    ${x.n ? `<dl><dt>Total harvest</dt><dd><b>${fmt(x.kg)} kg</b></dd>
+    ${x.n ? `<dl><dt>Total harvest</dt><dd><b>${fmt(x.kg / 30)} baskets</b> · ${fmt(x.kg)} kg${targetOf() ? ` · target ${fmt(targetOf() * x.bags / 30)} baskets` : ''}</dd>
       <dt>Polybags</dt><dd>${fmt(x.bags)}</dd>
       <dt>Harvest days</dt><dd>${x.hdays} days (over ${x.span} days)</dd>
-      <dt>Average per harvest day</dt><dd>${x.hdays ? fmt(x.kg / x.hdays) : '—'} kg</dd>
-      <dt>Best 7 days</dt><dd>${x.bestEnd ? fmt(x.best) + ' kg (to ' + dShort(x.bestEnd) + ')' : '—'}</dd>
+      <dt>Average per harvest day</dt><dd>${x.hdays ? fmt(x.kg / x.hdays / 30) + ' baskets · ' + fmt(x.kg / x.hdays) + ' kg' : '—'}</dd>
+      <dt>Best 7 days</dt><dd>${x.bestEnd ? fmt(x.best / 30) + ' baskets · ' + fmt(x.best) + ' kg (to ' + dShort(x.bestEnd) + ')' : '—'}</dd>
       ${x.tpToLast != null ? `<dt>Transplant → last harvest</dt><dd>${x.tpToLast} days</dd>` : ''}
       <dt>AA share</dt><dd>${x.kg ? fmt(x.aa / x.kg * 100, 1) + '%' : '—'}</dd>
       ${x.pending ? `<dt>Not yet confirmed</dt><dd style="color:var(--warn)">${x.pending} reports</dd>` : ''}</dl>` : ''}
@@ -742,7 +744,7 @@ function renderSeasons(){
     <div class="sec-t">Last finished season</div>
     ${fin.length ? `<div class="sea-grid">${fin.map(x => seasonCard(x, nowOf(x))).join('')}</div>` : '<div class="card empty">No finished season yet</div>'}
     ${growing.length ? `<div class="sec-t">Growing now (so far)</div><div class="sea-grid">${growing.map(x => seasonCard(x, prevOf(x))).join('')}</div>` : ''}
-    <div class="sec-t">All seasons · kg per polybag</div>
+    <div class="sec-t">All seasons · baskets and kg</div>
     <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th>First harvest</th><th>Last harvest</th><th class="num">Harvest days</th><th class="num">Baskets</th><th class="num">Total kg</th><th class="num">kg per polybag</th><th class="num">vs target</th><th class="num">AA %</th></tr></thead><tbody>
     ${all.map(x => `<tr><td><span class="sw ${x.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${FARM_COLOR[x.L.farm] || '#555'}"></span> <b>${esc(x.L.text)}</b></td>
       <td>${x.closed ? 'Finished' : 'Growing'}</td><td class="num">${fmt(x.bags)}</td><td>${x.first ? dLong(x.first) : '—'}</td><td>${x.last ? dLong(x.last) : '—'}</td>
@@ -846,9 +848,10 @@ function renderBench(){
       ${b.sources.map(x => `<tr><td><b>${esc(x.label)}</b></td><td class="num">${fmt(x.bags)}</td><td>${dLong(x.first)}</td><td>${dLong(x.last)}</td><td class="num">${x.first_days ?? '—'}</td><td class="num">${x.weeks}</td><td class="num">${fmt(x.kg)}</td><td class="num">${fmt(x.per_bag, 2)}</td><td class="num">${fmt(x.aa_pct, 1)}%</td></tr>`).join('')}
       <tr><td><b>Benchmark (average)</b></td><td></td><td></td><td></td><td class="num"><b>${b.first_days ?? '—'}</b></td><td class="num">${b.season_weeks_max}</td><td></td><td class="num"><b>${fmt(b.total_per_bag, 2)}</b></td><td class="num"><b>${fmt(b.aa_pct, 1)}%</b></td></tr></tbody></table></div></div>
     <div class="sec-t">Week by week (week 1 = first harvest week)</div>
+    <div class="hint" style="margin:-4px 0 8px">This benchmark is where the target in Tracking comes from: Tracking keeps the same ups and downs, uses only the formula's harvest weeks (Crops: 1st harvest day ${msOff('HARVEST_1') ?? '—'} → last harvest day ${msOff('CYCLE_END') ?? '—'}), and scales them so the season adds up to the target ${fmt(targetOf())} kg per polybag (${fmt(targetOf() * 10000 / 30)} baskets per 10,000 polybags). Green column = what Tracking shows.</div>
     <div class="fc-chart"><canvas id="bnChart"></canvas></div>
-    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th class="num">Days after transplant</th><th class="num">kg per polybag</th><th class="num">Season so far</th><th class="num">AA %</th><th></th></tr></thead><tbody>
-      ${b.weeks.map(x => { cum += x.kg_per_bag; return `<tr><td><b>Week ${x.w}</b></td><td class="num">${b.first_days != null ? (b.first_days + (x.w - 1) * 7) + '–' + (b.first_days + x.w * 7 - 1) : '—'}</td><td class="num">${fmt(x.kg_per_bag, 3)}</td><td class="num">${fmt(cum / b.total_per_bag * 100)}%</td><td class="num" ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct, 1) + '%' : '—'}</td><td>${x.w === b.peak_week ? '<span class="badge b-active">Peak</span>' : ''}${x.w === b.half_week ? ' <span class="badge b-planned">Half way</span>' : ''}</td></tr>`; }).join('')}
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th class="num">Days after transplant</th><th class="num">kg per polybag</th><th class="num" title="Season 1 actual, in baskets for every 10,000 polybags">Season 1 · baskets per 10,000</th><th class="num" title="What Tracking uses: same shape, formula weeks only, adds up to the target">Target · baskets per 10,000</th><th class="num">Season so far</th><th class="num">AA %</th><th></th></tr></thead><tbody>
+      ${(() => { const R0 = cyRules(b), NW = Math.min(R0.wk || b.weeks.length, b.weeks.length), shS = b.weeks.slice(0, NW).reduce((t, x) => t + x.kg_per_bag, 0) || 1, tg0 = targetOf(); return b.weeks.map(x => { cum += x.kg_per_bag; return `<tr><td><b>Week ${x.w}</b></td><td class="num">${b.first_days != null ? (b.first_days + (x.w - 1) * 7) + '–' + (b.first_days + x.w * 7 - 1) : '—'}</td><td class="num">${fmt(x.kg_per_bag, 3)}</td><td class="num">${fmt(x.kg_per_bag * 10000 / 30)}</td><td class="num" style="color:#0F6E56;font-weight:700">${x.w <= NW && tg0 ? fmt(x.kg_per_bag / shS * tg0 * 10000 / 30) : '<span class="hint">not in the formula</span>'}</td><td class="num">${fmt(cum / b.total_per_bag * 100)}%</td><td class="num" ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct, 1) + '%' : '—'}</td><td>${x.w === b.peak_week ? '<span class="badge b-active">Peak</span>' : ''}${x.w === b.half_week ? ' <span class="badge b-planned">Half way</span>' : ''}</td></tr>`; }).join(''); })()}
     </tbody></table></div></div>
     <div class="sec-t">My notes</div>
     <div class="card"><textarea id="bnNote" rows="4" style="width:100%">${esc(B.note || '')}</textarea>
@@ -932,31 +935,30 @@ function renderForecast(){
   const proj = F.ratio != null && F.done >= 2 && c.status !== 'CLOSED' ? F.benchTotal * F.ratio : null;
   v.innerHTML = `
     <div class="ms">
-      <div class="stat"><small>Now vs benchmark</small><b>${c.status === 'CLOSED' ? stTxt(F.ratio) : F.done ? stTxt(F.ratio) : '<span class="hint">No full week yet</span>'}</b><div class="d">${F.last ? `${fmt(F.last.ac)} kg vs ${fmt(F.last.bc)} kg by end of week ${F.last.w}` : ''}</div></div>
+      <div class="stat"><small>Now vs Season 1</small><b>${c.status === 'CLOSED' ? stTxt(F.ratio) : F.done ? stTxt(F.ratio) : '<span class="hint">No full week yet</span>'}</b><div class="d">${F.last ? `${fmt(F.last.ac / 30)} vs ${fmt(F.last.bc / 30)} baskets by end of week ${F.last.w}` : ''}</div></div>
       <div class="stat"><small>First harvest</small><b>${F.actFirst ? dLong(F.actFirst) : F.predFirst ? '~ ' + dLong(F.predFirst) : '—'}</b><div class="d">${F.predFirst ? (F.actFirst ? `Forecast ${dLong(F.predFirst)} · ${dd(dnum(F.actFirst) - dnum(F.predFirst))}` : `Forecast: transplant + ${b.first_days} days`) : ''}${c.transplant_is_estimate ? ' · transplant date is an estimate' : ''}</div></div>
-      <div class="stat"><small>Peak (week ${b.peak_week})</small><b>${peakRow ? dShort(peakRow.from) + ' – ' + dShort(peakRow.to) : '—'}</b><div class="d">${peakRow ? `Benchmark ${fmt(peakRow.bk)} kg that week` : ''}${F.best ? ` · best so far week ${F.best.w}: ${fmt(F.best.ak)} kg` : ''}</div></div>
-      <div class="stat"><small>Half of season (${fmt(F.benchTotal / 2)} kg)</small><b>${F.halfAct ? 'Reached week ' + F.halfAct.w : halfRow ? '~ ' + dShort(halfRow.to) : '—'}</b><div class="d">Benchmark: end of week ${b.half_week}${halfRow ? ' (' + dLong(halfRow.to) + ')' : ''}</div></div>
+      <div class="stat"><small>Peak (week ${b.peak_week})</small><b>${peakRow ? dShort(peakRow.from) + ' – ' + dShort(peakRow.to) : '—'}</b><div class="d">${peakRow ? `Season 1 pattern ${fmt(peakRow.bk / 30)} baskets that week` : ''}${F.best ? ` · best so far week ${F.best.w}: ${fmt(F.best.ak / 30)} baskets` : ''}</div></div>
+      <div class="stat"><small>Half of season (${fmt(F.benchTotal / 2 / 30)} baskets)</small><b>${F.halfAct ? 'Reached week ' + F.halfAct.w : halfRow ? '~ ' + dShort(halfRow.to) : '—'}</b><div class="d">Benchmark: end of week ${b.half_week}${halfRow ? ' (' + dLong(halfRow.to) + ')' : ''}</div></div>
       <div class="stat"><small>Season ends about</small><b>${c.actual_end ? dLong(c.actual_end) : endRow ? dLong(endRow.to) : '—'}</b><div class="d">${c.actual_end ? 'Finished' : `After ${b.season_weeks_min === b.season_weeks_max ? b.season_weeks_max : b.season_weeks_min + '–' + b.season_weeks_max} weeks of harvest`}</div></div>
-      <div class="stat"><small>Season total</small><b>${fmt(F.benchTotal)} kg</b><div class="d">Benchmark ${fmt(b.total_per_bag, 2)} kg × ${fmt(F.bags)} polybags${F.tg ? ` · target ${fmt(F.tg * F.bags)} kg` : ''}${proj ? `<br>At the current pace: <b>${fmt(proj)} kg</b> (${fmt(proj / F.bags, 2)} kg per polybag)` : ''}${c.status === 'CLOSED' ? `<br>Actual: <b>${fmt(F.total)} kg</b> (${fmt(F.total / F.bags, 2)} kg per polybag)` : ''}</div></div>
+      <div class="stat"><small>Season total · Season 1 pattern</small><b>${fmt(F.benchTotal / 30)} baskets</b><div class="d">Season 1 gave ${fmt(b.total_per_bag, 2)} kg per polybag × ${fmt(F.bags)} polybags${proj ? `<br>At the current pace: <b>${fmt(proj / 30)} baskets</b>` : ''}${c.status === 'CLOSED' ? `<br>Actual: <b>${fmt(F.total / 30)} baskets</b> (${fmt(F.total)} kg)` : ''}<br>Target is in Tracking</div></div>
     </div>
     <div class="fc-chart"><canvas id="fcChart"></canvas></div>
-    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th>Dates</th><th class="num">Forecast kg</th><th class="num">Forecast total</th>${F.tg ? '<th class="num">Target pace total</th>' : ''}<th class="num">Actual kg</th><th class="num">Actual total</th><th class="num">vs forecast</th><th class="num">AA % forecast</th><th class="num">AA % actual</th></tr></thead><tbody>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Week</th><th>Dates</th><th class="num">Season 1 pattern</th><th class="num">Pattern total</th><th class="num">Actual</th><th class="num">Actual total</th><th class="num">vs Season 1</th><th class="num">AA % Season 1</th><th class="num">AA % actual</th></tr></thead><tbody>
       ${F.rows.map(r => `<tr class="${r.st}"><td><b>Week ${r.w}</b>${r.w === b.peak_week ? ' <span class="badge b-active">Peak</span>' : ''}${r.st === 'now' ? ' <span class="badge b-pending">This week</span>' : ''}</td>
-        <td>${dShort(r.from)} – ${dShort(r.to)}</td><td class="num">${fmt(r.bk)}</td><td class="num">${fmt(r.bc)}</td>${F.tg ? `<td class="num">${fmt(r.tc)}</td>` : ''}
-        <td class="num">${r.ak == null ? '' : fmt(r.ak)}</td><td class="num">${r.ac == null ? '' : '<b>' + fmt(r.ac) + '</b>'}</td>
+        <td>${dShort(r.from)} – ${dShort(r.to)}</td><td class="num">${fmt(r.bk / 30)}</td><td class="num">${fmt(r.bc / 30)}</td>
+        <td class="num">${r.ak == null ? '' : fmt(r.ak / 30)}</td><td class="num">${r.ac == null ? '' : '<b>' + fmt(r.ac / 30) + '</b>'}</td>
         <td class="num">${r.ac == null || !r.bc ? '' : r.st === 'now' ? '<span class="hint">week not over</span>' : stTxt(r.ac / r.bc)}</td>
         <td class="num">${r.aaB != null ? fmt(r.aaB) + '%' : '—'}</td><td class="num" ${r.aaA != null && r.aaA < 70 ? 'style="color:var(--danger);font-weight:700"' : ''}>${r.aaA != null ? fmt(r.aaA) + '%' : ''}</td></tr>`).join('')}
     </tbody></table></div></div>
-    <div class="hint" style="margin-top:8px">Week 1 starts on the ${F.actFirst ? 'actual first harvest day' : 'forecast first harvest day (transplant + ' + b.first_days + ' days)'}. Forecast kg = benchmark v${B.version} kg per polybag for that week × ${fmt(F.bags)} polybags. "vs forecast" compares the totals so far. Pending and confirmed reports are counted; voided ones are not. AA % in red = below 70%.</div>`;
+    <div class="hint" style="margin-top:8px">Week 1 starts on the ${F.actFirst ? 'actual first harvest day' : 'forecast first harvest day (transplant + ' + b.first_days + ' days)'}. All numbers in baskets of 30 kg. Season 1 pattern = benchmark v${B.version} (what Season 1 really gave each week, 17 weeks) × ${fmt(F.bags)} polybags. "vs Season 1" compares the totals so far. This page answers "are we doing better than last time?" — the target (14 weeks, ${fmt(targetOf())} kg per polybag) is in Tracking. Pending and confirmed reports are counted; voided ones are not. AA % in red = below 70%.</div>`;
   if(window.Chart){
     const upto = F.rows.filter(r => r.ac != null);
-    const ds = [{label:'Forecast (benchmark v' + B.version + ')', data:F.rows.map(r => r.bc), borderColor:'#8a8a8a', borderDash:[6, 4], borderWidth:2, pointRadius:0}];
-    if(F.tg) ds.push({label:'Target pace', data:F.rows.map(r => r.tc), borderColor:'#2E8B57', borderDash:[2, 3], borderWidth:2, pointRadius:0});
-    ds.push({label:'Actual', data:F.rows.map(r => r.ac), borderColor:col, backgroundColor:col, borderWidth:3, pointRadius:3, spanGaps:false});
+    const ds = [{label:'Season 1 pattern (benchmark v' + B.version + ')', data:F.rows.map(r => r.bc / 30), borderColor:'#8a8a8a', borderDash:[6, 4], borderWidth:2, pointRadius:0}];
+    ds.push({label:'Actual', data:F.rows.map(r => r.ac == null ? null : r.ac / 30), borderColor:col, backgroundColor:col, borderWidth:3, pointRadius:3, spanGaps:false});
     const cfg = {type:'line', data:{labels:F.rows.map(r => 'W' + r.w + ' · ' + dShort(r.from)), datasets:ds},
       options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
-        plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:x => x.parsed.y == null ? '' : ` ${x.dataset.label}: ${fmt(x.parsed.y)} kg`}}},
-        scales:{y:{beginAtZero:true, title:{display:true, text:'Season total so far (kg)'}, ticks:{callback:x => fmt(x)}}}}};
+        plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:x => x.parsed.y == null ? '' : ` ${x.dataset.label}: ${fmt(x.parsed.y)} baskets`}}},
+        scales:{y:{beginAtZero:true, title:{display:true, text:'Season total so far (baskets)'}, ticks:{callback:x => fmt(x)}}}}};
     if(fchart) fchart.destroy(); fchart = new Chart($('fcChart'), cfg);
   }
 }
@@ -1434,7 +1436,7 @@ function renderHomeDetail(){
   const rmW = which => plans.reduce((s, P) => s + sumW(P, which) * P.rpk.v, 0);
   const leftAll = plans.reduce((s, P) => s + P.left, 0), leftRM = plans.reduce((s, P) => s + P.left * P.rpk.v, 0);
   const miss = [...new Set(plans.flatMap(P => P.rpk.miss))];
-  let h = `<div class="ov-top">
+  let h = `<div class="alert" style="background:#FFF6DD;border:1px solid #EBD38F;border-radius:10px;padding:8px 12px;margin:8px 0 12px;font-size:13px">Older view: these numbers follow the Season 1 pattern (17 weeks), not the target. For the target, use <b>Tracking</b>. The price setting at the bottom is still used by Money.</div><div class="ov-top">
     <div class="stat"><small>This harvest week · all farms</small><b>${fmt(thisWk / 30)} baskets</b><div class="d">${money ? rm(rmW('cur')) + ' at your prices' : 'Set prices below to see RM'}</div></div>
     <div class="stat"><small>Next harvest week · all farms</small><b>${fmt(nextWk / 30)} baskets</b><div class="d">${money ? rm(rmW('nxt')) : ''}</div></div>
     <div class="stat"><small>Still to harvest this season · all farms</small><b>${fmt(leftAll / 30)} baskets</b><div class="d">${money ? rm(leftRM) : ''}</div></div>
@@ -1529,23 +1531,23 @@ function turnaroundDays(){
 }
 /* ---------- Money ---------- */
 function moneyRows(R){
-  const B = liveBench()[0], t = today(), mine = MONEY.price === 'mine' && hasPrice();
+  const B = liveBench()[0], t = today(), mine = MONEY.price === 'mine' && hasPrice(), TM = trackModel();
   const priceOf = cid => mine ? rmPerKg(gradeMix(cid)).v : R.plPrice;
   return H.cycles.filter(c => c.status === 'CLOSED' || c.status === 'ACTIVE').map(c => {
     const bags = bagsFor(c), L = cycleLabel(c), sale = (R.d.season_sales || []).find(x => x.cycle_id === c.id), cost = bags * R.total;
     const row = {c, L, bags, cost, col:FARM_COLOR[L.farm] || '#555'};
     if(c.status === 'CLOSED'){
-      if(sale){ Object.assign(row, {kg:sale.kg_sold, price:R.plPrice, rev:sale.kg_sold * R.plPrice, src:'pl', how:`${fmt(sale.kg_sold)} kg sold × RM ${fmt(R.plPrice, 2)} (Season 1 average from the P&L)`}); }
-      else { const kg = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), pr = priceOf(c.id); Object.assign(row, {kg, price:pr, rev:kg * pr, src:'est', how:`${fmt(kg)} kg harvested × RM ${fmt(pr, 2)}`}); }
+      if(sale){ Object.assign(row, {kg:sale.kg_sold, price:R.plPrice, rev:sale.kg_sold * R.plPrice, src:'pl', how:`${fmt(sale.kg_sold / 30)} baskets (${fmt(sale.kg_sold)} kg) sold × RM ${fmt(R.plPrice, 2)} (Season 1 average from the P&L)`}); }
+      else { const kg = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), pr = priceOf(c.id); Object.assign(row, {kg, price:pr, rev:kg * pr, src:'est', how:`${fmt(kg / 30)} baskets (${fmt(kg)} kg) harvested × RM ${fmt(pr, 2)}`}); }
       Object.assign(row, {profit:row.rev - cost, status:'Finished', soFar:null});
     } else {
-      const P = B ? farmPlan(c, B.data) : null, pr = priceOf(c.id);
-      const kgNow = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), kg = P ? P.projTotal : kgNow;
+      const P = B ? farmPlan(c, B.data) : null, pr = priceOf(c.id), TP = TM ? TM.farms.find(x => x.F.c.id === c.id) : null;
+      const kgNow = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), kg = TP ? TP.proj : P ? P.projTotal : kgNow;   /* same expected harvest as Tracking */
       const st = c.transplant_date || c.sowing_date, end = P ? P.end : null;
       const frac = st && end ? Math.max(0, Math.min(1, (dnum(t) - dnum(st)) / (dnum(end) - dnum(st)))) : 0;
       Object.assign(row, {kg, price:pr, rev:kg * pr, src:'est', profit:kg * pr - cost, status:'Growing', frac,
         soFar:{kg:kgNow, rev:kgNow * pr, cost:cost * frac, profit:kgNow * pr - cost * frac},
-        how:`${fmt(kg)} kg expected for the whole season (Forecast) × RM ${fmt(pr, 2)}${mine ? ' (your prices × this season\'s grade mix)' : ' (Season 1 average from the P&L)'}`});
+        how:`${fmt(kg / 30)} baskets (${fmt(kg)} kg) expected for the whole season (same as Tracking: target × this farm's % of target so far) × RM ${fmt(pr, 2)}${mine ? ' (your prices × this season\'s grade mix)' : ' (Season 1 average from the P&L)'}`});
     }
     return row;
   }).sort((a, b) => a.L.farm.localeCompare(b.L.farm) || a.c.cycle_no - b.c.cycle_no);
@@ -1562,8 +1564,23 @@ function renderMoney(){
   const sumF = (xs, f) => xs.reduce((s, r) => s + f(r), 0);
   const farms = [...new Set(rows.map(r => r.L.farm))];
   const bagsF = sumF(fin, r => r.bags), bagsG = sumF(grow, r => r.bags);
+  /* standard: one season for every 10,000 polybags at the target */
+  const SB = 10000, tg = targetOf(), pr0 = MONEY.price === 'mine' && hasPrice() ? rmPerKg(gradeMix(null)).v || R.plPrice : R.plPrice;
+  const sRev = tg * SB * pr0, sCost = SB * R.total, sPro = sRev - sCost, beB = pr0 ? sCost / (30 * pr0) : null, tgB = tg * SB / 30;
+  const be = r => r.price ? r.cost / (30 * r.price) : null;   /* baskets needed to cover the cost */
+  const loss = rows.filter(r => r.profit < 0);
+  const stdBox = `<div class="mn-std"><div class="mn-h"><b>Standard · one season for every ${fmt(SB)} polybags</b><span class="hint">target ${fmt(tg)} kg per polybag · RM ${fmt(pr0, 2)} per kg · cost RM ${fmt(R.total, 2)} per polybag</span></div>
+    <div class="mn-g"><div><small>Target harvest</small><b>${fmt(tgB)} baskets</b><em>${fmt(tg * SB)} kg</em></div>
+      <div><small>Revenue</small><b>RM ${fmt(sRev)}</b><em>${fmt(tgB)} × 30 kg × RM ${fmt(pr0, 2)}</em></div>
+      <div><small>Cost</small><b>RM ${fmt(sCost)}</b><em>running + depreciation</em></div>
+      <div><small>Profit</small><b style="color:${sPro >= 0 ? 'var(--ok)' : 'var(--danger)'}">${pm(sPro)}</b><em>RM ${fmt(sPro / SB, 2)} per polybag</em></div>
+      <div class="be"><small>Break-even</small><b>${beB ? fmt(beB) + ' baskets' : '—'}</b><em>${beB ? fmt(beB / tgB * 100) + '% of target · below this the season loses money' : ''}</em></div></div></div>
+  <div class="card" style="padding:10px 14px;margin:10px 0;border-left:6px solid ${loss.length ? 'var(--danger)' : 'var(--ok)'}"><b>${loss.length ? '⚠ Ask why · ' + loss.length + ' season' + (loss.length > 1 ? 's' : '') + ' below break-even' : '✓ Every season covers its cost'}</b>
+    ${loss.map(r => `<div style="margin-top:5px;cursor:pointer" onclick="moneyDetail('${r.c.id}')"><b style="color:var(--danger)">${esc(r.L.text)}</b> — ${r.status === 'Growing' ? 'expected' : 'got'} ${fmt(r.kg / 30)} baskets, needs ${fmt(be(r))} to break even (target ${fmt(tg * r.bags / 30)}) · ${pm(r.profit)}</div>`).join('')}</div>`;
   v.innerHTML = `<h1 class="pt">Money <span class="no-print" style="display:inline-flex;gap:6px;margin-left:8px">
       <button class="btn btn-sm" onclick="MONEY.view='rates';renderMoney()">Cost rates</button><button class="btn btn-sm" onclick="window.print()">Print</button><button class="btn btn-sm" onclick="exportAll()">Export</button></span></h1>
+    ${stdBox}
+    <div class="sec-t" style="margin-top:14px">Actual · all farms</div>
     <div class="ov-top">
       <div class="stat"><small>Growing seasons · profit so far</small><b>${pm(sumF(grow, r => r.soFar.profit))}</b><div class="d">${TAG.est} harvest so far minus costs for the days gone</div></div>
       <div class="stat"><small>Growing seasons · whole season expected</small><b>${pm(sumF(grow, r => r.profit))}</b><div class="d">${TAG.est} ${bagsG ? 'RM ' + fmt(sumF(grow, r => r.profit) / bagsG, 2) + ' per polybag' : ''}</div></div>
@@ -1574,19 +1591,19 @@ function renderMoney(){
       <select onchange="MONEY.farm=this.value;renderMoney()" style="max-width:150px"><option value="">All farms</option>${farms.map(f => `<option ${MONEY.farm === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
       <select onchange="MONEY.st=this.value;renderMoney()" style="max-width:150px"><option value="">Growing &amp; finished</option><option value="Growing" ${MONEY.st === 'Growing' ? 'selected' : ''}>Growing</option><option value="Finished" ${MONEY.st === 'Finished' ? 'selected' : ''}>Finished</option></select>
     </div>
-    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th class="num">kg</th><th class="num">Revenue</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Profit per polybag</th><th>Source</th></tr></thead><tbody>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th class="num">Baskets</th><th class="num" title="Baskets needed to cover the cost">Break-even</th><th class="num">vs target</th><th class="num">kg</th><th class="num">Revenue</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Profit per polybag</th><th>Source</th></tr></thead><tbody>
     ${shown.length ? shown.map(r => `<tr class="click" onclick="moneyDetail('${r.c.id}')"><td><span class="sw ${r.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${r.col}"></span> <b>${esc(r.L.text)}</b></td>
-      <td>${r.status === 'Growing' ? `Growing · ${fmt(r.frac * 100)}% of season` : 'Finished'}</td><td class="num">${fmt(r.bags)}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(r.rev)}</td><td class="num">${fmt(r.cost)}</td>
-      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="10" class="empty">No season yet</td></tr>'}
+      <td>${r.status === 'Growing' ? `Growing · ${fmt(r.frac * 100)}% of season` : 'Finished'}</td><td class="num">${fmt(r.bags)}</td><td class="num" ${be(r) && r.kg / 30 < be(r) ? 'style="color:var(--danger);font-weight:800"' : ''}><b>${fmt(r.kg / 30)}</b></td><td class="num hint">${be(r) ? fmt(be(r)) : '—'}</td><td class="num">${tg ? fmt(r.kg / (tg * r.bags) * 100) + '%' : '—'}</td><td class="num hint">${fmt(r.kg)}</td><td class="num">${fmt(r.rev)}</td><td class="num">${fmt(r.cost)}</td>
+      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="13" class="empty">No season yet</td></tr>'}
     </tbody></table></div></div>
-    <div class="hint" style="margin-top:8px">Cost = polybags × RM ${fmt(R.total, 2)} per polybag per season (cost rates v${R.cp.version}: running RM ${fmt(R.run, 2)} + depreciation RM ${fmt(R.dep, 2)}). Growing seasons use the Forecast for the whole season. Click a row to see how it is worked out. When Revenue and Costs are recorded, these become Actual.</div>`;
+    <div class="hint" style="margin-top:8px">Cost = polybags × RM ${fmt(R.total, 2)} per polybag per season (cost rates v${R.cp.version}: running RM ${fmt(R.run, 2)} + depreciation RM ${fmt(R.dep, 2)}). Growing seasons use the same expected harvest as Tracking (target × the farm's % of target so far). Baskets in red = below break-even. Click a row to see how it is worked out. When Revenue and Costs are recorded, these become Actual.</div>`;
 }
 function moneyDetail(cid){
   const R = rates(curCost()), r = moneyRows(R).find(x => x.c.id === cid); if(!r) return;
   const k = r.bags / R.basis, lines = (R.d.items || []).filter(i => i.kind === 'season' || i.kind === 'dep');
   openModal(r.L.text, `
     <div class="mg-line"><b>Revenue</b> ${TAG[r.src]}: ${esc(r.how)} = <b>${money(r.rev)}</b></div>
-    ${r.soFar ? `<div class="mg-line">So far: ${fmt(r.soFar.kg)} kg harvested = ${money(r.soFar.rev)} · costs for ${fmt(r.frac * 100)}% of the season ${money(r.soFar.cost)} · profit so far ${pm(r.soFar.profit)}</div>` : ''}
+    ${r.soFar ? `<div class="mg-line">So far: ${fmt(r.soFar.kg / 30)} baskets (${fmt(r.soFar.kg)} kg) harvested = ${money(r.soFar.rev)} · costs for ${fmt(r.frac * 100)}% of the season ${money(r.soFar.cost)} · profit so far ${pm(r.soFar.profit)}</div>` : ''}
     <div class="mg-line" style="margin-top:8px"><b>Cost</b> ${TAG.pl}: ${fmt(r.bags)} polybags ÷ ${fmt(R.basis)} polybags in the P&amp;L × each line</div>
     <table class="qt"><thead><tr><th>Line</th><th>This season</th><th>Per polybag</th></tr></thead><tbody>
     ${lines.map(i => `<tr><td>${esc(i.name)}</td><td>${fmt(i.rm * k)}</td><td>${fmt(i.rm / R.basis, 2)}</td></tr>`).join('')}
@@ -1745,14 +1762,14 @@ function renderPlan(){
 function planRight(I, R, X, ok){
   return `${ok ? `<div class="res">
       <div><small>1. Setup a new farm (once)</small><b>${money(X.setup)}</b><div class="d">RM ${fmt(R.setup, 2)} per polybag · deposits not included</div></div>
-      <div><small>Harvest per season</small><b>${fmt(X.kg)} kg</b></div>
+      <div><small>Harvest per season</small><b>${fmt(X.kg / 30)} baskets</b><div class="d">${fmt(X.kg)} kg</div></div>
       <div><small>2. Revenue per season</small><b>${money(X.rev)}</b></div>
       <div><small>Costs per season</small><b>${money(X.run + X.dep)}</b><div class="d">running ${money(X.run)} + depreciation ${money(X.dep)}</div></div>
       <div><small>Profit per season</small><b>${pm(X.profit)}</b><div class="d">${pm(X.perBag, 2)} per polybag</div></div>
       <div><small>Profit per year</small><b>${pm(X.year)}</b><div class="d">${I.seasons} seasons</div></div>
       <div><small>Setup paid back in</small><b>${X.payback != null ? fmt(X.payback, 1) + ' seasons' : '<span class="neg">Never</span>'}</b><div class="d">${X.payback != null ? 'about ' + fmt(X.payback * 6, 0) + ' months' : 'loses money each season'}</div></div>
       <div><small>Break-even price</small><b>RM ${fmt(X.bePrice, 2)}</b><div class="d">below this you lose money</div></div>
-      <div><small>Break-even harvest</small><b>${fmt(X.beYield, 2)} kg</b><div class="d">per polybag, at RM ${fmt(I.price, 2)}</div></div>
+      <div><small>Break-even harvest</small><b>${fmt(X.beYield * I.bags / 30)} baskets</b><div class="d">${fmt(X.beYield, 2)} kg per polybag, at RM ${fmt(I.price, 2)} · below this the season loses money</div></div>
     </div>` : '<div class="card empty">Fix the fields marked in red</div>'}`;
 }
 function planLower(I, R, PR){
@@ -1785,8 +1802,8 @@ function planTimeline(I, R){
     ta && nd != null ? ['Next season sowing', dLong(addDays(last1, ta.min - nd)) + ' – ' + dLong(addDays(last2, ta.max - nd)), 'start the nursery around the last harvest'] : null
   ].filter(Boolean);
   return `<div class="sec-t">Dates (from benchmark v${B.version})</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Step</th><th>Date</th><th>How</th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="hint">${r[2]}</td></tr>`).join('')}</tbody></table></div></div>
-  <div class="sec-t">Week by week</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Harvest week</th><th>Dates</th><th class="num">kg</th><th class="num">RM</th><th class="num">Season so far</th></tr></thead><tbody>
-  ${(() => { let c = 0; return b.weeks.map(x => { const kg = x.kg_per_bag * I.bags * scale; c += kg; const [a, z] = wk(x.w); return `<tr><td>Week ${x.w}${x.w === b.peak_week ? ' <span class="badge b-active">Peak</span>' : ''}</td><td>${dShort(a)} – ${dShort(z)}</td><td class="num">${fmt(kg)}</td><td class="num">${fmt(kg * I.price)}</td><td class="num">${fmt(c / (I.bags * I.yield) * 100)}%</td></tr>`; }).join(''); })()}
+  <div class="sec-t">Week by week</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Harvest week</th><th>Dates</th><th class="num">Baskets</th><th class="num">RM</th><th class="num">Season so far</th></tr></thead><tbody>
+  ${(() => { let c = 0; return b.weeks.map(x => { const kg = x.kg_per_bag * I.bags * scale; c += kg; const [a, z] = wk(x.w); return `<tr><td>Week ${x.w}${x.w === b.peak_week ? ' <span class="badge b-active">Peak</span>' : ''}</td><td>${dShort(a)} – ${dShort(z)}</td><td class="num">${fmt(kg / 30)}</td><td class="num">${fmt(kg * I.price)}</td><td class="num">${fmt(c / (I.bags * I.yield) * 100)}%</td></tr>`; }).join(''); })()}
   </tbody></table></div></div>`;
 }
 function planSet(k, val, full){
@@ -1862,19 +1879,23 @@ function gapStats(){
 }
 function kbFacts(key){
   const B = liveBench()[0], b = B && B.data, R = rates(curCost()), nd = nurseryDays(), ta = turnaroundDays();
-  const M = (H.milestones || []).filter(m => !m.voided_at).sort((a, x) => a.sort - x.sort), ms = c => (M.find(m => m.code === c) || {}).day;
+  const M = (H.milestones || []).filter(m => !m.voided_at && (!curProto().id || m.protocol_id === curProto().id)).sort((a, x) => a.day - x.day || a.sort - x.sort), ms = c => (M.find(m => m.code === c) || {}).day;
   const tg = targetOf(H.cycles.find(c => c.status === 'ACTIVE'));
   const li = xs => '<ul class="kb-ul">' + xs.filter(Boolean).map(x => '<li>' + x + '</li>').join('') + '</ul>';
   if(key === 'overview'){
     if(!b) return '<div class="hint">No benchmark yet.</div>';
-    const fh = (nd || 0) + b.first_days, steps = [
-      ['Sow 播种', 0], ['Transplant 定植', nd], ['First harvest 首采', fh], ['Peak week 高峰周', fh + (b.peak_week - 1) * 7], ['Half harvested 收到一半', fh + b.half_week * 7 - 1],
-      ['Last harvest 末采', fh + b.season_weeks_min * 7 - 1], ['Next transplant 下一造定植', ta ? fh + b.season_weeks_max * 7 - 1 + ta.avg : null]].filter(s => s[1] != null);
+    /* standard = the Crops formula (Owner); Season 1 is shown in the list below for comparison */
+    const tpD = msOff('TRANSPLANTING') ?? nd, fh = msOff('HARVEST_1') ?? ((nd || 0) + b.first_days), endD = msOff('CYCLE_END') ?? (fh + b.season_weeks_max * 7 - 1), R0 = cyRules(b), steps = [
+      ['Sow 播种', 0], ['Transplant 定植', tpD], ['Flowering 开花', msOff('FLOWERING')], ['Fruit set 结果', msOff('FRUIT_SET')], ['First harvest 首采', fh], ['Peak 高峰', msOff('PEAK_START')], ['Steady 平稳', msOff('PEAK_END')],
+      ['Last harvest 末采', endD]].filter(s => s[1] != null);
     const span = Math.max(...steps.map(s => s[1])) + 5, pos = d => d / span * 100;
-    return `<div class="kb-tl">${[[0, nd, '#DCEFD0', '育苗'], [nd, fh, '#F6E7B8', '长大、开花、结果'], [fh, fh + b.season_weeks_max * 7 - 1, '#F3D2CC', '采收 ' + b.season_weeks_min + '–' + b.season_weeks_max + ' 周'], ta ? [fh + b.season_weeks_max * 7 - 1, fh + b.season_weeks_max * 7 - 1 + ta.avg, '#E6E6E6', '换季'] : null].filter(Boolean).filter(x => x[0] != null && x[1] != null).map(x => `<div class="kb-seg" style="left:${pos(x[0])}%;width:${pos(x[1] - x[0])}%;background:${x[2]}"><span>${x[3]}</span></div>`).join('')}</div>
-      <div class="kb-steps">${steps.map(s => `<div><b>${s[0]}</b><span>第 ${s[1]} 天</span></div>`).join('')}</div>
-      ${li([nd != null ? `育苗 <b>${nd} 天</b>（从真实周期算）` : null, `定植后约 <b>${b.first_days} 天</b>开始收（标杆 v${B.version}）`, `采收 <b>${b.season_weeks_min}–${b.season_weeks_max} 周</b>，第 <b>${b.peak_week}</b> 周最高峰，第 <b>${b.half_week}</b> 周结束时收到一半`,
-        `一包一季约 <b>${fmt(b.total_per_bag, 2)} kg</b>${tg ? `（目标 ${fmt(tg)} kg，做到 ${fmt(b.total_per_bag / tg * 100)}%）` : ''}`, ta ? `末采到下一造定植约 <b>${ta.min}–${ta.max} 天</b>，一块地一整轮约 ${fmt(((b.first_days + b.season_weeks_min * 7) + ta.min) / 30.4, 1)}–${fmt(((b.first_days + b.season_weeks_max * 7) + ta.max) / 30.4, 1)} 个月，一年约 2 季` : null])}`;
+    return `<div class="kb-tl">${[[0, tpD, '#DCEFD0', '育苗'], [tpD, fh, '#F6E7B8', '长大、开花、结果'], [fh, endD, '#F3D2CC', '采收 ' + R0.wk + ' 周']].filter(Boolean).filter(x => x[0] != null && x[1] != null).map(x => `<div class="kb-seg" style="left:${pos(x[0])}%;width:${pos(x[1] - x[0])}%;background:${x[2]}"><span>${x[3]}</span></div>`).join('')}</div>
+      <div class="hint" style="margin:2px 0">标准（Crops 公式）· 播种后第几天</div><div class="kb-steps">${steps.map(s => `<div><b>${s[0]}</b><span>第 ${s[1]} 天</span></div>`).join('')}</div>
+      ${(() => { const m = c => msOff(c), R0 = cyRules(b); return li([
+        m('TRANSPLANTING') != null ? `<b>标准（Crops 公式）</b>：第 0 天播种 → 第 ${m('TRANSPLANTING')} 天定植 → 第 ${m('FLOWERING')} 天开花（TP +${m('FLOWERING') - m('TRANSPLANTING')}）→ 第 ${m('FRUIT_SET')} 天结果（TP +${m('FRUIT_SET') - m('TRANSPLANTING')}）→ 第 ${m('HARVEST_1')} 天首采（TP +${m('HARVEST_1') - m('TRANSPLANTING')}）→ 第 ${m('CYCLE_END')} 天收完，一季 <b>${m('CYCLE_END')} 天</b>` : null,
+        `<b>采收 ${R0.wk} 周</b>：Week 1–${R0.pk - 1} 首采 · Week ${R0.pk} 高峰 · Week ${R0.pk + 1}–${R0.tail - 1} 平稳 · Week ${R0.tail}–${R0.wk} 尾采`,
+        tg ? `<b>目标</b>：每包 ${fmt(tg)} kg ＝ 每 10,000 包一季 <b>${fmt(tg * 10000 / 30)} 篮</b>（每周几篮看 Tracking）` : null,
+        `第一季真实（对照用）：定植后约 ${b.first_days} 天开始收，收了 ${b.season_weeks_min}–${b.season_weeks_max} 周，一包约 ${fmt(b.total_per_bag, 2)} kg${tg ? `（目标的 ${fmt(b.total_per_bag / tg * 100)}%）` : ''}${nd != null ? `，育苗 ${nd} 天` : ''}`, ta ? `末采到下一造定植约 <b>${ta.min}–${ta.max} 天</b>，一块地一整轮约 ${fmt(((b.first_days + b.season_weeks_min * 7) + ta.min) / 30.4, 1)}–${fmt(((b.first_days + b.season_weeks_max * 7) + ta.max) / 30.4, 1)} 个月，一年约 2 季` : null]); })()}`;
   }
   if(key === 'land'){
     if(!R) return '<div class="hint">No cost rates yet.</div>';
@@ -1883,16 +1904,16 @@ function kbFacts(key){
       + `<table class="qt"><thead><tr><th>最大的几项</th><th>每包 RM</th></tr></thead><tbody>${items.slice(0, 6).map(i => `<tr><td>${esc(i.name)}</td><td>${fmt(i.rm / R.basis, 2)}</td></tr>`).join('')}</tbody></table>`;
   }
   if(key === 'nursery') return li([nd != null ? `播种到定植 <b>${nd} 天</b>（真实）${ms('TRANSPLANTING') != null ? `；Crops 标准写 ${ms('TRANSPLANTING')} 天` : ''}` : null, ms('GERMINATION') != null ? `发芽：标准第 ${ms('GERMINATION')} 天` : null, b && ta ? `下一季的苗要在<b>末采前后</b>就开始育（育苗 ${nd} 天 + 换季空档 ${ta.min}–${ta.max} 天）` : null]);
-  if(key === 'transplant') return li([b ? `定植那天就是预估的起点：<b>定植日 + ${b.first_days} 天 = 第一次收成</b>` : null, '定植日一定要记在 Farms → Cycles，估计的要勾「estimate」']);
-  if(key === 'growing') return li([b ? `定植后约 ${b.first_days} 天开始收（标杆 v${B.version}）；开花、结果的真实日子见上面「第 1 季实际日期」` : null,
+  if(key === 'transplant') return li([msOff('HARVEST_1') != null && msOff('TRANSPLANTING') != null ? `定植那天就是预估的起点：<b>定植日 + ${msOff('HARVEST_1') - msOff('TRANSPLANTING')} 天 = 第一次收成</b>（标准）${b ? `；第一季真实是 + ${b.first_days} 天` : ''}` : null, '定植日一定要记在 Farms → Cycles，估计的要勾「estimate」']);
+  if(key === 'growing') return li([msOff('TRANSPLANTING') != null ? `标准：定植后 ${msOff('FLOWERING') - msOff('TRANSPLANTING')} 天开花（TP +${msOff('FLOWERING') - msOff('TRANSPLANTING')}）、${msOff('FRUIT_SET') - msOff('TRANSPLANTING')} 天结果、${msOff('HARVEST_1') - msOff('TRANSPLANTING')} 天首采；每个场真的哪天开花结果，填在 Farms → Cycles，Overview 会标出早几天、晚几天` : null,
     M.length ? 'Crops 种植标准（播种后第几天）：' + M.map(m => `${esc(m.name)} ${m.day}`).join(' · ') : null]);
   if(key === 'harvest'){
     if(!b) return '';
     const G = gapStats(), WDN = ['日', '一', '二', '三', '四', '五', '六'];
     return li([`一周收约 <b>${fmt(b.harvest_days_per_week, 1)} 次</b>`, G.tot ? '一周收成分布：' + G.wd.map((v, i) => v / G.tot > 0.03 ? `星期${WDN[i]} ${fmt(v / G.tot * 100)}%` : null).filter(Boolean).join(' · ') : null,
-      Object.keys(G.by).length ? '收多少看<b>隔了几天</b>：' + Object.entries(G.by).map(([g, x]) => `隔 ${g}${g === '3' ? '+' : ''} 天：每 1,000 包每天约 ${fmt(x.k1 / x.n / Number(g))} kg（${x.n} 次）`).join('；') : null,
+      Object.keys(G.by).length ? '收多少看<b>隔了几天</b>：' + Object.entries(G.by).map(([g, x]) => `隔 ${g}${g === '3' ? '+' : ''} 天：每 10,000 包每天约 ${fmt(x.k1 / x.n / Number(g) * 10 / 30)} 篮（${x.n} 次）`).join('；') : null,
       '要看有没有异常：看「kg ÷ 隔几天」，不要只看当天几 kg'])
-      + `<table class="qt"><thead><tr><th>采收周</th><th>每 1,000 包 kg</th><th>累计</th><th>AA %</th></tr></thead><tbody>${(() => { let c = 0; return b.weeks.map(x => { c += x.kg_per_bag; return `<tr><td>第 ${x.w} 周${x.w === b.peak_week ? '（高峰）' : ''}</td><td>${fmt(x.kg_per_bag * 1000)}</td><td>${fmt(c / b.total_per_bag * 100)}%</td><td ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct) + '%' : '—'}</td></tr>`; }).join(''); })()}</tbody></table>`;
+      + `<table class="qt"><thead><tr><th>采收周</th><th>每 10,000 包几篮（第一季）</th><th>累计</th><th>AA %</th></tr></thead><tbody>${(() => { let c = 0; return b.weeks.map(x => { c += x.kg_per_bag; return `<tr><td>第 ${x.w} 周${x.w === b.peak_week ? '（高峰）' : ''}</td><td>${fmt(x.kg_per_bag * 10000 / 30)}</td><td>${fmt(c / b.total_per_bag * 100)}%</td><td ${x.aa_pct != null && x.aa_pct < 70 ? 'style="color:var(--danger)"' : ''}>${x.aa_pct != null ? fmt(x.aa_pct) + '%' : '—'}</td></tr>`; }).join(''); })()}</tbody></table>`;
   }
   if(key === 'quality'){
     if(!b) return '';
@@ -1906,13 +1927,13 @@ function kbFacts(key){
     let tf = b.weeks.length + 1; for(let w = b.weeks.length; w > b.peak_week; w--){ if(b.weeks[w - 1].kg_per_bag < med / 2) tf = w; else break; }
     const tail = b.weeks.filter(x => x.w >= tf), tp = tail.reduce((s, x) => s + x.kg_per_bag, 0) / b.total_per_bag * 100;
     return li([tail.length ? `最后 ${tail.length} 周（第 ${tf}${tail.length > 1 ? '–' + b.weeks.length : ''} 周）只占全季 <b>${fmt(tp, 1)}%</b>，而且多数是低等级` : null,
-      `拔树参考：每 1,000 包一周少于约 <b>${fmt(med / 2 * 1000)} kg</b> 时，可以考虑拔树换季（要比工钱划不划算）`, ta ? `第 1 季末采到下一造定植 <b>${ta.min}–${ta.max} 天</b>` : null, '拔树日期现在没有记录：以后一定要记']);
+      `拔树参考：每 10,000 包一周少于约 <b>${fmt(med / 2 * 10000 / 30)} 篮</b> 时，可以考虑拔树换季（要比工钱划不划算）`, ta ? `第 1 季末采到下一造定植 <b>${ta.min}–${ta.max} 天</b>` : null, '拔树日期现在没有记录：以后一定要记']);
   }
   if(key === 'money'){
     if(!R) return '<div class="hint">No cost rates yet.</div>';
     const y = b ? b.total_per_bag : R.yieldAct, prof = y * R.plPrice - R.total;
     return li([`每包每季成本 <b>RM ${fmt(R.total, 2)}</b>（经常费用 ${fmt(R.run, 2)} + 折旧 ${fmt(R.dep, 2)}）`, `真实平均卖价 <b>RM ${fmt(R.plPrice, 2)} / kg</b>`,
-      `保本卖价约 <b>RM ${fmt(R.total / y, 2)} / kg</b>；保本产量约 <b>${fmt(R.total / R.plPrice, 2)} kg / 包</b>`, `照标杆产量和真实卖价，每包每季约赚 <b>RM ${fmt(prof, 2)}</b>`,
+      `保本卖价约 <b>RM ${fmt(R.total / y, 2)} / kg</b>；保本产量约 <b>${fmt(R.total / R.plPrice, 2)} kg / 包</b>（每 10,000 包约 ${fmt(R.total / R.plPrice * 10000 / 30)} 篮）`, `照标杆产量和真实卖价，每包每季约赚 <b>RM ${fmt(prof, 2)}</b>`,
       `开新场设园费约 RM ${fmt(R.setup, 2)} / 包`, '要试不同包数、产量、卖价 → <a href="#" onclick="go(\'plan\');return false">Planner</a>；每个场每季赚多少 → <a href="#" onclick="go(\'money\');return false">Money</a>']);
   }
   if(key === 'records') return li(['日期：播种、发芽、定植、第一次开花、结果、第一次收成、最后一次收成、<b>拔树</b>（Farms → Cycles）', '每次收成：Leader 表单（日期、场、每个等级几篮 / 几 kg）',
@@ -2098,7 +2119,9 @@ async function renderManage(){
   <div class="card"><div class="card-title">② System info</div>
     <div class="mg-line">System: <span class="mg-val">Harvest</span> (Operations) · Version: <span class="mg-val">v${APP_VERSION}</span></div>
     <div class="mg-line">Reports: pending ${n('PENDING')} · confirmed ${n('CONFIRMED')} · voided ${n('VOID')}</div>
-    <div class="mg-line">Leader form: <span class="mg-val">${esc(LEADER_LINK)}</span> — Leaders do not sign in; they can only send reports, never read them</div></div>
+    <div class="mg-line">Leader form: <span class="mg-val">${esc(LEADER_LINK)}</span> — Leaders do not sign in; they can only send reports, never read them</div>
+    <div class="mg-line">Unit: <span class="mg-val">1 basket = 30 kg</span> — all tracking is in baskets; kg shows only in Money, Seasons and inside each report</div>
+    <div class="mg-line">Standard: Crops growing plan v${curProto().version ?? '—'} · target <span class="mg-val">${fmt(targetOf())} kg per polybag</span> = ${fmt(targetOf() * 10000 / 30)} baskets per 10,000 polybags · harvest weeks from the formula: ${(() => { const B0 = liveBench()[0]; return B0 ? cyRules(B0.data).wk : '—'; })()}</div></div>
   <div class="card"><div class="card-title">③ Cloud connection</div>
     <div class="mg-line">Status: ${LOADED ? '<span class="badge b-active">Connected</span>' : '<span class="badge b-archived">Offline</span>'} · Last loaded: ${loadedAt ? hhmm(loadedAt) : '—'}</div>
     ${lastErr ? `<div class="alert alert-danger" style="margin-top:8px">Last error: ${esc(lastErr)}</div>` : ''}
