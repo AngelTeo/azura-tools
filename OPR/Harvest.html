@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v27</title>
+<title>Harvest v28</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -214,6 +214,13 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .hv-c.now{box-shadow:inset 2px 0 0 #222}
 .hv-t{height:64px;display:flex;align-items:flex-end;justify-content:center}.hv-t i{width:13px;border-radius:3px 3px 0 0;background:#8B6B2E}.hv-t.clash i{background:#C62828}.hv-t.gap{background:repeating-linear-gradient(0deg,#fff 0 4px,#F2D7D5 4px 6px)}
 .tk-tabs{display:flex;gap:6px;margin:0 0 12px}.tk-tabs button{border:1px solid var(--bdr);background:var(--sur);border-radius:999px;padding:7px 16px;font-weight:700;cursor:pointer;font-size:14px}.tk-tabs button.on{background:var(--layer);color:#fff;border-color:var(--layer)}
+.hb{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto}
+.hb-d{border-radius:12px;padding:10px;border:1px solid var(--bdr);background:var(--sur);display:flex;flex-direction:column;gap:7px}
+.hb-d.off{background:repeating-linear-gradient(45deg,#F6F4EE 0 6px,#fff 6px 12px);color:#888}.hb-d.on{border-top:5px solid #8B6B2E}.hb-d.small{border-top-color:#E8A800}
+.hb-n{font-weight:800;font-size:15px}.hb-n small{font-weight:400;color:var(--mut);font-size:11px}
+.hb-l{background:#EFE7D3;border-radius:8px;padding:5px 7px;font-size:12.5px}.hb-l small,.hb-g small,.hb-s small,.hb-x small,.hb-f small{display:block;font-size:10.5px;color:var(--mut);font-weight:400}
+.hb-g{font-weight:700;font-size:13px}.hb-s b{font-size:20px;color:#0F6E56}.hb-x{font-size:13px;font-weight:700;margin-top:6px}
+.hb-f{border-left:4px solid var(--c);padding-left:6px;font-size:12.5px}
 .tk-badge{display:inline-block;background:#C62828;color:#fff;border-radius:999px;font-size:11px;padding:0 7px;margin-left:4px}
 table.mini{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}table.mini th{font-size:11px;color:var(--mut);font-weight:600;text-align:left;border-bottom:1px solid var(--bdr);padding:3px 4px}table.mini td{padding:3px 4px;border-bottom:1px solid #f0ede4}table.mini .num{text-align:right}
 .ot{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
@@ -311,7 +318,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v27</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v28</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -321,7 +328,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v27</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v28</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -446,7 +453,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 27;
+const APP_VERSION = 28;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1330,13 +1337,58 @@ function trackWeekCharts(M){
         scales:{x:{ticks:{font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:9}, grid:{display:false}}, y:{beginAtZero:true, ticks:{font:{size:9}, maxTicksLimit:4}}}}}));
   });
 }
+/* weekly habit (Mon–Sun): which days are harvested (lorry the same night), days grown since the last harvest,
+   standard share = days grown ÷ 7, and each farm's real average baskets per harvest day (last 6 weeks, this season) */
+function weekHabit(M){
+  const t = today(), from = addDays(t, -42), DAYS = [1, 2, 3, 4, 5, 6, 0];   /* Mon..Sun as JS getUTCDay */
+  const dow = d => new Date(dnum(d) * 864e5).getUTCDay();
+  const farms = M.farms.map(P => { const rs = P.X.rs.filter(r => r.date >= from && r.date <= t); const by = {}; rs.forEach(r => { const k = dow(r.date); (by[k] = by[k] || []).push(r.bk); }); return {P, rs, by}; }).filter(x => x.rs.length);
+  const weeks = 6, cnt = {}; farms.forEach(f => Object.entries(f.by).forEach(([k, v]) => cnt[k] = Math.max(cnt[k] || 0, v.length)));
+  const on = DAYS.filter(k => (cnt[k] || 0) >= 2);   /* harvested on this weekday at least twice in 6 weeks */
+  if(!on.length) return null;
+  const gap = {}; on.forEach((k, i) => { const p = on[(i - 1 + on.length) % on.length]; let g = (k - p + 7) % 7; if(g === 0) g = 7; gap[k] = g; });
+  const tot = on.reduce((s, k) => s + gap[k], 0);
+  return {DAYS, on, gap, tot, farms, weeks};
+}
+function habitHTML(M){
+  const Hb = weekHabit(M); if(!Hb) return '';
+  const nm = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], zh = ['日', '一', '二', '三', '四', '五', '六'];
+  const avg = a => a && a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  const sumAvg = f => Hb.on.reduce((s, k) => s + (avg(f.by[k]) || 0), 0);
+  return `<div class="sec-t" style="margin-top:4px">Weekly habit · Mon → Sun · which day we harvest and the lorry goes</div>
+  <div class="hb">${Hb.DAYS.map(k => { const h = Hb.on.includes(k), g = Hb.gap[k];
+    return `<div class="hb-d ${h ? 'on' : 'off'}${g === 1 ? ' small' : ''}">
+      <div class="hb-n">${nm[k]} <small>星期${zh[k]}</small></div>
+      ${h ? `<div class="hb-l">🚚 <b>Harvest + lorry</b><small>lorry comes the same night</small></div>
+        <div class="hb-g">${g} day${g > 1 ? 's' : ''} grown<small>since the last harvest</small></div>
+        <div class="hb-s"><b>${fmt(g / Hb.tot * 100, 1)}%</b><small>standard share of the week (${g}/${Hb.tot})</small></div>
+        ${Hb.farms.map(f => { const a = avg(f.by[k]), sh = a != null && sumAvg(f) ? a / sumAvg(f) * 100 : null;
+          return `<div class="hb-f" style="--c:${f.P.F.col}"><b>${esc(f.P.F.farm)}</b> ${a != null ? fmt(a) + ' baskets' : '—'}<small ${sh != null && sh < g / Hb.tot * 100 * 0.8 ? 'style="color:var(--danger);font-weight:700"' : ''}>${sh != null ? fmt(sh, 1) + '% of its week' : ''} · ${(f.by[k] || []).length}×</small></div>`; }).join('')}`
+      : `<div class="hb-x">No harvest<small>no lorry · plants keep growing</small></div>`}
+    </div>`; }).join('')}</div>
+  <div class="ot-c" style="--c:#8B6B2E;margin:10px 0 6px"><div class="ot-h"><b>Average baskets per harvest day · last 6 weeks</b><span class="hint">bars = each farm · 🚚 = harvest + lorry that night</span></div><div style="height:220px"><canvas id="hbChart"></canvas></div></div>
+  <div class="hint" style="margin-bottom:14px">Why the days differ: the plants grow about the same every day, so each harvest is as big as the days grown since the last one. ${Hb.on.map(k => nm[k] + ' ' + Hb.gap[k]).join(' : ')} days = the share of the week each harvest should carry. A day far below its share (its % of the week in red on the day cards) means something happened that day — check Ask why above.</div>`;
+}
+function habitChart(M){
+  const Hb = weekHabit(M), el = $('hbChart'); if(!Hb || !el || !window.Chart) return;
+  const nm = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], avg = a => a && a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+  const lab = Hb.DAYS.map(k => nm[k] + (Hb.on.includes(k) ? ' 🚚' : ''));
+  const ds = [];
+  Hb.farms.forEach(f => {
+    const wk = Hb.on.reduce((s, k) => s + avg(f.by[k]), 0);
+    ds.push({type:'bar', label:f.P.F.farm, data:Hb.DAYS.map(k => Hb.on.includes(k) ? Math.round(avg(f.by[k])) : 0), backgroundColor:f.P.F.col, borderRadius:3});
+  });
+  RCH.push(new Chart(el, {data:{labels:lab, datasets:ds}, options:{maintainAspectRatio:false, animation:false,
+    plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}, filter:i => !/standard/.test(i.text)}}, tooltip:{callbacks:{label:c => c.raw == null ? '' : ' ' + c.dataset.label + ': ' + c.raw + ' baskets'}}},
+    scales:{x:{ticks:{font:{size:12}}}, y:{beginAtZero:true, title:{display:true, text:'baskets per harvest'}}}}}));
+}
 /* ---- each harvest ---- */
 function trackAsk(){ const G = growth(), t = today(); return H.reports.filter(r => r.status !== 'VOID' && G[r.id] && G[r.id].low && r.date >= addDays(t, -14)).sort((a, b) => b.date.localeCompare(a.date)).map(r => ({r, g:G[r.id]})); }
 /* standard target for one harvest = that week's target × days grown / 7 (Sun, Tue, Thu = 2/7, Fri = 1/7) */
 function harvestTarget(M, P, r, gap){ if(!P || !gap) return null; const i = Math.floor((dnum(r.date) - dnum(P.start)) / 7); return i >= 0 && i < M.NW ? M.tW(i, P.bags) * Math.min(gap, 7) / 7 : null; }
 function trackEachHTML(M){
   const G = growth(), ask = trackAsk(), wd = d => WD[new Date(dnum(d) * 864e5).getUTCDay()];
-  let h = `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:6px solid ${ask.length ? 'var(--danger)' : 'var(--ok)'}">
+  let h = habitHTML(M) + `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:6px solid ${ask.length ? 'var(--danger)' : 'var(--ok)'}">
     <b style="font-size:15px">${ask.length ? '⚠ Ask why · last 14 days · ' + ask.length + ' harvest' + (ask.length > 1 ? 's' : '') + ' below what the farm should give' : '✓ Last 14 days: every harvest is inside what the farm should give'}</b>
     ${ask.map(({r, g}) => `<div style="margin-top:6px;cursor:pointer" onclick="openReport('${r.id}')"><b style="color:var(--danger)">${esc(r.farm)} · ${wd(r.date)} ${dShort(r.date)}</b> — ${fmt(r.bk)} baskets, should be ${bkF(g.lo)}–${bkF(g.hi)} (${g.gap} day${g.gap === 1 ? '' : 's'} since last × usual ${fmt(bkN(g.base), 1)} baskets a day) · only ${fmt(g.kd / g.base * 100)}% of usual</div>`).join('')}
   </div>
@@ -1353,7 +1405,8 @@ function trackEachHTML(M){
 }
 function trackEachCharts(M){
   if(!window.Chart) return;
-  const G = growth(), cv = $('trackView').querySelectorAll('.ot-c canvas');
+  habitChart(M);
+  const G = growth(), cv = $('trackView').querySelectorAll('.ot-c canvas:not(#hbChart)');
   M.farms.filter(P => P.X.rs.length).forEach((P, i) => {
     const rs = P.X.rs.slice(-24), col = P.F.col;
     const lab = rs.map(r => WD[new Date(dnum(r.date) * 864e5).getUTCDay()].slice(0, 2) + ' ' + dShort(r.date));
