@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v17</title>
+<title>Harvest v18</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -221,8 +221,6 @@ table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.gri
 .cy-fm i{font-style:normal;font-size:10px;font-weight:800;margin-left:2px}.fm-e{color:#0F6E56}.fm-l{color:#A32D2D}
 .cy-mk{position:absolute;top:3px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:2;line-height:1.15}
 .cy-mk.first{transform:none;align-items:flex-start}
-.cy-mk::after{content:'';width:2px;height:6px;background:currentColor;margin-top:1px}
-.cy-mk.first::after{margin-left:0}
 .cy-mk b{font-size:11.5px;font-weight:800;white-space:nowrap;color:#222}
 .cy-mk small{font-size:11px;font-weight:800;white-space:nowrap}
 .cy-mk i{font-style:normal}
@@ -291,7 +289,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v17</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v18</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -301,7 +299,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v17</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v18</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -425,7 +423,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1036,7 +1034,7 @@ function cyMarks(F, PL){
   return mk.map(([i, d, n, std, est]) => {
     const df = std == null ? 0 : n - std, cls = i === 0 || Math.abs(df) <= 2 ? 'mk-ok' : df > 0 ? 'mk-late' : 'mk-early';
     const gap = i === 0 || !df ? '' : ` <i>${df > 0 ? '+' : '−'}${Math.abs(df)}</i>`;
-    return `<div class="cy-mk ${cls}${i === 0 ? ' first' : ''}" style="left:${i * 10}%" title="${esc(F.farm)}: ${dLong(d)} = day ${n}${std != null && i ? ' · standard day ' + std : ''}"><b>${est ? '≈' : ''}${dShort(d)}</b><small>D${n}${gap}</small></div>`;
+    return `<div class="cy-mk ${cls}${i === 0 ? ' first' : ''}" style="left:${i * 10}%" title="${esc(F.farm)}: ${dLong(d)} = day ${n}${std != null && i ? ' · standard day ' + std : ''}"><b>${est ? '≈' : ''}${dShort(d)}</b><small>D${std != null && i ? std : n}${gap}</small></div>`;
   }).join('');
 }
 function cyPin(F, t){
@@ -1073,7 +1071,7 @@ function renderHome(){
       <div class="cy-tr" style="--c:${F.col}" data-farm="${esc(F.farm)}" data-stage="${p.P.s + 1}"><div class="cy-fill" style="width:${p.P.x}%"></div>
       <div class="cy-pin" style="left:${Math.min(96, Math.max(4, p.P.x))}%"><span>${esc(p.big)}</span><s>${esc(p.small)}</s></div>${cyMarks(F, PL)}</div>`; }).join('')}
   </div></div>
-  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Tags on each bar = real dates typed in Farms → Cycles (1st harvest also comes from Leader reports). D = day from sowing: <b style="color:#0F6E56">green</b> on the standard (±2 days), <b style="color:#A32D2D">red +n</b> = n days late, <b style="color:#236FAD">blue −n</b> = early.</div>
+  <div class="hint" style="margin-top:6px">Standard day numbers and each stage's length come from the Crops growing plan. Changeover has no day count: the next season's nursery starts before the last harvest. The colour bars below show where each farm really is now. Tags on each bar = real dates typed in Farms → Cycles (1st harvest also comes from Leader reports). D30 = standard day 30 from sowing; <b style="color:#A32D2D">D30 +3</b> = done 3 days later than the standard, <b style="color:#236FAD">D60 −1</b> = 1 day earlier, <b style="color:#0F6E56">green</b> = on the standard (±2 days).</div>
   ${FS.length ? '' : '<div class="card empty">No planting cycles yet. Add them in Farms → Cycles.</div>'}
 `;
   h += `  <details class="ov-more" ontoggle="if(this.open) renderHomeDetail()"><summary>More detail · week-by-week chart, each farm, prices</summary><div id="homeDetail"></div></details>`;
