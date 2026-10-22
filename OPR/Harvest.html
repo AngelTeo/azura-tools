@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v4</title>
+<title>Harvest v5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -145,6 +145,21 @@ input:focus,select:focus{outline:2px solid rgba(139,108,42,.25);border-color:var
 .sea dt{color:var(--mut)}.sea dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 .sea table{width:100%;font-size:12px;border-collapse:collapse}.sea th,.sea td{padding:4px;border-top:.5px solid var(--bdr)}.sea th{text-align:left;color:var(--mut);font-weight:500}.sea td.num,.sea th.num{text-align:right}
 .sec-t{font-size:14px;font-weight:700;margin:18px 0 8px}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap;margin-left:4px}
+.tag-act{background:#E1F5EE;color:var(--ok)}.tag-pl{background:#E8F0F7;color:var(--info)}.tag-est{background:#FFF3CD;color:var(--warn)}
+.neg{color:var(--danger);font-weight:700}.pos{color:var(--ok);font-weight:700}
+.pl-grid{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:14px;align-items:start}
+@media (max-width:820px){.pl-grid{grid-template-columns:1fr}}
+.pl-in label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}.pl-in input{width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.chip{border:.5px solid var(--bdr);background:var(--sur);border-radius:14px;padding:3px 9px;font-size:11px;cursor:pointer}
+.chip:hover{background:#FFF9E6}.chip.on{background:var(--layer);color:#fff;border-color:var(--layer)}
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.res>div{background:var(--sur);border:.5px solid var(--bdr);border-radius:10px;padding:9px 12px}.res small{display:block;font-size:11px;color:var(--mut)}
+.res b{font-size:19px;font-variant-numeric:tabular-nums}.res .d{font-size:11px;color:var(--mut)}
+.fld-err{color:var(--danger);font-size:11px;margin-top:2px}
+table.grid td,table.grid th{text-align:right}table.grid td:first-child,table.grid th:first-child{text-align:left}
+.cr-in{width:100%;min-width:70px}
+@media print{.nav,.no-print,.ov{display:none!important}body{background:#fff}.page{display:none!important}.page.on{display:block!important}}
 .ov-top{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:12px}
 .ov-top .stat b{font-size:22px}.ov-top .stat .d{font-size:12px;color:var(--mut);margin-top:2px}
 .fm{background:var(--sur);border:.5px solid var(--bdr);border-left:6px solid var(--c);border-radius:12px;padding:14px 16px;margin-bottom:12px}
@@ -206,7 +221,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v4</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v5</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -216,8 +231,10 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v4</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v5</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
+    <button class="ntab" data-p="money" onclick="go('money')">Money</button>
+    <button class="ntab" data-p="plan" onclick="go('plan')">Planner</button>
     <button class="ntab" data-p="compare" onclick="go('compare')">Compare</button>
     <button class="ntab" data-p="seasons" onclick="go('seasons')">Seasons</button>
     <button class="ntab" data-p="forecast" onclick="go('forecast')">Forecast</button>
@@ -237,6 +254,12 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
   <!-- Compare -->
   <div class="page on" id="page-home"><div id="homeView"></div></div>
+
+  <!-- Money -->
+  <div class="page" id="page-money"><div id="moneyView"></div></div>
+
+  <!-- Planner -->
+  <div class="page" id="page-plan"><div id="planView"></div></div>
 
   <!-- Compare -->
   <div class="page" id="page-compare">
@@ -324,7 +347,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -336,6 +359,7 @@ const H = { farms:[], blocks:[], cycles:[], protocols:[], grades:[], units:[], r
 const OPT = { x:'day', from:'first', m:'cum', u:'kg' };
 let HIDDEN = new Set(), REPF = '', SEL = new Set();
 let BENCH = [], BENCH_ERR = '', fchart = null, bchart = null, hchart = null, PRICES = [], PRICE_ERR = '';
+let COSTS = [], COST_ERR = '', PLANS = [], PLAN_ERR = '', MONEY = {price:'pl', farm:'', st:'', view:'money', ver:null, draft:null, dirty:false}, PIN = null, PLAN_FROM = null;
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -403,6 +427,9 @@ async function loadAll(){
     BENCH = bq.error ? [] : (bq.data || []); BENCH_ERR = bq.error ? nice(bq.error) : '';
     const pq = await sb.rpc('harvest_owner_prices');
     PRICES = pq.error ? [] : (pq.data || []); PRICE_ERR = pq.error ? nice(pq.error) : '';
+    const [cq, plq] = await Promise.all([sb.rpc('harvest_owner_cost_profiles'), sb.rpc('harvest_owner_plans')]);
+    COSTS = cq.error ? [] : (cq.data || []); COST_ERR = cq.error ? nice(cq.error) : '';
+    PLANS = plq.error ? [] : (plq.data || []); PLAN_ERR = plq.error ? nice(plq.error) : '';
     LOADED = true; loadedAt = new Date(); $('savedAt').textContent = 'Loaded ' + hhmm(loadedAt);
     $('loadBanner').style.display = 'none'; setSync('ok', 'Cloud');
   }catch(err){
@@ -420,6 +447,8 @@ function go(p){
 }
 function renderAll(){
   if($('page-home').classList.contains('on')) renderHome();
+  if($('page-money').classList.contains('on')) renderMoney();
+  if($('page-plan').classList.contains('on')) renderPlan();
   if($('page-compare').classList.contains('on')) renderCompare();
   if($('page-seasons').classList.contains('on')) renderSeasons();
   if($('page-forecast').classList.contains('on')) renderForecast();
@@ -932,6 +961,330 @@ async function savePrices(){
   toast('✓ Prices saved'); await loadAll();
 }
 
+/* ══════ Money · Planner · Cost rates ══════
+   All money numbers come from the owner-only database (cost rate versions, harvest, benchmark, prices).
+   This page has no money figures written in it. */
+const KIND = {asset:'Fixed asset (Balance Sheet)', setup:'One-off setup', season:'Every season', dep:'Depreciation', exclude:'Not counted'};
+const curCost = () => COSTS.find(c => !c.retired_at) || null;
+const r2n = v => Math.round(v * 100) / 100;
+function rates(cp){
+  if(!cp) return null;
+  const d = cp.data, b = Number(d.basis_bags) || 1, sum = {asset:0, setup:0, season:0, dep:0, exclude:0};
+  (d.items || []).forEach(i => sum[i.kind] = (sum[i.kind] || 0) + Number(i.rm || 0));
+  return {cp, d, basis:b, sum, setup:(sum.asset + sum.setup) / b, run:sum.season / b, dep:sum.dep / b, total:(sum.season + sum.dep) / b,
+    plPrice: d.kg_sold ? d.sales_rm / d.kg_sold : 0, yieldAct: d.harvest_kg ? d.harvest_kg / b : 0,
+    recon: r2n(sum.setup + sum.season + sum.dep + sum.exclude) - r2n(Number(d.pl_total_expenses) || 0)};
+}
+const money = (v, d = 0) => (v < 0 ? '−RM ' : 'RM ') + fmt(Math.abs(v), d);
+const pm = (v, d = 0) => `<span class="${v < 0 ? 'neg' : 'pos'}">${money(v, d)}</span>`;
+const TAG = {act:'<span class="tag tag-act">Actual</span>', pl:'<span class="tag tag-pl">From P&amp;L</span>', est:'<span class="tag tag-est">Estimated</span>'};
+function nurseryDays(){ const xs = H.cycles.filter(c => c.sowing_date && c.transplant_date && !c.sowing_is_estimate && !c.transplant_is_estimate).map(c => dnum(c.transplant_date) - dnum(c.sowing_date)); return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null; }
+function turnaroundDays(){
+  const xs = []; H.cycles.filter(c => c.status === 'CLOSED' && c.actual_end).forEach(c => { const n = H.cycles.find(x => x.block_id === c.block_id && x.cycle_no === c.cycle_no + 1 && x.transplant_date); if(n) xs.push(dnum(n.transplant_date) - dnum(c.actual_end)); });
+  return xs.length ? {avg:Math.round(xs.reduce((a, b) => a + b, 0) / xs.length), min:Math.min(...xs), max:Math.max(...xs)} : null;
+}
+/* ---------- Money ---------- */
+function moneyRows(R){
+  const B = liveBench()[0], t = today(), mine = MONEY.price === 'mine' && hasPrice();
+  const priceOf = cid => mine ? rmPerKg(gradeMix(cid)).v : R.plPrice;
+  return H.cycles.filter(c => c.status === 'CLOSED' || c.status === 'ACTIVE').map(c => {
+    const bags = bagsFor(c), L = cycleLabel(c), sale = (R.d.season_sales || []).find(x => x.cycle_id === c.id), cost = bags * R.total;
+    const row = {c, L, bags, cost, col:FARM_COLOR[L.farm] || '#555'};
+    if(c.status === 'CLOSED'){
+      if(sale){ Object.assign(row, {kg:sale.kg_sold, price:R.plPrice, rev:sale.kg_sold * R.plPrice, src:'pl', how:`${fmt(sale.kg_sold)} kg sold × RM ${fmt(R.plPrice, 2)} (Season 1 average from the P&L)`}); }
+      else { const kg = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), pr = priceOf(c.id); Object.assign(row, {kg, price:pr, rev:kg * pr, src:'est', how:`${fmt(kg)} kg harvested × RM ${fmt(pr, 2)}`}); }
+      Object.assign(row, {profit:row.rev - cost, status:'Finished', soFar:null});
+    } else {
+      const P = B ? farmPlan(c, B.data) : null, pr = priceOf(c.id);
+      const kgNow = nonVoid(c.id).reduce((s, r) => s + r.kg, 0), kg = P ? P.projTotal : kgNow;
+      const st = c.transplant_date || c.sowing_date, end = P ? P.end : null;
+      const frac = st && end ? Math.max(0, Math.min(1, (dnum(t) - dnum(st)) / (dnum(end) - dnum(st)))) : 0;
+      Object.assign(row, {kg, price:pr, rev:kg * pr, src:'est', profit:kg * pr - cost, status:'Growing', frac,
+        soFar:{kg:kgNow, rev:kgNow * pr, cost:cost * frac, profit:kgNow * pr - cost * frac},
+        how:`${fmt(kg)} kg expected for the whole season (Forecast) × RM ${fmt(pr, 2)}${mine ? ' (your prices × this season\'s grade mix)' : ' (Season 1 average from the P&L)'}`});
+    }
+    return row;
+  }).sort((a, b) => a.L.farm.localeCompare(b.L.farm) || a.c.cycle_no - b.c.cycle_no);
+}
+function renderMoney(){
+  const v = $('moneyView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  if(COST_ERR){ v.innerHTML = `<h1 class="pt">Money</h1><div class="alert alert-danger"><span>⚠</span><div>Cannot read the cost rates, <b>no data has been changed</b>. ${esc(COST_ERR)} <button class="btn btn-sm" onclick="loadAll()">Reload</button></div></div>`; return; }
+  if(MONEY.view === 'rates') return renderRates();
+  const R = rates(curCost());
+  if(!R){ v.innerHTML = `<h1 class="pt">Money</h1><div class="card empty">No cost rates yet. <button class="btn btn-pri" onclick="MONEY.view='rates';renderMoney()">Open cost rates</button></div>`; return; }
+  const rows = moneyRows(R), grow = rows.filter(r => r.status === 'Growing'), fin = rows.filter(r => r.status === 'Finished');
+  const shown = rows.filter(r => (!MONEY.farm || r.L.farm === MONEY.farm) && (!MONEY.st || r.status === MONEY.st));
+  const sumF = (xs, f) => xs.reduce((s, r) => s + f(r), 0);
+  const farms = [...new Set(rows.map(r => r.L.farm))];
+  const bagsF = sumF(fin, r => r.bags), bagsG = sumF(grow, r => r.bags);
+  v.innerHTML = `<h1 class="pt">Money <span class="no-print" style="display:inline-flex;gap:6px;margin-left:8px">
+      <button class="btn btn-sm" onclick="MONEY.view='rates';renderMoney()">Cost rates</button><button class="btn btn-sm" onclick="window.print()">Print</button><button class="btn btn-sm" onclick="exportAll()">Export</button></span></h1>
+    <div class="ov-top">
+      <div class="stat"><small>Growing seasons · profit so far</small><b>${pm(sumF(grow, r => r.soFar.profit))}</b><div class="d">${TAG.est} harvest so far minus costs for the days gone</div></div>
+      <div class="stat"><small>Growing seasons · whole season expected</small><b>${pm(sumF(grow, r => r.profit))}</b><div class="d">${TAG.est} ${bagsG ? 'RM ' + fmt(sumF(grow, r => r.profit) / bagsG, 2) + ' per polybag' : ''}</div></div>
+      <div class="stat"><small>Last finished seasons · profit</small><b>${pm(sumF(fin, r => r.profit))}</b><div class="d">${fin.some(r => r.src === 'pl') ? TAG.pl : TAG.est} ${bagsF ? 'RM ' + fmt(sumF(fin, r => r.profit) / bagsF, 2) + ' per polybag' : ''}</div></div>
+    </div>
+    <div class="row-inline no-print" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="seg"><button class="${MONEY.price === 'pl' ? 'on' : ''}" onclick="MONEY.price='pl';renderMoney()">Price: Season 1 actual average RM ${fmt(R.plPrice, 2)}</button><button class="${MONEY.price === 'mine' ? 'on' : ''}" ${hasPrice() ? '' : 'disabled title="Set your prices in Overview first"'} onclick="MONEY.price='mine';renderMoney()">Price: my prices</button></div>
+      <select onchange="MONEY.farm=this.value;renderMoney()" style="max-width:150px"><option value="">All farms</option>${farms.map(f => `<option ${MONEY.farm === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
+      <select onchange="MONEY.st=this.value;renderMoney()" style="max-width:150px"><option value="">Growing &amp; finished</option><option value="Growing" ${MONEY.st === 'Growing' ? 'selected' : ''}>Growing</option><option value="Finished" ${MONEY.st === 'Finished' ? 'selected' : ''}>Finished</option></select>
+    </div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th class="num">kg</th><th class="num">Revenue</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Profit per polybag</th><th>Source</th></tr></thead><tbody>
+    ${shown.length ? shown.map(r => `<tr class="click" onclick="moneyDetail('${r.c.id}')"><td><span class="sw ${r.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${r.col}"></span> <b>${esc(r.L.text)}</b></td>
+      <td>${r.status === 'Growing' ? `Growing · ${fmt(r.frac * 100)}% of season` : 'Finished'}</td><td class="num">${fmt(r.bags)}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(r.rev)}</td><td class="num">${fmt(r.cost)}</td>
+      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="9" class="empty">No season yet</td></tr>'}
+    </tbody></table></div></div>
+    <div class="hint" style="margin-top:8px">Cost = polybags × RM ${fmt(R.total, 2)} per polybag per season (cost rates v${R.cp.version}: running RM ${fmt(R.run, 2)} + depreciation RM ${fmt(R.dep, 2)}). Growing seasons use the Forecast for the whole season. Click a row to see how it is worked out. When Revenue and Costs are recorded, these become Actual.</div>`;
+}
+function moneyDetail(cid){
+  const R = rates(curCost()), r = moneyRows(R).find(x => x.c.id === cid); if(!r) return;
+  const k = r.bags / R.basis, lines = (R.d.items || []).filter(i => i.kind === 'season' || i.kind === 'dep');
+  openModal(r.L.text, `
+    <div class="mg-line"><b>Revenue</b> ${TAG[r.src]}: ${esc(r.how)} = <b>${money(r.rev)}</b></div>
+    ${r.soFar ? `<div class="mg-line">So far: ${fmt(r.soFar.kg)} kg harvested = ${money(r.soFar.rev)} · costs for ${fmt(r.frac * 100)}% of the season ${money(r.soFar.cost)} · profit so far ${pm(r.soFar.profit)}</div>` : ''}
+    <div class="mg-line" style="margin-top:8px"><b>Cost</b> ${TAG.pl}: ${fmt(r.bags)} polybags ÷ ${fmt(R.basis)} polybags in the P&amp;L × each line</div>
+    <table class="qt"><thead><tr><th>Line</th><th>This season</th><th>Per polybag</th></tr></thead><tbody>
+    ${lines.map(i => `<tr><td>${esc(i.name)}</td><td>${fmt(i.rm * k)}</td><td>${fmt(i.rm / R.basis, 2)}</td></tr>`).join('')}
+    <tr><td><b>Total</b></td><td><b>${fmt(r.cost)}</b></td><td><b>${fmt(R.total, 2)}</b></td></tr></tbody></table>
+    <div class="mg-line" style="margin-top:8px"><b>Profit</b>: ${pm(r.profit)} · ${pm(r.profit / r.bags, 2)} per polybag</div>`,
+    `<button class="btn" onclick="closeModal()">Close</button>`);
+}
+/* ---------- Cost rates ---------- */
+function renderRates(){
+  const v = $('moneyView');
+  if(MONEY.draft) return renderRateEditor();
+  const cp = COSTS.find(c => String(c.version) === String(MONEY.ver)) || curCost() || COSTS[0];
+  const head = `<h1 class="pt"><button class="btn btn-sm no-print" onclick="MONEY.view='money';renderMoney()">← Money</button> Cost rates
+    ${COSTS.length ? `<select class="no-print" onchange="MONEY.ver=this.value;renderRates()" style="max-width:320px;font-size:13px;font-weight:400">${COSTS.map(c => `<option value="${c.version}" ${cp && c.version === cp.version ? 'selected' : ''}>v${c.version} · ${esc(c.name)}${c.retired_at ? ' (retired)' : ''}</option>`).join('')}</select>` : ''}
+    <button class="btn btn-pri btn-sm no-print" onclick="rateNew()">New version</button></h1>`;
+  if(!cp){ v.innerHTML = head + '<div class="card empty">No cost rates yet. Press New version.</div>'; return; }
+  const R = rates(cp), d = R.d;
+  const grp = k => (d.items || []).map((i, n) => ({...i, n})).filter(i => i.kind === k);
+  const sec = k => { const xs = grp(k); if(!xs.length) return ''; const t = xs.reduce((s, i) => s + i.rm, 0);
+    return `<tr><td colspan="5" style="background:#F6F4EF"><b>${KIND[k]}</b></td></tr>` + xs.map(i => `<tr><td>${esc(i.cat || '')}</td><td>${esc(i.name)}</td><td class="num">${fmt(i.rm, 2)}</td><td class="num">${fmt(i.rm / R.basis, 2)}</td><td>${esc(i.src || '')}</td></tr>`).join('')
+      + `<tr><td></td><td><b>Subtotal</b></td><td class="num"><b>${fmt(t, 2)}</b></td><td class="num"><b>${fmt(t / R.basis, 2)}</b></td><td></td></tr>`; };
+  v.innerHTML = head + `
+    <div class="hint" style="margin:-6px 0 10px">v${cp.version} saved ${esc(String(cp.created_at).slice(0, 10))} · ${esc(d.period || '')} · costs are for ${fmt(R.basis)} polybags (${esc(d.basis_text || '')})${cp.retired_at ? ' · <b>retired</b>' : ''}</div>
+    <div class="res" style="margin-bottom:12px">
+      <div><small>Setup, once (per polybag)</small><b>RM ${fmt(R.setup, 2)}</b><div class="d">fixed assets + one-off</div></div>
+      <div><small>Every season (per polybag)</small><b>RM ${fmt(R.run, 2)}</b><div class="d">running costs</div></div>
+      <div><small>Depreciation (per polybag per season)</small><b>RM ${fmt(R.dep, 2)}</b></div>
+      <div><small>Average selling price</small><b>RM ${fmt(R.plPrice, 2)}</b><div class="d">RM ${fmt(d.sales_rm, 2)} ÷ ${fmt(d.kg_sold)} kg sold</div></div>
+      <div><small>Check against the P&amp;L</small><b class="${Math.abs(R.recon) < 0.01 ? 'pos' : 'neg'}">${Math.abs(R.recon) < 0.01 ? 'Matches' : 'Off by RM ' + fmt(R.recon, 2)}</b><div class="d">P&amp;L total RM ${fmt(d.pl_total_expenses, 2)}</div></div>
+    </div>
+    <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Group</th><th>Line</th><th class="num">RM</th><th class="num">Per polybag</th><th>Source</th></tr></thead><tbody>
+    ${['asset', 'setup', 'season', 'dep', 'exclude'].map(sec).join('')}</tbody></table></div></div>
+    <div class="sec-t">Notes</div>
+    <div class="card"><textarea id="crNote" rows="3" style="width:100%">${esc(cp.note || '')}</textarea>
+      <div class="row-inline" style="margin-top:8px"><button class="btn btn-pri" onclick="rateNote(${cp.version}, false)">Save notes</button>
+      <button class="btn" onclick="rateNote(${cp.version}, ${!cp.retired_at})">${cp.retired_at ? 'Use this version again' : 'Retire this version'}</button></div>
+      <div class="hint">Only notes can be changed. To change amounts, press New version (this version stays as it is).</div></div>`;
+}
+async function rateNote(ver, retire){
+  const {error} = await sb.rpc('harvest_owner_cost_profile_note', {p_version:ver, p_note:$('crNote').value, p_retire:retire});
+  if(error){ toast('Not saved: ' + nice(error)); return; }
+  toast(retire ? '✓ Version retired' : '✓ Saved'); await loadAll();
+}
+function rateNew(){
+  const base = curCost() || COSTS[0];
+  const d = base ? JSON.parse(JSON.stringify(base.data)) : {period:'', basis_bags:0, basis_text:'', pl_total_expenses:0, sales_rm:0, kg_sold:0, harvest_kg:0, season_sales:[], items:[]};
+  MONEY.draft = {name:'', note:'', d}; MONEY.dirty = false; renderRates();
+}
+function rateDraftSum(){ const d = MONEY.draft.d; return r2n(d.items.filter(i => i.kind !== 'asset').reduce((s, i) => s + (Number(i.rm) || 0), 0)) - r2n(Number(d.pl_total_expenses) || 0); }
+function renderRateEditor(){
+  const D = MONEY.draft, d = D.d, diff = rateDraftSum();
+  const num = (k, lab) => `<div><label>${lab}</label><input type="number" step="0.01" min="0" class="cr-in" value="${d[k] ?? ''}" oninput="MONEY.draft.d['${k}']=Number(this.value);MONEY.dirty=true;rateRecon()"></div>`;
+  $('moneyView').innerHTML = `<h1 class="pt">New cost rate version</h1>
+    <div class="card pl-in"><div class="res" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+      <div><label>Name *</label><input id="crName" class="cr-in" value="${esc(D.name)}" placeholder="e.g. FY 2026/27 P&amp;L" oninput="MONEY.draft.name=this.value;MONEY.dirty=true"></div>
+      <div><label>Period</label><input class="cr-in" value="${esc(d.period || '')}" oninput="MONEY.draft.d.period=this.value;MONEY.dirty=true"></div>
+      ${num('basis_bags', 'Polybags these costs are for *')}${num('pl_total_expenses', 'P&amp;L total expenses (RM) *')}${num('sales_rm', 'P&amp;L sales (RM)')}${num('kg_sold', 'kg sold in the period')}${num('harvest_kg', 'kg harvested in the period')}
+      <div><label>Polybags note</label><input class="cr-in" value="${esc(d.basis_text || '')}" oninput="MONEY.draft.d.basis_text=this.value;MONEY.dirty=true"></div>
+    </div></div>
+    <div class="card" style="padding:0;margin-top:10px"><div class="tw"><table class="data"><thead><tr><th>Type</th><th>Group</th><th>Line *</th><th class="num">RM *</th><th>Source</th><th></th></tr></thead><tbody>
+    ${d.items.map((i, n) => `<tr><td><select class="cr-in" onchange="MONEY.draft.d.items[${n}].kind=this.value;MONEY.dirty=true;rateRecon()">${Object.keys(KIND).map(k => `<option value="${k}" ${i.kind === k ? 'selected' : ''}>${KIND[k]}</option>`).join('')}</select></td>
+      <td><input class="cr-in" value="${esc(i.cat || '')}" oninput="MONEY.draft.d.items[${n}].cat=this.value;MONEY.dirty=true"></td>
+      <td><input class="cr-in" value="${esc(i.name)}" oninput="MONEY.draft.d.items[${n}].name=this.value;MONEY.dirty=true"></td>
+      <td><input type="number" step="0.01" min="0" class="cr-in" style="text-align:right" value="${i.rm}" oninput="MONEY.draft.d.items[${n}].rm=Number(this.value);MONEY.dirty=true;rateRecon()"></td>
+      <td><input class="cr-in" value="${esc(i.src || '')}" oninput="MONEY.draft.d.items[${n}].src=this.value;MONEY.dirty=true"></td>
+      <td><button class="btn btn-sm" title="Remove this line from the new version" onclick="MONEY.draft.d.items.splice(${n},1);MONEY.dirty=true;renderRateEditor()">✕</button></td></tr>`).join('')}
+    </tbody></table></div></div>
+    <div class="row-inline" style="margin-top:8px"><button class="btn" onclick="MONEY.draft.d.items.push({kind:'season',cat:'',name:'',rm:0,src:''});MONEY.dirty=true;renderRateEditor()">+ Add line</button></div>
+    <div class="card" style="margin-top:10px"><div id="crRecon"></div>
+      <label class="hint">Why a new version (note)</label><textarea rows="2" style="width:100%" oninput="MONEY.draft.note=this.value">${esc(D.note)}</textarea>
+      <div class="row-inline" style="margin-top:8px"><button class="btn" onclick="rateCancel()">Cancel</button><button class="btn btn-pri" id="crSave" onclick="rateSaveAsk()">Save as new version</button></div>
+      <div class="hint">The P&amp;L lines (all types except Fixed asset) must add up to the P&amp;L total before you can save. Season sales by farm are copied from the current version.</div></div>`;
+  rateRecon();
+}
+function rateRecon(){
+  const diff = rateDraftSum(), ok = Math.abs(diff) < 0.01, el = $('crRecon'); if(!el) return;
+  el.innerHTML = ok ? '<b class="pos">✓ P&amp;L lines match the P&amp;L total</b>' : `<b class="neg">P&amp;L lines are ${diff > 0 ? 'more' : 'less'} than the P&amp;L total by RM ${fmt(Math.abs(diff), 2)} — fix before saving</b>`;
+  $('crSave').disabled = !ok;
+}
+function rateCancel(){ if(MONEY.dirty && !confirmLeave()) return; MONEY.draft = null; MONEY.dirty = false; renderRates(); }
+function confirmLeave(){ return window.__noConfirm || window.confirm('Leave without saving? Your changes to the new version will be lost.'); }
+function rateSaveAsk(){
+  const D = MONEY.draft;
+  if(!D.name.trim()){ toast('Give the new version a name'); $('crName').focus(); return; }
+  if(!(Number(D.d.basis_bags) > 0)){ toast('Enter the number of polybags these costs are for'); return; }
+  if(D.d.items.some(i => !String(i.name || '').trim() || !(Number(i.rm) >= 0))){ toast('Every line needs a name and an amount of 0 or more'); return; }
+  if(Math.abs(rateDraftSum()) >= 0.01) return;
+  const R = rates({version:0, data:D.d});
+  openModal('Save new cost rates', `<p>Save <b>${esc(D.name)}</b> as v${Math.max(0, ...COSTS.map(c => c.version)) + 1}?</p>
+    <p class="hint">Setup RM ${fmt(R.setup, 2)} · every season RM ${fmt(R.run, 2)} · depreciation RM ${fmt(R.dep, 2)} per polybag. Money and Planner will use this version from now on. Older versions stay and cannot be changed.</p><div class="alert alert-danger" id="merr" style="display:none"></div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="rateSave()">Save</button>`);
+}
+async function rateSave(){
+  const D = MONEY.draft;
+  const {error} = await sb.rpc('harvest_owner_cost_profile_save', {p_name:D.name.trim(), p_data:D.d, p_note:D.note});
+  if(error) return merr('Not saved — your changes are still here. ' + nice(error));
+  closeModal(); MONEY.draft = null; MONEY.dirty = false; MONEY.ver = null; toast('✓ New cost rates saved'); await loadAll();
+}
+window.addEventListener('beforeunload', e => { if(MONEY.dirty || (PIN && PIN.dirty)){ e.preventDefault(); e.returnValue = ''; } });
+/* ---------- Planner ---------- */
+function planDefaults(R){ return {bags:10000, yield:r2n(R.yieldAct * 100) / 100, price:r2n(R.plPrice * 100) / 100, seasons:2, mgmt:0, months:6, tp:'', name:'', dirty:false}; }
+function planPresets(R){
+  const B = liveBench()[0], ys = [];
+  ys.push({l:'Season 1 actual', v:R.yieldAct});
+  if(B) ys.push({l:'Benchmark v' + B.version, v:B.data.total_per_bag});
+  H.cycles.filter(c => c.status === 'CLOSED').forEach(c => { const kg = nonVoid(c.id).reduce((s, r) => s + r.kg, 0); if(kg) ys.push({l:cycleLabel(c).text, v:kg / bagsFor(c)}); });
+  if(B) H.cycles.filter(c => c.status === 'ACTIVE').forEach(c => { const P = farmPlan(c, B.data); if(P && P.F.actFirst) ys.push({l:cycleLabel(c).text + ' (now)', v:P.projTotal / bagsFor(c)}); });
+  const tg = targetOf(H.cycles.find(c => c.status === 'ACTIVE')); if(tg) ys.push({l:'Target', v:tg});
+  const ps = [{l:'Season 1 actual', v:R.plPrice}];
+  if(hasPrice()){ const mix = gradeMix('__all__'); const x = rmPerKg(mix).v; if(x) ps.push({l:'My prices', v:x}); }
+  return {ys, ps};
+}
+function planCalc(I, R){
+  const kg = I.bags * I.yield, rev = kg * I.price, run = I.bags * R.run + I.mgmt * I.months, dep = I.bags * R.dep, profit = rev - run - dep;
+  return {setup:I.bags * R.setup, kg, rev, run, dep, profit, perBag:profit / I.bags, year:profit * I.seasons,
+    payback: profit > 0 ? I.bags * R.setup / (profit + dep) : null, bePrice: kg ? (run + dep) / kg : null, beYield: I.price && I.bags ? (run + dep) / I.price / I.bags : null};
+}
+function planErrs(I){ const e = {}; if(!(I.bags > 0)) e.bags = 'Enter the number of polybags'; if(!(I.yield > 0) || I.yield > 100) e.yield = 'Enter kg per polybag (0–100)'; if(!(I.price > 0) || I.price > 100) e.price = 'Enter a price between 0 and 100'; if(!(I.seasons > 0) || I.seasons > 6) e.seasons = '1–6'; if(I.mgmt < 0) e.mgmt = '0 or more'; if(!(I.months > 0) || I.months > 24) e.months = '1–24'; return e; }
+function renderPlan(){
+  const v = $('planView');
+  if(!LOADED){ v.innerHTML = '<div class="card empty">Cloud not loaded</div>'; return; }
+  const R = rates(curCost());
+  if(!R){ v.innerHTML = `<h1 class="pt">Planner</h1><div class="card empty">${COST_ERR ? esc(COST_ERR) : 'No cost rates yet. Set them in Money → Cost rates.'}</div>`; return; }
+  if(!PIN) PIN = planDefaults(R);
+  const I = PIN, E = planErrs(I), ok = !Object.keys(E).length, X = ok ? planCalc(I, R) : null, PR = planPresets(R);
+  const inp = (k, lab, step, extra = '') => `<label>${lab}</label><input id="pl_${k}" type="number" step="${step}" min="0" value="${I[k]}" oninput="planSet('${k}', this.value)" ${extra}><div class="fld-err" id="err_${k}">${E[k] || ''}</div>`;
+  const chips = (k, xs) => `<div class="chips">${xs.map(x => `<span class="chip ${Math.abs(I[k] - r2n(x.v)) < 0.005 ? 'on' : ''}" onclick="planSet('${k}', ${r2n(x.v)}, true)">${esc(x.l)} · ${fmt(x.v, 2)}</span>`).join('')}</div>`;
+  const live = PLANS.filter(p => !p.voided_at);
+  let h = `<h1 class="pt">Planner <span class="no-print" style="display:inline-flex;gap:6px;margin-left:8px"><button class="btn btn-sm" onclick="PIN=planDefaults(rates(curCost()));PLAN_FROM=null;renderPlan()">Start over</button><button class="btn btn-sm" onclick="window.print()">Print</button></span></h1>
+  ${PLAN_FROM ? `<div class="hint" style="margin:-6px 0 8px">Opened from plan <b>${esc(PLAN_FROM.name)}</b> (${esc(String(PLAN_FROM.created_at).slice(0, 10))})${I.dirty ? ' · changed — save as a new plan to keep the changes' : ''}</div>` : ''}
+  <div class="pl-grid">
+    <div class="card pl-in">
+      ${inp('bags', 'Polybags *', '1')}
+      ${inp('yield', 'kg per polybag per season *', '0.01')}${chips('yield', PR.ys)}
+      ${inp('price', 'Average price RM per kg *', '0.01')}${chips('price', PR.ps)}
+      ${inp('seasons', 'Seasons per year', '1')}
+      ${inp('mgmt', 'Management salary RM per month (none in the P&amp;L)', '100')}
+      ${inp('months', 'Months per season', '1')}
+      <label>Transplant date (optional — to plan dates)</label><input id="pl_tp" type="date" value="${I.tp}" oninput="planSet('tp', this.value)">
+      <div class="sec-t" style="margin-top:14px">Save this plan</div>
+      <input id="pl_name" placeholder="e.g. AD4 · 30,000 bags · Daniel proposal" value="${esc(I.name)}" oninput="PIN.name=this.value" onkeydown="if(event.key==='Enter'){event.preventDefault();planSave()}">
+      <button class="btn btn-pri" id="plSaveBtn" style="margin-top:6px;width:100%" onclick="planSave()" ${ok ? '' : 'disabled'}>Save plan</button>
+      <div class="hint" id="plSaveSt"></div>
+    </div>
+    <div id="plRight">${planRight(I, R, X, ok)}</div>
+  </div>`;
+  h += `<div id="plLower">${ok ? planLower(I, R, PR) : ''}</div>`;
+  h += `<div class="sec-t">Saved plans</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Plan</th><th>Saved</th><th class="num">Polybags</th><th class="num">kg / polybag</th><th class="num">Price</th><th class="num">Profit / season</th><th class="num">Paid back</th><th></th></tr></thead><tbody>
+    ${PLAN_ERR ? `<tr><td colspan="8" class="empty">Cannot read plans. ${esc(PLAN_ERR)}</td></tr>` : PLANS.length ? PLANS.map(p => `<tr ${p.voided_at ? 'style="opacity:.5"' : ''}><td><b>${esc(p.name)}</b>${p.voided_at ? ` <span class="badge b-void">Voided</span> <small class="hint">${esc(p.void_reason || '')}</small>` : ''}</td><td>${esc(String(p.created_at).slice(0, 10))}</td>
+      <td class="num">${fmt(p.inputs.bags)}</td><td class="num">${fmt(p.inputs.yield, 2)}</td><td class="num">${fmt(p.inputs.price, 2)}</td><td class="num">${p.result ? pm(p.result.profit) : '—'}</td><td class="num">${p.result && p.result.payback != null ? fmt(p.result.payback, 1) : '—'}</td>
+      <td class="no-print" style="white-space:nowrap"><button class="btn btn-sm" onclick="planOpen(${p.id}, false)">Open</button> <button class="btn btn-sm" onclick="planOpen(${p.id}, true)">Duplicate</button>${p.voided_at ? '' : ` <button class="btn btn-sm" onclick="planVoidAsk(${p.id})">Void</button>`}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">No saved plan yet</td></tr>'}
+  </tbody></table></div></div>
+  <div class="hint" style="margin-top:8px">Uses cost rates v${R.cp.version} (${esc(R.d.period || '')}). All costs are counted per polybag, so very large or very small farms are less certain. ${live.length ? '' : ''}</div>`;
+  v.innerHTML = h;
+}
+function planRight(I, R, X, ok){
+  return `${ok ? `<div class="res">
+      <div><small>1. Setup a new farm (once)</small><b>${money(X.setup)}</b><div class="d">RM ${fmt(R.setup, 2)} per polybag · deposits not included</div></div>
+      <div><small>Harvest per season</small><b>${fmt(X.kg)} kg</b></div>
+      <div><small>2. Revenue per season</small><b>${money(X.rev)}</b></div>
+      <div><small>Costs per season</small><b>${money(X.run + X.dep)}</b><div class="d">running ${money(X.run)} + depreciation ${money(X.dep)}</div></div>
+      <div><small>Profit per season</small><b>${pm(X.profit)}</b><div class="d">${pm(X.perBag, 2)} per polybag</div></div>
+      <div><small>Profit per year</small><b>${pm(X.year)}</b><div class="d">${I.seasons} seasons</div></div>
+      <div><small>Setup paid back in</small><b>${X.payback != null ? fmt(X.payback, 1) + ' seasons' : '<span class="neg">Never</span>'}</b><div class="d">${X.payback != null ? 'about ' + fmt(X.payback * 6, 0) + ' months' : 'loses money each season'}</div></div>
+      <div><small>Break-even price</small><b>RM ${fmt(X.bePrice, 2)}</b><div class="d">below this you lose money</div></div>
+      <div><small>Break-even harvest</small><b>${fmt(X.beYield, 2)} kg</b><div class="d">per polybag, at RM ${fmt(I.price, 2)}</div></div>
+    </div>` : '<div class="card empty">Fix the fields marked in red</div>'}`;
+}
+function planLower(I, R, PR){
+  let h = '';
+    const sizes = [...new Set([5000, 10000, R.basis, 50000, 100000, I.bags])].sort((a, b) => a - b);
+    h += `<div class="sec-t">Different farm sizes (same harvest and price)</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Polybags</th><th class="num">Setup</th><th class="num">Revenue / season</th><th class="num">Costs / season</th><th class="num">Profit / season</th><th class="num">Profit / year</th><th class="num">Paid back in</th></tr></thead><tbody>
+      ${sizes.map(b => { const y = planCalc({...I, bags:b}, R); return `<tr ${b === I.bags ? 'style="background:#FFF9E6"' : ''}><td><b>${fmt(b)}</b>${b === R.basis ? ' <small class="hint">AD 1 + AD 2</small>' : ''}</td><td class="num">${fmt(y.setup)}</td><td class="num">${fmt(y.rev)}</td><td class="num">${fmt(y.run + y.dep)}</td><td class="num">${pm(y.profit)}</td><td class="num">${pm(y.year)}</td><td class="num">${y.payback != null ? fmt(y.payback, 1) + ' seasons' : '<span class="neg">Never</span>'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+    const yv = [...new Set(PR.ys.map(x => r2n(x.v)).concat([r2n(I.yield)]))].sort((a, b) => a - b);
+    const pv = [...new Set([1.5, 2, 2.5, 3, 3.5, 4, r2n(R.plPrice), r2n(I.price)])].sort((a, b) => a - b);
+    h += `<div class="sec-t">Profit per polybag per season — will it lose money?</div><div class="card" style="padding:0"><div class="tw"><table class="data grid"><thead><tr><th>kg per polybag ↓ · price →</th>${pv.map(p => `<th>RM ${fmt(p, 2)}</th>`).join('')}</tr></thead><tbody>
+      ${yv.map(y => `<tr><td><b>${fmt(y, 2)}</b> <small class="hint">${esc(PR.ys.filter(x => r2n(x.v) === y).map(x => x.l).join(' · '))}</small></td>${pv.map(p => { const z = planCalc({...I, yield:y, price:p}, R).perBag; return `<td ${y === r2n(I.yield) && p === r2n(I.price) ? 'style="outline:2px solid var(--layer)"' : ''}><span class="${z < 0 ? 'neg' : ''}">${fmt(z, 2)}</span></td>`; }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+    h += planTimeline(I, R);
+  
+  return h;
+}
+function planTimeline(I, R){
+  const B = liveBench()[0]; if(!I.tp || !B) return '';
+  const b = B.data, nd = nurseryDays(), ta = turnaroundDays(), f = addDays(I.tp, b.first_days);
+  const wk = w => [addDays(f, (w - 1) * 7), addDays(f, w * 7 - 1)];
+  const last1 = wk(b.season_weeks_min)[1], last2 = wk(b.season_weeks_max)[1];
+  const scale = I.yield / b.total_per_bag;
+  const rows = [
+    nd != null ? ['Sow (nursery)', dLong(addDays(I.tp, -nd)), `${nd} days before transplant`] : null,
+    ['Transplant', dLong(I.tp), ''],
+    ['First harvest', dLong(f), `transplant + ${b.first_days} days`],
+    ['Peak week', dLong(wk(b.peak_week)[0]) + ' – ' + dLong(wk(b.peak_week)[1]), `harvest week ${b.peak_week}`],
+    ['Half of the season harvested', dLong(wk(b.half_week)[1]), `end of week ${b.half_week}`],
+    ['Last harvest / uproot', dLong(last1) + ' – ' + dLong(last2), `after ${b.season_weeks_min}–${b.season_weeks_max} weeks of harvest`],
+    ta ? ['Next season transplant', dLong(addDays(last1, ta.min)) + ' – ' + dLong(addDays(last2, ta.max)), `${ta.min}–${ta.max} days after the last harvest`] : null,
+    ta && nd != null ? ['Next season sowing', dLong(addDays(last1, ta.min - nd)) + ' – ' + dLong(addDays(last2, ta.max - nd)), 'start the nursery around the last harvest'] : null
+  ].filter(Boolean);
+  return `<div class="sec-t">Dates (from benchmark v${B.version})</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Step</th><th>Date</th><th>How</th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="hint">${r[2]}</td></tr>`).join('')}</tbody></table></div></div>
+  <div class="sec-t">Week by week</div><div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Harvest week</th><th>Dates</th><th class="num">kg</th><th class="num">RM</th><th class="num">Season so far</th></tr></thead><tbody>
+  ${(() => { let c = 0; return b.weeks.map(x => { const kg = x.kg_per_bag * I.bags * scale; c += kg; const [a, z] = wk(x.w); return `<tr><td>Week ${x.w}${x.w === b.peak_week ? ' <span class="badge b-active">Peak</span>' : ''}</td><td>${dShort(a)} – ${dShort(z)}</td><td class="num">${fmt(kg)}</td><td class="num">${fmt(kg * I.price)}</td><td class="num">${fmt(c / (I.bags * I.yield) * 100)}%</td></tr>`; }).join(''); })()}
+  </tbody></table></div></div>`;
+}
+function planSet(k, val, full){
+  PIN[k] = k === 'tp' ? val : (val === '' ? NaN : Number(val)); PIN.dirty = true;
+  if(full){ renderPlan(); const el = $('pl_' + k); if(el) el.focus(); return; }
+  const R = rates(curCost()), E = planErrs(PIN), ok = !Object.keys(E).length, X = ok ? planCalc(PIN, R) : null;
+  Object.keys(planErrs({})).concat(['bags','yield','price','seasons','mgmt','months']).forEach(f => { const e = $('err_' + f); if(e) e.textContent = E[f] || ''; });
+  $('plRight').innerHTML = planRight(PIN, R, X, ok); $('plLower').innerHTML = ok ? planLower(PIN, R, planPresets(R)) : '';
+  $('plSaveBtn').disabled = !ok;
+  document.querySelectorAll('.chips').forEach(x => x.querySelectorAll('.chip').forEach(c => c.classList.remove('on')));
+}
+async function planSave(){
+  const R = rates(curCost()), I = PIN, E = planErrs(I);
+  if(Object.keys(E).length){ toast('Fix the fields marked in red'); return; }
+  if(!String(I.name || '').trim()){ toast('Give the plan a name'); $('pl_name').focus(); return; }
+  const X = planCalc(I, R), B = liveBench()[0], st = $('plSaveSt'); if(st) st.textContent = 'Saving…';
+  const inputs = {bags:I.bags, yield:I.yield, price:I.price, seasons:I.seasons, mgmt:I.mgmt, months:I.months, tp:I.tp || null};
+  const result = {setup:r2n(X.setup), rev:r2n(X.rev), cost:r2n(X.run + X.dep), profit:r2n(X.profit), year:r2n(X.year), payback:X.payback != null ? r2n(X.payback) : null,
+    be_price:X.bePrice != null ? r2n(X.bePrice) : null, be_yield:X.beYield != null ? r2n(X.beYield) : null, cost_version:R.cp.version, bench_version:B ? B.version : null};
+  const {error} = await sb.rpc('harvest_owner_plan_save', {p_name:I.name.trim(), p_inputs:inputs, p_result:result});
+  if(error){ if(st) st.innerHTML = `<span class="neg">Not saved — your inputs are still here. ${esc(nice(error))}</span> <button class="btn btn-sm" onclick="planSave()">Retry</button>`; return; }
+  PIN.dirty = false; PIN.name = ''; PLAN_FROM = null; toast('✓ Plan saved'); await loadAll();
+}
+function planOpen(id, dup){
+  const p = PLANS.find(x => x.id === id); if(!p) return;
+  if(PIN && PIN.dirty && !confirmLeave()) return;
+  PIN = {...planDefaults(rates(curCost())), ...p.inputs, tp:p.inputs.tp || '', name:dup ? p.name + ' (copy)' : '', dirty:false};
+  PLAN_FROM = dup ? null : p; renderPlan(); window.scrollTo(0, 0);
+}
+function planVoidAsk(id){
+  const p = PLANS.find(x => x.id === id); if(!p) return;
+  openModal('Void plan', `<p>Void <b>${esc(p.name)}</b>? It stays in the list as voided and cannot be used again.</p><label class="hint">Why *</label><input id="pvWhy" style="width:100%" placeholder="e.g. Daniel dropped this idea"><div class="alert alert-danger" id="merr" style="display:none"></div>`,
+    `<button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-danger btn-pri" onclick="planVoid(${id})">Void</button>`);
+  setTimeout(() => $('pvWhy') && $('pvWhy').focus(), 50);
+}
+async function planVoid(id){
+  const why = $('pvWhy').value.trim(); if(!why) return merr('Write why this plan is voided');
+  const {error} = await sb.rpc('harvest_owner_plan_void', {p_id:id, p_reason:why});
+  if(error) return merr('Not voided. ' + nice(error));
+  closeModal(); toast('✓ Plan voided'); await loadAll();
+}
+
 /* ══════ Reports ══════ */
 function cycleText(id){ const c = cycleOf(id); return c ? 'Season ' + c.cycle_no : '<span class="hint">—</span>'; }
 function stBadge(s){ return s === 'CONFIRMED' ? '<span class="badge b-active">Confirmed</span>' : s === 'PENDING' ? '<span class="badge b-pending">Pending</span>' : '<span class="badge b-void">Voided</span>'; }
@@ -1065,7 +1418,7 @@ async function renderManage(){
 function exportAll(){
   if(!LOADED){ toast('Cloud not loaded — cannot export'); return; }
   const n = new Date(), stamp = `${n.getFullYear()}${pad(n.getMonth() + 1)}${pad(n.getDate())}_${pad(n.getHours())}${pad(n.getMinutes())}`;
-  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH, prices:PRICES}};
+  const out = {meta:{system:SYS, version:APP_VERSION, exportTime:n.toISOString(), reports:H.reports.length}, data:{reports:H.reports, benchmarks:BENCH, prices:PRICES, cost_rates:COSTS, plans:PLANS}};
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], {type:'application/json'}));
   a.download = `Harvest_${stamp}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('✓ Backup downloaded');
 }
