@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harvest v25</title>
+<title>Harvest v26</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
@@ -308,7 +308,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 
 <div id="gate">
   <div class="card">
-    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v25</span></div>
+    <div style="font-size:18px;font-weight:700;color:var(--layer);margin-bottom:4px">Harvest <span class="ver">v26</span></div>
     <div class="hint" style="margin-bottom:14px">Azura Delta · Operations</div>
     <div id="gateMsg"><div class="alert alert-info"><span>ℹ</span><div>Checking your sign-in…</div></div></div>
     <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
@@ -318,7 +318,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
 <div id="app" style="display:none">
   <nav class="nav">
     <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
-    <div class="nav-logo">🍆 Harvest <span class="ver">v25</span></div>
+    <div class="nav-logo">🍆 Harvest <span class="ver">v26</span></div>
     <button class="ntab on" data-p="home" onclick="go('home')">Overview</button>
     <button class="ntab" data-p="track" onclick="go('track')">Tracking</button>
     <button class="ntab" data-p="money" onclick="go('money')">Money</button>
@@ -411,6 +411,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
   <div class="page" id="page-reports">
     <h1 class="pt">Reports <button class="btn btn-pri" onclick="openAdd()">+ Add report</button></h1>
     <div class="stats" id="repStats"></div>
+    <div id="repCheck"></div>
     <div class="hint" style="margin:-4px 0 10px">Why one day is big and one day small: the plants grow about the same every day, so kg depends on how many days since the last harvest. Sun, Tue, Thu come 2 days after the last harvest (big), Fri only 1 day after Thu (about half). So compare <b>kg a day</b> = kg ÷ gap, not kg. <b style="color:var(--danger)">Red ⚠</b> = below 70% of that farm's usual kg a day this season — ask why.</div>
     <div class="row-inline" style="margin-bottom:10px">
       <select id="repFarm" onchange="renderReports()" style="max-width:160px"></select>
@@ -420,7 +421,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
       <button class="btn" id="btnConfirmSel" onclick="confirmSelected()" disabled>Confirm selected</button>
     </div>
     <div class="card" style="padding:0"><div class="tw"><table class="data">
-      <thead><tr><th class="chk-col"><input type="checkbox" id="selAll" onchange="selAllPending(this.checked)"></th><th>Date</th><th>Farm</th><th>Cycle</th><th class="num">Baskets</th><th class="num">kg</th><th class="num" title="Days since this farm's last harvest">Gap</th><th class="num" title="kg ÷ days since the last harvest = how much the plants grew a day">kg a day</th><th class="num">AA %</th><th>From</th><th>Status</th></tr></thead>
+      <thead><tr><th class="chk-col"><input type="checkbox" id="selAll" onchange="selAllPending(this.checked)"></th><th>Date</th><th>Farm</th><th>Cycle</th><th class="num">Baskets</th><th class="num">kg</th><th class="num" title="Days since this farm's last harvest">Gap</th><th class="num" title="kg ÷ days since the last harvest = how much the plants grew a day">kg a day</th><th class="num" title="Usual baskets a day this season × days since the last harvest, ±30%">Should be</th><th class="num">AA %</th><th>From</th><th>Status</th></tr></thead>
       <tbody id="repRows"></tbody><tfoot id="repFoot"></tfoot></table></div></div>
   </div>
 
@@ -443,7 +444,7 @@ input[type=date]{min-height:40px;padding:6px 8px;border:.5px solid var(--bdr);bo
    收成资料在 owner_data 区，只能透过 harvest_owner_* 入口读写；入口里写死只有 OWNER
    主资料（场、区块、周期、等级、单位）只读
    ══════════════════════════════════════════════════════════════ */
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 const SYS = 'Harvest';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -1468,7 +1469,7 @@ function renderMoney(){
     <div class="card" style="padding:0"><div class="tw"><table class="data"><thead><tr><th>Season</th><th>Status</th><th class="num">Polybags</th><th class="num">kg</th><th class="num">Revenue</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Profit per polybag</th><th>Source</th></tr></thead><tbody>
     ${shown.length ? shown.map(r => `<tr class="click" onclick="moneyDetail('${r.c.id}')"><td><span class="sw ${r.c.cycle_no > 1 ? 'dash' : ''}" style="display:inline-block;vertical-align:middle;border-color:${r.col}"></span> <b>${esc(r.L.text)}</b></td>
       <td>${r.status === 'Growing' ? `Growing · ${fmt(r.frac * 100)}% of season` : 'Finished'}</td><td class="num">${fmt(r.bags)}</td><td class="num">${fmt(r.kg)}</td><td class="num">${fmt(r.rev)}</td><td class="num">${fmt(r.cost)}</td>
-      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="11" class="empty">No season yet</td></tr>'}
+      <td class="num">${pm(r.profit)}</td><td class="num">${pm(r.profit / r.bags, 2)}</td><td>${TAG[r.src]}${r.status === 'Growing' ? ' <small class="hint">whole season</small>' : ''}</td></tr>`).join('') : '<tr><td colspan="12" class="empty">No season yet</td></tr>'}
     </tbody></table></div></div>
     <div class="hint" style="margin-top:8px">Cost = polybags × RM ${fmt(R.total, 2)} per polybag per season (cost rates v${R.cp.version}: running RM ${fmt(R.run, 2)} + depreciation RM ${fmt(R.dep, 2)}). Growing seasons use the Forecast for the whole season. Click a row to see how it is worked out. When Revenue and Costs are recorded, these become Actual.</div>`;
 }
@@ -1873,14 +1874,41 @@ function growth(){
       if(!i){ G[r.id] = {first:true}; return; }
       const gap = dnum(r.date) - dnum(L[i - 1].date); if(gap <= 0){ G[r.id] = {gap:0}; return; }
       const kd = r.kg / gap, base = prev.length >= 3 ? [...prev.slice(-6)].sort((a, b) => a - b)[Math.floor(Math.min(6, prev.length) / 2)] : null;
-      G[r.id] = {gap, kd, base, low: base != null && kd < base * 0.7};
+      G[r.id] = {gap, kd, base, low: base != null && kd < base * 0.7, high: base != null && kd > base * 1.3, lo: base != null ? base * gap * 0.7 : null, mid: base != null ? base * gap : null, hi: base != null ? base * gap * 1.3 : null};
       prev.push(kd);
     });
   });
   return G;
 }
+let RCH = [];
+/* Reports check: each new report is matched against what that farm should give on that day.
+   should be = usual baskets a day (median of the last 6 harvests this season) × days since the last harvest; red = below 70% */
+function renderRepCheck(G){
+  const box = $('repCheck'); if(!box) return;
+  RCH.forEach(c => c.destroy()); RCH = [];
+  const t = today(), act = H.cycles.filter(c => c.status === 'ACTIVE').map(c => ({c, L:cycleLabel(c), rs:nonVoid(c.id)})).filter(x => x.rs.length).sort((a, b) => a.L.farm.localeCompare(b.L.farm));
+  const low = H.reports.filter(r => r.status !== 'VOID' && G[r.id] && G[r.id].low && r.date >= addDays(t, -14)).sort((a, b) => b.date.localeCompare(a.date));
+  box.innerHTML = `<div class="card" style="padding:12px 14px;margin-bottom:12px;border-left:6px solid ${low.length ? 'var(--danger)' : 'var(--ok)'}">
+    <b style="font-size:15px">${low.length ? '⚠ Ask why · last 14 days · ' + low.length + ' harvest' + (low.length > 1 ? 's' : '') + ' below what the farm should give' : '✓ Last 14 days: every harvest is inside what the farm should give'}</b>
+    ${low.map(r => { const g = G[r.id]; return `<div style="margin-top:6px;cursor:pointer" onclick="openReport('${r.id}')"><b style="color:var(--danger)">${esc(r.farm)} · ${WD[new Date(dnum(r.date) * 864e5).getUTCDay()]} ${dShort(r.date)}</b> — ${fmt(r.baskets)} baskets, should be ${fmt(g.lo / 30)}–${fmt(g.hi / 30)} (${g.gap} day${g.gap === 1 ? '' : 's'} since last × usual ${fmt(g.base / 30, 1)} baskets a day) · only ${fmt(g.kd / g.base * 100)}% of usual</div>`; }).join('')}
+  </div>
+  <div class="ot" style="margin-bottom:12px">${act.map(x => `<div class="ot-c" style="--c:${FARM_COLOR[x.L.farm] || '#555'}"><div class="ot-h"><b>${esc(x.L.farm)} · S${x.c.cycle_no}</b><span class="hint">baskets each harvest · grey = should be</span></div><div style="height:190px"><canvas></canvas></div></div>`).join('')}</div>`;
+  if(!window.Chart) return;
+  const cv = box.querySelectorAll('canvas');
+  act.forEach((x, i) => {
+    const rs = x.rs.slice(-24), col = FARM_COLOR[x.L.farm] || '#555';
+    const lab = rs.map(r => WD[new Date(dnum(r.date) * 864e5).getUTCDay()].slice(0, 2) + ' ' + dShort(r.date));
+    const lo = rs.map(r => G[r.id] && G[r.id].lo != null ? Math.round(G[r.id].lo / 30) : null), hi = rs.map(r => G[r.id] && G[r.id].hi != null ? Math.round(G[r.id].hi / 30) : null);
+    RCH.push(new Chart(cv[i], {data:{labels:lab, datasets:[
+      {type:'line', data:hi, borderWidth:0, pointRadius:0, fill:'+1', backgroundColor:'rgba(120,120,120,.18)', stepped:'middle', spanGaps:false},
+      {type:'line', data:lo, borderWidth:0, pointRadius:0, fill:false, stepped:'middle', spanGaps:false},
+      {type:'bar', data:rs.map(r => r.baskets), backgroundColor:rs.map(r => G[r.id] && G[r.id].low ? '#C62828' : col), borderRadius:3}]},
+      options:{maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => c.datasetIndex === 2 ? c.raw + ' baskets' : (c.datasetIndex === 0 ? 'should be up to ' : 'should be at least ') + c.raw}}},
+        scales:{x:{ticks:{font:{size:9}, maxRotation:60, minRotation:60}}, y:{beginAtZero:true, ticks:{font:{size:10}}}}}}));
+  });
+}
 function renderReports(){
-  if(!LOADED){ $('repRows').innerHTML = '<tr><td colspan="11" class="empty">Cloud not loaded</td></tr>'; $('repStats').innerHTML = ''; $('repFoot').innerHTML = ''; return; }
+  if(!LOADED){ $('repRows').innerHTML = '<tr><td colspan="12" class="empty">Cloud not loaded</td></tr>'; $('repStats').innerHTML = ''; $('repFoot').innerHTML = ''; return; }
   const pend = H.reports.filter(r => r.status === 'PENDING'), t = today(), y = addDays(t, -1);
   const kgOn = d => H.reports.filter(r => r.date === d && r.status !== 'VOID').reduce((s, r) => s + r.kg, 0);
   $('repStats').innerHTML = `<div class="stat click ${REPF === 'pending' ? 'on' : ''}" onclick="REPF = REPF === 'pending' ? '' : 'pending'; renderReports()"><small>Pending</small><b style="color:${pend.length ? 'var(--warn)' : 'inherit'}">${pend.length}</b></div>
@@ -1893,10 +1921,11 @@ function renderReports(){
   $('repRows').innerHTML = rows.length ? rows.map(r => `<tr class="click" onclick="openReport('${r.id}')" ${r.status === 'VOID' ? 'style="opacity:.55"' : ''}>
     <td class="chk-col" onclick="event.stopPropagation()">${r.status === 'PENDING' ? `<input type="checkbox" ${SEL.has(r.id) ? 'checked' : ''} onchange="selOne('${r.id}', this.checked)">` : ''}</td>
     <td>${dLong(r.date)}</td><td class="code">${esc(r.farm)}</td><td>${cycleText(r.cycle_id)}</td>
-    <td class="num">${fmt(r.baskets)}</td><td class="num"><b>${fmt(r.kg)}</b></td>${(g => !g || r.status === 'VOID' ? '<td class="num">—</td><td class="num">—</td>' : g.first ? '<td class="num hint">1st</td><td class="num">—</td>' : `<td class="num">${g.gap} day${g.gap === 1 ? '' : 's'}</td><td class="num" ${g.low ? `style="color:var(--danger);font-weight:700" title="Below 70% of this season's usual ${fmt(g.base)} kg a day — ask why"` : `title="Usual ≈ ${g.base != null ? fmt(g.base) : '—'} kg a day"`}>${g.kd != null ? fmt(g.kd) : '—'}${g.low ? ' ⚠' : ''}</td>`)(G[r.id])}<td class="num">${r.kg ? fmt(r.aa / r.kg * 100) + '%' : '—'}</td>
-    <td>${SRC[r.source] || r.source}</td><td>${stBadge(r.status)}</td></tr>`).join('') : '<tr><td colspan="11" class="empty">No report</td></tr>';
+    <td class="num" ${(G[r.id] || {}).low && r.status !== 'VOID' ? 'style="color:var(--danger);font-weight:800"' : ''}>${fmt(r.baskets)}</td><td class="num"><b>${fmt(r.kg)}</b></td>${(g => !g || r.status === 'VOID' ? '<td class="num">—</td><td class="num">—</td><td class="num">—</td>' : g.first ? '<td class="num hint">1st</td><td class="num">—</td><td class="num">—</td>' : `<td class="num">${g.gap} day${g.gap === 1 ? '' : 's'}</td><td class="num" ${g.low ? `style="color:var(--danger);font-weight:700" title="Below 70% of this season's usual ${fmt(g.base)} kg a day — ask why"` : `title="Usual ≈ ${g.base != null ? fmt(g.base) : '—'} kg a day"`}>${g.kd != null ? fmt(g.kd) : '—'}${g.low ? ' ⚠' : ''}</td><td class="num hint" ${g.high ? 'title="More than usual — fine if the plants are still growing; check the numbers if not"' : ''}>${g.lo != null ? fmt(g.lo / 30) + '–' + fmt(g.hi / 30) : '—'}${g.high ? ' ↑' : ''}</td>`)(G[r.id])}<td class="num">${r.kg ? fmt(r.aa / r.kg * 100) + '%' : '—'}</td>
+    <td>${SRC[r.source] || r.source}</td><td>${stBadge(r.status)}</td></tr>`).join('') : '<tr><td colspan="12" class="empty">No report</td></tr>';
   const live = rows.filter(r => r.status !== 'VOID');
-  $('repFoot').innerHTML = rows.length ? `<tr><td></td><td colspan="3">Total (${live.length} reports, voided not counted)</td><td class="num">${fmt(live.reduce((s, r) => s + r.baskets, 0))}</td><td class="num">${fmt(live.reduce((s, r) => s + r.kg, 0))}</td><td colspan="5"></td></tr>` : '';
+  $('repFoot').innerHTML = rows.length ? `<tr><td></td><td colspan="3">Total (${live.length} reports, voided not counted)</td><td class="num">${fmt(live.reduce((s, r) => s + r.baskets, 0))}</td><td class="num">${fmt(live.reduce((s, r) => s + r.kg, 0))}</td><td colspan="6"></td></tr>` : '';
+  renderRepCheck(G);
   $('btnConfirmSel').disabled = !SEL.size; $('btnConfirmSel').textContent = SEL.size ? `Confirm selected (${SEL.size})` : 'Confirm selected';
 }
 function selOne(id, on){ if(on) SEL.add(id); else SEL.delete(id); renderReports(); }
