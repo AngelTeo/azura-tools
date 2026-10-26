@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "_site")
 BLOCK = re.compile(r"<!--[\s\S]*?-->|/\*[\s\S]*?\*/")
-DECL = re.compile(r"^\s*(?:const|let|var)\s+APP_VERSION\s*=\s*['\"]?v?(\d+)['\"]?\s*(?:;|$)", re.M)
+DECL = re.compile(r"^\s*(?:const|let|var)\s+APP_VERSION\s*=\s*['\"]?v?(\d+)['\"]?(?=[\s;,)]|$)", re.M)
 TITLE = re.compile(r"<title\b[^>]*>([\s\S]*?)</title>", re.I)
 TITLE_VERSION = re.compile(r"\bv(\d{1,4})\b", re.I)
 
