@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v3</title>
+<title>SprayGo v4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -86,6 +86,10 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
 .chip.on{background:var(--green);border-color:var(--green);color:var(--onGreen)}
 .chip.mix{color:var(--green);background:var(--green2);border-color:transparent}
 .chip.mix.on{background:var(--green);color:var(--onGreen)}
+.chip.mix.rot{display:inline-flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;padding-top:8px;padding-bottom:8px}
+.daytag{font-size:12px;font-weight:800;border-radius:6px;padding:1px 7px}
+.daytag.t{background:var(--red);color:#fff}.daytag.y{background:var(--field);color:var(--muted)}.daytag.m{background:var(--amber2);color:var(--amber)}
+.chip.mix.on .daytag.y{background:rgba(255,255,255,.25);color:var(--onGreen)}
 .prodgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .productpick{position:relative;background:var(--white);border:2px solid var(--line);border-radius:13px;text-align:left;display:flex;gap:11px;padding:9px;min-width:0;align-items:center;min-height:92px}
 .productpick.on{border-color:var(--green);background:var(--green2)}
@@ -225,7 +229,7 @@ body.nocost .cost{display:none!important}
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -337,6 +341,20 @@ function labelAmt(p,fid){const r=parseFloat(p.rate),w=water(fid||farm);return (!
 const U=p=>p.rateUnit||'ml';
 function photo(p){return p&&p.photo?`<img src="${e(p.photo)}" alt="" loading="lazy">`:`<span class="placeholder">${e((p&&p.name||'?').slice(0,2).toUpperCase())}</span>`}
 const isDone=s=>!s.status||s.status==='done';
+const LET=['A','B','C'];
+const mixLetter=m=>{const x=String(m&&m.name||'').match(/Mix\s*([ABC])\b/i);return x?x[1].toUpperCase():null};
+function sprayLetter(s){if(s.mix){const l=String(s.mix).match(/([ABC])\s*$/i);if(l)return l[1].toUpperCase()}
+  const ids=new Set((s.items||[]).map(i=>i.id).filter(id=>id!=='jwa'));let best=null,bs=0,tie=false;
+  for(const m of mixes){if(m.farm!==s.farm)continue;const l=mixLetter(m);if(!l)continue;let n=0;for(const it of m.items||[])if(it.id!=='jwa'&&ids.has(it.id))n++;
+    if(n>bs){bs=n;best=l;tie=false}else if(n===bs&&n>0&&l!==best)tie=true}
+  return bs>0&&!tie?best:null}
+function farmAnchor(fid){const L=sprays.filter(s=>s.farm===fid&&isDone(s)).sort((a,b)=>String(b.doneDate||b.date).localeCompare(String(a.doneDate||a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b._id).localeCompare(String(a._id)));
+  for(const s of L){const l=sprayLetter(s);if(l)return {fid,date:s.doneDate||s.date,l}}return null}
+function rotation(fid){let a=farmAnchor(fid),borrowed=false;if(!a){const all=FARMS.map(f=>farmAnchor(f.id)).filter(Boolean).sort((x,y)=>y.date.localeCompare(x.date));if(all.length){a=all[0];borrowed=true}}
+  if(!a)return null;const dd=(x,y)=>Math.round((Date.parse(x+'T00:00:00Z')-Date.parse(y+'T00:00:00Z'))/864e5);
+  const at=ds=>LET[(((LET.indexOf(a.l)+dd(ds,a.date))%3)+3)%3];const t=today(),y=ymd(addDays(t,-1)),tm=ymd(addDays(t,1));
+  const tags={};[[y,'昨天','y'],[t,'今天','t'],[tm,'明天','m']].forEach(([ds,w,c])=>{tags[at(ds)]={w,c,d:ds.slice(8).replace(/^0/,'')+'/'+ds.slice(5,7).replace(/^0/,'')}});
+  return {a,borrowed,tags}}
 const sortN=(a,b)=>(a.name||'').localeCompare(b.name||'');
 function holdFor(fid){let best=null;const now=new Date();now.setHours(0,0,0,0);
   for(const s of sprays)if(s.farm===fid&&isDone(s))for(const i of s.items||[]){const ph=Number(i.phi||(byId(i.id)||{}).phi)||0;if(!ph)continue;const until=addDays(s.doneDate||s.date,ph);if(until>now&&(!best||until>best.until))best={until,name:i.name}}
@@ -473,7 +491,7 @@ function vSpray(){
     <div class="panel"><h2>① 选园</h2><div class="chips">${FARMS.map(f=>`<button class="chip ${f.id===farm?'on':''}" data-act="farm" data-farm="${f.id}">${f.name}</button>`).join('')}</div>
       <p class="note">${w?`每次水量：${e(fw.tanks)} 桶 × ${e(fw.litres)} L = ${w} L`:'还没设定水量（药品页 → 每次水量）。'}</p></div>
     <div class="panel"><div class="splithead"><h2>② 点照片选药</h2><button class="btn small" data-nav="products">＋ 药品库</button></div>
-      ${fm.length?`<div class="chips">${fm.map(m=>`<button class="chip mix ${activeMix===m._id?'on':''}" data-act="mix" data-id="${e(m._id)}">⚡ ${e(m.name)} · ${(m.items||[]).length}</button>`).join('')}</div>`:''}
+      ${fm.length?(()=>{const rt=rotation(farm);return `<div class="chips">${fm.map(m=>{const tg=rt&&rt.tags[mixLetter(m)];return `<button class="chip mix rot ${activeMix===m._id?'on':''}" data-act="mix" data-id="${e(m._id)}"><span>⚡ ${e(m.name)} · ${(m.items||[]).length}</span>${tg?`<small class="daytag ${tg.c}">${tg.w} ${tg.d}</small>`:''}</button>`}).join('')}</div>${rt?`<p class="note">${rt.borrowed?`${fname(farm)} 还没有喷药记录，先按 ${fname(rt.a.fid)} `:`按 ${fname(farm)} `}最后一次喷药 ${dmy(rt.a.date)}（Mix ${rt.a.l}），每天轮一组推算。</p>`:''}`})():''}
       <details class="morefields" id="guide" ${guideOpen?'open':''}><summary>📖 看到什么问题，加什么药？</summary><div class="guide">${GUIDE.map(([q,a])=>`<div><b>${q}</b>${a}</div>`).join('')}<p class="note">只是帮你学习的参考。用量照标签；拿不准就拍照问卖药店或农业官员。</p></div></details>
       ${chosen.length?`<div class="eyebrow">已选 · ${chosen.length}</div><div class="prodgrid">${chosen.map(pick).join('')}</div>`:''}
       ${activeMix?`${main.length+other.length?`<button class="btn" data-act="other">${showOther?'收起':'＋ 加别的药'}（${main.length+other.length}）</button>`:''}
@@ -654,7 +672,7 @@ async function sendNow(){
   const list=items();const ta=$('msgtext');let ok=true;
   try{await navigator.clipboard.writeText(ta.value)}catch(err){ok=false;ta.focus();ta.select()}
   if(!db){toast(ok?'已复制。':'已选取，请按复制。');return}
-  const rec={status:'planned',date:today(),farm,farmName:fname(farm),items:list.map(i=>({id:i.id,name:i.name,amt:i.amt===''?null:i.amt,unit:i.unit,phi:Number(i.p.phi)||0})),createdAt:new Date().toISOString()};
+  const rec={status:'planned',date:today(),farm,mix:activeMix?((mixes.find(m=>m._id===activeMix)||{}).name||null):null,farmName:fname(farm),items:list.map(i=>({id:i.id,name:i.name,amt:i.amt===''?null:i.amt,unit:i.unit,phi:Number(i.p.phi)||0})),createdAt:new Date().toISOString()};
   try{await db.collection('sprays').doc(rec.date+'_'+farm+'_'+Date.now().toString(36)).set(rec);
     for(const i of list){const f=i.p.farms||[];if(i.p._id&&!f.includes(farm)){try{await db.collection('products').doc(i.p._id).update({farms:[...f,farm]})}catch(x){}}}
     toast(ok?'已复制，贴到 WhatsApp。':'已保存，请选取文字复制。');sel.clear();activeMix=null;go('today')}
