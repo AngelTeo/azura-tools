@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v4</title>
+<title>SprayGo v5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -210,7 +210,7 @@ body{margin:0}
 .gate{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center}
 .gate a{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:var(--green);color:var(--onGreen);text-decoration:none;font-weight:700}
 body.noedit [data-act="sprayfarm"],body.noedit [data-act="doneask"],body.noedit [data-act="done"],body.noedit [data-act="nospray"],
-body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit .wpanel{display:none!important}
+body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit [data-act="dripopen"],body.noedit .wpanel{display:none!important}
 body.nocost .cost{display:none!important}
 </style>
 </head>
@@ -229,7 +229,7 @@ body.nocost .cost{display:none!important}
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -341,6 +341,9 @@ function labelAmt(p,fid){const r=parseFloat(p.rate),w=water(fid||farm);return (!
 const U=p=>p.rateUnit||'ml';
 function photo(p){return p&&p.photo?`<img src="${e(p.photo)}" alt="" loading="lazy">`:`<span class="placeholder">${e((p&&p.name||'?').slice(0,2).toUpperCase())}</span>`}
 const isDone=s=>!s.status||s.status==='done';
+const isSpray=s=>s.kind!=='drip';
+const DRIP_IDS=['amino','h2gro','hydrogen-peroxide-50','seaweed','promocide','cp-bio'];
+const dripProducts=()=>products.filter(p=>p.drip||DRIP_IDS.includes(p._id)).sort(sortN);
 const LET=['A','B','C'];
 const mixLetter=m=>{const x=String(m&&m.name||'').match(/Mix\s*([ABC])\b/i);return x?x[1].toUpperCase():null};
 function sprayLetter(s){if(s.mix){const l=String(s.mix).match(/([ABC])\s*$/i);if(l)return l[1].toUpperCase()}
@@ -348,7 +351,7 @@ function sprayLetter(s){if(s.mix){const l=String(s.mix).match(/([ABC])\s*$/i);if
   for(const m of mixes){if(m.farm!==s.farm)continue;const l=mixLetter(m);if(!l)continue;let n=0;for(const it of m.items||[])if(it.id!=='jwa'&&ids.has(it.id))n++;
     if(n>bs){bs=n;best=l;tie=false}else if(n===bs&&n>0&&l!==best)tie=true}
   return bs>0&&!tie?best:null}
-function farmAnchor(fid){const L=sprays.filter(s=>s.farm===fid&&isDone(s)).sort((a,b)=>String(b.doneDate||b.date).localeCompare(String(a.doneDate||a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b._id).localeCompare(String(a._id)));
+function farmAnchor(fid){const L=sprays.filter(s=>s.farm===fid&&isDone(s)&&isSpray(s)).sort((a,b)=>String(b.doneDate||b.date).localeCompare(String(a.doneDate||a.date))||String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b._id).localeCompare(String(a._id)));
   for(const s of L){const l=sprayLetter(s);if(l)return {fid,date:s.doneDate||s.date,l}}return null}
 function rotation(fid){let a=farmAnchor(fid),borrowed=false;if(!a){const all=FARMS.map(f=>farmAnchor(f.id)).filter(Boolean).sort((x,y)=>y.date.localeCompare(x.date));if(all.length){a=all[0];borrowed=true}}
   if(!a)return null;const dd=(x,y)=>Math.round((Date.parse(x+'T00:00:00Z')-Date.parse(y+'T00:00:00Z'))/864e5);
@@ -418,10 +421,10 @@ function doneCard(s){
   <h3 style="margin:5px 0">${e((s.items||[]).map(i=>i.name).join(' + '))}</h3><div class="meta">${e(dmy(s.doneDate||s.date))} 喷好</div></div></div>`}
 function vToday(){
   const planned=sprays.filter(s=>s.status==='planned').sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));
-  const mo=today().slice(0,7);const doneMo=sprays.filter(s=>isDone(s)&&(s.doneDate||s.date||'').startsWith(mo)).length;
+  const mo=today().slice(0,7);const doneMo=sprays.filter(s=>isDone(s)&&isSpray(s)&&(s.doneDate||s.date||'').startsWith(mo)).length;
   let buyNow=0;for(const f of FARMS)buyNow+=lowCount(f.id);
   const cards=FARMS.map(f=>{const hd=holdFor(f.id);const pend=planned.filter(s=>s.farm===f.id).length;
-    const last=sprays.filter(s=>s.farm===f.id&&isDone(s)).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date))[0];
+    const last=sprays.filter(s=>s.farm===f.id&&isDone(s)&&isSpray(s)).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date))[0];
     const low=lowCount(f.id);
     return `<div class="panel farmcard"><div class="nm"><b>${f.name}</b><span class="pill ${hd?'red':'green'}">${hd?'⛔ 不能采收':'可以采收'}</span></div>
     <div class="big ${hd?'bad':'ok'}">${hd?`${dm(hd.until)} 前不能采收`:'没有采收限制'}</div>
@@ -429,7 +432,7 @@ function vToday(){
     ${low?`<button class="btn small warn" data-act="stockfarm" data-farm="${f.id}">库存：${low} 样要马上买 →</button>`:''}
     <p class="note">${pend} 个等工人 · ${last?`上次喷药 ${e(dmy(last.doneDate||last.date))}`:'还没有喷药记录'}</p>
     <button class="btn small soft" data-act="sprayfarm" data-farm="${f.id}">＋ ${f.name} 喷药</button></div>`}).join('');
-  const done=sprays.filter(isDone).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date)).slice(0,3);
+  const done=sprays.filter(s=>isDone(s)&&isSpray(s)).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date)).slice(0,3);
   return `${head('FARM CONTROL','今天，三个园','采收限制、等工人的喷药、要买的药。',`<button class="btn dark" data-act="sprayfarm" data-farm="${farm}">＋ 发喷药指令</button>`)}
   <div class="stats"><div class="stat"><div class="val">${planned.length}</div><div class="lab">等工人喷</div></div>
   <div class="stat"><div class="val">${doneMo}</div><div class="lab">本月已喷次数</div></div>
@@ -587,7 +590,7 @@ function vStockAll(){
 function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const r=stockRow(sf,p),pb=r.pb,u=U(p);
   const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}`]);
   for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${fmtAmt(b.amt,p)}${Number(b.price)>0?' · '+RM(Number(b.price)):''}`]);
-  for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`喷药：${i.amt??'?'} ${i.unit||u}`]);
+  for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`${s.kind==='drip'?'滴灌':'喷药'}：${i.amt??'?'} ${i.unit||u}`]);
   ev.sort((a,b)=>b[0].localeCompare(a[0]));
   const fill=pb&&Number(p.price)>0&&r.packs?Math.round(r.packs*Number(p.price)*100)/100:'';
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
@@ -602,12 +605,12 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
 
 /* ---------- Records ---------- */
 function vRecords(){
-  const rows=sprays.filter(s=>(recFarm==='all'||s.farm===recFarm)&&(recStatus==='all'||(s.status||'done')===recStatus)).sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
+  const rows=sprays.filter(s=>(recFarm==='all'||s.farm===recFarm)&&(recStatus==='all'||(recStatus==='drip'?s.kind==='drip':(s.status||'done')===recStatus&&isSpray(s)))).sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
   const pill=st=>st==='done'?'<span class="pill green">已喷</span>':st==='planned'?'<span class="pill blue">等工人</span>':'<span class="pill grey">没喷</span>';
-  return `${head('记录','喷药记录','等工人、已喷、没喷分开记。')}
+  return `${head('记录','喷药 · 滴灌记录','等工人、已喷、没喷、滴灌加料分开记。','<button class="btn dark" data-act="dripopen">💧 记滴灌加料</button>')}
   <div class="panel"><div class="splithead"><div class="chips">${[['all','全部园'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${recFarm===id?'on':''}" data-act="rfarm" data-id="${id}">${n}</button>`).join('')}</div>
-  <div class="chips">${[['all','全部'],['planned','等工人'],['done','已喷'],['cancelled','没喷']].map(([id,n])=>`<button class="chip ${recStatus===id?'on':''}" data-act="rstatus" data-id="${id}">${n}</button>`).join('')}</div></div>
-  ${rows.length?`<div class="stack">${rows.map(s=>{const st=s.status||'done';return `<div class="minirow"><div><div class="rid">${e(s.farmName||fname(s.farm))} ${pill(st)} <span class="meta">${e(dmy(st==='done'&&s.doneDate?s.doneDate:s.date))}</span></div>
+  <div class="chips">${[['all','全部'],['planned','等工人'],['done','已喷'],['cancelled','没喷'],['drip','💧 滴灌']].map(([id,n])=>`<button class="chip ${recStatus===id?'on':''}" data-act="rstatus" data-id="${id}">${n}</button>`).join('')}</div></div>
+  ${rows.length?`<div class="stack">${rows.map(s=>{const st=s.status||'done';return `<div class="minirow"><div><div class="rid">${e(s.farmName||fname(s.farm))} ${s.kind==='drip'?'<span class="pill blue">💧 滴灌</span>':pill(st)} <span class="meta">${e(dmy(st==='done'&&s.doneDate?s.doneDate:s.date))}</span></div>
     <div class="note" style="margin-top:4px">${e((s.items||[]).map(i=>`${i.name} ${i.amt??'?'} ${i.unit}`).join(' · '))}</div></div>
     ${st==='planned'?`<div class="acts" id="acts-${e(s._id)}"><button class="btn small dark" data-act="doneask" data-id="${e(s._id)}">喷好了</button></div>`:''}</div>`}).join('')}</div>`:'<div class="empty"><strong>没有记录</strong>换个筛选，或从「喷药」发指令。</div>'}</div>`}
 
@@ -651,11 +654,19 @@ function mEdit(){const need=new Set(needed(draft));const dl=doseLines();
 
 /* ---------- modal ---------- */
 function openModal(kind,arg){modalKind=kind;modalArg=arg;drawModal();document.body.style.overflow='hidden'}
-function drawModal(){const html=modalKind==='stock'?mStock(modalArg):modalKind==='edit'?mEdit():'';
+function mDrip(){const d=draft;const L=dripProducts();
+  return `<div class="modalhead"><div><div class="eyebrow">滴灌加料</div><h2>💧 记一次滴灌加料</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
+  <div class="panel"><h3>哪个园 · 哪天</h3><div class="chips">${FARMS.map(f=>`<button class="chip ${d.farm===f.id?'on':''}" data-act="dfarm" data-id="${f.id}">${f.name}</button>`).join('')}</div>
+    <div class="field" style="margin-top:10px"><label for="drip-date">日期</label><input id="drip-date" type="date" value="${e(d.date)}"></div></div>
+  <div class="panel"><h3>加了什么、加多少</h3><p class="note">只填有加的，其它留空。</p>
+    ${L.map(p=>`<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="pair"><input class="inp" style="width:110px" inputmode="decimal" data-drip="${e(p._id)}" value="${e(d.amts[p._id]??'')}" aria-label="${e(p.name)} 用量"><span class="note">${e(U(p))}</span></div></div>`).join('')}
+    <button class="btn dark" data-act="savedrip" style="margin-top:12px">保存</button></div>`}
+function drawModal(){const html=modalKind==='stock'?mStock(modalArg):modalKind==='edit'?mEdit():modalKind==='drip'?mDrip():'';
   const host=$('modalhost');const sc=host.querySelector('.modalwrap')?.scrollTop||0;
   host.innerHTML=`<div class="modalwrap" role="dialog" aria-modal="true"><div class="modal">${html}</div></div>`;host.querySelector('.modalwrap').scrollTop=sc;wireModal()}
 function closeModal(){$('modalhost').innerHTML='';modalKind=null;modalArg=null;draft=null;editing=null;document.body.style.overflow=''}
 function wireModal(){
+  document.querySelectorAll('#modalhost [data-drip]').forEach(i=>i.oninput=()=>{draft.amts[i.dataset.drip]=i.value});const dd=$('drip-date');if(dd)dd.onchange=()=>{draft.date=dd.value};
   document.querySelectorAll('#modalhost [data-k]').forEach(i=>{if(i.tagName==='INPUT'||i.tagName==='TEXTAREA')i.oninput=()=>{draft[i.dataset.k]=i.value}});
   const more=$('more');if(more)more.ontoggle=()=>{if(draft)draft._more=more.open};
   const fi=$('photo-in');if(fi)fi.onchange=async()=>{const file=fi.files[0];if(!file)return;if(!assets){toast('这里不能上传照片。');return}
@@ -713,6 +724,12 @@ document.addEventListener('click',async ev=>{
   case 'savemix':{const n=($('mixname').value||'').trim();if(!n){toast('请填配方名');break}if(!db)break;
     try{await db.collection('mixes').doc(farm+'-'+n.toLowerCase().replace(/[^a-z0-9]+/g,'-')).set({name:n,farm,items:items().map(i=>({id:i.id,amt:i.amt===''?null:i.amt}))});toast('配方已保存')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'sfarm':stockFarm=b.dataset.farm;render();break;
+  case 'dripopen':draft={farm:recFarm!=='all'?recFarm:farm,date:today(),amts:{}};openModal('drip');break;
+  case 'dfarm':draft.farm=id;drawModal();break;
+  case 'savedrip':{const ds=($('drip-date').value||today());const items=[];for(const p of dripProducts()){const v=draft.amts[p._id];if(v===undefined||String(v).trim()==='')continue;const n=Number(v);if(Number.isNaN(n)||n<0){toast('只能填数字');return}if(n>0)items.push({id:p._id,name:p.name,amt:n,unit:U(p),phi:0})}
+    if(!items.length){toast('至少填一样的用量');break}
+    const rec={kind:'drip',status:'done',date:ds,doneDate:ds,farm:draft.farm,farmName:fname(draft.farm),items,createdAt:new Date().toISOString()};
+    try{await db.collection('sprays').doc(ds+'_'+draft.farm+'_drip_'+Date.now().toString(36)).set(rec);closeModal();toast('已记录滴灌加料')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'focus':focus=focus&&focus.m===id?null:{m:id};render();break;
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
