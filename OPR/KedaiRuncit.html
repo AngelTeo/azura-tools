@@ -85,6 +85,60 @@ tr.void td{color:#bbb;text-decoration:line-through}
 .pchip.def{border-color:var(--ok);background:var(--okl)}
 .demo{background:var(--warnl);color:var(--warn);text-align:center;font-size:12px;padding:4px;font-weight:600}
 @media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.tabs{margin-left:6px}.tab{padding:6px 8px}.hide-m{display:none}}
+
+/* Shared Farm Worker UX · FoodFlow visual language */
+:root{--acc:#1c7457;--accl:#e7f5ee;--accd:#14543f;--ok:#1c7457;--okl:#e7f5ee;--bar:#8b6a32}
+html,body{font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;background:#f6f7f2}
+.top{padding:12px 16px;min-height:62px}.top b{font-size:20px}.top .farm{font-size:15px;padding:7px 12px}
+.wrap{max-width:620px;padding:15px 13px 130px}.card{border:1px solid #e3e7dd;border-radius:17px;padding:16px;margin-bottom:13px;box-shadow:0 2px 9px #1c302008}
+.lbl{margin:0 0 12px;align-items:center;gap:6px}.lbl b{font-size:19px;color:#263024}.lbl .hint{font-size:12px}
+.step-badge{display:inline-grid;place-items:center;width:30px;height:30px;background:#e7f5ee;color:#14543f;border-radius:50%;font-weight:800;font-size:15px;margin-right:7px}
+.opt{border-radius:12px;min-height:57px;transition:background .12s,border-color .12s;position:relative}.opt.on{border:2px solid #1c7457;background:#e7f5ee;color:#124b37;box-shadow:inset 0 0 0 1px #a3ccb5}.opt.on:after{content:'✓';position:absolute;top:3px;right:5px;color:#1c7457;font-weight:900;font-size:13px}
+.opt.name{min-height:58px;display:flex;align-items:center;gap:9px;padding:10px 10px;font-size:14px}.opt.name .personicon{font-size:22px;opacity:.75;flex:none}.opt.name.on .personicon{opacity:1}.opt.name span:last-child{overflow-wrap:anywhere}
+.opt.product{min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:14px}.opt.product .producticon{font-size:36px;line-height:1.1;background:#f3f5ef;border-radius:13px;width:60px;height:53px;display:grid;place-items:center}.opt.product.on .producticon{background:#d1ebda}.opt.product .productname{line-height:1.15;overflow-wrap:anywhere}
+.opt.price{min-height:65px;font-size:18px}.opt.price small{font-size:11px}.opt.date{min-height:69px;font-size:15px}.opt.date .dateicon{font-size:20px;display:block;margin-bottom:3px}
+.qty{justify-content:center;gap:20px;padding:8px 0}.qty button{width:58px;height:58px;border-radius:13px;font-size:29px;touch-action:manipulation}.qty button:last-child{background:#1c7457;color:white;border-color:#1c7457}.qty span{min-width:64px;font-size:30px}
+.save{min-height:53px;background:#1c7457;border-radius:12px;font-size:17px;white-space:nowrap}.sumbar{box-shadow:0 -4px 18px #15291416}.sumbar .txt{font-size:13px}.sumbar .txt b{font-size:23px}.recentrow{padding:12px 0}.recentrow .itemico{font-size:25px;width:36px;text-align:center;flex:none}.recentrow .m div{font-size:14px}.recentrow .amt{font-size:15px;font-weight:750}
+.step-info{color:#728074;font-size:12px}.helper{padding:10px 13px;background:#f0f5f5;border-radius:11px;color:#365665;font-size:13px;margin:8px 0}.flow-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:13px}.flow-chip{border:1px solid #e3e7dd;background:white;border-radius:12px;padding:9px 4px;text-align:center;font-size:12px;font-weight:750}.flow-chip span{font-size:22px;display:block}.flow-chip.current{background:#e7f5ee;border-color:#8dc09f;color:#14543f}
+.ownerheading{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:750;margin-bottom:12px}.tinyicon{font-size:19px;vertical-align:middle}.g.g3.items{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:420px){.g.g3.items{grid-template-columns:repeat(2,minmax(0,1fr))}.g.g4{grid-template-columns:repeat(3,minmax(0,1fr))}.wrap{padding-left:11px;padding-right:11px}.sumbar .inner{gap:8px}.save{min-width:112px;padding:12px}.opt.name{font-size:13px}}
+
+/* Worker UX v1.2: consistent with FoodFlow */
+.custom-panel{background:#f6f8f4;border:1px solid var(--border);border-radius:13px;padding:12px;margin-top:12px}
+.custom-panel label{display:block;font-size:15px;font-weight:700;margin-bottom:7px}
+.custom-panel small{display:block;font-size:12px;color:var(--warn);margin-top:7px;font-weight:600}
+.submit-actions{display:flex;gap:8px;align-items:center}.submit-actions>button{min-height:52px}
+.share-wa{border:1px solid #168446;background:#e4f5e9;color:#12652e;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:750;cursor:pointer}
+.share-wa:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:440px){.submit-actions{flex-direction:column}.submit-actions>button{width:100%;min-width:0}.sumbar .inner{align-items:stretch}.sumbar .txt{min-width:85px}}
+.purchase-confirm{display:flex;align-items:center;gap:12px;border:2px solid var(--border);border-radius:12px;padding:14px;font-weight:700;background:var(--okl);cursor:pointer}.purchase-confirm input{width:24px;height:24px;accent-color:var(--ok);flex-shrink:0}.submit-actions .save{width:100%;font-size:14px;white-space:normal}.submit-actions{width:100%}
+
+/* v2 · Request → Boss confirms */
+.stat{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:750;white-space:nowrap}
+.stat.wait{background:var(--warnl);color:var(--warn)}.stat.ok{background:var(--okl);color:var(--ok)}.stat.no{background:#eee;color:#777}.stat.bad{background:var(--badl);color:var(--bad)}
+.req{padding:12px 0;border-top:1px solid #eee}.req:first-child{border-top:0}
+.req .head{display:flex;align-items:flex-start;gap:10px}.req .head .ico{font-size:26px;width:38px;text-align:center;flex:none}
+.req .head .m{flex:1;min-width:0}.req .head .m b{font-size:15px}.req .head .m small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.req .who{font-size:13px;color:#4c584d;margin:6px 0 0 48px;line-height:1.5}
+.req .acts{margin:8px 0 0 48px;display:flex;gap:8px;flex-wrap:wrap}
+.btn.sm{padding:7px 12px;font-size:13px}
+.done-sheet{text-align:center;padding:8px 4px 4px}.done-sheet .big{font-size:52px;line-height:1}.done-sheet h3{margin:10px 0 6px;font-size:21px}.done-sheet p{color:var(--muted);margin-bottom:16px;line-height:1.45}
+.wa-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;border:0;border-radius:12px;background:#1f9d55;color:#fff;font-size:17px;font-weight:800;cursor:pointer;margin-bottom:8px}
+.ocard{background:#fff;border:1px solid #e3e7dd;border-radius:17px;padding:16px;margin-bottom:13px;box-shadow:0 2px 9px #1c302008}
+.ocard.open{border:2px solid #e9cf95}
+.ocard .top2{display:flex;gap:12px;align-items:flex-start}.ocard .top2 .ico{font-size:34px;width:52px;height:52px;display:grid;place-items:center;background:#f3f5ef;border-radius:13px;flex:none}
+.ocard .top2 .m{flex:1;min-width:0}.ocard .top2 .m b{font-size:17px}.ocard .top2 .m small{display:block;color:var(--muted);margin-top:3px}
+.wk{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:11px;margin-top:8px;cursor:pointer;font-weight:600}
+.wk input{width:22px;height:22px;accent-color:var(--ok);flex:none}.wk.off{opacity:.5}
+.f-lbl{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.total{display:flex;justify-content:space-between;align-items:center;background:#f6f8f4;border-radius:11px;padding:12px 14px;margin-top:14px;font-weight:700}
+.total b{font-size:22px;font-family:'IBM Plex Mono',monospace}
+.obtns{display:flex;gap:8px;margin-top:12px}.obtns .btn{min-height:50px}.obtns .btn.pri{flex:1;font-size:16px}
+.newtag{display:inline-block;background:var(--warnl);color:var(--warn);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;vertical-align:middle}
+.tabbadge{display:inline-block;background:#e9a23b;color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px}
+.empty{color:var(--muted);text-align:center;padding:26px 10px}
+@media(max-width:640px){.top{flex-wrap:wrap;row-gap:8px}.top .tabs{width:100%;margin-left:0;overflow-x:auto}.tab{white-space:nowrap;padding:7px 8px;font-size:12px}}
+.tab{color:#f1e6cf}
 </style>
 </head>
 <body>
@@ -94,23 +148,31 @@ tr.void td{color:#bbb;text-decoration:line-through}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 'use strict';
-const VER = 'v1';
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
-const DEMO = QS.get('demo');            // ?demo=leader | ?demo=owner | ?demo=pending
-const FORCE_LEADER = QS.has('leader');  // Owner 想看 Leader 画面时用
+const DEMO = /*DEMO*/QS.get('demo');   // ?demo=leader | owner | pending
+const FORCE_LEADER = QS.has('leader');
 const KEY_NAME = 'runcit_device_key';
+
+const SHOP_ICONS = {ROKOK:'🚬',CIGARETTES:'🚬',WHISKEY:'🍾','TOP UP':'📱',BAJU:'👕',SABUN:'🧼',SHAMPOO:'🧴',BERAS:'🍚',TELUR:'🥚',MINYAK:'🫗',MEE:'🍜',KOPI:'☕',SELUAR:'👖',KASUT:'👟',CHARGER:'🔌',EARPHONE:'🎧'};
+function productIcon(label){ const k = String(label||'').trim().toUpperCase(); if(SHOP_ICONS[k]) return SHOP_ICONS[k];
+  for(const w in SHOP_ICONS) if(k.includes(w)) return SHOP_ICONS[w]; return '📦'; }
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rm = n => 'RM ' + (Math.round(Number(n)*100)/100).toLocaleString('en-MY', {minimumFractionDigits: Number(n)%1 ? 2 : 0, maximumFractionDigits: 2});
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }));
-function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2000); }
 function klDate(offset){ const d = new Date(Date.now() + 8*3600e3 - offset*864e5); return d.toISOString().slice(0,10); }
 function dmy(iso){ const [y,m,d] = String(iso).slice(0,10).split('-'); return d + '/' + m; }
-function hm(ts){ const d = new Date(ts); return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); }
+function hm(ts){ return new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kuala_Lumpur'}); }
+function klDay(ts){ return new Date(new Date(ts).getTime() + 8*3600e3).toISOString().slice(0,10); }
+function when(ts){ const d = klDay(ts); return (d === klDate(0) ? 'Today' : d === klDate(1) ? 'Yesterday' : dmy(d)) + ' ' + hm(ts); }
+function sheet(html){ const s = document.createElement('div'); s.className = 'sheet'; s.innerHTML = '<div class="box">' + html + '</div>'; s.onclick = e => { if(e.target === s) s.remove(); }; document.body.appendChild(s); return s; }
+const STAT = {REQUESTED:['wait','⏳ Waiting'], CONFIRMED:['ok','✅ Bought'], REJECTED:['no','✖ Not bought'], CANCELLED:['no','Cancelled']};
+const statPill = s => '<span class="stat ' + STAT[s][0] + '">' + STAT[s][1] + '</span>';
 
 function deviceKey(){
   let k = null;
@@ -119,7 +181,7 @@ function deviceKey(){
   return k;
 }
 
-// ================= 资料层：真的走 Supabase；?demo= 走假资料（同一组函数）=================
+// ================= 资料层：真的走 Supabase；DEMO 走假资料（同一组函数）=================
 const sb = (!DEMO && window.supabase) ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 async function rpc(name, p){
   if(DEMO) return MOCK.call(name, p);
@@ -129,41 +191,76 @@ async function rpc(name, p){
 }
 
 const MOCK = (() => {
-  const names = ['AUNG KO','HAN NAING THU','KYAW MIN','MAUNG MAUNG','MIN THU','NAY LIN','PHO THAE','SAN WIN','THET NAING','ZAW ZAW','AYE KO','WIN NAING'].sort();
+  const names = ['AUNG KO','AYE KO','HAN NAING THU','KYAW MIN','MAUNG MAUNG','MIN THU','NAY LIN','PHO THAE','SAN WIN','THET NAING','WIN NAING','ZAW ZAW'];
   const W = names.map((n,i) => ({id:'w'+i, name:n}));
   const items = [
-    {id:'i1', label:'ROKOK', prices:[54,50,56,90,36], default:54},
-    {id:'i2', label:'WHISKEY', prices:[25,17,20,50,56], default:25},
-    {id:'i3', label:'TOP UP', prices:[35,30,50], default:35},
-    {id:'i4', label:'CIGARETTES', prices:[100,50], default:100},
+    {id:'i1', label:'ROKOK', prices:[36,50,54,56,90], default:54},
+    {id:'i2', label:'WHISKEY', prices:[17,20,25,50,56], default:25},
+    {id:'i3', label:'TOP UP', prices:[30,35,50], default:35},
+    {id:'i4', label:'CIGARETTES', prices:[50,100], default:100},
     {id:'i5', label:'BAJU', prices:[36,40,42], default:36},
   ];
-  const entries = [];
-  const now = Date.now();
-  [['w2','i1',1,54,54,0],['w5','i2',2,25,25,1],['w7','i3',1,35,35,1],['w0','i1',1,60,54,2],['w9','i2',1,17,25,3]].forEach((r,i) =>
-    entries.push({id:'e'+i, workerId:r[0], worker:W.find(w=>w.id===r[0]).name, item:items.find(x=>x.id===r[1]).label, qty:r[2], price:r[3], default:r[4], amount:r[2]*r[3], date:klDate(r[5]>1?1:0), at:new Date(now - (r[5]*40+3)*60e3).toISOString(), farm:'AD 1', device:'AD 1 Leader', void:false}));
-  const devices = [
-    {id:'d1', code:'7F3A9C', label:'AD 1 Leader', farm_code:'AD 1', status:'ACTIVE', requested_at:'2026-11-01T02:00:00Z', last_seen:new Date().toISOString()},
-    {id:'d2', code:'B41E07', label:null, farm_code:null, status:'PENDING', requested_at:new Date(now-600e3).toISOString(), last_seen:null},
+  const all = items.concat([{id:'i6', label:'PINJAM', prices:null},{id:'i7', label:'XXXXX', prices:null}]);
+  const now = Date.now(), ago = m => new Date(now - m*60e3).toISOString();
+  let R = [ // requests: one row per worker
+    {id:'r1', client_id:'c1', farm:'AD 1', worker:'w5', item_id:'i1', custom:null, qty:1, est:54, status:'REQUESTED', at:ago(12)},
+    {id:'r2', client_id:'c1', farm:'AD 1', worker:'w9', item_id:'i1', custom:null, qty:1, est:54, status:'REQUESTED', at:ago(12)},
+    {id:'r3', client_id:'c2', farm:'AD 1', worker:'w2', item_id:null, custom:'SABUN MANDI', qty:2, est:null, status:'REQUESTED', at:ago(40)},
+    {id:'r4', client_id:'c3', farm:'AD 1', worker:'w0', item_id:'i3', custom:null, qty:1, est:35, status:'CONFIRMED', at:ago(300), price:35, amount:35},
+    {id:'r5', client_id:'c4', farm:'AD 1', worker:'w7', item_id:'i2', custom:null, qty:2, est:25, status:'REJECTED', at:ago(1500), note:'No stock'},
   ];
+  const entries = [
+    {id:'e1', farm:'AD 1', worker:'AUNG KO', item:'TOP UP', qty:1, price:35, default:35, amount:35, date:klDate(0), at:ago(200), device:'AD 1 Leader', void:false},
+    {id:'e2', farm:'AD 1', worker:'PHO THAE', item:'ROKOK', qty:1, price:60, default:54, amount:60, date:klDate(0), at:ago(500), device:'AD 1 Leader', void:false},
+  ];
+  const devices = [
+    {id:'d1', code:'7F3A9C', label:'AD 1 Leader', farm_code:'AD 1', status:'ACTIVE', requested_at:'2026-11-01T02:00:00Z', last_seen:ago(1)},
+    {id:'d2', code:'B41E07', label:null, farm_code:null, status:'PENDING', requested_at:ago(10), last_seen:null},
+  ];
+  const wname = id => (W.find(w => w.id === id)||{}).name;
+  const ilabel = r => r.item_id ? items.concat(all).find(i => i.id === r.item_id).label : r.custom;
+  function group(rows){
+    const g = {};
+    rows.forEach(r => { (g[r.client_id] ??= []).push(r); });
+    return Object.values(g).map(rs => { const r0 = rs[0], st = rs.map(r => r.status);
+      return {client_id:r0.client_id, at:r0.at, farm:r0.farm, device:'AD 1 Leader', item_id:r0.item_id, item:ilabel(r0), custom:!r0.item_id, qty:r0.qty, est:r0.est,
+        default: r0.item_id ? (items.find(i => i.id === r0.item_id)||{}).default : null,
+        open: st.includes('REQUESTED'),
+        status: st.every(s => s==='REQUESTED') ? 'REQUESTED' : st.every(s => s==='CANCELLED') ? 'CANCELLED' : st.includes('CONFIRMED') ? 'CONFIRMED' : 'REJECTED',
+        note: rs.map(r => r.note).find(Boolean) || null,
+        workers: rs.map(r => ({request_id:r.id, worker_id:r.worker, name:wname(r.worker), status:r.status, price:r.price||null, amount:r.amount||null})).sort((a,b) => a.name < b.name ? -1 : 1)};
+    }).sort((a,b) => (b.open - a.open) || (a.at < b.at ? 1 : -1));
+  }
   const wait = ms => new Promise(r => setTimeout(r, ms));
   async function call(name, p){
-    await wait(200);
+    await wait(180);
     if(name === 'shop_hello'){
       if(DEMO === 'pending') return {status:'PENDING', code:'B41E07'};
-      return {status:'ACTIVE', farm:'AD 1', today:klDate(0), workers:W, items,
-        recent: entries.filter(e => !e.void).map(e => ({...e, undo: Date.now() - new Date(e.at) < 15*60e3}))};
+      return {status:'ACTIVE', farm:'AD 1', today:klDate(0), workers:W, items, requests: group(R)};
     }
-    if(name === 'shop_submit'){
-      p.workers.forEach(wid => { const w = W.find(x => x.id === wid); const it = items.find(x => x.id === p.item_id);
-        entries.unshift({id:'e'+Math.random(), workerId:wid, worker:w.name, item:it.label, qty:p.qty, price:p.price, default:it.default, amount:p.qty*p.price, date:p.date, at:new Date().toISOString(), farm:'AD 1', device:'AD 1 Leader', void:false}); });
+    if(name === 'shop_request'){
+      if(R.some(r => r.client_id === p.client_id)) return {ok:true, repeat:true};
+      p.workers.forEach(w => R.push({id:'r'+Math.random(), client_id:p.client_id, farm:'AD 1', worker:w, item_id:p.item_id||null, custom:p.item_id?null:String(p.custom_name).trim().toUpperCase(), qty:p.qty, est:p.price||null, status:'REQUESTED', at:new Date().toISOString()}));
       return {ok:true, count:p.workers.length};
     }
-    if(name === 'shop_undo' || name === 'shop_owner_void'){ const e = entries.find(x => x.id === (p.entry_id || p.id)); e.void = true; e.void_by = name==='shop_undo'?'LEADER':'OWNER'; return {ok:true}; }
-    if(name === 'shop_owner_data') return {devices, items:items.map(i => ({id:i.id, label:i.label, prices:i.prices.map(x => ({price:x, default:x===i.default}))})).concat([{id:'i6', label:'PINJAM', prices:null},{id:'i7', label:'XXXXX', prices:null}]), entries:entries.filter(e => e.date.slice(0,7) === p.month).map(e => ({...e, in_salary:!e.void}))};
+    if(name === 'shop_request_cancel'){ const rs = R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED'); if(!rs.length) throw new Error('Already handled by the boss'); rs.forEach(r => { r.status = 'CANCELLED'; r.note = 'Cancelled by Leader'; }); return {ok:true}; }
+    if(name === 'shop_owner_requests') return group(R);
+    if(name === 'shop_owner_confirm'){
+      const rs = R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED'); if(!rs.length) throw new Error('Already handled');
+      let label = p.item_id ? all.find(i => i.id === p.item_id).label : String(p.new_item).trim().toUpperCase();
+      if(!p.item_id && !all.some(i => i.label === label)) all.push({id:'i'+Math.random(), label, prices:null});
+      rs.forEach(r => { if(p.request_ids.includes(r.id)){ r.status = 'CONFIRMED'; r.price = p.price; r.amount = p.price*p.qty;
+          entries.unshift({id:'e'+Math.random(), farm:r.farm, worker:wname(r.worker), item:label, qty:p.qty, price:p.price, default:(items.find(i=>i.label===label)||{}).default ?? null, amount:p.price*p.qty, date:p.date, at:new Date().toISOString(), device:'AD 1 Leader', void:false}); }
+        else { r.status = 'REJECTED'; r.note = 'Not bought'; } });
+      return {ok:true, count:p.request_ids.length};
+    }
+    if(name === 'shop_owner_reject'){ R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED').forEach(r => { r.status = 'REJECTED'; r.note = p.note || null; }); return null; }
+    if(name === 'shop_owner_void'){ const e = entries.find(x => x.id === p.id); e.void = true; e.void_by = 'OWNER'; return null; }
+    if(name === 'shop_owner_data') return {devices, items: all.map(i => ({id:i.id, label:i.label, prices: i.prices ? i.prices.map(x => ({price:x, default:x===i.default})) : null})), entries: entries.filter(e => e.date.slice(0,7) === p.month).map(e => ({...e, in_salary:!e.void}))};
     if(name === 'shop_owner_device_set'){ const d = devices.find(x => x.id === p.id); Object.assign(d, {status:p.status, farm_code:p.status==='ACTIVE'?p.farm:d.farm_code, label:p.label||d.label}); return null; }
-    if(name === 'shop_owner_prices_set'){ let it = items.find(x => x.id === p.item_id); if(!it){ it = {id:p.item_id, label:p.label||'NEW', prices:[], default:null}; items.push(it); } it.prices = p.prices.map(Number).sort((a,b)=>a-b); it.default = Number(p.default); return null; }
-    if(name === 'shop_owner_item_add'){ const id = 'i'+Math.random(); items.push({id, label:p.label.toUpperCase(), prices:[], default:null}); return id; }
+    if(name === 'shop_owner_prices_set'){ const it = all.find(x => x.id === p.item_id); it.prices = p.prices.length ? p.prices.map(Number).sort((a,b)=>a-b) : null; it.default = p.default!=null ? Number(p.default) : null;
+      const k = items.findIndex(x => x.id === it.id); if(it.prices && k < 0) items.push(it); if(!it.prices && k >= 0) items.splice(k,1); return null; }
+    if(name === 'shop_owner_item_add'){ const id = 'i'+Math.random(); all.push({id, label:p.label.toUpperCase(), prices:null}); return id; }
     throw new Error('Unknown');
   }
   return {call};
@@ -171,8 +268,7 @@ const MOCK = (() => {
 
 // ================= 入口 =================
 async function boot(){
-  const app = $('#app');
-  app.innerHTML = '<div class="gate"><p>Loading…</p></div>';
+  $('#app').innerHTML = '<div class="gate"><p>Loading…</p></div>';
   if(DEMO === 'owner') return Owner.start();
   if(!DEMO && !FORCE_LEADER && sb){
     try{
@@ -186,124 +282,133 @@ async function boot(){
   Leader.start();
 }
 
-// ================= Leader（手机）=================
+// ================= Leader（手机）：只送申请 =================
 const Leader = (() => {
   let D = null, F = null, busy = false;
-  const fresh = () => ({workers:[], item:null, price:null, other:'', qty:1, date:D.today || klDate(0), client:uuid()});
+  const fresh = () => ({workers:[], item:null, customName:'', price:null, other:'', qty:1, client:uuid()});
 
   async function start(){
     try{ D = await rpc('shop_hello', {device_key: deviceKey(), ua: navigator.userAgent}); }
     catch(e){ return gate(e.message === 'Too many phones waiting' ? 'Please try again later.' : 'This page is not available.'); }
     if(D.status !== 'ACTIVE'){
-      $('#app').innerHTML = (DEMO?'<div class="demo">DEMO</div>':'') + '<div class="gate"><h2>Waiting for approval</h2><div class="code">' + esc(D.code) + '</div><p>Show this code to the boss.<br>After approval, open this page again.</p><button class="btn" style="margin-top:16px" onclick="location.reload()">Check again</button></div>';
+      $('#app').innerHTML = demoBar() + '<div class="gate"><h2>📱 Waiting for approval</h2><div class="code">' + esc(D.code) + '</div><p>Show this code to the boss.<br>After approval, open this page again.</p><button class="btn" style="margin-top:16px" onclick="location.reload()">Check again</button></div>';
       return;
     }
     F = fresh(); render();
   }
   function gate(msg){ $('#app').innerHTML = '<div class="gate"><p>' + esc(msg) + '</p></div>'; }
+  const demoBar = () => DEMO ? '<div class="demo">PREVIEW · sample data · nothing is saved</div>' : '';
 
-  const item = () => D.items.find(i => i.id === F.item);
-  const price = () => F.price === 'other' ? Number(F.other) : Number(F.price);
-  const ready = () => F.workers.length && F.item && price() > 0 && price() <= 2000;
+  const custom = () => F.item === '__custom';
+  const item = () => custom() ? {id:'__custom', label:F.customName.trim().toUpperCase() || 'OTHER ITEM', prices:[], default:null} : D.items.find(i => i.id === F.item);
+  const price = () => F.price === 'other' ? Number(F.other) || 0 : F.price === 'unknown' ? 0 : Number(F.price) || 0;
+  const ready = () => !!(F.workers.length && F.item && (!custom() || F.customName.trim()) && (F.price === 'unknown' || F.price === 'other' ? true : price() > 0) && price() <= 2000);
 
   function render(){
-    const it = item(), p = price();
-    const dates = [[klDate(0),'Today'],[klDate(1),'Yesterday'],[klDate(2),'2 days ago']];
-    let h = (DEMO?'<div class="demo">DEMO · nothing is saved</div>':'')
-      + '<div class="top"><b>Kedai Runcit</b><span class="farm">' + esc(D.farm) + '</span></div><div class="wrap">';
+    const it = item(), n = F.workers.length;
+    let h = demoBar() + '<div class="top"><b>🛍️ Kedai Runcit</b><span class="farm">🏡 ' + esc(D.farm) + '</span></div><div class="wrap">';
+    h += '<div class="flow-strip"><div class="flow-chip' + (!n?' current':'') + '"><span>👤</span>1. Worker</div><div class="flow-chip' + (n && !F.item?' current':'') + '"><span>🛍️</span>2. Item</div><div class="flow-chip' + (n && F.item?' current':'') + '"><span>📨</span>3. Send</div></div>';
 
-    // 1 Who
-    h += '<div class="card"><div class="lbl"><b>1 · Who</b>' + (F.workers.length ? '<span>' + F.workers.length + ' picked · <button class="lnk" data-act="clearw">Clear</button></span>' : '<span>tap names</span>') + '</div>'
-      + '<div class="g g2">' + D.workers.map(w => '<div class="opt name' + (F.workers.includes(w.id)?' on':'') + '" data-w="' + w.id + '">' + esc(w.name) + '</div>').join('') + '</div>'
+    // 1 Worker
+    h += '<div class="card"><div class="lbl"><b><span class="step-badge">1</span>Worker</b>' + (n ? '<span>' + n + ' selected · <button class="lnk" data-act="clearw">Clear</button></span>' : '<span class="step-info">Tap name</span>') + '</div>'
+      + '<div class="g g2">' + D.workers.map(w => '<button type="button" class="opt name' + (F.workers.includes(w.id)?' on':'') + '" data-w="' + esc(w.id) + '"><span class="personicon">👤</span><span>' + esc(w.name) + '</span></button>').join('') + '</div>'
       + (D.workers.length ? '' : '<p style="color:var(--muted)">No workers on ' + esc(D.farm) + '.</p>') + '</div>';
 
-    // 2 What
-    h += '<div class="card"><div class="lbl"><b>2 · What</b></div><div class="g g3">'
-      + D.items.map(i => '<div class="opt' + (F.item===i.id?' on':'') + '" data-i="' + i.id + '">' + esc(i.label) + '</div>').join('') + '</div></div>';
+    // 2 Item
+    h += '<div class="card"><div class="lbl"><b><span class="step-badge">2</span>Item</b><span class="step-info">Tap picture</span></div><div class="g g3 items">'
+      + D.items.map(i => '<button type="button" class="opt product' + (F.item===i.id?' on':'') + '" data-i="' + esc(i.id) + '"><span class="producticon">' + productIcon(i.label) + '</span><span class="productname">' + esc(i.label) + '</span></button>').join('')
+      + '<button type="button" class="opt product' + (custom()?' on':'') + '" data-i="__custom"><span class="producticon">✏️</span><span class="productname">OTHER ITEM</span></button></div>'
+      + (custom() ? '<div class="custom-panel"><label for="customItem">✏️ Item name</label><input id="customItem" class="in" maxlength="40" placeholder="e.g. SABUN" value="' + esc(F.customName) + '"></div>' : '')
+      + '</div>';
 
     // 3 Price + qty
-    if(it){
+    if(F.item){
       const ps = it.prices || [];
-      h += '<div class="card"><div class="lbl"><b>3 · Price</b><span>each</span></div><div class="g g4">'
-        + ps.map(x => '<div class="opt' + (String(F.price)===String(x)?' on':'') + '" data-p="' + x + '">' + x + (x===it.default?'<small>usual</small>':'') + '</div>').join('')
-        + '<div class="opt' + (F.price==='other'?' on':'') + '" data-p="other">Other</div></div>'
+      h += '<div class="card"><div class="lbl"><b><span class="step-badge">3</span>Price · How many</b><span class="step-info">each</span></div><div class="g g4">'
+        + ps.map(x => '<button type="button" class="opt price' + (String(F.price)===String(x)?' on':'') + '" data-p="' + x + '">' + x + (x===it.default?'<small>usual</small>':'') + '</button>').join('')
+        + '<button type="button" class="opt price' + (F.price==='other'?' on':'') + '" data-p="other">✏️<small>Other</small></button>'
+        + '<button type="button" class="opt price' + (F.price==='unknown'?' on':'') + '" data-p="unknown">❓<small>Don\'t know</small></button></div>'
         + (F.price==='other' ? '<input class="in" id="other" inputmode="decimal" placeholder="RM" value="' + esc(F.other) + '" style="margin-top:8px">' : '')
-        + (it.default != null && p > 0 && p !== Number(it.default) ? '<div class="chg">Usual price is ' + rm(it.default) + '</div>' : '')
-        + '<div class="lbl" style="margin-top:14px"><b>How many</b></div><div class="qty"><button data-q="-1">−</button><span>' + F.qty + '</span><button data-q="1">+</button></div></div>';
+        + '<div class="qty" style="margin-top:12px"><button type="button" data-q="-1" aria-label="Less">−</button><span>' + F.qty + '</span><button type="button" data-q="1" aria-label="More">+</button></div></div>';
     }
 
-    // 4 Date
-    h += '<div class="card"><div class="lbl"><b>' + (it ? '4' : '3') + ' · Date</b></div><div class="g g3">'
-      + dates.map(d => '<div class="opt' + (F.date===d[0]?' on':'') + '" data-d="' + d[0] + '">' + d[1] + '<small>' + dmy(d[0]) + '</small></div>').join('') + '</div></div>';
-
-    // Recent
-    const rec = D.recent || [];
-    h += '<div class="card"><div class="lbl"><b>Saved · last 3 days</b><span>' + rec.length + '</span></div>'
-      + (rec.length ? rec.map(e => '<div class="row"><div class="m"><div>' + esc(e.worker) + '</div><small>' + esc(e.item) + (e.qty>1?' × '+e.qty:'') + ' · ' + dmy(e.date) + ' · ' + hm(e.at) + '</small></div><span class="amt">' + rm(e.amount) + '</span>'
-          + (e.undo ? '<button class="undo" data-undo="' + e.id + '">Undo</button>' : '') + '</div>').join('') : '<p style="color:var(--muted)">Nothing yet.</p>')
+    // My requests
+    const rq = D.requests || [];
+    h += '<div class="card"><div class="lbl"><b>📨 My requests</b><span class="step-info">last 7 days</span></div>'
+      + (rq.length ? rq.map(r => {
+          const names = r.workers.map(w => esc(w.name) + (r.status==='CONFIRMED' && w.status!=='CONFIRMED' ? ' ✖' : '')).join(', ');
+          const paid = r.workers.filter(w => w.status==='CONFIRMED');
+          return '<div class="req"><div class="head"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + '</b><small>' + when(r.at) + (r.est ? ' · est. ' + rm(r.est) : '') + '</small></div>' + statPill(r.status) + '</div>'
+            + '<div class="who">👤 ' + names + (paid.length ? '<br>✅ ' + rm(paid[0].price) + ' each' : '') + (r.note && r.status!=='CANCELLED' && r.status!=='CONFIRMED' ? '<br>💬 ' + esc(r.note) : '') + '</div>'
+            + (r.status==='REQUESTED' ? '<div class="acts"><button class="btn sm red" data-cancel="' + esc(r.client_id) + '">Cancel</button></div>' : '') + '</div>';
+        }).join('') : '<p class="empty">No requests yet.</p>')
       + '</div>';
     h += '<div id="err" class="err"></div></div>';
 
-    // 底部
-    const n = F.workers.length, total = n * F.qty * (p || 0);
-    h += '<div class="sumbar"><div class="inner"><div class="txt">' + (ready()
-        ? esc(it.label) + (F.qty>1?' × '+F.qty:'') + ' · ' + rm(p) + (n>1 ? ' · ' + n + ' workers' : '') + '<br><b>' + rm(total) + '</b>'
-        : '<span style="color:var(--muted)">Pick who, what and price</span>')
-      + '</div><button class="save" data-act="save"' + (ready() && !busy ? '' : ' disabled') + '>' + (busy ? 'Saving…' : 'Save') + '</button></div></div>';
+    // bottom
+    h += '<div class="sumbar"><div class="inner"><div class="txt">' + barText() + '</div><button class="save" data-act="send"' + (ready() && !busy ? '' : ' disabled') + '>' + (busy ? 'Sending…' : '📨 Send request') + '</button></div></div>';
 
     const y = window.scrollY; $('#app').innerHTML = h; window.scrollTo(0, y);
+    const c = $('#customItem'); if(c){ c.oninput = () => { F.customName = c.value; renderBar(); }; if(F.focusCustom){ c.focus(); F.focusCustom = false; } }
     const o = $('#other'); if(o){ o.oninput = () => { F.other = o.value.replace(/[^0-9.]/g,''); renderBar(); }; if(F.focusOther){ o.focus(); F.focusOther = false; } }
   }
-  function renderBar(){ // 打字时只更新底部，不重画整页
-    const it = item(), p = price(), n = F.workers.length;
-    $('.sumbar .txt').innerHTML = ready() ? esc(it.label) + (F.qty>1?' × '+F.qty:'') + ' · ' + rm(p) + (n>1 ? ' · ' + n + ' workers' : '') + '<br><b>' + rm(n*F.qty*p) + '</b>' : '<span style="color:var(--muted)">Pick who, what and price</span>';
-    $('.save').disabled = !ready() || busy;
+  function barText(){
+    const n = F.workers.length;
+    if(!n) return '<span style="color:var(--muted)">👤 Choose worker</span>';
+    if(!F.item) return '<span style="color:var(--muted)">🛍️ Choose item</span>';
+    const it = item(), p = price();
+    return productIcon(it.label) + ' ' + esc(it.label) + (F.qty>1?' × '+F.qty:'') + ' · ' + n + ' worker' + (n>1?'s':'') + '<br><b>' + (p ? '≈ ' + rm(p*F.qty*n) : 'Price ?') + '</b>';
   }
+  function renderBar(){ $('.sumbar .txt').innerHTML = barText(); $('.save').disabled = !ready() || busy; }
 
-  document.addEventListener('click', async ev => {
+  document.addEventListener('click', ev => {
     if(!F) return;
-    const t = ev.target.closest('[data-w],[data-i],[data-p],[data-q],[data-d],[data-act],[data-undo]'); if(!t) return;
+    const t = ev.target.closest('[data-w],[data-i],[data-p],[data-q],[data-act],[data-cancel]'); if(!t || t.closest('.sheet')) return;
     if(t.dataset.w){ const id = t.dataset.w; F.workers = F.workers.includes(id) ? F.workers.filter(x => x !== id) : F.workers.concat(id); }
-    else if(t.dataset.i){ F.item = t.dataset.i; const it = item(); F.price = it.default != null ? String(it.default) : (it.prices && it.prices.length ? String(it.prices[0]) : 'other'); F.qty = 1; F.other = ''; }
+    else if(t.dataset.i){ F.item = t.dataset.i; const it = item(); F.qty = 1; F.other = '';
+      F.price = custom() ? 'unknown' : it.default != null ? String(it.default) : (it.prices && it.prices.length ? String(it.prices[0]) : 'unknown');
+      if(custom()) F.focusCustom = true; }
     else if(t.dataset.p){ F.price = t.dataset.p; if(F.price === 'other') F.focusOther = true; }
     else if(t.dataset.q){ F.qty = Math.min(20, Math.max(1, F.qty + Number(t.dataset.q))); }
-    else if(t.dataset.d){ F.date = t.dataset.d; }
     else if(t.dataset.act === 'clearw'){ F.workers = []; }
-    else if(t.dataset.undo){ return undo(t.dataset.undo); }
-    else if(t.dataset.act === 'save'){ return save(); }
+    else if(t.dataset.cancel){ return cancel(t.dataset.cancel); }
+    else if(t.dataset.act === 'send'){ return send(); }
     render();
   });
 
-  async function save(){
+  async function send(){
     if(!ready() || busy) return;
-    busy = true; renderBar(); $('.save').textContent = 'Saving…';
-    const body = {device_key: deviceKey(), client_id: F.client, date: F.date, item_id: F.item, qty: F.qty, price: price(), workers: F.workers};
-    try{
-      const r = await rpc('shop_submit', body);
-      toast(r.repeat ? 'Already saved' : 'Saved · ' + r.count + (r.count>1?' workers':' worker'));
-      D = await rpc('shop_hello', {device_key: deviceKey()});
-      const keepDate = F.date; F = fresh(); F.date = keepDate;
-    }catch(e){
-      busy = false; render(); $('#err').textContent = e.message === 'Failed to fetch' ? 'No internet. Try again — it will not save twice.' : e.message; return;
-    }
-    busy = false; render(); window.scrollTo(0,0);
+    busy = true; renderBar(); $('.save').textContent = 'Sending…';
+    const it = item(), names = F.workers.map(id => (D.workers.find(w => w.id === id)||{}).name || '');
+    const body = {device_key: deviceKey(), client_id: F.client, qty: F.qty, price: price() || null, workers: F.workers};
+    if(custom()) body.custom_name = F.customName; else body.item_id = F.item;
+    try{ await rpc('shop_request', body); }
+    catch(e){ busy = false; render(); $('#err').textContent = e.message === 'Failed to fetch' ? 'No internet. Try again — it will not send twice.' : e.message; return; }
+    const p = price(), msg = ['🛍️ KEDAI RUNCIT · REQUEST', '🏡 ' + D.farm, '👤 ' + names.join(', '), '📦 ' + it.label + ' × ' + F.qty, p ? '💰 est. ' + rm(p) + ' each' : '💰 price ?', '', 'Please buy and confirm in Kedai Runcit.'].join('\n');
+    try{ D = await rpc('shop_hello', {device_key: deviceKey()}); }catch(e){}
+    busy = false; F = fresh(); render(); window.scrollTo(0,0);
+    const s = sheet('<div class="done-sheet"><div class="big">📨</div><h3>Request sent</h3><p>Not deducted yet.<br>The boss confirms after buying.</p>'
+      + '<button class="wa-big" data-wa>💬 Tell boss on WhatsApp</button><button class="btn" style="width:100%" data-x>Close</button></div>');
+    s.querySelector('[data-wa]').onclick = () => { window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener'); s.remove(); };
+    s.querySelector('[data-x]').onclick = () => s.remove();
   }
-  async function undo(id){
-    const e = (D.recent||[]).find(x => x.id === id); if(!e) return;
-    if(!confirm('Undo ' + e.item + ' ' + rm(e.amount) + ' for ' + e.worker + '?')) return;
-    try{ await rpc('shop_undo', {device_key: deviceKey(), entry_id: id}); toast('Undone'); D = await rpc('shop_hello', {device_key: deviceKey()}); render(); }
-    catch(err){ $('#err').textContent = err.message; }
+  async function cancel(cid){
+    const r = (D.requests||[]).find(x => x.client_id === cid); if(!r) return;
+    if(!confirm('Cancel request: ' + r.item + ' for ' + r.workers.map(w => w.name).join(', ') + '?')) return;
+    try{ await rpc('shop_request_cancel', {device_key: deviceKey(), client_id: cid}); toast('Cancelled'); D = await rpc('shop_hello', {device_key: deviceKey()}); render(); }
+    catch(err){ $('#err').textContent = err.message; try{ D = await rpc('shop_hello', {device_key: deviceKey()}); render(); }catch(e){} }
   }
   return {start};
 })();
 
-// ================= Owner（电脑 / 手机）=================
+// ================= Owner =================
 const Owner = (() => {
-  let D = null, TAB = 'log', MONTH = klDate(0).slice(0,7), FARM = 'ALL', ONLYCHG = false;
+  let D = null, REQ = [], TAB = 'requests', MONTH = klDate(0).slice(0,7), FARM = 'ALL', ONLYCHG = false;
+  const C = {}; // confirm form per request: {ids:Set, item_id, new_item, price, qty, date}
 
   async function start(){ await load(); }
   async function load(){
-    try{ D = await rpc('shop_owner_data', {month: MONTH}); }
+    try{ [D, REQ] = await Promise.all([rpc('shop_owner_data', {month: MONTH}), rpc('shop_owner_requests', {})]); }
     catch(e){ $('#app').innerHTML = '<div class="gate"><p>This page is not available.</p></div>'; return; }
     render();
   }
@@ -311,16 +416,87 @@ const Owner = (() => {
   const mLabel = m => new Date(m + '-15').toLocaleDateString('en-GB', {month:'short', year:'numeric'});
 
   function render(){
-    const pend = D.devices.filter(d => d.status === 'PENDING').length;
-    let h = (DEMO?'<div class="demo">DEMO · nothing is saved</div>':'')
-      + '<div class="top"><a href="../index.html" style="color:#fff;text-decoration:none"><b>Kedai Runcit</b></a><div class="tabs">'
-      + [['log','Purchases'],['prices','Prices'],['phones','Phones' + (pend ? ' · ' + pend : '')]].map(t => '<button class="tab' + (TAB===t[0]?' on':'') + '" data-tab="' + t[0] + '">' + t[1] + '</button>').join('')
-      + '</div></div><div class="wrap wide">';
-    h += TAB === 'log' ? logView() : TAB === 'prices' ? priceView() : phoneView();
+    const pend = D.devices.filter(d => d.status === 'PENDING').length, open = REQ.filter(r => r.open).length;
+    let h = (DEMO?'<div class="demo">PREVIEW · sample data · nothing is saved</div>':'')
+      + '<div class="top"><a href="../index.html" style="color:#fff;text-decoration:none"><b>🛍️ Kedai Runcit</b></a><div class="tabs">'
+      + [['requests','📨 Requests', open],['log','🧾 Deducted'],['prices','🏷️ Prices'],['phones','📱 Phones', pend]].map(t => '<button class="tab' + (TAB===t[0]?' on':'') + '" data-tab="' + t[0] + '">' + t[1] + (t[2] ? '<span class="tabbadge">' + t[2] + '</span>' : '') + '</button>').join('')
+      + '</div></div><div class="wrap' + (TAB==='log'?' wide':'') + '">';
+    h += TAB === 'requests' ? requestView() : TAB === 'log' ? logView() : TAB === 'prices' ? priceView() : phoneView();
     h += '</div>';
-    $('#app').innerHTML = h;
+    const y = window.scrollY; $('#app').innerHTML = h; window.scrollTo(0, y);
+    document.querySelectorAll('[data-fprice]').forEach(el => el.oninput = () => { const f = C[el.dataset.fprice]; f.price = el.value.replace(/[^0-9.]/g,''); updTotal(el.dataset.fprice); });
+    document.querySelectorAll('[data-fnew]').forEach(el => el.oninput = () => { C[el.dataset.fnew].new_item = el.value; });
+    document.querySelectorAll('[data-fdate]').forEach(el => el.onchange = () => { C[el.dataset.fdate].date = el.value; render(); });
   }
 
+  // ---- Requests ----
+  function form(r){
+    if(!C[r.client_id]){
+      C[r.client_id] = {ids: new Set(r.workers.filter(w => w.status==='REQUESTED').map(w => w.request_id)), item_id: r.custom ? null : r.item_id, new_item: r.custom ? r.item : '',
+        price: r.est ? String(Number(r.est)) : r.default ? String(Number(r.default)) : '', qty: r.qty, date: klDate(0)};
+    }
+    return C[r.client_id];
+  }
+  function updTotal(cid){ const f = C[cid], el = document.getElementById('tot_' + cid); if(!el) return; const p = Number(f.price)||0; el.textContent = p ? rm(p * f.qty * f.ids.size) : '—'; }
+  function requestView(){
+    const open = REQ.filter(r => r.open), done = REQ.filter(r => !r.open);
+    let h = '<div class="ownerheading">📨 To buy <span class="step-info">' + open.length + '</span></div>';
+    h += open.length ? open.map(openCard).join('') : '<div class="ocard"><p class="empty">Nothing waiting. 👍</p></div>';
+    if(done.length) h += '<div class="ownerheading" style="margin-top:20px">🕘 Done · last 30 days</div><div class="ocard">' + done.map(doneRow).join('') + '</div>';
+    return h;
+  }
+  function openCard(r){
+    const f = form(r), cid = esc(r.client_id), live = r.workers.filter(w => w.status==='REQUESTED');
+    const catalog = D.items.filter(i => i.prices && i.prices.length);
+    const chosen = f.item_id ? (D.items.find(i => i.id === f.item_id)||{}) : null;
+    const prices = chosen && chosen.prices ? chosen.prices.map(p => Number(p.price)) : [];
+    const p = Number(f.price)||0;
+    let h = '<div class="ocard open"><div class="top2"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + (r.custom?'<span class="newtag">NEW</span>':'') + '</b><small>🏡 ' + esc(r.farm) + ' · ' + when(r.at) + (r.est ? ' · est. ' + rm(r.est) : ' · price ?') + '</small></div>' + statPill('REQUESTED') + '</div>';
+    h += '<div class="f-lbl">Bought for</div>' + live.map(w => '<label class="wk' + (f.ids.has(w.request_id)?'':' off') + '"><input type="checkbox" data-fw="' + cid + '|' + esc(w.request_id) + '"' + (f.ids.has(w.request_id)?' checked':'') + '>👤 ' + esc(w.name) + '</label>').join('');
+    if(r.custom){
+      h += '<div class="f-lbl">Item in Salary</div><div class="g g3">' + catalog.map(i => '<button type="button" class="opt' + (f.item_id===i.id?' on':'') + '" style="min-height:46px" data-fitem="' + cid + '|' + esc(i.id) + '">' + productIcon(i.label) + ' ' + esc(i.label) + '</button>').join('')
+        + '<button type="button" class="opt' + (!f.item_id?' on':'') + '" style="min-height:46px" data-fitem="' + cid + '|">➕ New</button></div>'
+        + (!f.item_id ? '<input class="in" style="margin-top:8px" maxlength="30" data-fnew="' + cid + '" value="' + esc(f.new_item) + '" placeholder="New item name">' : '');
+    }
+    h += '<div class="f-lbl">Actual price each (RM)</div>'
+      + (prices.length ? '<div class="g g4" style="margin-bottom:8px">' + prices.map(x => '<button type="button" class="opt price' + (p===x?' on':'') + '" style="min-height:50px" data-fp="' + cid + '|' + x + '">' + x + '</button>').join('') + '</div>' : '')
+      + '<input class="in" inputmode="decimal" data-fprice="' + cid + '" value="' + esc(f.price) + '" placeholder="RM">';
+    h += '<div class="f-lbl">How many · Date given</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="qty" style="padding:0;gap:12px"><button type="button" data-fq="' + cid + '|-1">−</button><span>' + f.qty + '</span><button type="button" data-fq="' + cid + '|1">+</button></div>'
+      + '<input class="in" type="date" style="flex:1;min-width:150px" data-fdate="' + cid + '" value="' + f.date + '" max="' + klDate(0) + '"></div>';
+    h += '<div class="total"><span>Deduct · ' + f.ids.size + ' worker' + (f.ids.size===1?'':'s') + '</span><b id="tot_' + cid + '">' + (p ? rm(p * f.qty * f.ids.size) : '—') + '</b></div>';
+    h += '<div class="err" id="err_' + cid + '"></div><div class="obtns"><button class="btn red" data-rej="' + cid + '">✖ Not bought</button><button class="btn pri" data-ok="' + cid + '">✅ Bought · Deduct</button></div></div>';
+    return h;
+  }
+  function doneRow(r){
+    const paid = r.workers.filter(w => w.status==='CONFIRMED');
+    return '<div class="req"><div class="head"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + '</b><small>🏡 ' + esc(r.farm) + ' · ' + when(r.at) + '</small></div>' + statPill(r.status) + '</div>'
+      + '<div class="who">👤 ' + r.workers.map(w => esc(w.name) + (w.status==='CONFIRMED' ? ' · ' + rm(w.amount) : w.status==='REQUESTED' ? '' : ' ✖')).join(', ') + (r.note && !paid.length ? '<br>💬 ' + esc(r.note) : '') + '</div></div>';
+  }
+  async function confirmReq(cid){
+    const r = REQ.find(x => x.client_id === cid), f = C[cid], err = document.getElementById('err_' + cid);
+    const p = Number(f.price);
+    if(!f.ids.size) return err.textContent = 'Tick at least one worker';
+    if(!f.item_id && !String(f.new_item||'').trim()) return err.textContent = 'Choose the item or type a new name';
+    if(!(p > 0 && p <= 2000)) return err.textContent = 'Enter the actual price';
+    if(!f.date || f.date > klDate(0)) return err.textContent = 'Check the date';
+    const names = r.workers.filter(w => f.ids.has(w.request_id)).map(w => w.name);
+    if(!confirm('Deduct ' + rm(p * f.qty) + ' from ' + names.join(', ') + '?')) return;
+    const body = {client_id: cid, request_ids: [...f.ids], price: p, qty: f.qty, date: f.date};
+    if(f.item_id) body.item_id = f.item_id; else body.new_item = f.new_item;
+    try{ await rpc('shop_owner_confirm', body); delete C[cid]; toast('Deducted · in Salary'); load(); }
+    catch(e){ err.textContent = e.message; }
+  }
+  function rejectReq(cid){
+    const s = sheet('<h3>Not bought</h3><div class="g g2">' + ['No stock','Not allowed','Duplicate','Other'].map(x => '<button class="opt" data-why="' + x + '">' + x + '</button>').join('') + '</div><p style="color:var(--muted);font-size:13px;margin-top:10px">The Leader sees this on their phone. Nothing is deducted.</p><div class="err" id="se"></div><button class="btn" style="width:100%;margin-top:12px" data-x>Back</button>');
+    s.addEventListener('click', async e => {
+      if(e.target.closest('[data-x]')) return s.remove();
+      const w = e.target.closest('[data-why]'); if(!w) return;
+      try{ await rpc('shop_owner_reject', {client_id: cid, note: w.dataset.why === 'Other' ? null : w.dataset.why}); s.remove(); delete C[cid]; toast('Marked not bought'); load(); }
+      catch(err){ s.querySelector('#se').textContent = err.message; }
+    });
+  }
+
+  // ---- Deducted ----
   function logView(){
     const all = D.entries, live = all.filter(e => !e.void);
     const rows = all.filter(e => (FARM==='ALL' || e.farm===FARM) && (!ONLYCHG || (e.default!=null && Number(e.price)!==Number(e.default))));
@@ -328,46 +504,76 @@ const Owner = (() => {
     const chg = live.filter(e => e.default!=null && Number(e.price)!==Number(e.default));
     let h = '<div class="filters">' + months().map(m => '<span class="chip' + (MONTH===m?' on':'') + '" data-month="' + m + '">' + mLabel(m) + '</span>').join('') + '</div>';
     h += '<div class="kpis"><div class="kpi"><small>Total · ' + mLabel(MONTH) + '</small><b>' + rm(sum(live)) + '</b></div>'
-      + ['AD 1','AD 2','AD 3'].map(f => '<div class="kpi"><small>' + f + '</small><b>' + rm(sum(live.filter(e => e.farm===f))) + '</b></div>').join('').replace(/<div class="kpi"><small>AD 3/, '<div class="kpi hide-m"><small>AD 3') + '</div>';
+      + ['AD 1','AD 2','AD 3'].map(f => '<div class="kpi' + (f==='AD 3'?' hide-m':'') + '"><small>' + f + '</small><b>' + rm(sum(live.filter(e => e.farm===f))) + '</b></div>').join('') + '</div>';
     h += '<div class="filters">' + ['ALL','AD 1','AD 2','AD 3'].map(f => '<span class="chip' + (FARM===f?' on':'') + '" data-farm="' + f + '">' + (f==='ALL'?'All farms':f) + '</span>').join('')
       + '<span class="chip' + (ONLYCHG?' on':'') + '" data-chg="1">Price changed · ' + chg.length + '</span></div>';
-    h += '<div class="card" style="padding:6px 10px;overflow-x:auto"><table><thead><tr><th>Date</th><th>Farm</th><th>Worker</th><th>Item</th><th class="n">Price</th><th class="n">Amount</th><th>Phone</th><th></th></tr></thead><tbody>'
+    h += '<div class="card" style="padding:6px 10px;overflow-x:auto"><table><thead><tr><th>Date</th><th>Farm</th><th>Worker</th><th>Item</th><th class="n">Price</th><th class="n">Amount</th><th></th></tr></thead><tbody>'
       + (rows.length ? rows.map(e => {
           const changed = e.default!=null && Number(e.price)!==Number(e.default);
-          return '<tr class="' + (e.void?'void':'') + '"><td>' + dmy(e.date) + ' <small style="color:var(--muted)">' + hm(e.at) + '</small></td><td>' + esc(e.farm) + '</td><td>' + esc(e.worker) + '</td><td>' + esc(e.item) + (e.qty>1?' × '+e.qty:'') + '</td>'
-            + '<td class="n">' + Number(e.price) + (changed ? ' <span class="pill w">was ' + Number(e.default) + '</span>' : '') + '</td><td class="n">' + rm(e.amount) + '</td><td><small>' + esc(e.device) + '</small></td>'
-            + '<td>' + (e.void ? '<span class="pill gr">Undone · ' + esc((e.void_by||'').toLowerCase()) + '</span>' : (!e.in_salary ? '<span class="pill bad">Removed in Salary</span>' : '<button class="lnk" data-void="' + e.id + '">Remove</button>')) + '</td></tr>';
-        }).join('') : '<tr><td colspan="8" style="color:var(--muted);padding:20px 6px">No purchases.</td></tr>')
+          return '<tr class="' + (e.void?'void':'') + '"><td>' + dmy(e.date) + '</td><td>' + esc(e.farm) + '</td><td>' + esc(e.worker) + '</td><td>' + productIcon(e.item) + ' ' + esc(e.item) + (e.qty>1?' × '+e.qty:'') + '</td>'
+            + '<td class="n">' + Number(e.price) + (changed ? ' <span class="pill w">usual ' + Number(e.default) + '</span>' : '') + '</td><td class="n">' + rm(e.amount) + '</td>'
+            + '<td>' + (e.void ? '<span class="pill gr">Removed</span>' : (!e.in_salary ? '<span class="pill bad">Removed in Salary</span>' : '<button class="lnk" data-void="' + e.id + '">Remove</button>')) + '</td></tr>';
+        }).join('') : '<tr><td colspan="7" style="color:var(--muted);padding:20px 6px">Nothing deducted.</td></tr>')
       + '</tbody></table></div>';
     return h;
   }
 
+  // ---- Prices ----
   function priceView(){
     const on = D.items.filter(i => i.prices && i.prices.length), off = D.items.filter(i => !(i.prices && i.prices.length));
-    let h = '<div class="card"><div class="lbl"><b>On Kedai Runcit</b><span>Leaders see these</span></div>'
-      + on.map(i => '<div class="row"><div class="m"><div>' + esc(i.label) + '</div><div class="pchips" style="margin-top:6px">' + i.prices.map(p => '<span class="pchip' + (p.default?' def':'') + '">' + Number(p.price) + '</span>').join('') + '</div></div><button class="btn" data-edit="' + i.id + '">Edit</button></div>').join('')
+    let h = '<div class="card"><div class="lbl"><b>🛍️ Leaders see these</b></div>'
+      + on.map(i => '<div class="row"><span class="tinyicon">' + productIcon(i.label) + '</span><div class="m"><div>' + esc(i.label) + '</div><div class="pchips" style="margin-top:6px">' + i.prices.map(p => '<span class="pchip' + (p.default?' def':'') + '">' + Number(p.price) + '</span>').join('') + '</div></div><button class="btn" data-edit="' + i.id + '">Edit</button></div>').join('')
       + '</div>';
-    h += '<div class="card"><div class="lbl"><b>Not on Kedai Runcit</b><span>Salary list only</span></div>'
-      + off.map(i => '<div class="row"><div class="m"><div style="color:var(--muted)">' + esc(i.label) + '</div></div><button class="btn" data-edit="' + i.id + '">Add prices</button></div>').join('')
+    h += '<div class="card"><div class="lbl"><b>Salary list only</b><span>Leaders don\'t see</span></div>'
+      + off.map(i => '<div class="row"><span class="tinyicon">' + productIcon(i.label) + '</span><div class="m"><div style="color:var(--muted)">' + esc(i.label) + '</div></div><button class="btn" data-edit="' + i.id + '">Add prices</button></div>').join('')
       + '<div class="row"><div class="m"></div><button class="btn pri" data-act="newitem">+ New item</button></div></div>';
     return h;
   }
+  function editPrices(id){
+    const it = D.items.find(x => x.id === id);
+    let ps = (it.prices||[]).map(p => Number(p.price)), def = ((it.prices||[]).find(p => p.default)||{}).price; def = def!=null ? Number(def) : null;
+    const s = sheet('<h3>' + productIcon(it.label) + ' ' + esc(it.label) + '</h3><div id="pp"></div><div style="display:flex;gap:8px;margin-top:10px"><input class="in" id="np" inputmode="decimal" placeholder="Add a price (RM)"><button class="btn" data-add>Add</button></div>'
+      + '<p style="color:var(--muted);font-size:13px;margin-top:10px">Tap a price to make it the usual one.</p>'
+      + '<div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button>' + (ps.length ? '<button class="btn red" data-off>Hide from Leaders</button>' : '') + '<button class="btn pri" style="flex:1" data-ok>Save</button></div>');
+    const draw = () => s.querySelector('#pp').innerHTML = ps.length ? '<div class="g g4">' + ps.sort((a,b)=>a-b).map(p => '<div class="opt' + (p===def?' on':'') + '" data-pick="' + p + '">' + p + (p===def?'<small>usual</small>':'') + '<small data-rm="' + p + '" style="color:var(--bad)">remove</small></div>').join('') + '</div>' : '<p style="color:var(--muted)">No prices yet.</p>';
+    draw();
+    s.addEventListener('click', async e => {
+      const rmv = e.target.closest('[data-rm]'); if(rmv){ const v = Number(rmv.dataset.rm); ps = ps.filter(x => x!==v); if(def===v) def = ps[0] ?? null; return draw(); }
+      const pk = e.target.closest('[data-pick]'); if(pk){ def = Number(pk.dataset.pick); return draw(); }
+      if(e.target.closest('[data-add]')){ const v = Math.round(Number(s.querySelector('#np').value)*100)/100; if(!(v>0 && v<=2000)) return s.querySelector('#se').textContent = 'Price 0.01 to 2000'; if(!ps.includes(v)) ps.push(v); if(def==null) def = v; s.querySelector('#np').value=''; s.querySelector('#se').textContent=''; return draw(); }
+      if(e.target.closest('[data-x]')) return s.remove();
+      const off = e.target.closest('[data-off]');
+      if(off || e.target.closest('[data-ok]')){
+        if(!off && !ps.length) return s.querySelector('#se').textContent = 'Add at least one price';
+        try{ await rpc('shop_owner_prices_set', {item_id:id, prices: off ? [] : ps, default: off ? null : def}); s.remove(); toast(off ? 'Hidden' : 'Saved'); load(); }
+        catch(err){ s.querySelector('#se').textContent = err.message; }
+      }
+    });
+  }
+  function newItem(){
+    const s = sheet('<h3>New item</h3><input class="in" id="ni" placeholder="e.g. SABUN" maxlength="30"><p style="color:var(--muted);font-size:13px;margin-top:8px">Also added to the Salary item list.</p><div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button><button class="btn pri" style="flex:1" data-ok>Next · prices</button></div>');
+    s.addEventListener('click', async e => {
+      if(e.target.closest('[data-x]')) return s.remove();
+      if(e.target.closest('[data-ok]')){
+        const v = s.querySelector('#ni').value.trim(); if(!v) return s.querySelector('#se').textContent = 'Enter a name';
+        try{ const id = await rpc('shop_owner_item_add', {label:v}); s.remove(); await load(); editPrices(id); }
+        catch(err){ s.querySelector('#se').textContent = err.message; }
+      }
+    });
+  }
 
+  // ---- Phones ----
   function phoneView(){
     const ord = {PENDING:0, ACTIVE:1, REVOKED:2};
     const ds = D.devices.slice().sort((a,b) => ord[a.status]-ord[b.status]);
-    return '<div class="card"><div class="lbl"><b>Phones</b><span>A Leader opens the link · the code shows on their phone</span></div>'
+    return '<div class="card"><div class="lbl"><b>📱 Phones</b><span>Leader opens the link → code shows</span></div>'
       + (ds.length ? ds.map(d => '<div class="row"><div class="m"><div><span style="font-family:IBM Plex Mono,monospace">' + esc(d.code) + '</span> ' + (d.label ? '· ' + esc(d.label) : '') + '</div><small>'
           + (d.status==='ACTIVE' ? '<span class="pill ok">' + esc(d.farm_code) + '</span> ' : d.status==='PENDING' ? '<span class="pill w">Waiting</span> ' : '<span class="pill gr">Blocked</span> ')
-          + (d.last_seen ? 'last used ' + dmy(d.last_seen) + ' ' + hm(d.last_seen) : 'asked ' + dmy(d.requested_at) + ' ' + hm(d.requested_at)) + '</small></div>'
+          + (d.last_seen ? 'last used ' + when(d.last_seen) : 'asked ' + when(d.requested_at)) + '</small></div>'
           + (d.status!=='ACTIVE' ? '<button class="btn pri" data-approve="' + d.id + '">Approve</button>' : '<button class="btn red" data-block="' + d.id + '">Block</button>') + '</div>').join('')
         : '<p style="color:var(--muted)">No phones yet.</p>')
       + '</div>';
   }
-
-  // ---- sheets ----
-  function sheet(html){ const s = document.createElement('div'); s.className = 'sheet'; s.innerHTML = '<div class="box">' + html + '</div>'; s.onclick = e => { if(e.target === s) s.remove(); }; document.body.appendChild(s); return s; }
-
   function approve(id){
     const d = D.devices.find(x => x.id === id); let farm = d.farm_code || null;
     const s = sheet('<h3>Approve phone ' + esc(d.code) + '</h3><div class="lbl"><b>Farm</b></div><div class="g g3">' + ['AD 1','AD 2','AD 3'].map(f => '<div class="opt' + (farm===f?' on':'') + '" data-f="' + f + '">' + f + '</div>').join('') + '</div>'
@@ -384,51 +590,25 @@ const Owner = (() => {
     });
   }
 
-  function editPrices(id){
-    const it = D.items.find(x => x.id === id);
-    let ps = (it.prices||[]).map(p => Number(p.price)), def = ((it.prices||[]).find(p => p.default)||{}).price; def = def!=null ? Number(def) : null;
-    const s = sheet('<h3>' + esc(it.label) + '</h3><div id="pp"></div><div style="display:flex;gap:8px;margin-top:10px"><input class="in" id="np" inputmode="decimal" placeholder="Add a price (RM)"><button class="btn" data-add>Add</button></div>'
-      + '<p style="color:var(--muted);font-size:13px;margin-top:10px">Tap a price to make it the usual one. Leaders can still type another price — you will see it marked in Purchases.</p>'
-      + '<div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button>' + (ps.length ? '<button class="btn red" data-off>Remove from Kedai Runcit</button>' : '') + '<button class="btn pri" style="flex:1" data-ok>Save</button></div>');
-    const draw = () => s.querySelector('#pp').innerHTML = ps.length ? '<div class="g g4">' + ps.sort((a,b)=>a-b).map(p => '<div class="opt' + (p===def?' on':'') + '" data-pick="' + p + '">' + p + (p===def?'<small>usual</small>':'') + '<small data-rm="' + p + '" style="color:var(--bad)">remove</small></div>').join('') + '</div>' : '<p style="color:var(--muted)">No prices yet.</p>';
-    draw();
-    s.addEventListener('click', async e => {
-      const rmv = e.target.closest('[data-rm]'); if(rmv){ const v = Number(rmv.dataset.rm); ps = ps.filter(x => x!==v); if(def===v) def = ps[0] ?? null; return draw(); }
-      const pk = e.target.closest('[data-pick]'); if(pk){ def = Number(pk.dataset.pick); return draw(); }
-      if(e.target.closest('[data-add]')){ const v = Math.round(Number(s.querySelector('#np').value)*100)/100; if(!(v>0 && v<=2000)) return s.querySelector('#se').textContent = 'Price 0.01 to 2000'; if(!ps.includes(v)) ps.push(v); if(def==null) def = v; s.querySelector('#np').value=''; s.querySelector('#se').textContent=''; return draw(); }
-      if(e.target.closest('[data-x]')) return s.remove();
-      const off = e.target.closest('[data-off]');
-      if(off || e.target.closest('[data-ok]')){
-        if(!off && !ps.length) return s.querySelector('#se').textContent = 'Add at least one price';
-        try{ await rpc('shop_owner_prices_set', {item_id:id, prices: off ? [] : ps, default: off ? null : def}); s.remove(); toast(off ? 'Removed' : 'Saved'); load(); }
-        catch(err){ s.querySelector('#se').textContent = err.message; }
-      }
-    });
-  }
-
-  function newItem(){
-    const s = sheet('<h3>New item</h3><input class="in" id="ni" placeholder="e.g. SABUN" maxlength="30"><p style="color:var(--muted);font-size:13px;margin-top:8px">It is also added to the Salary item list.</p><div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button><button class="btn pri" style="flex:1" data-ok>Next · prices</button></div>');
-    s.addEventListener('click', async e => {
-      if(e.target.closest('[data-x]')) return s.remove();
-      if(e.target.closest('[data-ok]')){
-        const v = s.querySelector('#ni').value.trim(); if(!v) return s.querySelector('#se').textContent = 'Enter a name';
-        try{ const id = await rpc('shop_owner_item_add', {label:v}); s.remove(); await load(); editPrices(id); }
-        catch(err){ s.querySelector('#se').textContent = err.message; }
-      }
-    });
-  }
-
   document.addEventListener('click', async ev => {
     if(!D) return;
-    const t = ev.target.closest('[data-tab],[data-month],[data-farm],[data-chg],[data-void],[data-edit],[data-act],[data-approve],[data-block]'); if(!t || t.closest('.sheet')) return;
-    if(t.dataset.tab){ TAB = t.dataset.tab; return render(); }
+    const t = ev.target.closest('[data-tab],[data-month],[data-farm],[data-chg],[data-void],[data-edit],[data-act],[data-approve],[data-block],[data-fw],[data-fitem],[data-fp],[data-fq],[data-ok],[data-rej]'); if(!t || t.closest('.sheet')) return;
+    const split = v => v.split('|');
+    if(t.dataset.fw){ const [c, rid] = split(t.dataset.fw); const f = C[c]; t.checked ? f.ids.add(rid) : f.ids.delete(rid); t.closest('.wk').classList.toggle('off', !t.checked); render(); return; }
+    if(t.dataset.fitem !== undefined){ const [c, id] = split(t.dataset.fitem); const f = C[c]; f.item_id = id || null;
+      const it = D.items.find(i => i.id === id); const d = it && it.prices ? (it.prices.find(p => p.default)||{}).price : null; if(d!=null && !f.price) f.price = String(Number(d)); return render(); }
+    if(t.dataset.fp){ const [c, v] = split(t.dataset.fp); C[c].price = v; return render(); }
+    if(t.dataset.fq){ const [c, v] = split(t.dataset.fq); C[c].qty = Math.min(20, Math.max(1, C[c].qty + Number(v))); return render(); }
+    if(t.dataset.ok) return confirmReq(t.dataset.ok);
+    if(t.dataset.rej) return rejectReq(t.dataset.rej);
+    if(t.dataset.tab){ TAB = t.dataset.tab; window.scrollTo(0,0); return render(); }
     if(t.dataset.month){ MONTH = t.dataset.month; return load(); }
     if(t.dataset.farm){ FARM = t.dataset.farm; return render(); }
     if(t.dataset.chg){ ONLYCHG = !ONLYCHG; return render(); }
     if(t.dataset.edit) return editPrices(t.dataset.edit);
     if(t.dataset.act === 'newitem') return newItem();
     if(t.dataset.approve) return approve(t.dataset.approve);
-    if(t.dataset.block){ if(!confirm('Block this phone? It can no longer add purchases.')) return; await rpc('shop_owner_device_set', {id:t.dataset.block, status:'REVOKED'}); toast('Blocked'); return load(); }
+    if(t.dataset.block){ if(!confirm('Block this phone? It can no longer send requests.')) return; await rpc('shop_owner_device_set', {id:t.dataset.block, status:'REVOKED'}); toast('Blocked'); return load(); }
     if(t.dataset.void){ const e = D.entries.find(x => x.id === t.dataset.void); if(!confirm('Remove ' + e.item + ' ' + rm(e.amount) + ' for ' + e.worker + '? It is also removed from Salary.')) return;
       try{ await rpc('shop_owner_void', {id:e.id}); toast('Removed'); load(); }catch(err){ alert(err.message); } }
   });
