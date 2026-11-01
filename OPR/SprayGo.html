@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v2</title>
+<title>SprayGo v3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -103,8 +103,21 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
 .fcell.soon,.fcell.nc{background:var(--amber2);border-color:transparent;color:var(--amber)}
 .fcell.out,.fcell.low{background:var(--red2);border-color:transparent;color:var(--red)}
 .fcell.none{opacity:.7;cursor:pointer;color:var(--muted)}
+.fcell.sub{background:var(--blue2);border-color:var(--blue);color:var(--blue)}
+.fcell .subtag{display:block;font-weight:800;font-size:11px}
+.fcell.focus{box-shadow:0 0 0 2px var(--ink) inset}
+.productrow.dim{opacity:.3;filter:grayscale(1)}
+.fhead>div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.mixbtns{display:flex;gap:3px}
+.mixbtns button{min-width:28px;min-height:30px;border-radius:8px;border:1px solid var(--field);background:var(--white);font-weight:800;font-size:12px;color:var(--muted);padding:0 6px}
+.mixbtns button.on{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.focusbox{border-radius:12px;padding:12px 14px;margin:4px 0 8px;background:var(--soft);border:1px solid var(--line);font-size:14px}
+.focusbox .l{margin-top:4px}
+.chip.subok{color:var(--blue);background:var(--blue2);border-color:var(--blue)}
+.chip.subunk{color:var(--amber);background:var(--amber2);border-color:transparent}
+.chip.suboff{opacity:.45;filter:grayscale(1);cursor:not-allowed}
 .fhead{display:grid;grid-template-columns:repeat(3,96px);gap:6px;text-align:center;font-size:12px;font-weight:800;color:var(--muted)}
-@media (max-width:620px){.fcells,.fhead{grid-template-columns:repeat(3,1fr);width:100%}.fhead{display:none}.fcell b{display:block;color:inherit}}
+@media (max-width:620px){.fcells,.fhead{grid-template-columns:repeat(3,1fr);width:100%}.fcell b{display:block;color:inherit}}
 .p-use{font-size:12px;line-height:1.4;color:var(--green);margin:2px 0 3px;font-weight:600}
 .guide{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .guide div{font-size:14px;line-height:1.5}
@@ -212,7 +225,7 @@ body.nocost .cost{display:none!important}
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -305,7 +318,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
 /* ---------- state ---------- */
 let products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=window.SG&&!window.SG.edit?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
-let guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
+let focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
 
 /* ---------- helpers ---------- */
@@ -349,6 +362,11 @@ function stockRow(fid,p){const c=lastCount(fid,p._id);const left=(c?Number(c.amt
   let need=0,packs=0;if(d>0){need=d*30-Math.max(left,0);if(need>0&&pb)packs=Math.ceil(need/pb)}
   const status=(!c&&!boughtSince(fid,p._id,null))?'nc':left<=0?'out':days!=null&&days<7?'low':days!=null&&days<30?'soon':'ok';
   return {p,c,left,d,days,pb,need,packs,status}}
+const r5=v=>Math.max(5,Math.round(v/5)*5);
+function subOpts(fid,p,amt){const base=Number(p.bookAmt)||0,n=Number(amt)||0;
+  return (p.subs||[]).map(x=>{const q=byId(x.id);if(!q)return null;const a=x.amt==null?null:(base&&n?r5(Number(x.amt)*n/base):Number(x.amt));
+    const sr=q.track!=='No'?stockRow(fid,q):null;const unknown=!!(sr&&sr.status==='nc');const ok=!sr||(!unknown&&a!=null&&sr.left>=a);
+    return {q,a,ok,unknown}}).filter(Boolean)}
 const ST={nc:['amber','未点算'],out:['red','没货'],low:['red','马上买'],soon:['amber','不够 30 天'],ok:['green','够用']};
 function buyList(fid){return stockProducts(fid).map(p=>stockRow(fid,p)).filter(r=>r.need>0&&r.status!=='nc')}
 function lowCount(fid){return stockProducts(fid).map(p=>stockRow(fid,p)).filter(r=>r.status==='out'||r.status==='low').length}
@@ -446,8 +464,8 @@ function vSpray(){
   const list=items();const w=water(farm);const {red,amb}=sendChecks(list);const fw=farms[farm]||{};
   const rows=list.map(i=>{const la=labelAmt(i.p);const over=la!=null&&Number(i.amt)>la*1.3;
     const sr=i.p._id&&i.p.track!=='No'?stockRow(farm,i.p):null;const short=sr&&sr.status!=='nc'&&Number(i.amt)>Math.max(sr.left,0);
-    const subs=(i.p.subs||[]).filter(x=>byId(x.id)&&!sel.has(x.id));
-    const subHTML=short?`<div class="subs"><span class="p-bad">库存不够（剩 ${e(fmtAmt(Math.max(sr.left,0),i.p))}）</span>${subs.length?`<span>→ 换成</span>${subs.map(x=>`<button class="chip mix" data-act="swap" data-id="${e(i.id)}" data-to="${e(x.id)}" data-amt="${e(x.amt??'')}">${e(byId(x.id).name)} ${e(x.amt??'')} ${e(U(byId(x.id)))}</button>`).join('')}`:''}</div>`:'';
+    const subs=short?subOpts(farm,i.p,i.amt).filter(o=>!sel.has(o.q._id)):[];
+    const subHTML=short?`<div class="subs"><span class="p-bad">库存不够（剩 ${e(fmtAmt(Math.max(sr.left,0),i.p))}）</span>${subs.length?`<span>→ 换成</span>${subs.map(o=>o.ok||o.unknown?`<button class="chip ${o.ok?'subok':'subunk'}" data-act="swap" data-id="${e(i.id)}" data-to="${e(o.q._id)}" data-amt="${e(o.a??'')}">${e(o.q.name)} ${e(o.a??'')} ${e(U(o.q))}${o.unknown?'（未点算）':''}</button>`:`<span class="chip suboff" title="也没货">${e(o.q.name)}（也没货）</span>`).join('')}`:'<span class="note">没有替代品，要买</span>'}</div>`:'';
     return `<div class="minirow ${over?'over':''}"><div><b>${e(i.name)}</b>${i.p.use?`<div class="p-use">${e(i.p.use)}</div>`:''}${subHTML}<div class="note">${la!=null?`${w} L 水的标签用量：${la} ${e(i.unit)}`:(i.p.rate?`标签 ${e(i.p.rate)} ${e(i.unit)}/10 L`:'未有标签用量')}</div></div>
     <div class="stepper"><button data-act="minus" data-id="${e(i.id)}" aria-label="减">−</button><input id="amt-${e(i.id)}" data-amt="${e(i.id)}" inputmode="decimal" value="${e(i.amt)}" aria-label="Amount ${e(i.name)} in ${e(i.unit)}"><button data-act="plus" data-id="${e(i.id)}" aria-label="加">＋</button></div></div>`}).join('');
   return `${head('选药 → 复制','选药 · 发 WhatsApp','选配方或点照片。红色是提醒先检查，照样可以发。')}
@@ -486,7 +504,7 @@ function vStock(){
   const now=rows.filter(r=>r.status==='out'||r.status==='low').length;const nc=rows.filter(r=>r.status==='nc').length;
   const mu=monthUse(sf);const nm=mixes.filter(m=>m.farm===sf).length;
   const list=rows.map(r=>{const p=r.p;const [c,t]=ST[r.status];
-    const sub=r.status==='nc'?'还没点算':`剩 ${fmtAmt(Math.max(r.left,0),p)}${r.pb?`（${(Math.max(r.left,0)/r.pb).toFixed(1)} 瓶/包）`:''} · ${r.days!=null?'约 '+r.days+' 天':'不在配方里'}`;
+    const sub=r.status==='nc'?'还没点算':`剩 ${fmtAmt(Math.max(r.left,0),p)}${r.pb?`（${(Math.max(r.left,0)/r.pb).toFixed(2)} 瓶/包）`:''} · ${r.days!=null?'约 '+r.days+' 天':'不在配方里'}`;
     return `<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small>${e(sub)}</small></div><span class="pill ${c}">${t}</span><button class="btn small" data-act="stockopen" data-id="${e(p._id)}">点算 / 进货</button></div>`}).join('');
   return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
   ${sfChips(sf)}
@@ -510,25 +528,35 @@ function vStock(){
 function sfChips(sf){return `<div class="chips" style="margin-bottom:16px">${[['all','全部'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${id===sf?'on':''}" data-act="sfarm" data-farm="${id}">${n}</button>`).join('')}</div>`}
 function allBuy(){const m=new Map();for(const f of FARMS)for(const r of buyList(f.id)){const k=r.p._id;const x=m.get(k)||{p:r.p,pb:r.pb,packs:0,need:0,by:[],urgent:false};x.packs+=r.packs;x.need+=r.need;x.by.push(`${f.name} ${r.pb?r.packs:fmtAmt(r.need,r.p)}`);if(r.status==='out'||r.status==='low')x.urgent=true;m.set(k,x)}return [...m.values()].sort((a,b)=>sortN(a.p,b.p))}
 function vStockAll(){
-  const ids=new Set();for(const f of FARMS)for(const p of stockProducts(f.id))ids.add(p._id);
-  const prods=[...ids].map(byId).filter(Boolean).sort(sortN);
+  const prods=products.filter(p=>p.track!=='No').sort(sortN);
   let now=0;for(const f of FARMS)now+=lowCount(f.id);
   const buy=allBuy();let tot=0,np=0;
   const buyLines=buy.map(x=>{let c=null;if(x.pb&&Number(x.p.price)>0){c=x.packs*Number(x.p.price);tot+=c}else np++;
     return `<div class="line ${x.urgent?'bad':''}"><span>${e(x.p.name)} — ${x.pb?`${x.packs} × ${e(x.p.packSize)} ${e(x.p.packUnit)}`:e(fmtAmt(x.need,x.p))}<br><small class="note">${e(x.by.join(' · '))}</small></span><b>${c!=null?RM(c):'—'}</b></div>`}).join('');
   let mt=0;const ml=new Map();const miss=new Set();for(const f of FARMS){const mu=monthUse(f.id);mt+=mu.total;for(const [c,p,a] of mu.lines){const x=ml.get(p._id)||{p,c:0,a:0};x.c+=c;x.a+=a;ml.set(p._id,x)}mu.miss.forEach(n=>miss.add(n))}
-  const cell=(f,p)=>{if(!stockProducts(f.id).some(q=>q._id===p._id))return `<button class="fcell none" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)} 点算"><b>${f.name}</b>＋ 点算</button>`;
-    const r=stockRow(f.id,p);const t=r.status==='nc'?'未点算':`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(1)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.status==='out'?'没货':r.days!=null?r.days+' 天':'—'}`;
-    return `<button class="fcell ${r.status}" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)}"><b>${f.name}</b>${t}</button>`};
-  const list=prods.map(p=>`<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="fcells">${FARMS.map(f=>cell(f,p)).join('')}</div></div>`).join('');
+  const fm=focus?mixes.find(m=>m._id===focus.m):null;const M=new Map();if(fm)for(const it of fm.items||[]){const q=byId(it.id);if(q&&q.track!=='No')M.set(it.id,Number(it.amt)||0)}
+  let fb='';if(fm){const fn=fname(fm.farm);let okN=0,ncN=0;const subL=[],buyL=[];
+    for(const [id,amt] of M){const q=byId(id),r=stockRow(fm.farm,q);if(r.status==='nc'){ncN++;continue}if(r.left>=amt){okN++;continue}
+      const o=subOpts(fm.farm,q,amt).find(x=>x.ok);if(o)subL.push(`${q.name} → ${o.q.name} ${o.a} ${U(o.q)}`);else buyL.push(q.name)}
+    fb=`<div class="focusbox"><b>${e(fn)} · ${e(fm.name)}（${M.size} 样）</b> · 够 ${okN} · 缺 ${subL.length+buyL.length}${ncN?` · 未点算 ${ncN}`:''}
+      ${subL.length?`<div class="l" style="color:var(--blue)">可换：${e(subL.join('；'))}</div>`:''}${buyL.length?`<div class="l" style="color:var(--red)">没有替代，一定要买：${e(buyL.join('、'))}</div>`:''}${!subL.length&&!buyL.length&&!ncN?'<div class="l" style="color:var(--green)">这组可以打。</div>':''}</div>`}
+  const cell=(f,p)=>{const isF=fm&&fm.farm===f.id&&M.has(p._id);
+    if(isF){const r=stockRow(f.id,p),amt=M.get(p._id);if(r.status!=='nc'&&r.left<amt){const o=subOpts(f.id,p,amt).find(x=>x.ok);
+      const t=`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(2)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.left<=0?'没货':'不够这桶'}`;
+      return `<button class="fcell ${o?'sub':'out'} focus" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}"><b>${f.name}</b>${t}${o?`<span class="subtag">可换 ${e(o.q.name)} ${e(o.a)} ${e(U(o.q))}</span>`:'<span class="subtag">要买</span>'}</button>`}}
+    if(!stockProducts(f.id).some(q=>q._id===p._id))return `<button class="fcell none" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)} 点算"><b>${f.name}</b>＋ 点算</button>`;
+    const r=stockRow(f.id,p);const t=r.status==='nc'?'未点算':`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(2)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.status==='out'?'没货':r.days!=null?r.days+' 天':'—'}`;
+    return `<button class="fcell ${r.status}${isF?' focus':''}" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)}"><b>${f.name}</b>${t}</button>`};
+  if(fm)prods.sort((a,b)=>(M.has(b._id)-M.has(a._id)));
+  const list=prods.map(p=>`<div class="productrow${fm&&!M.has(p._id)?' dim':''}">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="fcells">${FARMS.map(f=>cell(f,p)).join('')}</div></div>`).join('');
   return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
   ${sfChips('all')}
   <div class="stats"><div class="stat"><div class="val ${now?'bad':''}">${now}</div><div class="lab">马上买（三园合计）</div></div>
   <div class="stat cost"><div class="val">${RM(tot)}</div><div class="lab">30 天进货${np?` · ${np} 样没价钱`:''}</div></div>
   <div class="stat cost"><div class="val">${RM(mt)}</div><div class="lab">本月成本（三园）</div></div></div>
   <div class="wizard"><div class="stack">
-    <div class="panel"><div class="splithead"><h2>三个园库存</h2><div class="fhead">${FARMS.map(f=>`<span>${f.name}</span>`).join('')}</div></div>
-      ${prods.length?`<div>${list}</div>`:'<div class="empty">没有药。</div>'}
+    <div class="panel"><div class="splithead"><h2>三个园库存</h2><div class="fhead">${FARMS.map(f=>`<div><span>${f.name}</span><div class="mixbtns">${mixes.filter(m=>m.farm===f.id).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(m=>`<button class="${focus&&focus.m===m._id?'on':''}" data-act="focus" data-id="${e(m._id)}" title="${f.name} ${e(m.name)}">${e(String(m.name).replace(/^Mix\s*/i,''))}</button>`).join('')}</div></div>`).join('')}</div></div>
+      ${fb}${prods.length?`<div>${list}</div>`:'<div class="empty">没有药。</div>'}
       <p class="note">格子里是剩几瓶/包和约够几天。红色 = 没货或不够 7 天，黄色 = 不够 30 天或未点算。点格子可以点算或登记进货。</p></div>
   </div><div class="stack sticky">
     <div class="panel"><h2>30 天要买（三园合计）</h2>${buy.length?`<div>${buyLines}</div><div class="total cost">${RM(tot)}${np?` <span class="note">+ ${np} 样没价钱</span>`:''}</div><button class="btn soft" data-act="copybuy">复制购买清单</button>`:'<p class="note">接下来 30 天不用买。</p>'}</div>
@@ -545,7 +573,7 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
   ev.sort((a,b)=>b[0].localeCompare(a[0]));
   const fill=pb&&Number(p.price)>0&&r.packs?Math.round(r.packs*Number(p.price)*100)/100:'';
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
-  <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(1)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
+  <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(2)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
   <div class="panel"><h3>现在点算</h3><div class="field"><label for="cnt-in">${pb?`架上有几瓶/包（每个 ${e(p.packSize)} ${e(p.packUnit)}，例 1.5）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
@@ -667,6 +695,7 @@ document.addEventListener('click',async ev=>{
   case 'savemix':{const n=($('mixname').value||'').trim();if(!n){toast('请填配方名');break}if(!db)break;
     try{await db.collection('mixes').doc(farm+'-'+n.toLowerCase().replace(/[^a-z0-9]+/g,'-')).set({name:n,farm,items:items().map(i=>({id:i.id,amt:i.amt===''?null:i.amt}))});toast('配方已保存')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'sfarm':stockFarm=b.dataset.farm;render();break;
+  case 'focus':focus=focus&&focus.m===id?null:{m:id};render();break;
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
