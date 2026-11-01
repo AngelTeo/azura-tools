@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v6</title>
+<title>SprayGo v7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -212,6 +212,9 @@ body{margin:0}
 body.noedit [data-act="sprayfarm"],body.noedit [data-act="doneask"],body.noedit [data-act="done"],body.noedit [data-act="nospray"],
 body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit [data-act="dripopen"],body.noedit .wpanel{display:none!important}
 body.nocost .cost{display:none!important}
+body.mode-spray [data-act="edit"],body.mode-spray [data-act="savecount"],body.mode-spray [data-act="savebuy"]{display:none!important}
+body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [data-act="savemix"]{display:none!important}
+.storelink{display:inline-flex;align-items:center;min-height:36px;padding:6px 10px;border-radius:10px;font-size:13px;font-weight:750;color:var(--amber);background:var(--amber2);text-decoration:none}
 </style>
 </head>
 <body>
@@ -229,7 +232,7 @@ body.nocost .cost{display:none!important}
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -272,8 +275,8 @@ async function boot(){
   const [{data:see,error:e2},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'SPRAY',p_action:'see'}),sb.rpc('hub_can',{p_system:'SPRAY',p_action:'edit'})]);
   if(e2){gate('offline',e2.message);return}
   if(!see){gate('no_access');return}
-  window.SG={role:me.role,name:me.display_name,edit:!!edit,cost:me.role==='OWNER'};
-  document.body.classList.toggle('noedit',!edit);document.body.classList.toggle('nocost',me.role!=='OWNER');
+  window.SG={mode:'spray',role:me.role,name:me.display_name,edit:!!edit,cost:me.role==='OWNER'};
+  document.body.classList.toggle('noedit',!edit);document.body.classList.add('mode-spray');document.body.classList.toggle('nocost',me.role!=='OWNER');
   if(document.readyState==='loading')await new Promise(r=>document.addEventListener('DOMContentLoaded',r));
   const m=document.getElementById('main-js');const s=document.createElement('script');s.textContent=m.textContent;document.body.appendChild(s);
   setInterval(()=>{if(!document.hidden)refreshAll()},60000);
@@ -289,7 +292,7 @@ boot();
 const KINDS=[['Insecticide','杀虫剂'],['Fungicide','杀菌剂'],['Fertilizer','肥料'],['Wetting agent','展着剂'],['Bio','生物'],['Unknown','未知']];
 const KL=Object.fromEntries(KINDS);const kl=k=>KL[k]||k;
 const FARMS=[{id:'ad1',name:'AD 1'},{id:'ad2',name:'AD 2'},{id:'ad3',name:'AD 3'}];
-const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品']].filter(t=>t[0]!=='spray'||(window.SG&&window.SG.edit));
+const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品']].filter(t=>{const S=window.SG||{};if(S.mode==='store')return t[0]==='stock'||t[0]==='products';if(S.mode==='spray')return t[0]!=='stock'&&(t[0]!=='spray'||S.edit);return true});
 const MAIN=[
   {k:'name',l:'药名',type:'text',wide:1},
   {k:'use',l:'用途（小字显示在药名下面）',type:'text',wide:1},
@@ -322,7 +325,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
 
 /* ---------- state ---------- */
 let sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
-let tab=window.SG&&!window.SG.edit?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
+let tab=(window.SG&&window.SG.mode==='store')?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
 let focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
 
@@ -402,7 +405,7 @@ function monthUse(fid){const mo=today().slice(0,7);const used={};
 function head(ey,title,sub,cta=''){return `<div class="hero"><div><div class="eyebrow">${ey}</div><h1>${title}</h1><p class="sub">${sub}</p></div>${cta}</div>`}
 function renderNav(){
   $('navDesktop').innerHTML=TABS.map(([t,i,l])=>`<button class="navbtn ${tab===t?'active':''}" data-nav="${t}"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
-function go(t){if(!TABS.some(x=>x[0]===t))t='stock';tab=t;render();window.scrollTo({top:0})}
+function go(t){if(!TABS.some(x=>x[0]===t))t=TABS[0][0];tab=t;render();window.scrollTo({top:0})}
 function render(){
   renderNav();
   const y=window.scrollY;
@@ -487,7 +490,7 @@ function vSpray(){
   const rows=list.map(i=>{const la=labelAmt(i.p);const over=la!=null&&Number(i.amt)>la*1.3;
     const sr=i.p._id&&i.p.track!=='No'?stockRow(farm,i.p):null;const short=sr&&sr.status!=='nc'&&Number(i.amt)>Math.max(sr.left,0);
     const subs=short?subOpts(farm,i.p,i.amt).filter(o=>!sel.has(o.q._id)):[];
-    const subHTML=short?`<div class="subs"><span class="p-bad">库存不够（剩 ${e(fmtAmt(Math.max(sr.left,0),i.p))}）</span>${subs.length?`<span>→ 换成</span>${subs.map(o=>o.ok||o.unknown?`<button class="chip ${o.ok?'subok':'subunk'}" data-act="swap" data-id="${e(i.id)}" data-to="${e(o.q._id)}" data-amt="${e(o.a??'')}">${e(o.q.name)} ${e(o.a??'')} ${e(U(o.q))}${o.unknown?'（未点算）':''}</button>`:`<span class="chip suboff" title="也没货">${e(o.q.name)}（也没货）</span>`).join('')}`:'<span class="note">没有替代品，要买</span>'}</div>`:'';
+    const subHTML=short?`<div class="subs"><span class="p-bad">库存不够（剩 ${e(fmtAmt(Math.max(sr.left,0),i.p))}）</span>${subs.length?`<span>→ 换成</span>${subs.map(o=>o.ok||o.unknown?`<button class="chip ${o.ok?'subok':'subunk'}" data-act="swap" data-id="${e(i.id)}" data-to="${e(o.q._id)}" data-amt="${e(o.a??'')}">${e(o.q.name)} ${e(o.a??'')} ${e(U(o.q))}${o.unknown?'（未点算）':''}</button>`:`<span class="chip suboff" title="也没货">${e(o.q.name)}（也没货）</span>`).join('')}`:'<span class="note">没有替代品，要买</span>'}${window.SG&&window.SG.mode==='spray'?'<a class="storelink" href="StoreGo.html">去 StoreGo 点算 / 进货</a>':''}</div>`:'';
     return `<div class="minirow ${over?'over':''}"><div><b>${e(i.name)}</b>${i.p.use?`<div class="p-use">${e(i.p.use)}</div>`:''}${subHTML}<div class="note">${la!=null?`${w} L 水的标签用量：${la} ${e(i.unit)}`:(i.p.rate?`标签 ${e(i.p.rate)} ${e(i.unit)}/10 L`:'未有标签用量')}</div></div>
     <div class="stepper"><button data-act="minus" data-id="${e(i.id)}" aria-label="减">−</button><input id="amt-${e(i.id)}" data-amt="${e(i.id)}" inputmode="decimal" value="${e(i.amt)}" aria-label="Amount ${e(i.name)} in ${e(i.unit)}"><button data-act="plus" data-id="${e(i.id)}" aria-label="加">＋</button></div></div>`}).join('');
   return `${head('选药 → 复制','选药 · 发 WhatsApp','选配方或点照片。红色是提醒先检查，照样可以发。')}
@@ -708,7 +711,7 @@ document.addEventListener('click',async ev=>{
   const a=b.dataset.act,id=b.dataset.id;
   switch(a){
   case 'sprayfarm':if(farm!==b.dataset.farm){farm=b.dataset.farm;sel.clear();activeMix=null}try{localStorage.setItem('farm',farm)}catch(x){}go('spray');break;
-  case 'stockfarm':stockFarm=b.dataset.farm;go('stock');break;
+  case 'stockfarm':if(window.SG&&window.SG.mode==='spray'){location.href='StoreGo.html';break}stockFarm=b.dataset.farm;go('stock');break;
   case 'doneask':{const box=$('acts-'+id);if(!box)break;const y=new Date();y.setDate(y.getDate()-1);
     box.innerHTML=`<button class="btn small dark" data-act="done" data-id="${e(id)}" data-d="${today()}">今天喷好</button><button class="btn small" data-act="done" data-id="${e(id)}" data-d="${ymd(y)}">昨天喷好</button><button class="btn small warn" data-act="nospray" data-id="${e(id)}">没喷</button>`;break}
   case 'done':markDone(id,b.dataset.d);break;
