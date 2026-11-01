@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SprayGo v1</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
+:root{
+  --bg:#f5f7f4; --white:#ffffff; --ink:#183126; --muted:#74837a; --line:#e0e8e0; --field:#d7e1d8;
+  --green:#146646; --green2:#e6f4ec; --amber:#936207; --amber2:#fff3dc; --red:#a13a39; --red2:#fcece9; --blue:#3d6385; --blue2:#eaf2f9;
+  --soft:#f7faf7; --onGreen:#ffffff; --shadow:0 12px 30px rgba(22,55,34,.055);
+  --font:system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101512; --white:#18201b; --ink:#e3ece5; --muted:#93a398; --line:#2a352d; --field:#33413a;
+  --green:#5cc195; --green2:#1b3227; --amber:#e3ae4f; --amber2:#33290f; --red:#f08a80; --red2:#3a1e1c; --blue:#8db6dc; --blue2:#1a2a38;
+  --soft:#141b16; --onGreen:#0d1a12; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101512; --white:#18201b; --ink:#e3ece5; --muted:#93a398; --line:#2a352d; --field:#33413a;
+  --green:#5cc195; --green2:#1b3227; --amber:#e3ae4f; --amber2:#33290f; --red:#f08a80; --red2:#3a1e1c; --blue:#8db6dc; --blue2:#1a2a38;
+  --soft:#141b16; --onGreen:#0d1a12; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.52 var(--font)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:11;background:var(--white)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer} button:disabled{cursor:not-allowed;opacity:.5}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.shell{max-width:1100px;margin:0 auto;padding-left:max(23px,env(safe-area-inset-left,0px));padding-right:max(23px,env(safe-area-inset-right,0px))}
+.mast{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:10}
+.mast .shell{display:flex;align-items:center;min-height:68px;gap:16px}
+.mark{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;background:var(--green);color:var(--onGreen);border-radius:12px;display:grid;place-items:center;font-size:21px}
+.brand{font-size:19px;font-weight:800;letter-spacing:-.6px;line-height:1.15}
+.brand small{display:block;font-weight:500;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-top:3px}
+.desktopnav{display:flex;gap:5px;margin-left:24px;flex:1}
+.navbtn{background:transparent;border:0;border-radius:9px;padding:10px 14px;color:var(--muted);font-weight:700}
+.navbtn.active{color:var(--green);background:var(--green2)}
+.mobile-nav{display:none}
+.navbtn span{margin-right:4px}
+.view{padding-block:28px 120px}
+.hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}
+.hero>.btn{flex-shrink:0}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:1.6px;font-weight:800;color:var(--green)}
+h1{font-size:clamp(24px,4vw,32px);letter-spacing:-1px;line-height:1.2;margin:6px 0;text-wrap:balance}
+h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
+.sub{color:var(--muted);margin:0}
+.note{font-size:12px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--line);background:var(--white);border-radius:11px;padding:10px 16px;min-height:44px;font-weight:650}
+.btn.dark{background:var(--green);border-color:var(--green);color:var(--onGreen)}
+.btn.soft{background:var(--green2);border-color:transparent;color:var(--green)}
+.btn.warn{background:var(--red2);border-color:transparent;color:var(--red)}
+.btn.small{padding:7px 11px;min-height:36px;font-size:13px}
+.btn.wide{width:100%;font-size:16px;min-height:52px}
+.pill{display:inline-flex;align-items:center;border-radius:50px;font-weight:700;padding:4px 10px;font-size:12px;gap:5px;white-space:nowrap}
+.pill.green{background:var(--green2);color:var(--green)} .pill.amber{background:var(--amber2);color:var(--amber)}
+.pill.red{background:var(--red2);color:var(--red)} .pill.blue{background:var(--blue2);color:var(--blue)} .pill.grey{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.panel{background:var(--white);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.farmcard .nm{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.farmcard .nm b{font-size:21px}
+.farmcard .big{font-size:18px;font-weight:800;line-height:1.3}
+.farmcard .big.bad{color:var(--red)} .farmcard .big.ok{color:var(--green)}
+.farmcard .btn{align-self:flex-start}
+.farmcard .btn.soft{margin-top:auto}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px}
+.stat{background:var(--white);border:1px solid var(--line);border-radius:15px;padding:14px 16px;min-width:0}
+.stat .val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;overflow-wrap:anywhere}
+.stat .val.bad{color:var(--red)}
+.stat .lab{font-size:12px;color:var(--muted)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:26px 0 12px;flex-wrap:wrap}
+.empty{padding:26px 20px;border:1px dashed var(--field);border-radius:15px;color:var(--muted);text-align:center;background:var(--white)}
+.empty strong{color:var(--ink);display:block;margin-bottom:4px}
+.stack{display:flex;flex-direction:column;gap:11px;min-width:0}
+.job{flex-direction:row;align-items:center;justify-content:space-between;gap:15px;padding:16px 18px}
+.rid{font-size:12px;font-weight:700;color:var(--green);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meta{font-size:13px;color:var(--muted)}
+.job .details{min-width:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.wizard{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(310px,.85fr);gap:18px;align-items:start}
+.sticky{position:sticky;top:calc(84px + env(safe-area-inset-top,0px))}
+.splithead{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border-radius:10px;border:1px solid var(--field);background:var(--white);padding:10px 15px;font-weight:750;color:var(--muted);min-height:44px}
+.chip.on{background:var(--green);border-color:var(--green);color:var(--onGreen)}
+.chip.mix{color:var(--green);background:var(--green2);border-color:transparent}
+.chip.mix.on{background:var(--green);color:var(--onGreen)}
+.prodgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.productpick{position:relative;background:var(--white);border:2px solid var(--line);border-radius:13px;text-align:left;display:flex;gap:11px;padding:9px;min-width:0;align-items:center;min-height:92px}
+.productpick.on{border-color:var(--green);background:var(--green2)}
+.productpick img,.placeholder{width:62px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:var(--soft)}
+.placeholder{display:grid;place-items:center;font-weight:800;color:var(--muted)}
+.p-name{font-weight:750;overflow-wrap:anywhere;font-size:14px}
+.p-sub{color:var(--muted);font-size:11px;line-height:1.45}
+.p-bad{color:var(--red);font-weight:700}
+.subs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:13px}
+.subs .chip{min-height:36px;padding:6px 10px;font-size:13px}
+.fcells{display:grid;grid-template-columns:repeat(3,96px);gap:6px;flex:none}
+.fcell{border:1px solid var(--line);border-radius:10px;padding:6px 4px;text-align:center;font-size:12px;line-height:1.3;background:var(--soft);min-height:52px}
+.fcell b{display:none;font-size:11px}
+.fcell.ok{background:var(--green2);border-color:transparent;color:var(--green)}
+.fcell.soon,.fcell.nc{background:var(--amber2);border-color:transparent;color:var(--amber)}
+.fcell.out,.fcell.low{background:var(--red2);border-color:transparent;color:var(--red)}
+.fcell.none{opacity:.45;cursor:default}
+.fhead{display:grid;grid-template-columns:repeat(3,96px);gap:6px;text-align:center;font-size:12px;font-weight:800;color:var(--muted)}
+@media (max-width:620px){.fcells,.fhead{grid-template-columns:repeat(3,1fr);width:100%}.fhead{display:none}.fcell b{display:block;color:inherit}}
+.p-use{font-size:12px;line-height:1.4;color:var(--green);margin:2px 0 3px;font-weight:600}
+.guide{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.guide div{font-size:14px;line-height:1.5}
+.guide b{display:block}
+.minirow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;background:var(--soft);border:1px solid var(--line);border-radius:11px}
+.minirow>div:first-child{min-width:0}
+.minirow.over{border-color:var(--red);background:var(--red2)}
+.stepper{display:grid;grid-template-columns:36px 74px 36px;gap:4px;align-items:center;flex:none}
+.stepper button{height:38px;border-radius:9px;border:1px solid var(--line);background:var(--white);font:700 18px var(--font)}
+.stepper input{height:38px;text-align:center;border:1px solid var(--field);border-radius:9px;background:var(--white);font-variant-numeric:tabular-nums;width:100%;padding:0 4px}
+.warning{background:var(--amber2);padding:11px 14px;border-radius:10px;color:var(--amber);font-size:13px}
+.danger{background:var(--red2);padding:11px 14px;border-radius:10px;color:var(--red);font-size:13px}
+.info{background:var(--blue2);padding:11px 14px;border-radius:10px;color:var(--blue);font-size:13px}
+.warning div,.danger div{margin-top:3px}
+.msgbox{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap;font-size:14px;width:100%;min-height:170px;resize:vertical}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.wide{grid-column:1/-1}
+.field label,.field .lb{font-size:12px;font-weight:750;color:var(--muted)}
+.field.need label::after,.field.need .lb::after{content:" · 待填";color:var(--amber)}
+.field input,.field select,.field textarea,.inp{background:var(--white);width:100%;min-height:45px;padding:10px 11px;border-radius:10px;border:1px solid var(--field)}
+.field.need input{border-color:var(--amber)}
+.field textarea{min-height:75px;resize:vertical}
+.field textarea.msgbox{min-height:190px}
+.pair{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.pair .chips{flex-wrap:nowrap}
+.pair .chip{padding:8px 10px;min-height:44px}
+.productrow{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.productrow:last-child{border-bottom:0}
+.productrow img,.productrow .placeholder{height:56px;width:48px;border-radius:9px;object-fit:cover}
+.productrow .grow{flex:1;min-width:0}
+.productrow .grow b{display:block;overflow-wrap:anywhere}
+.productrow .grow small{display:block;color:var(--muted);line-height:1.45}
+.productrow .pill{flex-shrink:0}
+.morefields{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.morefields summary{font-weight:750;color:var(--green);cursor:pointer}
+.total{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.line{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:6px 0;border-top:1px solid var(--line)}
+.line:first-child{border-top:0}
+.line b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.line.bad span{color:var(--red);font-weight:650}
+.modalwrap{position:fixed;z-index:30;inset:0;background:rgba(13,34,22,.55);display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:25px 16px}
+.modal{width:min(660px,100%);background:var(--white);border-radius:19px;padding:22px;margin:auto;display:flex;flex-direction:column;gap:14px}
+.modalhead{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.close{border:0;background:var(--green2);color:var(--green);border-radius:9px;width:40px;height:40px;font-size:20px;flex:none}
+.footactions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.photo-edit{display:flex;gap:12px;align-items:center}
+.photo-edit img,.photo-edit .placeholder{width:84px;height:104px}
+.sendbar{display:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:90vw}
+.loading{padding:40px 0;text-align:center;color:var(--muted)}
+@media (max-width:860px){
+  .mast .shell{justify-content:space-between;flex-wrap:wrap;min-height:0;padding-block:8px 0;gap:8px}
+  .desktopnav{order:3;flex:1 1 100%;margin:0;gap:2px;overflow-x:auto}
+  .navbtn{flex:1;padding:9px 2px;font-size:14px;white-space:nowrap;border-radius:9px 9px 0 0}
+  .navbtn span{display:block;margin:0;font-size:17px;line-height:1.2}
+  .wizard{grid-template-columns:1fr}
+  .sticky{position:static}
+  .shell{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .view{padding-block:20px 100px}
+  .sendbar{position:fixed;left:0;right:0;bottom:0;z-index:19;background:var(--white);border-top:1px solid var(--line);padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));align-items:center;gap:10px}
+  .sendbar.show{display:flex}
+  .sendbar b{flex:1}
+  .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:620px){
+  .grid3{grid-template-columns:1fr}
+  .stats{gap:7px} .stat{padding:10px 9px} .stat .val{font-size:20px} .stat .lab{font-size:11px}
+  .panel{padding:15px}
+  .hero{flex-wrap:wrap}
+  .hero .btn{font-size:13px;padding:8px 12px;min-height:40px}
+  .productpick{display:block;padding:8px;min-height:0}
+  .productpick img,.productpick .placeholder{width:100%;height:110px;object-fit:contain}
+  .productpick .p-name{margin-top:6px}
+  .job{flex-direction:column;align-items:flex-start}
+  .acts{justify-content:flex-start}
+  .modalwrap{padding:0}
+  .modal{border-radius:0;min-height:100%;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  .minirow{flex-wrap:wrap}
+  .productrow{flex-wrap:wrap}
+  .productrow .grow{flex:1 1 55%}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+body{margin:0}
+.homebtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--white);display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:18px}
+.gate{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center}
+.gate a{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:var(--green);color:var(--onGreen);text-decoration:none;font-weight:700}
+body.noedit [data-act="sprayfarm"],body.noedit [data-act="doneask"],body.noedit [data-act="done"],body.noedit [data-act="nospray"],
+body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit .wpanel{display:none!important}
+body.nocost .cost{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="mast"><div class="shell">
+  <a class="homebtn" href="../index.html" title="回主页" aria-label="回主页">←</a>
+  <div class="mark"><span class="logo" aria-hidden="true">🌱</span><div class="brand">SprayGo<small>AZURA DELTA</small></div></div>
+  <nav class="desktopnav" id="navDesktop" aria-label="Main"></nav>
+  <span class="pill green" id="conn">● 在线</span>
+</div></header>
+<main class="shell view" id="root"><div class="loading">载入中…</div></main>
+<div class="sendbar" id="sendbar"><b id="sendbar-n"></b><button class="btn small" data-act="clear">清除</button><button class="btn dark small" data-act="tosend">检查并发送 ↓</button></div>
+<div id="modalhost"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
+const APP_VERSION = 1;
+(()=>{'use strict';
+const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+const MSG={no_login:'还没登入。请回主页登入后再打开 SprayGo。',no_access:'你的账号没有 SprayGo 权限。',offline:'连不上资料库，请检查网络后重新整理。'};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function gate(kind,extra){document.getElementById('root').innerHTML=`<div class="gate"><strong>SprayGo</strong><p>${MSG[kind]||esc(kind)}</p>${extra?`<p class="note">${esc(extra)}</p>`:''}<a href="../index.html">← 回主页</a></div>`;const n=document.getElementById('navDesktop');if(n)n.innerHTML='';const c=document.getElementById('conn');if(c){c.className='pill amber';c.textContent='● 未登入'}}
+let sb=null;const subs={};
+const fix=d=>d&&typeof d.photo==='string'&&d.photo.startsWith('/_blob/')?{...d,photo:'spray_img/'+d.photo.slice(7)+'.jpg'}:d;
+const clean=o=>JSON.parse(JSON.stringify(o));
+const fail=e=>{const x=new Error(e&&e.message||String(e));x.code=e&&(e.code||e.message)||'error';return x};
+async function refresh(col){
+  const L=subs[col];if(!L||!L.length)return;
+  const {data,error}=await sb.from('spray_doc').select('id,doc').eq('col',col);
+  if(error){for(const s of L)s.err&&s.err(fail(error));return}
+  const snap={docs:data.map(r=>({id:r.id,data:()=>fix(r.doc)}))};
+  for(const s of L)try{s.fn(snap)}catch(e){console.error(e)}
+}
+const refreshAll=()=>Object.keys(subs).forEach(refresh);
+const db={collection(col){return{
+  onSnapshot(fn,err){(subs[col]=subs[col]||[]).push({fn,err});refresh(col);return()=>{subs[col]=subs[col].filter(s=>s.fn!==fn)}},
+  doc(id){return{
+    async set(o){const doc=clean(o);let {error}=await sb.from('spray_doc').insert({col,id,doc});
+      if(error&&error.code==='23505'){({error}=await sb.from('spray_doc').update({doc,updated_at:new Date().toISOString()}).eq('col',col).eq('id',id).select('id').single())}
+      if(error)throw fail(error);await refresh(col)},
+    async update(p){const {data,error:e1}=await sb.from('spray_doc').select('doc').eq('col',col).eq('id',id).single();if(e1)throw fail(e1);
+      const doc=clean({...data.doc,...p});const {error}=await sb.from('spray_doc').update({doc,updated_at:new Date().toISOString()}).eq('col',col).eq('id',id).select('id').single();
+      if(error)throw fail(error);await refresh(col)},
+    async delete(){const {error}=await sb.from('spray_doc').delete().eq('col',col).eq('id',id);if(error)throw fail(error);await refresh(col)}
+  }}}}};
+window.claude={use:async n=>n==='db'?db:null};
+async function boot(){
+  if(!window.supabase){gate('offline');return}
+  sb=window.supabase.createClient(SB_URL,SB_KEY);
+  let ss=null;try{ss=(await sb.auth.getSession()).data.session}catch(e){gate('offline',e.message);return}
+  if(!ss){gate('no_login');return}
+  const {data:me,error:e1}=await sb.from('hub_app_user').select('display_name,role,status').eq('id',ss.user.id).maybeSingle();
+  if(e1){gate('offline',e1.message);return}
+  if(!me||me.status!=='ACTIVE'){gate('no_access');return}
+  const [{data:see,error:e2},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'SPRAY',p_action:'see'}),sb.rpc('hub_can',{p_system:'SPRAY',p_action:'edit'})]);
+  if(e2){gate('offline',e2.message);return}
+  if(!see){gate('no_access');return}
+  window.SG={role:me.role,name:me.display_name,edit:!!edit,cost:me.role==='OWNER'};
+  document.body.classList.toggle('noedit',!edit);document.body.classList.toggle('nocost',me.role!=='OWNER');
+  if(document.readyState==='loading')await new Promise(r=>document.addEventListener('DOMContentLoaded',r));
+  const m=document.getElementById('main-js');const s=document.createElement('script');s.textContent=m.textContent;document.body.appendChild(s);
+  setInterval(()=>{if(!document.hidden)refreshAll()},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAll()});
+}
+boot();
+})();
+
+</script>
+<script type="text/plain" id="main-js">
+(()=>{'use strict';
+/* ---------- constants ---------- */
+const KINDS=[['Insecticide','杀虫剂'],['Fungicide','杀菌剂'],['Fertilizer','肥料'],['Wetting agent','展着剂'],['Bio','生物'],['Unknown','未知']];
+const KL=Object.fromEntries(KINDS);const kl=k=>KL[k]||k;
+const FARMS=[{id:'ad1',name:'AD 1'},{id:'ad2',name:'AD 2'},{id:'ad3',name:'AD 3'}];
+const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品']].filter(t=>t[0]!=='spray'||(window.SG&&window.SG.edit));
+const MAIN=[
+  {k:'name',l:'药名',type:'text',wide:1},
+  {k:'use',l:'用途（小字显示在药名下面）',type:'text',wide:1},
+  {k:'kind',l:'类别',type:'chips',opts:KINDS,wide:1},
+  {k:'farms',l:'用在哪个园',type:'multi',opts:FARMS,wide:1},
+  {k:'rate',l:'标签用量（每 10 L 水）',type:'num',unit:'rateUnit',units:['ml','g'],wide:1},
+  {k:'eggplant',l:'标签有写茄子 (terung) 吗',type:'chips',opts:[['Yes','有'],['No','没有'],['Not sure','不确定']],wide:1},
+  {k:'phi',l:'喷后几天不能采收',type:'num'},
+  {k:'rei',l:'喷后几小时不能进园',type:'num'},
+  {k:'packSize',l:'每瓶/包容量',type:'num',unit:'packUnit',units:['ml','L','g','kg'],wide:1},
+  {k:'price',l:'每瓶/包价钱 (RM)',type:'num'},
+  {k:'bookAmt',l:'平时每次用量',type:'num'}];
+const MORE=[
+  {k:'notebook',l:'本子上的名字',type:'text'},
+  {k:'maker',l:'品牌 / 公司',type:'text'},
+  {k:'ai',l:'有效成分 (%)',type:'text',wide:1},
+  {k:'group',l:'组别 (IRAC / FRAC)',type:'text'},
+  {k:'lrmp',l:'LRMP 号码',type:'text'},
+  {k:'cls',l:'毒性等级 (Kelas)',type:'chips',opts:['I','II','III','IV'],wide:1},
+  {k:'interval',l:'间隔几天喷一次',type:'num'},
+  {k:'maxSprays',l:'每季最多喷几次',type:'num'},
+  {k:'track',l:'要追踪库存吗',type:'chips',opts:[['Yes','要'],['No','不要（自制）']],wide:1},
+  {k:'note',l:'备注',type:'area',wide:1}];
+const ALLF=[...MAIN,...MORE];
+const PEST=['Insecticide','Fungicide'];
+function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
+  const keys=PEST.includes(p.kind)?['ai','group','cls','rate','eggplant','phi']:['ai','rate'];
+  if(p.track!=='No')keys.push('packSize','price');
+  for(const k of keys){const v=p[k];if(v===undefined||v===null||v===''||v==='Not sure')r.push(k)}return r}
+
+/* ---------- state ---------- */
+let products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
+let tab=window.SG&&!window.SG.edit?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
+let guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
+const sel=new Map();
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(t){const x=$('toast');x.textContent=t;x.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>x.hidden=true,2600)}
+const fname=id=>(FARMS.find(f=>f.id===id)||{}).name||id;
+const byId=id=>products.find(p=>p._id===id);
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=()=>ymd(new Date());
+const dmy=s=>{if(!s)return '';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`};
+const dm=d=>`${d.getDate()}/${d.getMonth()+1}`;
+function addDays(ds,n){const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return d}
+function water(fid){const f=farms[fid]||{};return (Number(f.tanks)||0)*(Number(f.litres)||0)}
+function labelAmt(p,fid){const r=parseFloat(p.rate),w=water(fid||farm);return (!isNaN(r)&&w)?Math.round(r*w/10*10)/10:null}
+const U=p=>p.rateUnit||'ml';
+function photo(p){return p&&p.photo?`<img src="${e(p.photo)}" alt="" loading="lazy">`:`<span class="placeholder">${e((p&&p.name||'?').slice(0,2).toUpperCase())}</span>`}
+const isDone=s=>!s.status||s.status==='done';
+const sortN=(a,b)=>(a.name||'').localeCompare(b.name||'');
+function holdFor(fid){let best=null;const now=new Date();now.setHours(0,0,0,0);
+  for(const s of sprays)if(s.farm===fid&&isDone(s))for(const i of s.items||[]){const ph=Number(i.phi||(byId(i.id)||{}).phi)||0;if(!ph)continue;const until=addDays(s.doneDate||s.date,ph);if(until>now&&(!best||until>best.until))best={until,name:i.name}}
+  return best}
+
+/* ---------- stock math ---------- */
+const packBase=p=>{const n=Number(p.packSize);if(!n)return null;return (p.packUnit==='L'||p.packUnit==='kg')?n*1000:n};
+function fmtAmt(v,p){const u=U(p);const n=Math.round(v);if(Math.abs(n)>=1000)return (Math.round(n/100)/10)+(u==='g'?' kg':' L');return n+' '+u}
+const RM=v=>window.SG&&!window.SG.cost?'':'RM '+(Math.round(v*100)/100).toFixed(2);
+function lastCount(fid,pid){return counts.filter(c=>c.farm===fid&&c.pid===pid).sort((a,b)=>((a.date||'')+(a.createdAt||'')).localeCompare((b.date||'')+(b.createdAt||''))).pop()||null}
+function usedSince(fid,pid,after){let t=0;for(const s of sprays)if(s.farm===fid&&isDone(s)){const d=s.doneDate||s.date;if(after&&d<=after)continue;for(const i of s.items||[])if(i.id===pid)t+=Number(i.amt)||0}return t}
+function boughtSince(fid,pid,c){let t=0;for(const b of purchases)if(b.farm===fid&&b.pid===pid&&(!c||(b.createdAt||'')>(c.createdAt||'')))t+=Number(b.amt)||0;return t}
+function dailyUse(fid,pid){const ms=mixes.filter(m=>m.farm===fid);
+  if(ms.length){let t=0;for(const m of ms)for(const i of m.items||[])if(i.id===pid)t+=Number(i.amt)||0;return t/ms.length}
+  const since=ymd(addDays(today(),-30));let t=0;for(const s of sprays)if(s.farm===fid&&isDone(s)&&(s.doneDate||s.date)>since)for(const i of s.items||[])if(i.id===pid)t+=Number(i.amt)||0;return t/30}
+function unitCost(p){let a=0,m=0;for(const b of purchases)if(b.pid===p._id&&Number(b.price)>0&&Number(b.amt)>0){a+=Number(b.price);m+=Number(b.amt)}
+  if(m)return a/m;const pb=packBase(p);return pb&&Number(p.price)>0?Number(p.price)/pb:null}
+function stockProducts(fid){const inMix=new Set();for(const m of mixes)if(m.farm===fid)for(const i of m.items||[])inMix.add(i.id);
+  return products.filter(p=>p.track!=='No'&&(inMix.has(p._id)||(p.farms||[]).includes(fid))).sort(sortN)}
+function stockRow(fid,p){const c=lastCount(fid,p._id);const left=(c?Number(c.amt)||0:0)+boughtSince(fid,p._id,c)-usedSince(fid,p._id,c&&c.date);
+  const d=dailyUse(fid,p._id),pb=packBase(p);const days=d>0?Math.floor(Math.max(left,0)/d):null;
+  let need=0,packs=0;if(d>0){need=d*30-Math.max(left,0);if(need>0&&pb)packs=Math.ceil(need/pb)}
+  const status=(!c&&!boughtSince(fid,p._id,null))?'nc':left<=0?'out':days!=null&&days<7?'low':days!=null&&days<30?'soon':'ok';
+  return {p,c,left,d,days,pb,need,packs,status}}
+const ST={nc:['amber','未点算'],out:['red','没货'],low:['red','马上买'],soon:['amber','不够 30 天'],ok:['green','够用']};
+function buyList(fid){return stockProducts(fid).map(p=>stockRow(fid,p)).filter(r=>r.need>0&&r.status!=='nc')}
+function lowCount(fid){return stockProducts(fid).map(p=>stockRow(fid,p)).filter(r=>r.status==='out'||r.status==='low').length}
+function monthUse(fid){const mo=today().slice(0,7);const used={};
+  for(const s of sprays)if(s.farm===fid&&isDone(s)&&(s.doneDate||s.date).startsWith(mo))for(const i of s.items||[])used[i.id]=(used[i.id]||0)+(Number(i.amt)||0);
+  let total=0;const lines=[],miss=[];
+  for(const [id,amt] of Object.entries(used)){const p=byId(id);if(!p||p.track==='No')continue;const uc=unitCost(p);if(uc==null){miss.push(p.name);continue}const c=amt*uc;total+=c;lines.push([c,p,amt])}
+  lines.sort((a,b)=>b[0]-a[0]);return {total,lines,miss,any:Object.keys(used).length>0}}
+
+/* ---------- shell ---------- */
+function head(ey,title,sub,cta=''){return `<div class="hero"><div><div class="eyebrow">${ey}</div><h1>${title}</h1><p class="sub">${sub}</p></div>${cta}</div>`}
+function renderNav(){
+  $('navDesktop').innerHTML=TABS.map(([t,i,l])=>`<button class="navbtn ${tab===t?'active':''}" data-nav="${t}"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
+function go(t){if(!TABS.some(x=>x[0]===t))t='stock';tab=t;render();window.scrollTo({top:0})}
+function render(){
+  renderNav();
+  const y=window.scrollY;
+  if(!db){$('root').innerHTML=`<div class="empty"><strong>连不上资料库</strong>请检查网络后重新整理。</div>`;updateSendbar();return}
+  if(!loaded){$('root').innerHTML='<div class="loading">载入药品中…</div>';return}
+  $('root').innerHTML=({today:vToday,spray:vSpray,stock:vStock,records:vRecords,products:vProducts})[tab]();
+  wire();updateSendbar();window.scrollTo({top:y});
+}
+
+/* ---------- Today ---------- */
+function pendCard(s){
+  return `<div class="panel job"><div class="details"><div class="rid">${e(fname(s.farm))} <span class="pill blue">等工人</span></div>
+  <h3 style="margin:5px 0">${e((s.items||[]).map(i=>i.name).join(' + '))}</h3><div class="meta">${e(dmy(s.date))} 发出</div></div>
+  <div class="acts" id="acts-${e(s._id)}"><button class="btn small dark" data-act="doneask" data-id="${e(s._id)}">喷好了</button></div></div>`}
+function doneCard(s){
+  return `<div class="panel job"><div class="details"><div class="rid">${e(fname(s.farm))} <span class="pill green">已喷</span></div>
+  <h3 style="margin:5px 0">${e((s.items||[]).map(i=>i.name).join(' + '))}</h3><div class="meta">${e(dmy(s.doneDate||s.date))} 喷好</div></div></div>`}
+function vToday(){
+  const planned=sprays.filter(s=>s.status==='planned').sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||''));
+  const mo=today().slice(0,7);const doneMo=sprays.filter(s=>isDone(s)&&(s.doneDate||s.date||'').startsWith(mo)).length;
+  let buyNow=0;for(const f of FARMS)buyNow+=lowCount(f.id);
+  const cards=FARMS.map(f=>{const hd=holdFor(f.id);const pend=planned.filter(s=>s.farm===f.id).length;
+    const last=sprays.filter(s=>s.farm===f.id&&isDone(s)).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date))[0];
+    const low=lowCount(f.id);
+    return `<div class="panel farmcard"><div class="nm"><b>${f.name}</b><span class="pill ${hd?'red':'green'}">${hd?'⛔ 不能采收':'可以采收'}</span></div>
+    <div class="big ${hd?'bad':'ok'}">${hd?`${dm(hd.until)} 前不能采收`:'没有采收限制'}</div>
+    <p class="note">${hd?e(hd.name):'只计算这里按了「喷好了」的记录。'}</p>
+    ${low?`<button class="btn small warn" data-act="stockfarm" data-farm="${f.id}">库存：${low} 样要马上买 →</button>`:''}
+    <p class="note">${pend} 个等工人 · ${last?`上次喷药 ${e(dmy(last.doneDate||last.date))}`:'还没有喷药记录'}</p>
+    <button class="btn small soft" data-act="sprayfarm" data-farm="${f.id}">＋ ${f.name} 喷药</button></div>`}).join('');
+  const done=sprays.filter(isDone).sort((a,b)=>(b.doneDate||b.date).localeCompare(a.doneDate||a.date)).slice(0,3);
+  return `${head('FARM CONTROL','今天，三个园','采收限制、等工人的喷药、要买的药。',`<button class="btn dark" data-act="sprayfarm" data-farm="${farm}">＋ 发喷药指令</button>`)}
+  <div class="stats"><div class="stat"><div class="val">${planned.length}</div><div class="lab">等工人喷</div></div>
+  <div class="stat"><div class="val">${doneMo}</div><div class="lab">本月已喷次数</div></div>
+  <div class="stat"><div class="val ${buyNow?'bad':''}">${buyNow}</div><div class="lab">马上要买的药</div></div></div>
+  <div class="grid3">${cards}</div>
+  <div class="section-head"><h2>⏳ 等工人喷</h2><span class="pill blue">${planned.length} 个</span></div>
+  ${planned.length?`<div class="stack">${planned.map(pendCard).join('')}</div>`:'<div class="empty"><strong>没有等待中的喷药</strong>在「喷药」发出指令后，会出现在这里，直到你按「喷好了」。</div>'}
+  <div class="section-head"><h2>📋 最近喷好</h2><button class="btn small" data-nav="records">全部记录 →</button></div>
+  ${done.length?`<div class="stack">${done.map(doneCard).join('')}</div>`:'<div class="empty">还没有喷好的记录。</div>'}`;
+}
+
+/* ---------- Spray ---------- */
+const GUIDE=[
+ ['叶子背面很多小白虫，一碰就飞（白粉虱）','Pollux、Amigo、Taci、Linodor。Amigo、Taci、Linodor 同是 4A 组，不要连着用。'],
+ ['叶子有银白色刮痕，花和嫩叶卷（蓟马）','Amigo、Taci、Simodis。Simodis 是不同组，适合换着用。'],
+ ['嫩芽枯萎，果实有小洞或虫粪（钻心虫 / 钻果虫）','Emamix（每季最多 2 次，隔 15 天）、Cyper H2O。'],
+ ['叶子有褐斑、发霉、烂（真菌病）','先用 Mancozeb 预防；已经发病用 Kulatox 或 Revon（两个同组，不要连着用）。'],
+ ['连续下雨、湿气重','加 Mancozeb 预防病害。'],
+ ['开花结果期','加 K-Rich（钾，果实饱满）、Triple Ten（磷多，帮开花结果）。'],
+ ['长势弱、叶子发黄','加 Amino（氨基酸，帮恢复）。'],
+ ['根烂、整棵突然枯萎','Trichoderma 淋根（有益菌）。不要和杀菌剂一起混。']];
+
+function step(v){return v>=1000?100:v>=100?10:v>=20?5:1}
+function pick(p){const on=sel.has(p._id);const la=labelAmt(p);
+  return `<button class="productpick ${on?'on':''}" data-act="pick" data-id="${e(p._id)}" aria-pressed="${on}">${photo(p)}<div style="min-width:0">
+  <div class="p-name">${on?'✓ ':''}${e(p.name)}</div>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}
+  <div class="p-sub">${e([kl(p.kind),p.group].filter(Boolean).join(' · ')||'—')}<br>${p.rate?`标签 ${e(p.rate)} ${e(U(p))}/10 L${la!=null?` → ${la} ${e(U(p))}`:''}`:'未有标签用量'}</div></div></button>`}
+function sendChecks(list){
+  const red=[],amb=[];
+  const phi=list.filter(i=>Number(i.p.phi)>0).sort((a,b)=>b.p.phi-a.p.phi)[0];
+  if(phi){const d=new Date();d.setDate(d.getDate()+Number(phi.p.phi));amb.push(`${dm(d)} 前不能采收（${phi.name}：${phi.p.phi} 天）`)}
+  const grp={};for(const i of list)for(const g of String(i.p.group||'').match(/\b\d+[A-Z]?\b/g)||[]){const k=(String(i.p.group).includes('FRAC')?'FRAC ':'IRAC ')+g;(grp[k]=grp[k]||[]).push(i.name)}
+  for(const [k,v] of Object.entries(grp))if(v.length>1)red.push(`同一组 ${k}：${v.join('、')}`);
+  for(const i of list){const la=labelAmt(i.p);if(la!=null&&Number(i.amt)>la*1.3)red.push(`${i.name}：${i.amt} ${i.unit} 超过标签（${la} ${i.unit}）`)}
+  const na=list.filter(i=>i.amt===''||i.amt==null);if(na.length)amb.push('没写用量：'+na.map(i=>i.name).join('、'));
+  if(!water(farm))amb.push(`${fname(farm)} 还没设定水量，不能对标签`);
+  return {red,amb}}
+function items(){return [...sel.entries()].map(([id,amt])=>{const p=byId(id)||{};return {id,name:p.name||id,amt,unit:U(p),p}})}
+function buildMsg(list){const f=farms[farm]||{};const w=water(farm);
+  const L=[`${fname(farm)} · ${dmy(today())}`,'ဒီနေ့ ဒီဆေးတွေ ဖျန်းပါ။ (Spray today)',''];
+  list.forEach((it,i)=>L.push(`${i+1}. ${it.name} — ${it.amt===''?'?':it.amt} ${it.unit}`));
+  if(w)L.push('',`ရေ / Water: ${f.tanks} × ${f.litres} L`);
+  L.push('','ပြီးရင် ဓာတ်ပုံ ပို့ပါ။ (Send photo when done)');return L.join('\n')}
+function vSpray(){
+  const fm=mixes.filter(m=>m.farm===farm).sort(sortN);
+  const chosen=[...sel.keys()].map(byId).filter(Boolean);
+  const main=products.filter(p=>(p.farms||[]).includes(farm)&&!sel.has(p._id)).sort(sortN);
+  const allMain=products.filter(p=>(p.farms||[]).includes(farm)).length;
+  const other=products.filter(p=>!(p.farms||[]).includes(farm)&&!sel.has(p._id)).sort(sortN);
+  const list=items();const w=water(farm);const {red,amb}=sendChecks(list);const fw=farms[farm]||{};
+  const rows=list.map(i=>{const la=labelAmt(i.p);const over=la!=null&&Number(i.amt)>la*1.3;
+    const sr=i.p._id&&i.p.track!=='No'?stockRow(farm,i.p):null;const short=sr&&sr.status!=='nc'&&Number(i.amt)>Math.max(sr.left,0);
+    const subs=(i.p.subs||[]).filter(x=>byId(x.id)&&!sel.has(x.id));
+    const subHTML=short?`<div class="subs"><span class="p-bad">库存不够（剩 ${e(fmtAmt(Math.max(sr.left,0),i.p))}）</span>${subs.length?`<span>→ 换成</span>${subs.map(x=>`<button class="chip mix" data-act="swap" data-id="${e(i.id)}" data-to="${e(x.id)}" data-amt="${e(x.amt??'')}">${e(byId(x.id).name)} ${e(x.amt??'')} ${e(U(byId(x.id)))}</button>`).join('')}`:''}</div>`:'';
+    return `<div class="minirow ${over?'over':''}"><div><b>${e(i.name)}</b>${i.p.use?`<div class="p-use">${e(i.p.use)}</div>`:''}${subHTML}<div class="note">${la!=null?`${w} L 水的标签用量：${la} ${e(i.unit)}`:(i.p.rate?`标签 ${e(i.p.rate)} ${e(i.unit)}/10 L`:'未有标签用量')}</div></div>
+    <div class="stepper"><button data-act="minus" data-id="${e(i.id)}" aria-label="减">−</button><input id="amt-${e(i.id)}" data-amt="${e(i.id)}" inputmode="decimal" value="${e(i.amt)}" aria-label="Amount ${e(i.name)} in ${e(i.unit)}"><button data-act="plus" data-id="${e(i.id)}" aria-label="加">＋</button></div></div>`}).join('');
+  return `${head('选药 → 复制','选药 · 发 WhatsApp','选配方或点照片。红色是提醒先检查，照样可以发。')}
+  <div class="wizard"><div class="stack">
+    <div class="panel"><h2>① 选园</h2><div class="chips">${FARMS.map(f=>`<button class="chip ${f.id===farm?'on':''}" data-act="farm" data-farm="${f.id}">${f.name}</button>`).join('')}</div>
+      <p class="note">${w?`每次水量：${e(fw.tanks)} 桶 × ${e(fw.litres)} L = ${w} L`:'还没设定水量（药品页 → 每次水量）。'}</p></div>
+    <div class="panel"><div class="splithead"><h2>② 点照片选药</h2><button class="btn small" data-nav="products">＋ 药品库</button></div>
+      ${fm.length?`<div class="chips">${fm.map(m=>`<button class="chip mix ${activeMix===m._id?'on':''}" data-act="mix" data-id="${e(m._id)}">⚡ ${e(m.name)} · ${(m.items||[]).length}</button>`).join('')}</div>`:''}
+      <details class="morefields" id="guide" ${guideOpen?'open':''}><summary>📖 看到什么问题，加什么药？</summary><div class="guide">${GUIDE.map(([q,a])=>`<div><b>${q}</b>${a}</div>`).join('')}<p class="note">只是帮你学习的参考。用量照标签；拿不准就拍照问卖药店或农业官员。</p></div></details>
+      ${chosen.length?`<div class="eyebrow">已选 · ${chosen.length}</div><div class="prodgrid">${chosen.map(pick).join('')}</div>`:''}
+      ${activeMix?`${main.length+other.length?`<button class="btn" data-act="other">${showOther?'收起':'＋ 加别的药'}（${main.length+other.length}）</button>`:''}
+      ${showOther?`${main.length?`<div class="eyebrow">${fname(farm)} 常用</div><div class="prodgrid">${main.map(pick).join('')}</div>`:''}${other.length?`<div class="eyebrow">其他药</div><div class="prodgrid">${other.map(pick).join('')}</div>`:''}`:''}`
+      :`<div class="eyebrow">${fname(farm)} 常用的药</div>
+      ${main.length?`<div class="prodgrid">${main.map(pick).join('')}</div>`:`<p class="note">${allMain?'全部已选。':'这个园还没有设定常用的药。'}</p>`}
+      ${other.length?`<button class="btn" data-act="other">${showOther?'收起其他药':'显示其他药'}（${other.length}）</button>`:''}
+      ${showOther&&other.length?`<div class="prodgrid">${other.map(pick).join('')}</div>`:''}`}
+    </div></div>
+    <div class="stack sticky" id="sendpanel"><div class="panel"><div class="splithead"><h2>③ 发给工人</h2><span class="pill ${red.length?'red':amb.length?'amber':'green'}">${list.length} 种药</span></div>
+      <p class="note">${fname(farm)} · ${dmy(today())}${w?` · ${w} L 水`:''}</p>
+      ${list.length?`<div class="stack">${rows}</div>`:'<div class="empty">选配方或点药，用量会显示在这里。</div>'}
+      ${list.length&&red.length?`<div class="danger"><b>先检查</b>${red.map(x=>`<div>· ${e(x)}</div>`).join('')}</div>`:''}
+      ${list.length&&amb.length?`<div class="warning">${amb.map(x=>`<div>· ${e(x)}</div>`).join('')}</div>`:''}
+      ${list.length?`<label class="field"><span class="lb">WhatsApp 讯息</span><textarea class="msgbox" id="msgtext">${e(buildMsg(list))}</textarea></label>
+      <button class="btn dark wide" data-act="send">📋 复制 WhatsApp 指令</button>
+      <p class="note">复制后列入「今天 → 等工人喷」。工人喷好后按「喷好了」，库存才会扣。</p>
+      <div class="pair"><input id="mixname" class="inp" placeholder="存成配方，例：Mix D" aria-label="配方名"><button class="btn soft" data-act="savemix">存配方</button></div>`:''}
+    </div></div></div>`;
+}
+
+/* ---------- Stock ---------- */
+function vStock(){
+  const sf=stockFarm||'all';if(sf==='all')return vStockAll();const rows=stockProducts(sf).map(p=>stockRow(sf,p));
+  const buy=rows.filter(r=>r.need>0&&r.status!=='nc');let tot=0,np=0;
+  const buyLines=buy.map(r=>{const p=r.p;let t,c=null;if(r.pb){if(Number(p.price)>0){c=r.packs*Number(p.price);tot+=c}else np++;t=`${r.packs} × ${p.packSize} ${p.packUnit}`}else{np++;t=fmtAmt(r.need,p)+'（未设容量）'}
+    return `<div class="line ${r.status==='out'||r.status==='low'?'bad':''}"><span>${e(p.name)} — ${e(t)}</span><b>${c!=null?RM(c):'—'}</b></div>`}).join('');
+  const now=rows.filter(r=>r.status==='out'||r.status==='low').length;const nc=rows.filter(r=>r.status==='nc').length;
+  const mu=monthUse(sf);const nm=mixes.filter(m=>m.farm===sf).length;
+  const list=rows.map(r=>{const p=r.p;const [c,t]=ST[r.status];
+    const sub=r.status==='nc'?'还没点算':`剩 ${fmtAmt(Math.max(r.left,0),p)}${r.pb?`（${(Math.max(r.left,0)/r.pb).toFixed(1)} 瓶/包）`:''} · ${r.days!=null?'约 '+r.days+' 天':'不在配方里'}`;
+    return `<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small>${e(sub)}</small></div><span class="pill ${c}">${t}</span><button class="btn small" data-act="stockopen" data-id="${e(p._id)}">点算 / 进货</button></div>`}).join('');
+  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
+  ${sfChips(sf)}
+  <div class="stats"><div class="stat"><div class="val ${now?'bad':''}">${now}</div><div class="lab">马上买（不够 7 天）</div></div>
+  <div class="stat cost"><div class="val">${RM(tot)}</div><div class="lab">30 天进货${np?` · ${np} 样没价钱`:''}</div></div>
+  <div class="stat cost"><div class="val">${RM(mu.total)}</div><div class="lab">本月成本</div></div></div>
+  <div class="wizard"><div class="stack">
+    <div class="panel"><div class="splithead"><h2>库存 · ${fname(sf)}</h2>${nc?`<span class="pill amber">${nc} 样未点算</span>`:''}</div>
+      ${rows.length?`<div>${list}</div>`:'<div class="empty">这个园没有药。</div>'}
+      <p class="note">${nm?`天数按这个园的 ${nm} 个配方算，一天一个配方。`:'这个园没有配方，按过去 30 天喷药记录算。'}</p></div>
+  </div><div class="stack sticky">
+    <div class="panel"><h2>30 天要买</h2>${buy.length?`<div>${buyLines}</div><div class="total cost">${RM(tot)}${np?` <span class="note">+ ${np} 样没价钱</span>`:''}</div><button class="btn soft" data-act="copybuy">复制购买清单</button>`:'<p class="note">接下来 30 天不用买。</p>'}</div>
+    <div class="panel cost"><h2>本月成本</h2><div class="total">${RM(mu.total)}</div>
+      ${mu.lines.length?`<div>${mu.lines.map(([c,p,a])=>`<div class="line"><span>${e(p.name)} · ${e(fmtAmt(a,p))}</span><b>${RM(c)}</b></div>`).join('')}</div>`:''}
+      ${mu.miss.length?`<div class="warning">还没有价钱：${e(mu.miss.join('、'))}</div>`:''}
+      ${mu.any?'':'<p class="note">本月还没有喷好的记录。</p>'}
+      <p class="note">价钱 = 进货平均价；没有进货就用药品页的价钱。</p></div>
+  </div></div>`;
+}
+
+function sfChips(sf){return `<div class="chips" style="margin-bottom:16px">${[['all','全部'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${id===sf?'on':''}" data-act="sfarm" data-farm="${id}">${n}</button>`).join('')}</div>`}
+function allBuy(){const m=new Map();for(const f of FARMS)for(const r of buyList(f.id)){const k=r.p._id;const x=m.get(k)||{p:r.p,pb:r.pb,packs:0,need:0,by:[],urgent:false};x.packs+=r.packs;x.need+=r.need;x.by.push(`${f.name} ${r.pb?r.packs:fmtAmt(r.need,r.p)}`);if(r.status==='out'||r.status==='low')x.urgent=true;m.set(k,x)}return [...m.values()].sort((a,b)=>sortN(a.p,b.p))}
+function vStockAll(){
+  const ids=new Set();for(const f of FARMS)for(const p of stockProducts(f.id))ids.add(p._id);
+  const prods=[...ids].map(byId).filter(Boolean).sort(sortN);
+  let now=0;for(const f of FARMS)now+=lowCount(f.id);
+  const buy=allBuy();let tot=0,np=0;
+  const buyLines=buy.map(x=>{let c=null;if(x.pb&&Number(x.p.price)>0){c=x.packs*Number(x.p.price);tot+=c}else np++;
+    return `<div class="line ${x.urgent?'bad':''}"><span>${e(x.p.name)} — ${x.pb?`${x.packs} × ${e(x.p.packSize)} ${e(x.p.packUnit)}`:e(fmtAmt(x.need,x.p))}<br><small class="note">${e(x.by.join(' · '))}</small></span><b>${c!=null?RM(c):'—'}</b></div>`}).join('');
+  let mt=0;const ml=new Map();const miss=new Set();for(const f of FARMS){const mu=monthUse(f.id);mt+=mu.total;for(const [c,p,a] of mu.lines){const x=ml.get(p._id)||{p,c:0,a:0};x.c+=c;x.a+=a;ml.set(p._id,x)}mu.miss.forEach(n=>miss.add(n))}
+  const cell=(f,p)=>{if(!stockProducts(f.id).some(q=>q._id===p._id))return `<div class="fcell none"><b>${f.name}</b>—</div>`;
+    const r=stockRow(f.id,p);const t=r.status==='nc'?'未点算':`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(1)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.status==='out'?'没货':r.days!=null?r.days+' 天':'—'}`;
+    return `<button class="fcell ${r.status}" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)}"><b>${f.name}</b>${t}</button>`};
+  const list=prods.map(p=>`<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="fcells">${FARMS.map(f=>cell(f,p)).join('')}</div></div>`).join('');
+  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
+  ${sfChips('all')}
+  <div class="stats"><div class="stat"><div class="val ${now?'bad':''}">${now}</div><div class="lab">马上买（三园合计）</div></div>
+  <div class="stat cost"><div class="val">${RM(tot)}</div><div class="lab">30 天进货${np?` · ${np} 样没价钱`:''}</div></div>
+  <div class="stat cost"><div class="val">${RM(mt)}</div><div class="lab">本月成本（三园）</div></div></div>
+  <div class="wizard"><div class="stack">
+    <div class="panel"><div class="splithead"><h2>三个园库存</h2><div class="fhead">${FARMS.map(f=>`<span>${f.name}</span>`).join('')}</div></div>
+      ${prods.length?`<div>${list}</div>`:'<div class="empty">没有药。</div>'}
+      <p class="note">格子里是剩几瓶/包和约够几天。红色 = 没货或不够 7 天，黄色 = 不够 30 天或未点算。点格子可以点算或登记进货。</p></div>
+  </div><div class="stack sticky">
+    <div class="panel"><h2>30 天要买（三园合计）</h2>${buy.length?`<div>${buyLines}</div><div class="total cost">${RM(tot)}${np?` <span class="note">+ ${np} 样没价钱</span>`:''}</div><button class="btn soft" data-act="copybuy">复制购买清单</button>`:'<p class="note">接下来 30 天不用买。</p>'}</div>
+    <div class="panel cost"><h2>本月成本（三园）</h2><div class="total">${RM(mt)}</div>
+      ${ml.size?`<div>${[...ml.values()].sort((a,b)=>b.c-a.c).map(x=>`<div class="line"><span>${e(x.p.name)} · ${e(fmtAmt(x.a,x.p))}</span><b>${RM(x.c)}</b></div>`).join('')}</div>`:'<p class="note">本月还没有喷好的记录。</p>'}
+      ${miss.size?`<div class="warning">还没有价钱：${e([...miss].join('、'))}</div>`:''}
+      <p class="note">各园分开看，点上面的 AD 1 / AD 2 / AD 3。</p></div>
+  </div></div>`;
+}
+function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const r=stockRow(sf,p),pb=r.pb,u=U(p);
+  const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}`]);
+  for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${fmtAmt(b.amt,p)}${Number(b.price)>0?' · '+RM(Number(b.price)):''}`]);
+  for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`喷药：${i.amt??'?'} ${i.unit||u}`]);
+  ev.sort((a,b)=>b[0].localeCompare(a[0]));
+  const fill=pb&&Number(p.price)>0&&r.packs?Math.round(r.packs*Number(p.price)*100)/100:'';
+  return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
+  <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(1)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
+  ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
+  <div class="panel"><h3>现在点算</h3><div class="field"><label for="cnt-in">${pb?`架上有几瓶/包（每个 ${e(p.packSize)} ${e(p.packUnit)}，例 1.5）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal"></div>
+    <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
+  <div class="panel"><h3>进货</h3><div class="fields"><div class="field"><label for="buy-n">${pb?'买了几瓶/包':`买了多少（${e(u)}）`}</label><input id="buy-n" inputmode="decimal" value="${r.packs||''}"></div>
+    <div class="field"><label for="buy-rm">总共付了 (RM)</label><input id="buy-rm" inputmode="decimal" value="${fill}"></div></div>
+    <button class="btn dark" data-act="savebuy" data-id="${e(pid)}">保存进货</button></div>
+  <div class="panel"><h3>历史</h3>${ev.length?`<div>${ev.slice(0,12).map(([d,t])=>`<div class="line"><span>${e(t)}</span><b>${e(dmy(d))}</b></div>`).join('')}</div>`:'<p class="note">还没有。</p>'}</div>`}
+
+/* ---------- Records ---------- */
+function vRecords(){
+  const rows=sprays.filter(s=>(recFarm==='all'||s.farm===recFarm)&&(recStatus==='all'||(s.status||'done')===recStatus)).sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
+  const pill=st=>st==='done'?'<span class="pill green">已喷</span>':st==='planned'?'<span class="pill blue">等工人</span>':'<span class="pill grey">没喷</span>';
+  return `${head('记录','喷药记录','等工人、已喷、没喷分开记。')}
+  <div class="panel"><div class="splithead"><div class="chips">${[['all','全部园'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${recFarm===id?'on':''}" data-act="rfarm" data-id="${id}">${n}</button>`).join('')}</div>
+  <div class="chips">${[['all','全部'],['planned','等工人'],['done','已喷'],['cancelled','没喷']].map(([id,n])=>`<button class="chip ${recStatus===id?'on':''}" data-act="rstatus" data-id="${id}">${n}</button>`).join('')}</div></div>
+  ${rows.length?`<div class="stack">${rows.map(s=>{const st=s.status||'done';return `<div class="minirow"><div><div class="rid">${e(s.farmName||fname(s.farm))} ${pill(st)} <span class="meta">${e(dmy(st==='done'&&s.doneDate?s.doneDate:s.date))}</span></div>
+    <div class="note" style="margin-top:4px">${e((s.items||[]).map(i=>`${i.name} ${i.amt??'?'} ${i.unit}`).join(' · '))}</div></div>
+    ${st==='planned'?`<div class="acts" id="acts-${e(s._id)}"><button class="btn small dark" data-act="doneask" data-id="${e(s._id)}">喷好了</button></div>`:''}</div>`}).join('')}</div>`:'<div class="empty"><strong>没有记录</strong>换个筛选，或从「喷药」发指令。</div>'}</div>`}
+
+/* ---------- Products ---------- */
+function vProducts(){
+  const done=products.filter(p=>!needed(p).length).length;
+  const inMix=new Set();for(const m of mixes)for(const i of m.items||[])inMix.add(i.id);
+  const KO=KINDS.map(k=>k[0]);const kOf=p=>KO.includes(p.kind)?p.kind:'Unknown';const gName=k=>k==='Unknown'?'其他 / 未分类':kl(k);
+  let rows=products.slice().sort((a,b)=>(inMix.has(b._id)-inMix.has(a._id))||sortN(a,b));if(needOnly)rows=rows.filter(p=>needed(p).length);
+  const groups=KO.map(k=>[k,rows.filter(p=>kOf(p)===k)]).filter(([k,a])=>a.length&&(pFilter==='All'||pFilter===k));
+  const prow=p=>{const n=needed(p).length;const pc=p.eggplant==='No'?['red','标签没有茄子']:n?['amber',`缺 ${n} 项`]:['green','齐全'];
+    return `<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name||'（没名字）')}${inMix.has(p._id)?' <span class="pill green">配方里在用</span>':''}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small>${e(p.ai||'')}${p.rate?` · ${e(p.rate)} ${e(U(p))}/10 L`:''}${p.phi?` · 停采 ${e(p.phi)} 天`:''}</small></div><span class="pill ${pc[0]}">${pc[1]}</span><button class="btn small" data-act="edit" data-id="${e(p._id)}">编辑</button></div>`};
+  const wbox=FARMS.map(f=>{const d=farms[f.id]||{};return `<div class="field"><span class="lb">${f.name}</span>
+    <div class="pair"><input id="w-${f.id}-tanks" class="inp" inputmode="decimal" value="${e(d.tanks??'')}" placeholder="桶数" aria-label="${f.name} 桶数"><span class="note">桶</span></div>
+    <div class="pair"><input id="w-${f.id}-litres" class="inp" inputmode="decimal" value="${e(d.litres??'')}" placeholder="公升" aria-label="${f.name} 每桶公升"><span class="note">L / 桶</span></div>
+    <button class="btn small" data-act="savewater" data-farm="${f.id}">保存 ${f.name}</button></div>`}).join('');
+  return `${head('药品库','药品 · 标签 · 容量','工人看不到这页。拍了标签就补资料。','<button class="btn dark" data-act="edit" data-id="">＋ 新增药品</button>')}
+  <div class="panel wpanel"><h2>每次喷药水量</h2><div class="grid3">${wbox}</div><p class="note">喷药页用来对标签用量。</p></div>
+  <div class="section-head"><h2>${products.length} 个药，${done} 个资料齐全</h2><button class="chip ${needOnly?'on':''}" data-act="needonly">只看缺资料</button></div>
+  <div class="chips" style="margin-bottom:14px">${[['All','全部',products.length],...KO.map(k=>[k,gName(k),products.filter(p=>kOf(p)===k).length])].filter(x=>x[2]).map(([o,t,c])=>`<button class="chip ${pFilter===o?'on':''}" data-act="pfilter" data-id="${o}">${t} ${c}</button>`).join('')}</div>
+  ${groups.length?groups.map(([k,a])=>`<div class="section-head" style="margin-top:18px"><h2>${gName(k)} · ${a.length}</h2><span class="note">${a.filter(p=>inMix.has(p._id)).length} 个在配方里</span></div><div class="panel"><div>${a.map(prow).join('')}</div></div>`).join(''):'<div class="empty">没有。</div>'}`}
+
+function fieldHTML(f,need){const id='fld-'+f.k;const cls=`field${f.wide?' wide':''}${need?' need':''}`;
+  if(f.type==='multi'){const cur=Array.isArray(draft.farms)?draft.farms:[];return `<div class="${cls}"><span class="lb">${f.l}</span><div class="chips">${f.opts.map(o=>`<button type="button" class="chip ${cur.includes(o.id)?'on':''}" data-act="dmulti" data-v="${o.id}">${o.name}</button>`).join('')}</div></div>`}
+  if(f.type==='chips')return `<div class="${cls}"><span class="lb">${f.l}</span><div class="chips">${f.opts.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o];return `<button type="button" class="chip ${draft[f.k]===v?'on':''}" data-act="dchip" data-k="${f.k}" data-v="${e(v)}">${e(t)}</button>`}).join('')}</div></div>`;
+  const inp=f.type==='area'?`<textarea id="${id}" data-k="${f.k}">${e(draft[f.k]??'')}</textarea>`:`<input id="${id}" data-k="${f.k}" ${f.type==='num'?'inputmode="decimal"':''} value="${e(draft[f.k]??'')}">`;
+  if(f.unit)return `<div class="${cls}"><label for="${id}">${f.l}</label><div class="pair">${inp}<div class="chips">${f.units.map(u=>`<button type="button" class="chip ${draft[f.unit]===u?'on':''}" data-act="dchip" data-k="${f.unit}" data-v="${u}">${u}</button>`).join('')}</div></div></div>`;
+  return `<div class="${cls}"><label for="${id}">${f.l}</label>${inp}</div>`}
+function doseLines(){const out=[];const rate=parseFloat(draft.rate),book=parseFloat(draft.bookAmt);const u=draft.rateUnit||'ml';
+  for(const f of FARMS){const w=water(f.id);if(!w||isNaN(rate))continue;const lab=Math.round(rate*w/10*10)/10;let t=`${f.name}：${w} L → 标签 ${lab} ${u}`,c='';
+    if(!isNaN(book)){const pct=Math.round(book/lab*100);t+=` · 平时 ${book} ${u}（${pct}%）`;if(pct>130)c='bad'}out.push([c,t])}return out}
+function mEdit(){const need=new Set(needed(draft));const dl=doseLines();
+  return `<div class="modalhead"><div><div class="eyebrow">药品库</div><h2>${e(draft.name||'新药品')}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
+  <div class="photo-edit">${photo(draft)}<div class="stack"><button type="button" class="btn" data-act="photo" id="photobtn">换照片</button><input type="file" accept="image/*" id="photo-in" hidden></div></div>
+  ${dl.length?`<div class="info"><b>用量对照</b>${dl.map(([c,t])=>`<div${c?' style="color:var(--red);font-weight:700"':''}>${e(t)}</div>`).join('')}</div>`:''}
+  <div class="fields">${MAIN.map(f=>fieldHTML(f,need.has(f.k))).join('')}</div>
+  <details class="morefields" ${MORE.some(f=>need.has(f.k))||draft._more?'open':''} id="more"><summary>＋ 更多资料</summary><div class="fields" style="margin-top:12px">${MORE.map(f=>fieldHTML(f,need.has(f.k))).join('')}
+  <div class="field wide"><span class="lb">没货时可以换成（点选；量用该药平时的量）</span>${(draft.subs||[]).length?`<p class="note">现在：${(draft.subs||[]).map(x=>{const q=byId(x.id);return q?`${e(q.name)} ${e(x.amt??'')} ${e(U(q))}`:''}).filter(Boolean).join('、')}</p>`:''}
+  <div class="chips">${products.filter(x=>x._id!==editing).sort(sortN).map(x=>`<button type="button" class="chip ${(draft.subs||[]).some(y=>y.id===x._id)?'on':''}" data-act="dsub" data-v="${e(x._id)}">${e(x.name)}</button>`).join('')}</div></div></div></details>
+  <div class="footactions">${editing?`<button class="btn warn" data-act="del">${draft._del?'再按一次删除':'删除'}</button>`:''}<button class="btn" data-act="close">取消</button><button class="btn dark" data-act="saveprod" id="savebtn">保存</button></div>`}
+
+/* ---------- modal ---------- */
+function openModal(kind,arg){modalKind=kind;modalArg=arg;drawModal();document.body.style.overflow='hidden'}
+function drawModal(){const html=modalKind==='stock'?mStock(modalArg):modalKind==='edit'?mEdit():'';
+  const host=$('modalhost');const sc=host.querySelector('.modalwrap')?.scrollTop||0;
+  host.innerHTML=`<div class="modalwrap" role="dialog" aria-modal="true"><div class="modal">${html}</div></div>`;host.querySelector('.modalwrap').scrollTop=sc;wireModal()}
+function closeModal(){$('modalhost').innerHTML='';modalKind=null;modalArg=null;draft=null;editing=null;document.body.style.overflow=''}
+function wireModal(){
+  document.querySelectorAll('#modalhost [data-k]').forEach(i=>{if(i.tagName==='INPUT'||i.tagName==='TEXTAREA')i.oninput=()=>{draft[i.dataset.k]=i.value}});
+  const more=$('more');if(more)more.ontoggle=()=>{if(draft)draft._more=more.open};
+  const fi=$('photo-in');if(fi)fi.onchange=async()=>{const file=fi.files[0];if(!file)return;if(!assets){toast('这里不能上传照片。');return}
+    const b=$('photobtn');b.disabled=true;b.textContent='上传中…';try{const r=await assets.upload(file);draft.photo=r.url;drawModal();toast('照片好了，请按保存。')}catch(err){toast('上传失败：'+(err.code||err.message));b.disabled=false;b.textContent='换照片'}};
+  const bn=$('buy-n');if(bn&&modalKind==='stock'){const p=byId(modalArg);bn.oninput=()=>{const n=Number(bn.value);if(packBase(p)&&Number(p.price)>0&&n>0)$('buy-rm').value=Math.round(n*Number(p.price)*100)/100}}
+}
+
+/* ---------- wiring ---------- */
+function wire(){const g=$('guide');if(g)g.ontoggle=()=>{guideOpen=g.open};document.querySelectorAll('#root [data-amt]').forEach(i=>i.oninput=()=>{const id=i.dataset.amt;sel.set(id,i.value===''?'':Number(i.value));refreshMsg()})}
+function refreshMsg(){const t=$('msgtext');if(t)t.value=buildMsg(items())}
+function updateSendbar(){const b=$('sendbar');const show=tab==='spray'&&sel.size>0;b.classList.toggle('show',show);$('sendbar-n').textContent='已选 '+sel.size+' 种'}
+async function markDone(id,ds){if(!db)return;try{await db.collection('sprays').doc(id).update({status:'done',doneDate:ds});toast('已记录喷好')}catch(err){toast('保存不了：'+(err.code||err.message))}}
+async function sendNow(){
+  const list=items();const ta=$('msgtext');let ok=true;
+  try{await navigator.clipboard.writeText(ta.value)}catch(err){ok=false;ta.focus();ta.select()}
+  if(!db){toast(ok?'已复制。':'已选取，请按复制。');return}
+  const rec={status:'planned',date:today(),farm,farmName:fname(farm),items:list.map(i=>({id:i.id,name:i.name,amt:i.amt===''?null:i.amt,unit:i.unit,phi:Number(i.p.phi)||0})),createdAt:new Date().toISOString()};
+  try{await db.collection('sprays').doc(rec.date+'_'+farm+'_'+Date.now().toString(36)).set(rec);
+    for(const i of list){const f=i.p.farms||[];if(i.p._id&&!f.includes(farm)){try{await db.collection('products').doc(i.p._id).update({farms:[...f,farm]})}catch(x){}}}
+    toast(ok?'已复制，贴到 WhatsApp。':'已保存，请选取文字复制。');sel.clear();activeMix=null;go('today')}
+  catch(err){toast('保存不了：'+(err.code||err.message))}}
+async function saveProduct(){
+  if(!db){toast('这里不能保存。');return}
+  if(!(draft.name||'').trim()){toast('请先填药名。');return}
+  const o={photo:draft.photo||'',subs:Array.isArray(draft.subs)?draft.subs:[]};
+  for(const f of ALLF){let v=draft[f.k];if(f.type==='multi'){o[f.k]=Array.isArray(v)?v:[];continue}
+    if(f.type==='num'){v=(v===''||v==null)?null:Number(v);if(Number.isNaN(v)){toast(f.l+'：只能填数字');return}}else v=(v??'').toString().trim();
+    o[f.k]=v;if(f.unit)o[f.unit]=draft[f.unit]||f.units[0]}
+  const id=editing||(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'p')+'-'+Date.now().toString(36);
+  const b=$('savebtn');b.disabled=true;
+  try{if(editing)await db.collection('products').doc(id).update(o);else await db.collection('products').doc(id).set(o);closeModal();toast('已保存')}
+  catch(err){toast('保存不了：'+(err.code||err.message));b.disabled=false}}
+async function saveDoc(col,o){try{await db.collection(col).doc(`${o.farm}_${o.pid}_${Date.now().toString(36)}`).set(o);toast('已保存');closeModal();render()}catch(err){toast('保存不了：'+(err.code||err.message))}}
+
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-nav],[data-act]');if(!b)return;
+  if(b.dataset.nav){go(b.dataset.nav);return}
+  const a=b.dataset.act,id=b.dataset.id;
+  switch(a){
+  case 'sprayfarm':if(farm!==b.dataset.farm){farm=b.dataset.farm;sel.clear();activeMix=null}try{localStorage.setItem('farm',farm)}catch(x){}go('spray');break;
+  case 'stockfarm':stockFarm=b.dataset.farm;go('stock');break;
+  case 'doneask':{const box=$('acts-'+id);if(!box)break;const y=new Date();y.setDate(y.getDate()-1);
+    box.innerHTML=`<button class="btn small dark" data-act="done" data-id="${e(id)}" data-d="${today()}">今天喷好</button><button class="btn small" data-act="done" data-id="${e(id)}" data-d="${ymd(y)}">昨天喷好</button><button class="btn small warn" data-act="nospray" data-id="${e(id)}">没喷</button>`;break}
+  case 'done':markDone(id,b.dataset.d);break;
+  case 'nospray':try{await db.collection('sprays').doc(id).update({status:'cancelled'})}catch(err){toast('保存不了：'+(err.code||err.message))}break;
+  case 'farm':if(farm!==b.dataset.farm){farm=b.dataset.farm;sel.clear();activeMix=null;showOther=false}try{localStorage.setItem('farm',farm)}catch(x){}render();break;
+  case 'mix':{const m=mixes.find(x=>x._id===id);if(!m)break;sel.clear();for(const it of m.items||[])if(byId(it.id))sel.set(it.id,it.amt??'');activeMix=id;showOther=false;render();break}
+  case 'pick':{const p=byId(id);if(sel.has(id))sel.delete(id);else sel.set(id,p&&p.bookAmt!=null?p.bookAmt:'');activeMix=null;render();break}
+  case 'minus':case 'plus':{const i=$('amt-'+id);const v=Number(i.value)||0;const n=a==='minus'?Math.max(0,v-step(v)):v+step(v||1);sel.set(id,n);render();break}
+  case 'swap':{const to=b.dataset.to,amt=b.dataset.amt===''?'':Number(b.dataset.amt);const n=new Map();for(const [k,v] of sel){if(k===id)n.set(to,amt);else n.set(k,v)}sel.clear();for(const [k,v] of n)sel.set(k,v);activeMix=null;render();toast('已换药');break}
+  case 'other':showOther=!showOther;render();break;
+  case 'clear':sel.clear();activeMix=null;render();break;
+  case 'tosend':$('sendpanel')?.scrollIntoView({behavior:'smooth',block:'start'});break;
+  case 'send':b.disabled=true;await sendNow();if(document.body.contains(b))b.disabled=false;break;
+  case 'savemix':{const n=($('mixname').value||'').trim();if(!n){toast('请填配方名');break}if(!db)break;
+    try{await db.collection('mixes').doc(farm+'-'+n.toLowerCase().replace(/[^a-z0-9]+/g,'-')).set({name:n,farm,items:items().map(i=>({id:i.id,amt:i.amt===''?null:i.amt}))});toast('配方已保存')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
+  case 'sfarm':stockFarm=b.dataset.farm;render();break;
+  case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
+  case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
+    try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
+  case 'savecount':{const p=byId(id),pb=packBase(p),v=$('cnt-in').value,n=Number(v);if(v===''||Number.isNaN(n)||n<0){toast('请填数字');break}
+    saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:pb?n*pb:n,date:today(),createdAt:new Date().toISOString()});break}
+  case 'savebuy':{const p=byId(id),pb=packBase(p),n=Number($('buy-n').value),rv=$('buy-rm').value,rm=rv===''?null:Number(rv);if(!(n>0)){toast('请填数量');break}if(rm!=null&&(Number.isNaN(rm)||rm<0)){toast('RM 只能填数字');break}
+    saveDoc('purchases',{farm:smFarm||stockFarm,pid:id,packs:pb?n:null,amt:pb?n*pb:n,price:rm,date:today(),createdAt:new Date().toISOString()});break}
+  case 'rfarm':recFarm=id;render();break;
+  case 'rstatus':recStatus=id;render();break;
+  case 'pfilter':pFilter=id;render();break;
+  case 'needonly':needOnly=!needOnly;render();break;
+  case 'savewater':{const f=b.dataset.farm;const t=$(`w-${f}-tanks`).value,l=$(`w-${f}-litres`).value;const o={name:fname(f),tanks:t===''?null:Number(t),litres:l===''?null:Number(l),acres:(farms[f]||{}).acres??null};
+    if([o.tanks,o.litres].some(x=>Number.isNaN(x))){toast('只能填数字');break}try{await db.collection('farms').doc(f).set(o);toast(fname(f)+' 已保存')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
+  case 'edit':{const p=id?byId(id):null;editing=p?p._id:null;draft=p?{...p}:{kind:'',rateUnit:'ml',packUnit:'ml',farms:[farm]};delete draft._del;openModal('edit');break}
+  case 'dchip':{const k=b.dataset.k,v=b.dataset.v;draft[k]=(draft[k]===v&&!['rateUnit','packUnit'].includes(k))?'':v;drawModal();break}
+  case 'dmulti':{const cur=Array.isArray(draft.farms)?draft.farms:[];const v=b.dataset.v;draft.farms=cur.includes(v)?cur.filter(x=>x!==v):[...cur,v];drawModal();break}
+  case 'dsub':{const v=b.dataset.v,cur=Array.isArray(draft.subs)?draft.subs:[];const q=byId(v);draft.subs=cur.some(y=>y.id===v)?cur.filter(y=>y.id!==v):[...cur,{id:v,amt:q&&q.bookAmt!=null?q.bookAmt:null}];draft._more=true;drawModal();break}
+  case 'photo':$('photo-in').click();break;
+  case 'del':if(!draft._del){draft._del=true;drawModal();break}try{await db.collection('products').doc(editing).delete();closeModal();toast('已删除')}catch(err){toast('删除不了：'+(err.code||err.message))}break;
+  case 'saveprod':saveProduct();break;
+  case 'close':closeModal();break;
+  }
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&modalKind)closeModal()});
+
+/* ---------- data ---------- */
+function rerender(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#root')&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;render();if(modalKind==='stock')drawModal()}
+renderNav();
+(async()=>{
+  try{db=window.claude?.use?await window.claude.use('db'):null}catch(err){db=null}
+  try{assets=window.claude?.use?await window.claude.use('assets'):null}catch(err){assets=null}
+  if(!db){$('conn').className='pill amber';$('conn').textContent='● 离线';render();return}
+  const timer=setTimeout(()=>{if(!loaded){$('root').innerHTML='<div class="empty"><strong>还在载入…</strong>请检查手机讯号。</div>'}},10000);
+  const on=(col,fn)=>db.collection(col).onSnapshot(s=>{fn(s.docs.map(d=>({...d.data(),_id:d.id})));rerender()},err=>{if(col==='products'){clearTimeout(timer);toast('载入失败（'+err.code+'）')}});
+  on('products',a=>{products=a;loaded=true;clearTimeout(timer)});
+  on('farms',a=>{farms={};for(const d of a)farms[d._id]=d});
+  on('mixes',a=>{mixes=a});
+  on('sprays',a=>{sprays=a});
+  on('purchases',a=>{purchases=a});
+  on('counts',a=>{counts=a});
+})();
+})();
+</script>
+</body>
+</html>
