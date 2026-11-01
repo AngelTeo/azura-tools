@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v5</title>
+<title>SprayGo v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -229,7 +229,7 @@ body.nocost .cost{display:none!important}
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -237,12 +237,13 @@ const MSG={no_login:'还没登入。请回主页登入后再打开 SprayGo。',n
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function gate(kind,extra){document.getElementById('root').innerHTML=`<div class="gate"><strong>SprayGo</strong><p>${MSG[kind]||esc(kind)}</p>${extra?`<p class="note">${esc(extra)}</p>`:''}<a href="../index.html">← 回主页</a></div>`;const n=document.getElementById('navDesktop');if(n)n.innerHTML='';const c=document.getElementById('conn');if(c){c.className='pill amber';c.textContent='● 未登入'}}
 let sb=null;const subs={};
+const TB=col=>col==='ferti'?['ferti_doc','days']:['spray_doc',col];
 const fix=d=>d&&typeof d.photo==='string'&&d.photo.startsWith('/_blob/')?{...d,photo:'spray_img/'+d.photo.slice(7)+'.jpg'}:d;
 const clean=o=>JSON.parse(JSON.stringify(o));
 const fail=e=>{const x=new Error(e&&e.message||String(e));x.code=e&&(e.code||e.message)||'error';return x};
 async function refresh(col){
   const L=subs[col];if(!L||!L.length)return;
-  const {data,error}=await sb.from('spray_doc').select('id,doc').eq('col',col);
+  const [t,c]=TB(col);const {data,error}=await sb.from(t).select('id,doc').eq('col',c);
   if(error){for(const s of L)s.err&&s.err(fail(error));return}
   const snap={docs:data.map(r=>({id:r.id,data:()=>fix(r.doc)}))};
   for(const s of L)try{s.fn(snap)}catch(e){console.error(e)}
@@ -251,13 +252,13 @@ const refreshAll=()=>Object.keys(subs).forEach(refresh);
 const db={collection(col){return{
   onSnapshot(fn,err){(subs[col]=subs[col]||[]).push({fn,err});refresh(col);return()=>{subs[col]=subs[col].filter(s=>s.fn!==fn)}},
   doc(id){return{
-    async set(o){const doc=clean(o);let {error}=await sb.from('spray_doc').insert({col,id,doc});
-      if(error&&error.code==='23505'){({error}=await sb.from('spray_doc').update({doc,updated_at:new Date().toISOString()}).eq('col',col).eq('id',id).select('id').single())}
+    async set(o){const doc=clean(o);const [t,c]=TB(col);let {error}=await sb.from(t).insert({col:c,id,doc});
+      if(error&&error.code==='23505'){({error}=await sb.from(t).update({doc,updated_at:new Date().toISOString()}).eq('col',c).eq('id',id).select('id').single())}
       if(error)throw fail(error);await refresh(col)},
-    async update(p){const {data,error:e1}=await sb.from('spray_doc').select('doc').eq('col',col).eq('id',id).single();if(e1)throw fail(e1);
-      const doc=clean({...data.doc,...p});const {error}=await sb.from('spray_doc').update({doc,updated_at:new Date().toISOString()}).eq('col',col).eq('id',id).select('id').single();
+    async update(p){const [t,c]=TB(col);const {data,error:e1}=await sb.from(t).select('doc').eq('col',c).eq('id',id).single();if(e1)throw fail(e1);
+      const doc=clean({...data.doc,...p});const {error}=await sb.from(t).update({doc,updated_at:new Date().toISOString()}).eq('col',c).eq('id',id).select('id').single();
       if(error)throw fail(error);await refresh(col)},
-    async delete(){const {error}=await sb.from('spray_doc').delete().eq('col',col).eq('id',id);if(error)throw fail(error);await refresh(col)}
+    async delete(){const [t,c]=TB(col);const {error}=await sb.from(t).delete().eq('col',c).eq('id',id);if(error)throw fail(error);await refresh(col)}
   }}}}};
 window.claude={use:async n=>n==='db'?db:null};
 async function boot(){
@@ -320,7 +321,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
   for(const k of keys){const v=p[k];if(v===undefined||v===null||v===''||v==='Not sure')r.push(k)}return r}
 
 /* ---------- state ---------- */
-let products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
+let sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=window.SG&&!window.SG.edit?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
 let focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
@@ -607,7 +608,7 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
 function vRecords(){
   const rows=sprays.filter(s=>(recFarm==='all'||s.farm===recFarm)&&(recStatus==='all'||(recStatus==='drip'?s.kind==='drip':(s.status||'done')===recStatus&&isSpray(s)))).sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
   const pill=st=>st==='done'?'<span class="pill green">已喷</span>':st==='planned'?'<span class="pill blue">等工人</span>':'<span class="pill grey">没喷</span>';
-  return `${head('记录','喷药 · 滴灌记录','等工人、已喷、没喷、滴灌加料分开记。','<button class="btn dark" data-act="dripopen">💧 记滴灌加料</button>')}
+  return `${head('记录','喷药 · 滴灌记录','等工人、已喷、没喷分开记。滴灌加料从 FertiGo 来，这里只看。','<a class="btn soft" href="FertiGo.html">💧 滴灌在 FertiGo 记</a>')}
   <div class="panel"><div class="splithead"><div class="chips">${[['all','全部园'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${recFarm===id?'on':''}" data-act="rfarm" data-id="${id}">${n}</button>`).join('')}</div>
   <div class="chips">${[['all','全部'],['planned','等工人'],['done','已喷'],['cancelled','没喷'],['drip','💧 滴灌']].map(([id,n])=>`<button class="chip ${recStatus===id?'on':''}" data-act="rstatus" data-id="${id}">${n}</button>`).join('')}</div></div>
   ${rows.length?`<div class="stack">${rows.map(s=>{const st=s.status||'done';return `<div class="minirow"><div><div class="rid">${e(s.farmName||fname(s.farm))} ${s.kind==='drip'?'<span class="pill blue">💧 滴灌</span>':pill(st)} <span class="meta">${e(dmy(st==='done'&&s.doneDate?s.doneDate:s.date))}</span></div>
@@ -765,10 +766,14 @@ renderNav();
   if(!db){$('conn').className='pill amber';$('conn').textContent='● 离线';render();return}
   const timer=setTimeout(()=>{if(!loaded){$('root').innerHTML='<div class="empty"><strong>还在载入…</strong>请检查手机讯号。</div>'}},10000);
   const on=(col,fn)=>db.collection(col).onSnapshot(s=>{fn(s.docs.map(d=>({...d.data(),_id:d.id})));rerender()},err=>{if(col==='products'){clearTimeout(timer);toast('载入失败（'+err.code+'）')}});
-  on('products',a=>{products=a;loaded=true;clearTimeout(timer)});
+  on('products',a=>{products=a;loaded=true;clearTimeout(timer);try{mergeS()}catch(x){}});
   on('farms',a=>{farms={};for(const d of a)farms[d._id]=d});
   on('mixes',a=>{mixes=a});
-  on('sprays',a=>{sprays=a});
+  const mergeS=()=>{const dr=[];for(const d of fdays){const m=new Map();for(const sl of d.slots||[])for(const x of sl.doses||[]){const n=Number(x.amt);if(x.id&&n>0)m.set(x.id,(m.get(x.id)||0)+n)}
+    if(m.size)dr.push({_id:'ferti_'+d._id,kind:'drip',status:'done',date:d.date,doneDate:d.date,farm:d.farm,farmName:fname(d.farm),createdAt:d.updatedAt||d.date,items:[...m].map(([id,amt])=>{const q=byId(id);return {id,name:q?q.name:id,amt,unit:q?U(q):'ml',phi:0}})})}
+    sprays=[...sprayDocs.filter(isSpray),...dr]};
+  on('sprays',a=>{sprayDocs=a;mergeS()});
+  on('ferti',a=>{fdays=a;mergeS()});
   on('purchases',a=>{purchases=a});
   on('counts',a=>{counts=a});
 })();
