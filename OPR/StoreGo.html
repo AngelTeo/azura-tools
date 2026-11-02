@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v9</title>
+<title>StoreGo v10</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -106,12 +106,21 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
 .fcell.ok{background:var(--green2);border-color:transparent;color:var(--green)}
 .fcell.soon,.fcell.nc{background:var(--amber2);border-color:transparent;color:var(--amber)}
 .fcell.out,.fcell.low{background:var(--red2);border-color:transparent;color:var(--red)}
-.productrow img,.productpick img{cursor:zoom-in}
+.productrow img,.productpick img,.mleft img{cursor:zoom-in}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
 .lightbox img{max-width:min(92vw,720px);max-height:78vh;object-fit:contain;background:#fff;border-radius:14px}
 .lightbox b{color:#fff;margin-top:12px;font-size:17px;text-align:center}
 .lightbox .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:24px}
 body.noedit .supset{display:none!important}
+.mrow{display:flex;gap:14px;align-items:center;padding:12px 2px;border-bottom:1px solid var(--line)}
+.mleft{display:flex;gap:12px;align-items:center;flex:0 0 38%;min-width:0}
+.mleft img,.mleft .placeholder{width:64px;height:64px;object-fit:contain;flex:none;border-radius:10px;background:var(--soft)}
+.mright{flex:1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.shopchip{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;font-size:13px;min-width:150px}
+.shopchip small{color:var(--muted)}.shopchip.none{border-color:var(--red);background:var(--red2);color:var(--red)}
+.frow{display:flex;gap:10px;align-items:flex-start;margin:6px 0}.flab{font-weight:800;color:var(--muted);font-size:13px;min-width:34px;padding-top:12px}
+.frow .chip{min-height:38px;padding:6px 12px;font-size:13px}
+@media (max-width:620px){.mrow{flex-direction:column;align-items:stretch}.mleft{flex:none}.mright{justify-content:flex-start}.frow{flex-direction:column;gap:4px}.flab{padding-top:0}}
 .supset select{border:1px solid var(--field);border-radius:10px;min-height:38px;padding:4px 8px;background:var(--white);max-width:220px}
 .fcell.none{opacity:.7;cursor:pointer;color:var(--muted)}
 .fcell.sub{background:var(--blue2);border-color:var(--blue);color:var(--blue)}
@@ -239,7 +248,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -334,7 +343,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
   for(const k of keys){const v=p[k];if(v===undefined||v===null||v===''||v==='Not sure')r.push(k)}return r}
 
 /* ---------- state ---------- */
-let suppliers=[],sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
+let supView='matrix',supShop='all',supKind='All',supArea='all',suppliers=[],sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=(window.SG&&window.SG.mode==='store')?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
 let ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
@@ -674,10 +683,31 @@ function vSuppliers(){
   const cmp=pids.map(p=>{const m=new Map();for(const b of purchases.filter(x=>x.pid===p._id&&x.shop).sort((a,c)=>String(c.date).localeCompare(String(a.date)))){const k=b.shop+'|'+pk(b);if(!m.has(k))m.set(k,b)}
     const L=[...m.values()];const best=Math.min(...L.map(perBase).filter(x=>x!=null));
     return `<div class="line"><span><b>${e(p.name)}</b><br>${L.map(b=>{const v=perBase(b);return `<small class="note">${e(b.shop)} · ${e(pk(b))} · <span class="cost">RM ${e(b.unitPrice??'—')}${v!=null?` · 每 ${b.packUnit==='g'||b.packUnit==='kg'?'kg':'L'} RM ${(Math.round(v*100)/100).toFixed(2)}`:''}${L.length>1&&v===best?' ✓ 最便宜':''}</span> · ${e(dmy(b.date))}</small>`}).join('<br>')}</span></div>`}).join('');
-  return `${head('商家','商家 · 跟谁买 · 价钱','每间店的资料、买过什么、最后的价钱。',`<button class="btn dark" data-act="supedit" data-id="">＋ 新增商家</button>`)}
-  ${missing}
-  <div class="wizard"><div class="stack">${list.map(card).join('')||'<div class="empty">还没有商家。</div>'}</div>
-  <div class="stack sticky"><div class="panel"><h2>按药比价</h2>${cmp||'<p class="note">还没有进货记录。</p>'}<p class="note">价钱是每间店最后一次的单价。</p></div></div></div>`}
+  const areaOf=n=>{const sp=suppliers.find(x=>x.name===n);if(sp&&sp.area)return sp.area;const m=String(n||'').match(/\(([^)]+)\)\s*$/);return m?m[1].replace(/^.*,\s*/,'').trim():'其他'};
+  const tracked=products.filter(p=>p.track!=='No').sort(sortN);
+  const shopNames=[...new Set([...suppliers.map(x=>x.name),...purchases.map(b=>b.shop)].filter(Boolean))].sort();
+  const areas=[...new Set(shopNames.map(areaOf))].sort();
+  const KO=KINDS.map(k=>k[0]);const kOf=p=>KO.includes(p.kind)?p.kind:'Unknown';
+  let rowsP=tracked.filter(p=>{const sh=shopsOf(p);if(supShop==='none'&&sh.length)return false;if(supShop!=='all'&&supShop!=='none'&&!sh.includes(supShop))return false;
+    if(supArea!=='all'&&!sh.some(n=>areaOf(n)===supArea))return false;if(supKind!=='All'&&kOf(p)!==supKind)return false;return true});
+  const lastBy=(p,n)=>purchases.filter(b=>b.pid===p._id&&b.shop===n).sort((a,c)=>String(c.date).localeCompare(String(a.date)))[0];
+  const shopChip=(p,n)=>{const b=lastBy(p,n);const v=b?perBase(b):null;
+    return `<div class="shopchip"><b>${e(n)}</b><small>${b?`${e(pk(b))}<span class="cost"> · RM ${e(b.unitPrice??'—')}</span> · ${e(dmy(b.date))}`:'问过有卖 · 还没买过'}</small></div>`};
+  const mrow=p=>{const sh=shopsOf(p);if(supShop!=='all'&&supShop!=='none')sh.sort((a,b)=>(b===supShop)-(a===supShop));
+    return `<div class="mrow"><div class="mleft">${photo(p)}<div><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small class="note">${e(kl(kOf(p)))}</small></div></div>
+    <div class="mright">${sh.length?sh.map(n=>shopChip(p,n)).join(''):'<div class="shopchip none"><b>❗ 还没有商家</b><small>问到了就在右边选店</small></div>'}
+      <div class="pair supset"><select id="ns-${e(p._id)}" aria-label="${e(p.name)} 加商家"><option value="">＋ 加店…</option>${shopNames.filter(n=>!sh.includes(n)).map(n=>`<option>${e(n)}</option>`).join('')}</select><button class="btn small" data-act="setshop" data-id="${e(p._id)}">记下</button></div></div></div>`};
+  const noN=tracked.filter(p=>!shopsOf(p).length).length;
+  const chipRow=(lab,act,cur,opts)=>`<div class="frow"><span class="flab">${lab}</span><div class="chips">${opts.map(([v,t])=>`<button class="chip ${cur===v?'on':''}" data-act="${act}" data-id="${e(v)}">${t}</button>`).join('')}</div></div>`;
+  const cnt=f=>tracked.filter(f).length;
+  const filters=`<div class="panel">${chipRow('商家','fshop',supShop,[['all',`全部 ${tracked.length}`],['none',`❗ 没有商家 ${noN}`],...shopNames.map(n=>[n,`${e(n.replace(/\s*\(.*\)$/,''))} ${cnt(p=>shopsOf(p).includes(n))}`])])}
+    ${chipRow('地区','farea',supArea,[['all','全部'],...areas.map(a=>[a,`${e(a)} ${cnt(p=>shopsOf(p).some(n=>areaOf(n)===a))}`])])}
+    ${chipRow('类别','fkind',supKind,[['All','全部'],...KINDS.filter(([k])=>cnt(p=>kOf(p)===k)).map(([k,l])=>[k,`${l} ${cnt(p=>kOf(p)===k)}`])])}</div>`;
+  const tabs=`<div class="chips" style="margin-bottom:14px"><button class="chip ${supView==='matrix'?'on':''}" data-act="supview" data-id="matrix">🧪 药 × 商家</button><button class="chip ${supView==='shops'?'on':''}" data-act="supview" data-id="shops">🏪 商家资料</button></div>`;
+  const body=supView==='matrix'?`${filters}<div class="panel"><div class="splithead"><h2>${rowsP.length} 样药</h2>${supShop!=='all'||supArea!=='all'||supKind!=='All'?'<button class="btn small" data-act="fclear">清除筛选</button>':''}</div>${rowsP.map(mrow).join('')||'<div class="empty">没有符合的药。</div>'}</div>`
+    :`<div class="wizard"><div class="stack">${list.map(card).join('')||'<div class="empty">还没有商家。</div>'}</div>
+  <div class="stack sticky"><div class="panel"><h2>按药比价</h2>${cmp||'<p class="note">还没有进货记录。</p>'}<p class="note">价钱是每间店最后一次的单价。</p></div></div></div>`;
+  return `${head('商家','商家 · 跟谁买 · 价钱','每样药在哪间店买、多少钱。',`<button class="btn dark" data-act="supedit" data-id="">＋ 新增商家</button>`)}${tabs}${body}`}
 const SUPF=[['name','店名（进货时选的名字）'],['company','公司全名'],['reg','注册号'],['address','地址'],['phone','电话（多个用逗号分开）'],['email','Email'],['terms','付款条件'],['bank','银行户口'],['sells','卖什么'],['note','备注']];
 function mSupplier(){const d=draft;return `<div class="modalhead"><div><div class="eyebrow">商家</div><h2>${editing?'编辑商家':'新增商家'}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
   <div class="panel">${SUPF.map(([k,l])=>`<div class="field"><label for="sup-${k}">${l}</label>${k==='address'||k==='sells'||k==='note'?`<textarea id="sup-${k}" data-k="${k}" rows="2">${e(d[k]||'')}</textarea>`:`<input id="sup-${k}" data-k="${k}" value="${e(d[k]||'')}">`}</div>`).join('')}
@@ -798,6 +828,11 @@ document.addEventListener('click',async ev=>{
     const rec={kind:'drip',status:'done',date:ds,doneDate:ds,farm:draft.farm,farmName:fname(draft.farm),items,createdAt:new Date().toISOString()};
     try{await db.collection('sprays').doc(ds+'_'+draft.farm+'_drip_'+Date.now().toString(36)).set(rec);closeModal();toast('已记录滴灌加料')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'supedit':{const x=id?suppliers.find(q=>q._id===id):null;editing=x?x._id:null;draft=x?{...x}:{};openModal('supplier');break}
+  case 'supview':supView=id;render();break;
+  case 'fshop':supShop=id;render();break;
+  case 'farea':supArea=id;render();break;
+  case 'fkind':supKind=id;render();break;
+  case 'fclear':supShop='all';supArea='all';supKind='All';render();break;
   case 'setshop':{const v=$('ns-'+id)?.value;if(!v){toast('请先选店');break}const p=byId(id);const cur=Array.isArray(p.shops)?p.shops:[];
     try{await db.collection('products').doc(id).update({shops:[...new Set([...cur,v])]});toast('已记下：'+p.name+' → '+v)}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'supsave':{const o={};for(const [k] of SUPF)o[k]=String(draft[k]||'').trim();if(!o.name){toast('请填店名');break}
@@ -834,8 +869,8 @@ document.addEventListener('click',async ev=>{
   case 'close':closeModal();break;
   }
 });
-document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow img,.productpick img');if(!im)return;if(im.closest('.productrow')&&ev.target.closest('button,a'))return;ev.preventDefault();ev.stopImmediatePropagation();
-  const row=im.closest('.productrow,.productpick');const ne=row&&(row.querySelector('.grow b')||row.querySelector('.p-name'));const nm=ne?String(ne.childNodes[0]?ne.childNodes[0].textContent:ne.textContent).replace(/^\s*✓\s*/,'').trim():'';
+document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow img,.productpick img,.mleft img');if(!im)return;if(im.closest('.productrow')&&ev.target.closest('button,a'))return;ev.preventDefault();ev.stopImmediatePropagation();
+  const row=im.closest('.productrow,.productpick,.mleft');const ne=row&&(row.querySelector('.grow b')||row.querySelector('.p-name')||row.querySelector('b'));const nm=ne?String(ne.childNodes[0]?ne.childNodes[0].textContent:ne.textContent).replace(/^\s*✓\s*/,'').trim():'';
   const lb=document.createElement('div');lb.className='lightbox';lb.setAttribute('role','dialog');lb.setAttribute('aria-label','药品照片');
   lb.innerHTML=`<button class="x" aria-label="关闭">×</button><img src="${e(im.getAttribute('src'))}" alt="${e(nm)}"><b>${e(nm)}</b>`;lb.onclick=()=>lb.remove();document.body.appendChild(lb)},true);
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const lb=document.querySelector('.lightbox');if(lb){lb.remove();return}}if(ev.key==='Escape'&&modalKind)closeModal()});
