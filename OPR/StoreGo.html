@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v4</title>
+<title>StoreGo v5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -237,7 +237,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -604,19 +604,25 @@ function vStockAll(){
       <p class="note">各园分开看，点上面的 AD 1 / AD 2 / AD 3。</p></div>
   </div></div>`;
 }
-function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const r=stockRow(sf,p),pb=r.pb,u=U(p);
+function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const lp=purchases.filter(b=>b.pid===pid).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0];const shops=[...new Set(purchases.map(b=>b.shop).filter(Boolean))].sort();const r=stockRow(sf,p),pb=r.pb,u=U(p);
   const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}`]);
-  for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${fmtAmt(b.amt,p)}${Number(b.price)>0?' · '+RM(Number(b.price)):''}`]);
+  for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${b.packs&&b.packSize?`${b.packs} × ${b.packSize} ${b.packUnit}`:fmtAmt(b.amt,p)}${b.shop?' · '+b.shop:''}${Number(b.price)>0&&RM(1)?' · '+RM(Number(b.price)):''}`]);
   for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`${s.kind==='drip'?'滴灌':'喷药'}：${i.amt??'?'} ${i.unit||u}`]);
   ev.sort((a,b)=>b[0].localeCompare(a[0]));
-  const fill=pb&&Number(p.price)>0&&r.packs?Math.round(r.packs*Number(p.price)*100)/100:'';
+  const upx=lp&&lp.unitPrice!=null?Number(lp.unitPrice):Number(p.price);const fill=upx>0&&r.packs?Math.round(r.packs*upx*100)/100:'';
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
   <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(2)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
   <div class="panel"><h3>现在点算</h3><div class="field"><label for="cnt-in">${pb?`架上有几瓶/包（每个 ${e(p.packSize)} ${e(p.packUnit)}，例 1.5）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
-  <div class="panel"><h3>进货</h3><div class="fields"><div class="field"><label for="buy-n">${pb?'买了几瓶/包':`买了多少（${e(u)}）`}</label><input id="buy-n" inputmode="decimal" value="${r.packs||''}"></div>
-    <div class="field"><label for="buy-rm">总共付了 (RM)</label><input id="buy-rm" inputmode="decimal" value="${fill}"></div></div>
+  <div class="panel"><h3>进货</h3>${lp?`<p class="note" style="margin-top:0">上次：${e(lp.shop||'没写店名')} · ${lp.unitPrice!=null?'每件 RM '+e(lp.unitPrice):'没写单价'}${lp.packSize?` · 每件 ${e(lp.packSize)} ${e(lp.packUnit)}`:''} · ${e(dmy(lp.date))}</p>`:''}
+    <div class="fields">
+    <div class="field"><label for="buy-shop">在哪间店买</label><input id="buy-shop" list="shoplist" value="${e(lp&&lp.shop||'')}" placeholder="例：Kedai Pertanian XX"><datalist id="shoplist">${shops.map(x=>`<option value="${e(x)}">`).join('')}</datalist></div>
+    <div class="field"><label for="buy-ps">每件多大（包装）</label><div class="pair"><input id="buy-ps" inputmode="decimal" value="${e(lp&&lp.packSize||p.packSize||'')}" style="max-width:110px"><select id="buy-pu">${['ml','L','g','kg'].map(x=>`<option ${x===((lp&&lp.packUnit)||p.packUnit||u)?'selected':''}>${x}</option>`).join('')}</select></div></div>
+    <div class="field"><label for="buy-n">买了几件（瓶/包/桶）</label><input id="buy-n" inputmode="decimal" value="${r.packs||''}"></div>
+    <div class="field"><label for="buy-up">每件价钱 (RM)</label><input id="buy-up" inputmode="decimal" value="${e(lp&&lp.unitPrice!=null?lp.unitPrice:(Number(p.price)>0?p.price:''))}"></div>
+    <div class="field"><label for="buy-rm">总共付了 (RM)</label><input id="buy-rm" inputmode="decimal" value="${fill}"></div>
+    <div class="field"><label for="buy-date">买的日期</label><input id="buy-date" type="date" value="${today()}"></div></div>
     <button class="btn dark" data-act="savebuy" data-id="${e(pid)}">保存进货</button></div>
   <div class="panel"><h3>历史</h3>${ev.length?`<div>${ev.slice(0,12).map(([d,t])=>`<div class="line"><span>${e(t)}</span><b>${e(dmy(d))}</b></div>`).join('')}</div>`:'<p class="note">还没有。</p>'}</div>`}
 
@@ -688,7 +694,7 @@ function wireModal(){
   const more=$('more');if(more)more.ontoggle=()=>{if(draft)draft._more=more.open};
   const fi=$('photo-in');if(fi)fi.onchange=async()=>{const file=fi.files[0];if(!file)return;if(!assets){toast('这里不能上传照片。');return}
     const b=$('photobtn');b.disabled=true;b.textContent='上传中…';try{const r=await assets.upload(file);draft.photo=r.url;drawModal();toast('照片好了，请按保存。')}catch(err){toast('上传失败：'+(err.code||err.message));b.disabled=false;b.textContent='换照片'}};
-  const bn=$('buy-n');if(bn&&modalKind==='stock'){const p=byId(modalArg);bn.oninput=()=>{const n=Number(bn.value);if(packBase(p)&&Number(p.price)>0&&n>0)$('buy-rm').value=Math.round(n*Number(p.price)*100)/100}}
+  const bn=$('buy-n'),bu=$('buy-up');if(bn&&bu&&modalKind==='stock'){const f=()=>{const n=Number(bn.value),up=Number(bu.value);if(n>0&&up>0)$('buy-rm').value=Math.round(n*up*100)/100};bn.oninput=f;bu.oninput=f}
 }
 
 /* ---------- wiring ---------- */
@@ -753,8 +759,11 @@ document.addEventListener('click',async ev=>{
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
   case 'savecount':{const p=byId(id),pb=packBase(p),v=$('cnt-in').value,n=Number(v);if(v===''||Number.isNaN(n)||n<0){toast('请填数字');break}
     saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:pb?n*pb:n,date:today(),createdAt:new Date().toISOString()});break}
-  case 'savebuy':{const p=byId(id),pb=packBase(p),n=Number($('buy-n').value),rv=$('buy-rm').value,rm=rv===''?null:Number(rv);if(!(n>0)){toast('请填数量');break}if(rm!=null&&(Number.isNaN(rm)||rm<0)){toast('RM 只能填数字');break}
-    saveDoc('purchases',{farm:smFarm||stockFarm,pid:id,packs:pb?n:null,amt:pb?n*pb:n,price:rm,date:today(),createdAt:new Date().toISOString()});break}
+  case 'savebuy':{const p=byId(id),n=Number($('buy-n').value),ps=$('buy-ps').value===''?null:Number($('buy-ps').value),pu=$('buy-pu').value,uv=$('buy-up').value,up=uv===''?null:Number(uv),rv=$('buy-rm').value;let rm=rv===''?null:Number(rv);
+    const shop=($('buy-shop').value||'').trim(),ds=$('buy-date').value||today();
+    if(!(n>0)){toast('请填买了几件');break}if(ps!=null&&!(ps>0)){toast('包装只能填数字');break}if(up!=null&&(Number.isNaN(up)||up<0)){toast('每件价钱只能填数字');break}if(rm!=null&&(Number.isNaN(rm)||rm<0)){toast('总共只能填数字');break}
+    if(rm==null&&up!=null)rm=Math.round(n*up*100)/100;const base=ps?((pu==='L'||pu==='kg')?ps*1000:ps):null;
+    saveDoc('purchases',{farm:smFarm||stockFarm,pid:id,shop:shop||null,packSize:ps,packUnit:pu,packs:n,unitPrice:up,price:rm,amt:base?n*base:n,date:ds,createdAt:new Date().toISOString()});break}
   case 'rfarm':recFarm=id;render();break;
   case 'rstatus':recStatus=id;render();break;
   case 'pfilter':pFilter=id;render();break;
