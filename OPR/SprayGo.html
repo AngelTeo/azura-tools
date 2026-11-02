@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v8</title>
+<title>SprayGo v9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -106,6 +106,11 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
 .fcell.ok{background:var(--green2);border-color:transparent;color:var(--green)}
 .fcell.soon,.fcell.nc{background:var(--amber2);border-color:transparent;color:var(--amber)}
 .fcell.out,.fcell.low{background:var(--red2);border-color:transparent;color:var(--red)}
+.productrow img{cursor:zoom-in}
+.lightbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+.lightbox img{max-width:min(92vw,720px);max-height:78vh;object-fit:contain;background:#fff;border-radius:14px}
+.lightbox b{color:#fff;margin-top:12px;font-size:17px;text-align:center}
+.lightbox .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:24px}
 .fcell.none{opacity:.7;cursor:pointer;color:var(--muted)}
 .fcell.sub{background:var(--blue2);border-color:var(--blue);color:var(--blue)}
 .fcell .subtag{display:block;font-weight:800;font-size:11px}
@@ -232,7 +237,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -329,7 +334,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
 /* ---------- state ---------- */
 let sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=(window.SG&&window.SG.mode==='store')?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
-let focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
+let ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
 
 /* ---------- helpers ---------- */
@@ -556,7 +561,12 @@ function vStock(){
 function sfChips(sf){return `<div class="chips" style="margin-bottom:16px">${[['all','全部'],...FARMS.map(f=>[f.id,f.name])].map(([id,n])=>`<button class="chip ${id===sf?'on':''}" data-act="sfarm" data-farm="${id}">${n}</button>`).join('')}</div>`}
 function allBuy(){const m=new Map();for(const f of FARMS)for(const r of buyList(f.id)){const k=r.p._id;const x=m.get(k)||{p:r.p,pb:r.pb,packs:0,need:0,by:[],urgent:false};x.packs+=r.packs;x.need+=r.need;x.by.push(`${f.name} ${r.pb?r.packs:fmtAmt(r.need,r.p)}`);if(r.status==='out'||r.status==='low')x.urgent=true;m.set(k,x)}return [...m.values()].sort((a,b)=>sortN(a.p,b.p))}
 function vStockAll(){
-  const prods=products.filter(p=>p.track!=='No').sort(sortN);
+  const hasC=(fid,pid)=>counts.some(c=>c.farm===fid&&c.pid===pid)||purchases.some(c=>c.farm===fid&&c.pid===pid);
+  const allP=products.filter(p=>p.track!=='No').sort(sortN);const ncBy={};let ncCells=0;const ncP=allP.filter(p=>{let m=false;for(const f of FARMS)if(!hasC(f.id,p._id)){ncBy[f.id]=(ncBy[f.id]||0)+1;ncCells++;m=true}return m});
+  const prods=ncOnly?ncP:allP;
+  const ncBox=ncP.length?`<div class="focusbox" style="border-color:var(--amber);background:var(--amber2)"><b style="color:var(--amber)">还没点算：${ncP.length} 样药，共 ${ncCells} 格</b> · ${FARMS.map(f=>`${f.name} 缺 ${ncBy[f.id]||0}`).join(' · ')}
+    <button class="btn small" style="margin-left:8px" data-act="nconly">${ncOnly?'显示全部':'只看未点算'}</button>
+    <div class="l note">没货也要点一次，填 0，系统才知道。未点算的不会算进「30 天要买」。</div></div>`:'<div class="focusbox" style="color:var(--green)">✓ 三个园全部药都点算过了。</div>';
   let now=0;for(const f of FARMS)now+=lowCount(f.id);
   const buy=allBuy();let tot=0,np=0;
   const buyLines=buy.map(x=>{let c=null;if(x.pb&&Number(x.p.price)>0){c=x.packs*Number(x.p.price);tot+=c}else np++;
@@ -572,7 +582,7 @@ function vStockAll(){
     if(isF){const r=stockRow(f.id,p),amt=M.get(p._id);if(r.status!=='nc'&&r.left<amt){const o=subOpts(f.id,p,amt).find(x=>x.ok);
       const t=`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(2)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.left<=0?'没货':'不够这桶'}`;
       return `<button class="fcell ${o?'sub':'out'} focus" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}"><b>${f.name}</b>${t}${o?`<span class="subtag">可换 ${e(o.q.name)} ${e(o.a)} ${e(U(o.q))}</span>`:'<span class="subtag">要买</span>'}</button>`}}
-    if(!stockProducts(f.id).some(q=>q._id===p._id))return `<button class="fcell none" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)} 点算"><b>${f.name}</b>＋ 点算</button>`;
+    if(!stockProducts(f.id).some(q=>q._id===p._id))return `<button class="fcell nc" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)} 点算"><b>${f.name}</b>未点算</button>`;
     const r=stockRow(f.id,p);const t=r.status==='nc'?'未点算':`${r.pb?(Math.max(r.left,0)/r.pb).toFixed(2)+' 瓶':fmtAmt(Math.max(r.left,0),p)}<br>${r.status==='out'?'没货':r.days!=null?r.days+' 天':'—'}`;
     return `<button class="fcell ${r.status}${isF?' focus':''}" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)}"><b>${f.name}</b>${t}</button>`};
   if(fm)prods.sort((a,b)=>(M.has(b._id)-M.has(a._id)));
@@ -584,7 +594,7 @@ function vStockAll(){
   <div class="stat cost"><div class="val">${RM(mt)}</div><div class="lab">本月成本（三园）</div></div></div>
   <div class="wizard"><div class="stack">
     <div class="panel"><div class="splithead"><h2>三个园库存</h2><div class="fhead">${FARMS.map(f=>`<div><span>${f.name}</span><div class="mixbtns">${mixes.filter(m=>m.farm===f.id).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(m=>`<button class="${focus&&focus.m===m._id?'on':''}" data-act="focus" data-id="${e(m._id)}" title="${f.name} ${e(m.name)}">${e(String(m.name).replace(/^Mix\s*/i,''))}</button>`).join('')}</div></div>`).join('')}</div></div>
-      ${fb}${prods.length?`<div>${list}</div>`:'<div class="empty">没有药。</div>'}
+      ${ncBox}${fb}${prods.length?`<div>${list}</div>`:'<div class="empty">没有药。</div>'}
       <p class="note">格子里是剩几瓶/包和约够几天。红色 = 没货或不够 7 天，黄色 = 不够 30 天或未点算。点格子可以点算或登记进货。</p></div>
   </div><div class="stack sticky">
     <div class="panel"><h2>30 天要买（三园合计）</h2>${buy.length?`<div>${buyLines}</div><div class="total cost">${RM(tot)}${np?` <span class="note">+ ${np} 样没价钱</span>`:''}</div><button class="btn soft" data-act="copybuy">复制购买清单</button>`:'<p class="note">接下来 30 天不用买。</p>'}</div>
@@ -736,6 +746,7 @@ document.addEventListener('click',async ev=>{
     if(!items.length){toast('至少填一样的用量');break}
     const rec={kind:'drip',status:'done',date:ds,doneDate:ds,farm:draft.farm,farmName:fname(draft.farm),items,createdAt:new Date().toISOString()};
     try{await db.collection('sprays').doc(ds+'_'+draft.farm+'_drip_'+Date.now().toString(36)).set(rec);closeModal();toast('已记录滴灌加料')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
+  case 'nconly':ncOnly=!ncOnly;render();break;
   case 'focus':focus=focus&&focus.m===id?null:{m:id};render();break;
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
@@ -760,7 +771,11 @@ document.addEventListener('click',async ev=>{
   case 'close':closeModal();break;
   }
 });
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&modalKind)closeModal()});
+document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow img');if(!im||ev.target.closest('button,a'))return;ev.preventDefault();ev.stopPropagation();
+  const row=im.closest('.productrow');const nm=row&&row.querySelector('.grow b')?row.querySelector('.grow b').childNodes[0].textContent.trim():'';
+  const lb=document.createElement('div');lb.className='lightbox';lb.setAttribute('role','dialog');lb.setAttribute('aria-label','药品照片');
+  lb.innerHTML=`<button class="x" aria-label="关闭">×</button><img src="${e(im.getAttribute('src'))}" alt="${e(nm)}"><b>${e(nm)}</b>`;lb.onclick=()=>lb.remove();document.body.appendChild(lb)},true);
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const lb=document.querySelector('.lightbox');if(lb){lb.remove();return}}if(ev.key==='Escape'&&modalKind)closeModal()});
 
 /* ---------- data ---------- */
 function rerender(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#root')&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;render();if(modalKind==='stock')drawModal()}
