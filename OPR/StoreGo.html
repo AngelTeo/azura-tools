@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v6</title>
+<title>StoreGo v7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -237,7 +237,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -376,6 +376,8 @@ function holdFor(fid){let best=null;const now=new Date();now.setHours(0,0,0,0);
   return best}
 
 /* ---------- stock math ---------- */
+function sizesFor(p){const m=new Map();const add=(ps,pu)=>{const n=Number(ps);if(!n||!pu)return;const b=(pu==='L'||pu==='kg')?n*1000:n;if(!m.has(b))m.set(b,{ps:n,pu,b})};
+  add(p.packSize,p.packUnit);for(const x of purchases)if(x.pid===p._id)add(x.packSize,x.packUnit);return [...m.values()].sort((a,b)=>b.b-a.b)}
 const packBase=p=>{const n=Number(p.packSize);if(!n)return null;return (p.packUnit==='L'||p.packUnit==='kg')?n*1000:n};
 function fmtAmt(v,p){const u=U(p);const n=Math.round(v);if(Math.abs(n)>=1000)return (Math.round(n/100)/10)+(u==='g'?' kg':' L');return n+' '+u}
 const RM=v=>window.SG&&!window.SG.cost?'':'RM '+(Math.round(v*100)/100).toFixed(2);
@@ -605,7 +607,7 @@ function vStockAll(){
   </div></div>`;
 }
 function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const lp=purchases.filter(b=>b.pid===pid).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0];const shops=[...new Set(purchases.map(b=>b.shop).filter(Boolean))].sort();const r=stockRow(sf,p),pb=r.pb,u=U(p);
-  const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}`]);
+  const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}${Array.isArray(c.parts)&&c.parts.length?'（'+c.parts.map(x=>x.n+' × '+x.size).join(' + ')+'）':''}`]);
   for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${b.packs&&b.packSize?`${b.packs} × ${b.packSize} ${b.packUnit}`:fmtAmt(b.amt,p)}${b.shop?' · '+b.shop:''}${Number(b.price)>0&&RM(1)?' · '+RM(Number(b.price)):''}`]);
   for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`${s.kind==='drip'?'滴灌':'喷药'}：${i.amt??'?'} ${i.unit||u}`]);
   ev.sort((a,b)=>b[0].localeCompare(a[0]));
@@ -613,7 +615,9 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
   <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(2)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
-  <div class="panel"><h3>现在点算</h3><div class="field"><label for="cnt-in">${pb?`架上有几瓶/包（每个 ${e(p.packSize)} ${e(p.packUnit)}，例 1.5）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal"></div>
+  <div class="panel"><h3>现在点算</h3><p class="note" style="margin-top:0">照瓶子/桶上写的容量填。剩半桶填 0.5。没有就留空，全部没货就在最后一格填 0。</p>
+    ${sizesFor(p).map((z,i)=>`<div class="field"><label for="cnt-s${i}">每个 <b>${e(z.ps)} ${e(z.pu)}</b> 的，有几个？</label><input id="cnt-s${i}" class="cnt-size" data-b="${z.b}" data-l="${e(z.ps+' '+z.pu)}" inputmode="decimal" placeholder="例 1 或 0.25"></div>`).join('')}
+    <div class="field"><label for="cnt-in">${sizesFor(p).length?'零散 / 其他':'架上有多少'}（${e(u)}）</label><input id="cnt-in" inputmode="decimal" placeholder="${sizesFor(p).length?'没有就留空':''}"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
   <div class="panel"><h3>进货</h3>${lp?`<p class="note" style="margin-top:0">上次：${e(lp.shop||'没写店名')} · ${lp.unitPrice!=null?'每件 RM '+e(lp.unitPrice):'没写单价'}${lp.packSize?` · 每件 ${e(lp.packSize)} ${e(lp.packUnit)}`:''} · ${e(dmy(lp.date))}</p>`:''}
     <div class="fields">
@@ -757,8 +761,11 @@ document.addEventListener('click',async ev=>{
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
-  case 'savecount':{const p=byId(id),pb=packBase(p),v=$('cnt-in').value,n=Number(v);if(v===''||Number.isNaN(n)||n<0){toast('请填数字');break}
-    saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:pb?n*pb:n,date:today(),createdAt:new Date().toISOString()});break}
+  case 'savecount':{const parts=[];let amt=0,any=false,bad=false;
+    document.querySelectorAll('#modalhost .cnt-size').forEach(i=>{if(i.value==='')return;const n=Number(i.value);if(Number.isNaN(n)||n<0){bad=true;return}any=true;amt+=n*Number(i.dataset.b);parts.push({size:i.dataset.l,n})});
+    const v=$('cnt-in').value;if(v!==''){const n=Number(v);if(Number.isNaN(n)||n<0)bad=true;else{any=true;amt+=n;if(n)parts.push({size:'零散',n})}}
+    if(bad){toast('只能填数字');break}if(!any){toast('请至少填一格（没货就填 0）');break}
+    saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:Math.round(amt*100)/100,parts,date:today(),createdAt:new Date().toISOString()});break}
   case 'savebuy':{const p=byId(id),n=Number($('buy-n').value),ps=$('buy-ps').value===''?null:Number($('buy-ps').value),pu=$('buy-pu').value,uv=$('buy-up').value,up=uv===''?null:Number(uv),rv=$('buy-rm').value;let rm=rv===''?null:Number(rv);
     const shop=($('buy-shop').value||'').trim(),ds=$('buy-date').value||today();
     if(!(n>0)){toast('请填买了几件');break}if(ps!=null&&!(ps>0)){toast('包装只能填数字');break}if(up!=null&&(Number.isNaN(up)||up<0)){toast('每件价钱只能填数字');break}if(rm!=null&&(Number.isNaN(rm)||rm<0)){toast('总共只能填数字');break}
