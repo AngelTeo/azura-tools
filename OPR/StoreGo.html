@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v11</title>
+<title>StoreGo v12</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -221,6 +221,7 @@ body.noedit .supset{display:none!important}
   .productrow .grow{flex:1 1 55%}
 }
 .cntsum{white-space:pre-line;margin:-4px 0 12px;font-weight:700;color:var(--green-d,#1f5a3d);font-size:15px}.cntsum:empty{display:none}.cntsum.warn,.cntsum.bad{color:#9a3412;background:#fff3e6;border:1px solid #f0c48a;border-radius:10px;padding:10px 12px}
+.sizehead{font-weight:800;margin:6px 0 8px;color:var(--ink,#1c2b22)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 body{margin:0}
 .homebtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--white);display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:18px}
@@ -249,7 +250,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -627,9 +628,9 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
   <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(2)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
-  <div class="panel"><h3>现在点算</h3><p class="note" style="margin-top:0">照瓶子/桶上写的容量填。剩半桶填 0.5。没有就留空，全部没货就在最后一格填 0。</p>
-    ${sizesFor(p).map((z,i)=>`<div class="field"><label for="cnt-s${i}">每个 <b>${e(z.ps)} ${e(z.pu)}</b> 的，有几个？</label><input id="cnt-s${i}" class="cnt-size" data-b="${z.b}" data-l="${e(z.ps+' '+z.pu)}" inputmode="decimal" placeholder="例 1 或 0.25"></div>`).join('')}
-    <div class="field"><label for="cnt-in">${sizesFor(p).length?`零散（只填 ${e(u)}，不是瓶数）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal" placeholder="${sizesFor(p).length?'没有就留空':''}"></div>
+  <div class="panel"><h3>现在点算</h3>${sizesFor(p).length?`<p class="note" style="margin-top:0">看瓶子填：满的有几瓶，开着那瓶剩几 %。全部没货就在「满的」填 0。</p>
+    ${sizesFor(p).map((z,i)=>`<div class="sizehead">${e(z.ps)} ${e(z.pu)} 的瓶/包</div><div class="fields"><div class="field"><label for="cnt-f${i}">满的有几瓶？</label><input id="cnt-f${i}" class="cnt-full" data-i="${i}" data-b="${z.b}" data-l="${e(z.ps+' '+z.pu)}" inputmode="numeric" placeholder="例 2"></div><div class="field"><label for="cnt-p${i}">开着那瓶剩几 %？</label><input id="cnt-p${i}" class="cnt-pct" data-i="${i}" inputmode="decimal" placeholder="例 40"></div></div>`).join('')}`:`<p class="note" style="margin-top:0">这样药还没设定每瓶容量，请填架上总共有多少（${e(u)}）。全部没货填 0。</p>
+    <div class="field"><label for="cnt-in">架上有多少（${e(u)}）</label><input id="cnt-in" inputmode="decimal"></div>`}
     <div id="cnt-sum" class="cntsum" data-u="${e(u)}" data-pb="${pb||''}" aria-live="polite"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
   <div class="panel"><h3>进货</h3>${lp?`<p class="note" style="margin-top:0">上次：${e(lp.shop||'没写店名')} · ${lp.unitPrice!=null?'每件 RM '+e(lp.unitPrice):'没写单价'}${lp.packSize?` · 每件 ${e(lp.packSize)} ${e(lp.packUnit)}`:''} · ${e(dmy(lp.date))}</p>`:''}
@@ -845,10 +846,8 @@ document.addEventListener('click',async ev=>{
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
-  case 'savecount':{const parts=[];let amt=0,any=false,bad=false;
-    document.querySelectorAll('#modalhost .cnt-size').forEach(i=>{if(i.value==='')return;const n=Number(i.value);if(Number.isNaN(n)||n<0){bad=true;return}any=true;amt+=n*Number(i.dataset.b);parts.push({size:i.dataset.l,n})});
-    const v=$('cnt-in').value;if(v!==''){const n=Number(v);if(Number.isNaN(n)||n<0)bad=true;else{any=true;amt+=n;if(n)parts.push({size:'零散',n})}}
-    if(bad){toast('只能填数字');break}if(!any){toast('请至少填一格（没货就填 0）');break}
+  case 'savecount':{const {parts,amt,any,bad}=cntRead();
+    if(bad){toast(bad);break}if(!any){toast('请至少填一格（没货就在「满的」填 0）');break}
     saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:Math.round(amt*100)/100,parts,date:today(),createdAt:new Date().toISOString()});break}
   case 'savebuy':{const p=byId(id),n=Number($('buy-n').value),ps=$('buy-ps').value===''?null:Number($('buy-ps').value),pu=$('buy-pu').value,uv=$('buy-up').value,up=uv===''?null:Number(uv),rv=$('buy-rm').value;let rm=rv===''?null:Number(rv);
     const shop=($('buy-shop').value||'').trim(),ds=$('buy-date').value||today();
@@ -878,15 +877,18 @@ document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow i
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const lb=document.querySelector('.lightbox');if(lb){lb.remove();return}}if(ev.key==='Escape'&&modalKind)closeModal()});
 
 /* ---------- data ---------- */
-function cntSum(){const box=document.getElementById('cnt-sum');if(!box)return;const u=box.dataset.u,pb=Number(box.dataset.pb)||0;let amt=0,any=false,bad=false;
-  document.querySelectorAll('#modalhost .cnt-size').forEach(i=>{if(i.value==='')return;const n=Number(i.value);if(Number.isNaN(n)||n<0){bad=true;return}any=true;amt+=n*Number(i.dataset.b)});
-  const li=document.getElementById('cnt-in'),lv=li?li.value:'';let ln=0;if(lv!==''){ln=Number(lv);if(Number.isNaN(ln)||ln<0)bad=true;else{any=true;amt+=ln}}
-  if(bad){box.className='cntsum bad';box.textContent='只能填数字';return}if(!any){box.className='cntsum';box.textContent='';return}
+function cntRead(){const parts=[];let amt=0,any=false,bad='';
+  document.querySelectorAll('#modalhost .cnt-full').forEach(f=>{const i=f.dataset.i,pe=document.getElementById('cnt-p'+i);const fv=f.value.trim(),pv=pe?pe.value.trim().replace('%',''):'';if(fv===''&&pv==='')return;
+    const fn=fv===''?0:Number(fv),pn=pv===''?0:Number(pv);if(Number.isNaN(fn)||fn<0||Number.isNaN(pn)||pn<0){bad='只能填数字';return}if(pn>100){bad='剩几 % 最多 100';return}
+    const n=Math.round((fn+pn/100)*10000)/10000;any=true;amt+=n*Number(f.dataset.b);parts.push({size:f.dataset.l,n,full:fn,pct:pn})});
+  const li=document.getElementById('cnt-in');if(li&&li.value.trim()!==''){const n=Number(li.value);if(Number.isNaN(n)||n<0)bad='只能填数字';else{any=true;amt+=n;if(n)parts.push({size:'零散',n})}}
+  return {parts,amt,any,bad}}
+function cntSum(){const box=document.getElementById('cnt-sum');if(!box)return;const u=box.dataset.u,pb=Number(box.dataset.pb)||0;const {amt,any,bad}=cntRead();
+  if(bad){box.className='cntsum bad';box.textContent=bad;return}if(!any){box.className='cntsum';box.textContent='';return}
   const big=amt>=1000?` = ${Math.round(amt/10)/100} ${u==='g'?'kg':'L'}`:'';
-  let t=`合计：${Math.round(amt*100)/100} ${u}${big}${pb?` · ${(amt/pb).toFixed(2)} 瓶/包`:''}`;
-  if(pb&&ln>0&&ln<pb/10)t+=`\n⚠ 零散格填的是 ${ln} ${u}，不是 ${ln} 瓶。剩几瓶请填在上面那格。`;
+  const ml=amt>=1000?`${Math.round(amt/10)/100} ${u==='g'?'kg':'L'}`:`${Math.round(amt*100)/100} ${u}`;let t=pb?`合计：${(amt/pb).toFixed(2)} 瓶 ＝ ${ml}`:`合计：${ml}`;
   box.className='cntsum'+(t.includes('⚠')?' warn':'');box.textContent=t}
-document.addEventListener('input',ev=>{if(ev.target&&ev.target.closest&&ev.target.closest('#modalhost')&&(ev.target.id==='cnt-in'||ev.target.classList.contains('cnt-size')))cntSum()});
+document.addEventListener('input',ev=>{if(ev.target&&ev.target.closest&&ev.target.closest('#modalhost')&&(ev.target.id==='cnt-in'||ev.target.classList.contains('cnt-full')||ev.target.classList.contains('cnt-pct')))cntSum()});
 function rerender(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#root')&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;render();if(modalKind==='stock')drawModal()}
 renderNav();
 (async()=>{
