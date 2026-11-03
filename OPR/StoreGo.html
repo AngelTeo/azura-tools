@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v10</title>
+<title>StoreGo v11</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -220,6 +220,7 @@ body.noedit .supset{display:none!important}
   .productrow{flex-wrap:wrap}
   .productrow .grow{flex:1 1 55%}
 }
+.cntsum{white-space:pre-line;margin:-4px 0 12px;font-weight:700;color:var(--green-d,#1f5a3d);font-size:15px}.cntsum:empty{display:none}.cntsum.warn,.cntsum.bad{color:#9a3412;background:#fff3e6;border:1px solid #f0c48a;border-radius:10px;padding:10px 12px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 body{margin:0}
 .homebtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--white);display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:18px}
@@ -248,7 +249,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 10;
+const APP_VERSION = 11;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -628,7 +629,8 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
   <div class="panel"><h3>现在点算</h3><p class="note" style="margin-top:0">照瓶子/桶上写的容量填。剩半桶填 0.5。没有就留空，全部没货就在最后一格填 0。</p>
     ${sizesFor(p).map((z,i)=>`<div class="field"><label for="cnt-s${i}">每个 <b>${e(z.ps)} ${e(z.pu)}</b> 的，有几个？</label><input id="cnt-s${i}" class="cnt-size" data-b="${z.b}" data-l="${e(z.ps+' '+z.pu)}" inputmode="decimal" placeholder="例 1 或 0.25"></div>`).join('')}
-    <div class="field"><label for="cnt-in">${sizesFor(p).length?'零散 / 其他':'架上有多少'}（${e(u)}）</label><input id="cnt-in" inputmode="decimal" placeholder="${sizesFor(p).length?'没有就留空':''}"></div>
+    <div class="field"><label for="cnt-in">${sizesFor(p).length?`零散（只填 ${e(u)}，不是瓶数）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal" placeholder="${sizesFor(p).length?'没有就留空':''}"></div>
+    <div id="cnt-sum" class="cntsum" data-u="${e(u)}" data-pb="${pb||''}" aria-live="polite"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
   <div class="panel"><h3>进货</h3>${lp?`<p class="note" style="margin-top:0">上次：${e(lp.shop||'没写店名')} · ${lp.unitPrice!=null?'每件 RM '+e(lp.unitPrice):'没写单价'}${lp.packSize?` · 每件 ${e(lp.packSize)} ${e(lp.packUnit)}`:''} · ${e(dmy(lp.date))}</p>`:''}
     <div class="fields">
@@ -876,6 +878,15 @@ document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow i
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const lb=document.querySelector('.lightbox');if(lb){lb.remove();return}}if(ev.key==='Escape'&&modalKind)closeModal()});
 
 /* ---------- data ---------- */
+function cntSum(){const box=document.getElementById('cnt-sum');if(!box)return;const u=box.dataset.u,pb=Number(box.dataset.pb)||0;let amt=0,any=false,bad=false;
+  document.querySelectorAll('#modalhost .cnt-size').forEach(i=>{if(i.value==='')return;const n=Number(i.value);if(Number.isNaN(n)||n<0){bad=true;return}any=true;amt+=n*Number(i.dataset.b)});
+  const li=document.getElementById('cnt-in'),lv=li?li.value:'';let ln=0;if(lv!==''){ln=Number(lv);if(Number.isNaN(ln)||ln<0)bad=true;else{any=true;amt+=ln}}
+  if(bad){box.className='cntsum bad';box.textContent='只能填数字';return}if(!any){box.className='cntsum';box.textContent='';return}
+  const big=amt>=1000?` = ${Math.round(amt/10)/100} ${u==='g'?'kg':'L'}`:'';
+  let t=`合计：${Math.round(amt*100)/100} ${u}${big}${pb?` · ${(amt/pb).toFixed(2)} 瓶/包`:''}`;
+  if(pb&&ln>0&&ln<pb/10)t+=`\n⚠ 零散格填的是 ${ln} ${u}，不是 ${ln} 瓶。剩几瓶请填在上面那格。`;
+  box.className='cntsum'+(t.includes('⚠')?' warn':'');box.textContent=t}
+document.addEventListener('input',ev=>{if(ev.target&&ev.target.closest&&ev.target.closest('#modalhost')&&(ev.target.id==='cnt-in'||ev.target.classList.contains('cnt-size')))cntSum()});
 function rerender(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#root')&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;render();if(modalKind==='stock')drawModal()}
 renderNav();
 (async()=>{
