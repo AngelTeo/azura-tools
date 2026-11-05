@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Users &amp; Access v4</title>
+<title>Users &amp; Access v5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
@@ -48,6 +48,14 @@ input,select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--
 .modal{background:var(--card);border-radius:12px;padding:18px;width:100%;max-width:440px}
 .modal .form{grid-template-columns:1fr}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.act td{white-space:normal;vertical-align:top}
+.act td.t{white-space:nowrap;color:var(--ink2);font-size:12px}
+.diff{font-size:12px;line-height:1.55}
+.diff b{font-weight:500;color:var(--ink2)}
+.diff .o{color:var(--red);text-decoration:line-through}
+.diff .n{color:var(--green)}
+.modal.wide{max-width:760px;max-height:85vh;overflow:auto}
+pre.js{background:#faf8f2;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:11px;white-space:pre-wrap;word-break:break-all;margin:4px 0 10px}
 </style>
 </head>
 <body>
@@ -64,18 +72,20 @@ input,select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--
       <button class="tab" data-t="invite" onclick="tab('invite')">Invitations</button>
       <button class="tab" data-t="matrix" onclick="tab('matrix')">Role Access</button>
       <button class="tab" data-t="override" onclick="tab('override')">Individual Access</button>
+      <button class="tab" data-t="activity" onclick="tab('activity')" hidden id="tab-activity">Activity</button>
     </div>
     <div id="v-people"></div>
     <div id="v-invite" hidden></div>
     <div id="v-matrix" hidden></div>
     <div id="v-override" hidden></div>
+    <div id="v-activity" hidden></div>
   </div>
 </main>
 <div class="modal-bg" id="mbg"><div class="modal" id="modal"></div></div>
 <div id="toast"></div>
 
 <script>
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -94,8 +104,8 @@ function dbErr(e){ if(!e) return false; let m = e.message || String(e);
   toast(m, true); return true; }
 const roleLabel = c => (ROLES.find(r => r[0] === c) || [c, c])[1];
 const ownerLocked = role => role === 'OWNER' && MYROLE !== 'OWNER';
-function tab(t){ document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t)); ['people','invite','matrix','override'].forEach(k => $('v-' + k).hidden = k !== t); }
-function modal(html){ $('modal').innerHTML = html; $('mbg').style.display = 'flex'; }
+function tab(t){ document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t)); ['people','invite','matrix','override','activity'].forEach(k => $('v-' + k).hidden = k !== t); if(t === 'activity' && !ACT_LOADED) loadActivity(); }
+function modal(html, wide){ $('modal').innerHTML = html; $('modal').className = 'modal' + (wide ? ' wide' : ''); $('mbg').style.display = 'flex'; }
 function closeModal(){ $('mbg').style.display = 'none'; }
 $('mbg').addEventListener('click', e => { if(e.target.id === 'mbg') closeModal(); });
 
@@ -128,6 +138,7 @@ async function loadAll(){
   if(!r1.error && r1.data && r1.data.length) ROLES = r1.data.map(o => [o.code, o.label]);
   SYS = r2.data; USERS = r3.data; INV = r4.data; RA = r5.data; OV = r6.data;
   renderPeople(); renderInvite(); renderMatrix(); renderOverride();
+  if(MYROLE === 'OWNER'){ $('tab-activity').hidden = false; renderActivityShell(); }
 }
 
 function renderPeople(){
@@ -252,6 +263,96 @@ async function setOV(uid, sys, key, v){
   if(dbErr(error)){ renderOverride(); return; }
   const i = OV.findIndex(x => x.user_id === uid && x.system_code === sys); if(i >= 0) OV[i] = row; else OV.push(row);
   renderOverride(); toast('Saved');
+}
+// ===== Activity (Owner only). Data comes from hub_owner_activity, which refuses anyone who is not the Owner. =====
+const ACT_GROUP = {Salary:t => t.startsWith('salary_'), Workers:t => t.startsWith('hub_worker'), Farms:t => /^hub_(farm|cycle)/.test(t), Crops:t => /^hub_(crop|grade)/.test(t), Lists:t => t === 'hub_option'};
+const TBL_NAME = {salary_attendance:'Attendance', salary_personal:'Personal entry', salary_advance:'Advance', salary_food:'Food list', salary_cashout:'Cash out',
+  salary_gross_override:'Gross change', salary_hold:'HOLD', salary_loan_month:'Loan (month)', salary_loan_plan:'Loan plan', salary_loan_txn:'Loan payment',
+  salary_pay_method:'Pay method', salary_payee_choice:'Payee choice', salary_payslip:'Payslip', salary_remit_state:'Remittance status', salary_remittance:'Remittance',
+  salary_run:'Month lock', salary_benef_saved:'Saved account', salary_worker_note:'Worker note',
+  hub_worker:'Worker', hub_worker_company:'Worker company', hub_worker_farm:'Worker farm', hub_worker_passport:'Passport', hub_worker_payee:'Payee', hub_worker_rate:'Pay rate',
+  hub_farm:'Farm', hub_farm_block:'Farm block', hub_farm_title:'Land title', hub_cycle:'Planting cycle', hub_crop:'Crop', hub_crop_variety:'Variety',
+  hub_crop_protocol:'Protocol', hub_crop_protocol_stage:'Protocol stage', hub_crop_protocol_milestone:'Protocol milestone', hub_crop_material:'Crop material', hub_grade:'Grade', hub_option:'List option'};
+const ACT_PILL = {INSERT:['Added','p-ok'], UPDATE:['Changed','p-amb'], VOID:['Voided','p-bad'], UNVOID:['Un-voided','p-amb'], DELETE:['Deleted','p-bad'], LOCK:['Locked','p-grey'], UNLOCK:['Unlocked','p-amb']};
+const SKIP = new Set(['updated_at','created_at','updated_by','created_by']);
+let ACT_ROWS = [], ACT_LOADED = false;
+const ymd = d => { const x = new Date(d.getTime() + 8 * 3600e3); return x.toISOString().slice(0, 10); };
+const myTime = s => { const d = new Date(new Date(s).getTime() + 8 * 3600e3); const p = n => String(n).padStart(2, '0');
+  return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+const groupOf = t => Object.keys(ACT_GROUP).find(g => ACT_GROUP[g](t)) || 'Other';
+function renderActivityShell(){
+  const today = new Date(), wk = new Date(today.getTime() - 6 * 864e5);
+  const ppl = [...USERS].sort((a, b) => a.display_name.localeCompare(b.display_name));
+  $('v-activity').innerHTML = `<div class="card"><h3>Activity</h3>
+    <p class="hint">Every add, change, void and delete in Workers, Salary, Farms and Crops, with who did it. Only you (Owner) can see this page. Nobody can change or delete this record.</p>
+    <div class="form">
+      <div><label>From</label><input type="date" id="a-from" value="${ymd(wk)}"></div>
+      <div><label>To</label><input type="date" id="a-to" value="${ymd(today)}"></div>
+      <div><label>Person</label><select id="a-who"><option value="">Everyone</option>${ppl.map(u => `<option value="${u.id}">${esc(u.display_name)}</option>`).join('')}</select></div>
+      <div><label>System</label><select id="a-grp"><option value="">All</option>${Object.keys(ACT_GROUP).map(g => `<option>${g}</option>`).join('')}</select></div>
+      <div><label>Worker name</label><input id="a-wk" placeholder="Type part of a name" oninput="renderActivity()"></div>
+      <div><button class="btn pri" style="padding:7px 14px" onclick="loadActivity()">Show</button></div>
+    </div></div><div class="card act" id="a-list"><p class="hint">Press Show.</p></div>`;
+}
+async function loadActivity(){
+  ACT_LOADED = true;
+  const from = $('a-from').value, to = $('a-to').value;
+  if(from && to && from > to) return toast('"From" must be before "To".', true);
+  $('a-list').innerHTML = '<p class="hint">Loading…</p>';
+  const p = {from, to, limit:3000}; const who = $('a-who').value; if(who) p.user_id = who;
+  const g = $('a-grp').value; if(g) p.tables = Object.keys(TBL_NAME).filter(ACT_GROUP[g]);
+  const {data, error} = await sb.rpc('hub_owner_activity', {p});
+  if(error){ $('a-list').innerHTML = '<p class="hint">Could not load.</p>'; dbErr(error); return; }
+  ACT_ROWS = data || []; renderActivity();
+}
+const short = v => { if(v === null || v === undefined || v === '') return '—'; const s = typeof v === 'object' ? JSON.stringify(v) : String(v); return s.length > 60 ? s.slice(0, 57) + '…' : s; };
+function diffOf(e){
+  const b = e.before || {}, a = e.after || {}, out = [];
+  const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(k => !SKIP.has(k));
+  for(const k of keys){
+    const o = b[k], n = a[k];
+    if(JSON.stringify(o) === JSON.stringify(n)) continue;
+    if(o && n && typeof o === 'object' && typeof n === 'object' && !Array.isArray(o)){
+      for(const s of [...new Set([...Object.keys(o), ...Object.keys(n)])]) if(JSON.stringify(o[s]) !== JSON.stringify(n[s])) out.push([k + '.' + s, o[s], n[s]]);
+    } else out.push([k, o, n]);
+  }
+  return out;
+}
+function summary(e){
+  const r = e.after || e.before || {}; const d = r.data && typeof r.data === 'object' ? r.data : {};
+  const bits = [];
+  for(const k of ['month','work_date','date','code','method','kind','name','label','description','amount','note','reason']){ const v = r[k] ?? d[k]; if(v !== undefined && v !== null && v !== '') bits.push(`<b>${k}</b> ${esc(short(v))}`); }
+  return bits.slice(0, 5).join(' · ');
+}
+function detailCell(e, i){
+  if(e.action === 'UPDATE' || e.action === 'VOID' || e.action === 'UNVOID'){
+    const d = diffOf(e);
+    const lines = d.slice(0, 4).map(([k, o, n]) => `<div><b>${esc(k)}</b>: <span class="o">${esc(short(o))}</span> → <span class="n">${esc(short(n))}</span></div>`).join('');
+    return `<div class="diff">${lines || '<span class="hint">—</span>'}${d.length > 4 ? `<div class="hint">+${d.length - 4} more</div>` : ''}</div>`;
+  }
+  return `<div class="diff">${summary(e) || '<span class="hint">—</span>'}</div>`;
+}
+function renderActivity(){
+  if(!$('a-list')) return;
+  const q = ($('a-wk').value || '').trim().toLowerCase();
+  const rows = ACT_ROWS.filter(e => !q || (e.worker || '').toLowerCase().includes(q));
+  if(!rows.length){ $('a-list').innerHTML = '<p class="hint">Nothing in this period.</p>'; return; }
+  const byWho = {}; rows.forEach(e => byWho[e.who || '—'] = (byWho[e.who || '—'] || 0) + 1);
+  const head = `<h3>${rows.length}${rows.length >= 3000 ? '+' : ''} records</h3><p class="hint">${Object.entries(byWho).sort((a, b) => b[1] - a[1]).map(([w, n]) => esc(w) + ' ' + n).join(' · ')}${rows.length >= 3000 ? ' · Showing the latest 3000 only. Pick a shorter period.' : ''}</p>`;
+  const body = rows.slice(0, 3000).map((e, i) => { const [l, c] = ACT_PILL[e.action] || [e.action, 'p-grey'];
+    return `<tr><td class="t">${myTime(e.at)}${e.src === 'old' ? '<div class="hint" style="margin:0">old log</div>' : ''}</td><td>${esc(e.who || '—')}</td>
+      <td>${esc(groupOf(e.tbl))} · ${esc(TBL_NAME[e.tbl] || e.tbl)}</td><td><span class="pill ${c}">${l}</span></td><td>${esc(e.worker || '')}</td>
+      <td>${detailCell(e, i)}</td><td><button class="btn" onclick="actDetail(${ACT_ROWS.indexOf(e)})">Full</button></td></tr>`; }).join('');
+  $('a-list').innerHTML = head + `<table><tr><th>Time</th><th>Who</th><th>What</th><th>Action</th><th>Worker</th><th>Details</th><th></th></tr>${body}</table>`;
+}
+function actDetail(i){
+  const e = ACT_ROWS[i]; const d = diffOf(e); const [l] = ACT_PILL[e.action] || [e.action];
+  modal(`<h3>${esc(l)} · ${esc(TBL_NAME[e.tbl] || e.tbl)}</h3>
+    <p class="hint">${myTime(e.at)} · ${esc(e.who || '—')}${e.role ? ' (' + esc(roleLabel(e.role)) + ')' : ''}${e.worker ? ' · ' + esc(e.worker) : ''}</p>
+    ${d.length && e.before && e.after ? `<table><tr><th>Field</th><th>Before</th><th>After</th></tr>${d.map(([k, o, n]) => `<tr><td>${esc(k)}</td><td class="diff"><span class="o">${esc(short(o))}</span></td><td class="diff"><span class="n">${esc(short(n))}</span></td></tr>`).join('')}</table>` : ''}
+    ${e.before ? `<div class="hint" style="margin-top:10px">Before</div><pre class="js">${esc(JSON.stringify(e.before, null, 1))}</pre>` : ''}
+    ${e.after ? `<div class="hint">After</div><pre class="js">${esc(JSON.stringify(e.after, null, 1))}</pre>` : ''}
+    <div class="row"><button class="btn" onclick="closeModal()">Close</button></div>`, true);
 }
 boot();
 </script>
