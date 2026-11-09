@@ -68,6 +68,12 @@ nav{display:flex;gap:6px;margin-left:auto}
 .gate{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center}
 .gate a{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:700}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:80px;background:var(--ink);color:var(--white);padding:10px 16px;border-radius:10px;z-index:30;max-width:90vw}
+.ochips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}.ochip{font:inherit;font-weight:750;padding:11px 0;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);min-height:44px}.ochip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.olbl{font-size:13px;font-weight:750;color:var(--muted)}.orow{display:flex;align-items:center;justify-content:space-between;gap:12px}.orow input{max-width:140px;text-align:center}
+.ototal{text-align:center;padding:4px 0 10px;color:var(--muted)}.obig{color:var(--ink);font-size:52px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}.obig small{font-size:19px;margin-left:6px}
+.otable{overflow-x:auto}.otable table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.otable th{font-size:12px;color:var(--muted);text-align:center;padding:0 4px 8px;font-weight:700}.otable th:first-child{text-align:left}.otable th.r{text-align:right}
+.otable td{border-top:1px solid var(--line);padding:9px 4px;vertical-align:middle}.otable td input{width:100%;min-width:0;text-align:center;padding:8px 4px}.of{font-weight:800;white-space:nowrap}.oneed{text-align:right;font-size:22px;font-weight:800;white-space:nowrap}.oneed small{font-size:13px}
+.ocalc{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}.obtns{display:grid;gap:10px;margin-top:12px}
 @media (max-width:620px){.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr}h1{font-size:23px}nav{margin-left:0;width:100%}.navbtn{flex:1;justify-content:center}.mast .shell{padding-top:8px;padding-bottom:6px}}
 </style>
 </head>
@@ -82,7 +88,7 @@ nav{display:flex;gap:6px;margin-left:auto}
 <div class="toast" id="toast" hidden></div>
 <script>
 /* FertiGo platform shell: sign-in gate + ferti_doc store; products shared with SprayGo (spray_doc). */
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -90,7 +96,7 @@ const MSG={no_login:'还没登入。请回主页登入后再打开 FertiGo。',n
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function gate(kind,extra){document.getElementById('root').innerHTML=`<div class="gate"><strong>FertiGo</strong><p>${MSG[kind]||esc(kind)}</p>${extra?`<p class="note">${esc(extra)}</p>`:''}<a href="../index.html">← 回主页</a></div>`;const n=document.getElementById('navDesktop');if(n)n.innerHTML='';const c=document.getElementById('conn');if(c){c.className='pill amber';c.textContent='● 未登入'}}
 let sb=null;const subs={};
-const TB=col=>col==='ferti'?['ferti_doc','days']:['products','counts','purchases'].includes(col)?['store_doc',col]:['spray_doc',col];
+const TB=col=>col==='ferti'?['ferti_doc','days']:col==='forder'?['ferti_doc','order']:['products','counts','purchases'].includes(col)?['store_doc',col]:['spray_doc',col];
 const fix=d=>d&&typeof d.photo==='string'&&d.photo.startsWith('/_blob/')?{...d,photo:'spray_img/'+d.photo.slice(7)+'.jpg'}:d;
 const clean=o=>JSON.parse(JSON.stringify(o));
 const fail=e=>{const x=new Error(e&&e.message||String(e));x.code=e&&(e.code||e.message)||'error';return x};
@@ -163,11 +169,36 @@ function loadSheet(){const x=findDay(farm,date);sheet=x?JSON.parse(JSON.stringif
   const have=new Set((sheet.slots||[]).map(s=>s.t));for(const t of SLOTS)if(!have.has(t))sheet.slots.push({t,min:null,ec:null,zones:'ABCDE',doses:[]});
   sheet.slots.sort((a,b)=>SLOTS.indexOf(a.t)-SLOTS.indexOf(b.t));dirty=false}
 function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>{el.hidden=true},2400)}
-const TABS=[['day','📝','今天的表'],['hist','📋','记录']];
+const TABS=[['day','📝','今天的表'],['hist','📋','记录'],['order','🧮','订肥料']];
+const ODEF={ad1:{per:4,extra:0},ad2:{per:2.5,extra:0},ad3:{per:6,extra:1}};
+let forder=null,odraft=null,odirty=false,odays=(()=>{try{const v=Number(localStorage.getItem('ferti_odays'));return v>0?v:10}catch(x){return 10}})();
+const oset=fid=>{const src=odraft||((forder&&forder.farms)||{});const x=src[fid]||(odraft?null:ODEF[fid])||{per:'',extra:0};return {per:x.per??'',extra:x.extra??0}};
+const r2=n=>String(Math.round(n*100)/100);
+function oneed(fid){const x=oset(fid),p=Number(x.per),ex=Number(x.extra)||0;if(x.per===''||!(p>0)||!(odays>0))return null;const raw=odays/p,base=Math.ceil(Math.round(raw*1e6)/1e6);return {n:base+ex,raw,base,ex,p}}
+function ocalc(){let tot=0,ok=true;for(const f of FARMS){const r=oneed(f.id),c=$('on-'+f.id);if(!c)continue;
+    if(!r){ok=false;c.innerHTML='—';continue}tot+=r.n;c.innerHTML=`${r.n}<small> 套</small><span class="ocalc">${odays}÷${r2(r.p)}=${r2(r.raw)}${r.raw!==r.base?'→'+r.base:''}${r.ex?'+'+r.ex:''}</span>`}
+  const t=ok&&odays>0?tot:'—';if($('otot'))$('otot').textContent=t;if($('ofoot'))$('ofoot').innerHTML=ok&&odays>0?`${tot}<small> 套</small>`:'—';
+  if($('ok'))$('ok').textContent=odays>0?`准备 ${odays} 天需要订购`:'请填天数';
+  document.querySelectorAll('[data-act="odays"]').forEach(b=>b.classList.toggle('on',Number(b.dataset.id)===odays));
+  const sv=$('osave');if(sv)sv.disabled=!odirty}
+function vOrder(){const ed=!!(window.SG&&window.SG.edit);const who=forder&&forder.updatedByName?`上次改：${e(forder.updatedByName)} · ${e(dm((forder.updatedAt||'').slice(0,10)))}`:'还没改过，现在是默认数字';
+  return head('订肥料','要订几套肥料','选要准备几天，按每个园「1 套可用几天」算出要订几套。')+
+  `<section class="panel"><div class="olbl">要准备几天</div><div class="ochips">${[10,20,30,40].map(d=>`<button class="ochip ${odays===d?'on':''}" data-act="odays" data-id="${d}">${d} 天</button>`).join('')}</div>
+   <div class="orow"><label class="olbl" for="odays">自订天数</label><input id="odays" class="inp" type="number" min="1" step="1" inputmode="numeric" value="${odays}"></div></section>
+  <section class="panel"><div class="ototal"><div id="ok"></div><div class="obig"><span id="otot"></span><small>套肥料</small></div></div>
+   <div class="otable"><table><thead><tr><th>园区</th><th>1 套可用（天）</th><th>额外预留（套）</th><th class="r">要订</th></tr></thead><tbody>
+   ${FARMS.map(f=>{const x=oset(f.id);return `<tr><td class="of">${e(f.name)}</td><td><input class="inp" type="number" data-ord="per" data-of="${e(f.id)}" id="op-${e(f.id)}" min="0.1" step="0.5" inputmode="decimal" value="${e(x.per)}" ${ed?'':'disabled'} aria-label="${e(f.name)} 1 套可用天数"></td><td><input class="inp" type="number" data-ord="extra" data-of="${e(f.id)}" id="ox-${e(f.id)}" min="0" step="1" inputmode="numeric" value="${e(x.extra)}" ${ed?'':'disabled'} aria-label="${e(f.name)} 额外预留套数"></td><td class="oneed" id="on-${e(f.id)}"></td></tr>`}).join('')}
+   </tbody><tfoot><tr><td class="of">合计</td><td></td><td></td><td class="oneed" id="ofoot"></td></tr></tfoot></table></div>
+   <p class="note">算法：天数 ÷ 1 套可用天数，有小数就进位，再加额外预留。${ed?'改了「1 套可用」或「额外预留」要按保存，大家才看到。':'「1 套可用」和「额外预留」只有老板能改。'}<br>${who}</p>
+   <div class="obtns">${ed?'<button class="btn" id="osave" data-act="osave" disabled>保存设定</button>':''}<button class="btn dark" data-act="ocopy">复制订购数量</button></div>
+   <textarea id="ocopybox" hidden readonly aria-label="订购数量文字"></textarea></section>`}
+document.addEventListener('input',ev=>{const t=ev.target;if(tab!=='order')return;
+  if(t.id==='odays'){const v=Number(t.value);odays=v>0?Math.round(v):0;try{localStorage.setItem('ferti_odays',String(odays))}catch(x){}ocalc();return}
+  if(t.dataset&&t.dataset.ord){if(!odraft){const base={};for(const f of FARMS)base[f.id]={...oset(f.id)};odraft=base}odraft[t.dataset.of]={...odraft[t.dataset.of],[t.dataset.ord]:t.value===''?'':Number(t.value)};odirty=true;ocalc()}});
 function renderNav(){$('nav').innerHTML=TABS.map(([t,i,l])=>`<button class="navbtn ${tab===t?'active':''}" data-nav="${t}"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
 function head(ey,t,sub,cta=''){return `<div class="hero"><div><div class="eyebrow">${ey}</div><h1>${t}</h1><p class="sub">${sub}</p></div>${cta}</div>`}
 function render(){renderNav();if(!loaded){$('root').innerHTML='<div class="loading">载入中…</div>';return}
-  const y=window.scrollY;$('root').innerHTML=tab==='day'?vDay():vHist();wire();window.scrollTo(0,y)}
+  const y=window.scrollY;$('root').innerHTML=tab==='day'?vDay():tab==='order'?vOrder():vHist();wire();if(tab==='order')ocalc();window.scrollTo(0,y)}
 function doseLine(si,di,x){const L=dripProducts();
   return `<div class="dose"><select data-dose-id="${si}:${di}" aria-label="加了什么">${['<option value="">选料…</option>',...L.map(p=>`<option value="${e(p._id)}" ${x.id===p._id?'selected':''}>${e(p.name)}</option>`)].join('')}</select>
   <input class="inp sm" inputmode="decimal" data-dose-amt="${si}:${di}" value="${e(x.amt??'')}" placeholder="多少" aria-label="用量"><span class="u">${e(U(byId(x.id)))}</span>
@@ -219,14 +250,14 @@ function wire(){
   document.querySelectorAll('[data-dose-amt]').forEach(i=>i.oninput=()=>{const [a,b]=i.dataset.doseAmt.split(':').map(Number);sheet.slots[a].doses[b].amt=i.value;mark()});
   const di=$('date');if(di)di.onchange=()=>{if(!di.value)return;if(dirty&&!confirm('有改动还没存，要放弃吗？')){di.value=date;return}date=di.value;loadSheet();render()}}
 function mark(){if(!dirty){dirty=true;const sb=document.querySelector('.savebar');if(sb){sb.querySelector('span').textContent='有改动还没存';sb.querySelector('button').disabled=false}}}
-function leave(){return !dirty||confirm('有改动还没存，要放弃吗？')}
+function leave(){if(tab==='order')return true;return !dirty||confirm('有改动还没存，要放弃吗？')}
 function clean(s){const bad=[];const n=(v,l)=>{const x=num(v);if(Number.isNaN(x)){bad.push(l);return null}return x};
   const out={farm:s.farm,date:s.date,slots:s.slots.map(sl=>({t:sl.t,min:n(sl.min,sl.t+' 放水'),ec:n(sl.ec,sl.t+' 浓度'),zones:sl.zones||'',doses:sl.doses.filter(x=>x.id&&String(x.amt??'').trim()!=='').map(x=>({id:x.id,amt:n(x.amt,sl.t+' 加料')}))})),
     ph:n(s.ph,'pH'),meterAM:n(s.meterAM,'水表早上'),meterPM:n(s.meterPM,'水表晚上'),stockA:n(s.stockA,'A 母液'),stockB:n(s.stockB,'B 母液'),note:String(s.note||'').trim()};
   for(const sl of s.slots)for(const x of sl.doses)if(x.id&&String(x.amt??'').trim()==='')bad.push(sl.t+' 加料没填多少');
   return {out,bad}}
 document.addEventListener('click',async ev=>{const b=ev.target.closest('[data-nav],[data-act]');if(!b)return;
-  if(b.dataset.nav){if(b.dataset.nav!==tab&&tab==='day'&&!leave())return;tab=b.dataset.nav;if(tab==='day')loadSheet();render();window.scrollTo(0,0);return}
+  if(b.dataset.nav){if(b.dataset.nav!==tab&&tab==='day'&&!leave())return;if(tab==='order'&&odirty&&b.dataset.nav!=='order'){toast('设定还没保存，已放弃');odraft=null;odirty=false}tab=b.dataset.nav;if(tab==='day')loadSheet();render();window.scrollTo(0,0);return}
   const a=b.dataset.act,id=b.dataset.id;
   switch(a){
   case 'farm':if(id===farm||!leave())break;farm=id;try{localStorage.setItem('ferti_farm',id)}catch(x){}loadSheet();render();break;
@@ -240,6 +271,13 @@ document.addEventListener('click',async ev=>{const b=ev.target.closest('[data-na
   case 'save':{const {out,bad}=clean(sheet);if(bad.length){toast('请检查：'+bad.slice(0,3).join('、'));break}
     out.updatedAt=new Date().toISOString();out.updatedByName=(window.SG&&window.SG.name)||'';b.disabled=true;
     try{await db.collection('ferti').doc(dayId(farm,date)).set(out);dirty=false;toast('已保存');loadSheet();render()}catch(err){b.disabled=false;toast('保存不了：'+(err.code||err.message))}break}
+  case 'odays':odays=Number(id);try{localStorage.setItem('ferti_odays',String(odays))}catch(x){}const di=$('odays');if(di)di.value=odays;ocalc();break;
+  case 'osave':{const out={farms:{}};for(const f of FARMS){const x=oset(f.id);const p=Number(x.per),ex=Number(x.extra);
+      if(x.per===''||!(p>0)){toast(f.name+' 的「1 套可用」要填大过 0 的数字');return}if(Number.isNaN(ex)||ex<0||!Number.isInteger(ex)){toast(f.name+' 的「额外预留」要填 0 或整数');return}out.farms[f.id]={per:p,extra:ex}}
+    out.updatedAt=new Date().toISOString();out.updatedByName=(window.SG&&window.SG.name)||'';b.disabled=true;
+    try{await db.collection('forder').doc('settings').set(out);odraft=null;odirty=false;toast('已保存，大家都看到新的设定');render()}catch(err){b.disabled=false;toast('保存不了：'+(err.code||err.message))}break}
+  case 'ocopy':{const L=[`肥料订购 · 准备 ${odays} 天`];let tot=0;for(const f of FARMS){const r=oneed(f.id);L.push(`${f.name}：${r?r.n+' 套':'—'}`);if(r)tot+=r.n}L.push(`合计：${tot} 套`);const t=L.join('\n');
+    try{await navigator.clipboard.writeText(t);toast('已复制')}catch(err){const bx=$('ocopybox');bx.value=t;bx.hidden=false;bx.focus();bx.select();toast('请长按选取复制')}break}
   case 'hfarm':histFarm=id;render();break;
   case 'open':{const [f,d]=id.split('|');farm=f;date=d;tab='day';loadSheet();render();window.scrollTo(0,0);break}
   }});
@@ -247,6 +285,7 @@ window.addEventListener('beforeunload',ev=>{if(dirty){ev.preventDefault();ev.ret
 renderNav();
 (async()=>{db=await window.claude.use('db');if(!db){$('root').innerHTML='<div class="empty"><strong>连不上资料库</strong>请检查网络后重新整理。</div>';return}
   db.collection('products').onSnapshot(s=>{products=s.docs.map(d=>({...d.data(),_id:d.id}));if(!loaded&&days._ok){loaded=true;loadSheet()}if(!dirty||tab!=='day')render()},err=>toast('载入失败：'+err.code));
+  db.collection('forder').onSnapshot(s=>{const d=s.docs.find(x=>x.id==='settings');forder=d?d.data():null;if(tab==='order'&&!odirty)render()},err=>{});
   db.collection('ferti').onSnapshot(s=>{days=s.docs.map(d=>({...d.data(),_id:d.id}));days._ok=true;if(!loaded&&products.length){loaded=true;loadSheet()}if(!dirty){if(tab==='day')loadSheet();render()}},err=>toast('载入失败：'+err.code));
 })();
 })();
