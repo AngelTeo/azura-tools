@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v12</title>
+<title>StoreGo v13</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -222,6 +222,13 @@ body.noedit .supset{display:none!important}
 }
 .cntsum{white-space:pre-line;margin:-4px 0 12px;font-weight:700;color:var(--green-d,#1f5a3d);font-size:15px}.cntsum:empty{display:none}.cntsum.warn,.cntsum.bad{color:#9a3412;background:#fff3e6;border:1px solid #f0c48a;border-radius:10px;padding:10px 12px}
 .sizehead{font-weight:800;margin:6px 0 8px;color:var(--ink,#1c2b22)}
+.subbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}.subbar .inp{flex:1;min-width:200px}
+.subcard{padding:14px}.subhead{display:flex;gap:12px;align-items:flex-start}.subhead img,.subhead .placeholder{width:56px;height:70px;object-fit:contain;border-radius:8px;flex:none;background:var(--soft)}
+.subfarms{display:flex;flex-wrap:wrap;gap:6px}.subsec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.subtitle{font-weight:800;font-size:14px;margin-bottom:6px}.subtitle.green{color:var(--green)}.subtitle.amber{color:var(--amber)}.subtitle.blue{color:var(--blue)}
+.subline{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;flex-wrap:wrap}.subline+.subline{border-top:1px dashed var(--line)}
+.subname{display:flex;gap:10px;align-items:center;min-width:0}.subname img,.subname .placeholder{width:36px;height:46px;object-fit:contain;border-radius:6px;flex:none;background:var(--soft)}
+.subamt{font-weight:800;color:var(--green)}.subamt.muted{color:var(--muted);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 body{margin:0}
 .homebtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--white);display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:18px}
@@ -250,7 +257,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -313,7 +320,7 @@ boot();
 const KINDS=[['Insecticide','杀虫剂'],['Fungicide','杀菌剂'],['Fertilizer','肥料'],['Wetting agent','展着剂'],['Bio','生物'],['Unknown','未知']];
 const KL=Object.fromEntries(KINDS);const kl=k=>KL[k]||k;
 const FARMS=(window.SG&&Array.isArray(window.SG.farms)&&window.SG.farms.length)?window.SG.farms:[{id:'ad1',name:'AD 1'},{id:'ad2',name:'AD 2'},{id:'ad3',name:'AD 3'}];
-const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品'],['suppliers','🏪','商家']].filter(t=>{const S=window.SG||{};if(S.mode==='store')return t[0]==='stock'||t[0]==='products'||t[0]==='suppliers';if(S.mode==='spray')return t[0]!=='stock'&&t[0]!=='suppliers'&&(t[0]!=='spray'||S.edit);return true});
+const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品'],['subs','🔁','替代'],['suppliers','🏪','商家']].filter(t=>{const S=window.SG||{};if(S.mode==='store')return t[0]==='stock'||t[0]==='products'||t[0]==='subs'||t[0]==='suppliers';if(S.mode==='spray')return t[0]!=='stock'&&t[0]!=='suppliers'&&(t[0]!=='spray'||S.edit);return true});
 const MAIN=[
   {k:'name',l:'药名',type:'text',wide:1},
   {k:'use',l:'用途（小字显示在药名下面）',type:'text',wide:1},
@@ -347,7 +354,7 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
 /* ---------- state ---------- */
 let supView='matrix',supShop='all',supKind='All',supArea='all',suppliers=[],sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=(window.SG&&window.SG.mode==='store')?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
-let ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
+let subQ='',subOut=false,ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
 
 /* ---------- helpers ---------- */
@@ -434,7 +441,7 @@ function render(){
   const y=window.scrollY;
   if(!db){$('root').innerHTML=`<div class="empty"><strong>连不上资料库</strong>请检查网络后重新整理。</div>`;updateSendbar();return}
   if(!loaded){$('root').innerHTML='<div class="loading">载入药品中…</div>';return}
-  $('root').innerHTML=({today:vToday,spray:vSpray,stock:vStock,records:vRecords,products:vProducts,suppliers:vSuppliers})[tab]();
+  $('root').innerHTML=({today:vToday,spray:vSpray,stock:vStock,records:vRecords,products:vProducts,subs:vSubs,suppliers:vSuppliers})[tab]();
   wire();updateSendbar();window.scrollTo({top:y});
 }
 
@@ -659,6 +666,36 @@ function vRecords(){
 const perBase=b=>{const n=Number(b.packSize),up=Number(b.unitPrice);if(!(n>0)||!(up>0))return null;const base=(b.packUnit==='L'||b.packUnit==='kg')?n*1000:n;return up/base*1000};
 const pk=b=>b.packSize?`${b.packSize} ${b.packUnit}`:'—';
 const shopsOf=p=>[...new Set([...purchases.filter(b=>b.pid===p._id&&b.shop).map(b=>b.shop),...(Array.isArray(p.shops)?p.shops:[])])];
+const FORM_RX=/\b(ec|sc|wp|wg|ew|dc|sl|od|cs|wdg|granules?|gr)\b/g;
+function aiParts(p){const a=String(p.ai||'').toLowerCase();if(!a||!/[a-z]/.test(a))return null;
+  return a.split('+').map(x=>{const m=x.match(/([\d.]+)\s*%/);return {n:x.replace(/[\d.]+\s*%?/g,'').replace(FORM_RX,'').replace(/[^a-z\- ]/g,' ').replace(/\s+/g,' ').trim(),c:m?Number(m[1]):null}}).filter(x=>x.n)}
+function aiKey(p){const P=aiParts(p);return P&&P.length?P.map(x=>x.n).sort().join(' + '):null}
+function grpTokens(p){const g=String(p.group||'').toUpperCase().replace(/\s+/g,' ').trim();if(!g)return [];const m=g.match(/^(IRAC|FRAC|HRAC)\s*(.*)$/);if(!m)return [g];return m[2].split('+').map(x=>m[1]+' '+x.trim()).filter(x=>x.length>5)}
+function sameAi(p){const k=aiKey(p);if(!k)return [];return products.filter(q=>q._id!==p._id&&aiKey(q)===k).sort(sortN)}
+function sameGrp(p){const G=grpTokens(p);if(!G.length)return [];const k=aiKey(p);return products.filter(q=>q._id!==p._id&&aiKey(q)!==k&&grpTokens(q).some(t=>G.includes(t))).sort(sortN)}
+function convAmt(p,q){const a=Number(p.bookAmt);const P=aiParts(p),Q=aiParts(q);if(!P||!Q||P.length!==1||Q.length!==1||!P[0].c||!Q[0].c)return null;
+  if(a>0)return r5(a*P[0].c/Q[0].c);const r=P[0].c/Q[0].c;return Math.abs(r-1)<0.02?'一样的量':`${U(p)} 数 × ${Math.round(r*100)/100}`}
+function subStock(q,need){return FARMS.map(f=>{const r=stockRow(f.id,q);const has=r.status!=='nc'&&r.left>0;const ok=has&&(typeof need!=='number'||r.left>=need);
+  const cls=r.status==='nc'?'amber':ok?'green':'grey';const t=r.status==='nc'?'未点算':has?fmtAmt(r.left,q):'没货';return `<span class="pill ${cls}">${e(f.name)} · ${e(t)}</span>`}).join('')}
+function mainStock(p){return FARMS.map(f=>{const r=stockRow(f.id,p);const st=ST[r.status]||['grey',''];const t=r.status==='nc'?'未点算':r.left>0?fmtAmt(r.left,p):'没货';return `<span class="pill ${st[0]}">${e(f.name)} · ${e(t)}</span>`}).join('')}
+function subLine(q,amt,tag){return `<div class="subline"><div class="subname">${photo(q)}<div><b>${e(q.name)}</b>${amt!=null?` <span class="subamt">${typeof amt==='number'?`${e(amt)} ${e(U(q))}`:e(amt)}</span>`:q.bookAmt?` <span class="subamt muted">平时 ${e(q.bookAmt)} ${e(U(q))}</span>`:''}<div class="note" style="margin:2px 0 0">${e(q.ai||'')}${tag?` · ${tag}`:''}</div></div></div><div class="subfarms">${subStock(q,amt)}</div></div>`}
+function subList(){const q=subQ.trim().toLowerCase();
+  const rows=products.filter(p=>p.kind!=='Wetting agent').filter(p=>!q||String(p.name).toLowerCase().includes(q)||String(p.ai||'').toLowerCase().includes(q))
+   .map(p=>({p,A:sameAi(p),G:sameGrp(p),M:(p.subs||[]).map(x=>({q:byId(x.id),amt:x.amt})).filter(x=>x.q)}))
+   .filter(x=>!subOut||FARMS.some(f=>{const st=stockRow(f.id,x.p).status;return st==='out'||st==='low'}))
+   .sort((a,b)=>sortN(a.p,b.p));
+  if(!rows.length)return '<div class="empty"><strong>没有找到</strong>换个药名或成分试试。</div>';
+  return rows.map(({p,A,G,M})=>{const used=new Set([...A,...G].map(x=>x._id));const M2=M.filter(x=>!used.has(x.q._id));
+    const none=!A.length&&!G.length&&!M2.length;
+    return `<section class="panel subcard"><div class="subhead">${photo(p)}<div style="min-width:0"><h3 style="margin:0">${e(p.name)}${p.bookAmt?` <span class="subamt muted">平时 ${e(p.bookAmt)} ${e(U(p))}</span>`:''}</h3><div class="note" style="margin:2px 0 6px">${e(p.ai||'成分未填')}${p.group?` · ${e(p.group)}`:''}</div><div class="subfarms">${mainStock(p)}</div></div></div>
+    ${A.length?`<div class="subsec"><div class="subtitle green">✅ 可以直接换（同成分，用量已换算）</div>${A.map(q=>subLine(q,convAmt(p,q),'')).join('')}</div>`:''}
+    ${G.length?`<div class="subsec"><div class="subtitle amber">🟡 也可以顶（同一类）</div>${G.map(q=>subLine(q,null,e(q.group||''))).join('')}</div>`:''}
+    ${M2.length?`<div class="subsec"><div class="subtitle blue">📝 设定的替代</div>${M2.map(x=>subLine(x.q,x.amt,'')).join('')}</div>`:''}
+    ${none?`<p class="note">还没有可替代的药。${p.ai?'':'这样药还没填成分。'}</p>`:''}</section>`}).join('')}
+function vSubs(){return `<div class="hero"><div><div class="eyebrow">替代</div><h1>缺货时用什么顶</h1><p class="sub">绿色 = 那个园有货，灰色 = 没货，橙色 = 还没点算。</p></div></div>
+  <div class="subbar"><input id="subq" class="inp" placeholder="搜药名或成分" value="${e(subQ)}" autocomplete="off"><button class="chip ${subOut?'on':''}" data-act="subout">只看缺货 / 快没</button></div>
+  <div id="sublist">${subList()}</div>`}
+document.addEventListener('input',ev=>{if(ev.target&&ev.target.id==='subq'){subQ=ev.target.value;const L=document.getElementById('sublist');if(L)L.innerHTML=subList()}});
 function vSuppliers(){
   const byShop=new Map();for(const b of purchases){if(!b.shop)continue;if(!byShop.has(b.shop))byShop.set(b.shop,[]);byShop.get(b.shop).push(b)}
   const known=new Set(suppliers.map(x=>x.name));const extra=[...byShop.keys()].filter(n=>!known.has(n)).map(n=>({_id:'',name:n}));
@@ -832,6 +869,7 @@ document.addEventListener('click',async ev=>{
     try{await db.collection('sprays').doc(ds+'_'+draft.farm+'_drip_'+Date.now().toString(36)).set(rec);closeModal();toast('已记录滴灌加料')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'supedit':{const x=id?suppliers.find(q=>q._id===id):null;editing=x?x._id:null;draft=x?{...x}:{};openModal('supplier');break}
   case 'supview':supView=id;render();break;
+  case 'subout':subOut=!subOut;render();break;
   case 'fshop':supShop=id;render();break;
   case 'farea':supArea=id;render();break;
   case 'fkind':supKind=id;render();break;

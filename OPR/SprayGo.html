@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SprayGo v10</title>
+<title>SprayGo v11</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -106,11 +106,22 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
 .fcell.ok{background:var(--green2);border-color:transparent;color:var(--green)}
 .fcell.soon,.fcell.nc{background:var(--amber2);border-color:transparent;color:var(--amber)}
 .fcell.out,.fcell.low{background:var(--red2);border-color:transparent;color:var(--red)}
-.productrow img,.productpick img{cursor:zoom-in}
+.productrow img,.productpick img,.mleft img{cursor:zoom-in}
 .lightbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
 .lightbox img{max-width:min(92vw,720px);max-height:78vh;object-fit:contain;background:#fff;border-radius:14px}
 .lightbox b{color:#fff;margin-top:12px;font-size:17px;text-align:center}
 .lightbox .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:24px}
+body.noedit .supset{display:none!important}
+.mrow{display:flex;gap:14px;align-items:center;padding:12px 2px;border-bottom:1px solid var(--line)}
+.mleft{display:flex;gap:12px;align-items:center;flex:0 0 38%;min-width:0}
+.mleft img,.mleft .placeholder{width:64px;height:64px;object-fit:contain;flex:none;border-radius:10px;background:var(--soft)}
+.mright{flex:1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.shopchip{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;font-size:13px;min-width:150px}
+.shopchip small{color:var(--muted)}.shopchip.none{border-color:var(--red);background:var(--red2);color:var(--red)}
+.frow{display:flex;gap:10px;align-items:flex-start;margin:6px 0}.flab{font-weight:800;color:var(--muted);font-size:13px;min-width:34px;padding-top:12px}
+.frow .chip{min-height:38px;padding:6px 12px;font-size:13px}
+@media (max-width:620px){.mrow{flex-direction:column;align-items:stretch}.mleft{flex:none}.mright{justify-content:flex-start}.frow{flex-direction:column;gap:4px}.flab{padding-top:0}}
+.supset select{border:1px solid var(--field);border-radius:10px;min-height:38px;padding:4px 8px;background:var(--white);max-width:220px}
 .fcell.none{opacity:.7;cursor:pointer;color:var(--muted)}
 .fcell.sub{background:var(--blue2);border-color:var(--blue);color:var(--blue)}
 .fcell .subtag{display:block;font-weight:800;font-size:11px}
@@ -209,13 +220,22 @@ h2{font-size:18px;letter-spacing:-.3px;margin:0} h3{font-size:16px;margin:0}
   .productrow{flex-wrap:wrap}
   .productrow .grow{flex:1 1 55%}
 }
+.cntsum{white-space:pre-line;margin:-4px 0 12px;font-weight:700;color:var(--green-d,#1f5a3d);font-size:15px}.cntsum:empty{display:none}.cntsum.warn,.cntsum.bad{color:#9a3412;background:#fff3e6;border:1px solid #f0c48a;border-radius:10px;padding:10px 12px}
+.sizehead{font-weight:800;margin:6px 0 8px;color:var(--ink,#1c2b22)}
+.subbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}.subbar .inp{flex:1;min-width:200px}
+.subcard{padding:14px}.subhead{display:flex;gap:12px;align-items:flex-start}.subhead img,.subhead .placeholder{width:56px;height:70px;object-fit:contain;border-radius:8px;flex:none;background:var(--soft)}
+.subfarms{display:flex;flex-wrap:wrap;gap:6px}.subsec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.subtitle{font-weight:800;font-size:14px;margin-bottom:6px}.subtitle.green{color:var(--green)}.subtitle.amber{color:var(--amber)}.subtitle.blue{color:var(--blue)}
+.subline{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;flex-wrap:wrap}.subline+.subline{border-top:1px dashed var(--line)}
+.subname{display:flex;gap:10px;align-items:center;min-width:0}.subname img,.subname .placeholder{width:36px;height:46px;object-fit:contain;border-radius:6px;flex:none;background:var(--soft)}
+.subamt{font-weight:800;color:var(--green)}.subamt.muted{color:var(--muted);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 body{margin:0}
 .homebtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--white);display:grid;place-items:center;text-decoration:none;color:var(--ink);font-size:18px}
 .gate{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:24px;text-align:center}
 .gate a{display:inline-block;margin-top:14px;padding:10px 18px;border-radius:10px;background:var(--green);color:var(--onGreen);text-decoration:none;font-weight:700}
 body.noedit [data-act="sprayfarm"],body.noedit [data-act="doneask"],body.noedit [data-act="done"],body.noedit [data-act="nospray"],
-body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit [data-act="dripopen"],body.noedit .wpanel{display:none!important}
+body.noedit [data-act="edit"],body.noedit [data-act="savewater"],body.noedit [data-act="savemix"],body.noedit [data-act="dripopen"],body.noedit [data-act="supedit"],body.noedit .wpanel{display:none!important}
 body.nocost .cost{display:none!important}
 body.mode-spray [data-act="edit"],body.mode-spray [data-act="savecount"],body.mode-spray [data-act="savebuy"]{display:none!important}
 body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [data-act="savemix"]{display:none!important}
@@ -237,7 +257,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* SprayGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 10;
+const APP_VERSION = 11;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -245,7 +265,7 @@ const MSG={no_login:'还没登入。请回主页登入后再打开 SprayGo。',n
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function gate(kind,extra){document.getElementById('root').innerHTML=`<div class="gate"><strong>SprayGo</strong><p>${MSG[kind]||esc(kind)}</p>${extra?`<p class="note">${esc(extra)}</p>`:''}<a href="../index.html">← 回主页</a></div>`;const n=document.getElementById('navDesktop');if(n)n.innerHTML='';const c=document.getElementById('conn');if(c){c.className='pill amber';c.textContent='● 未登入'}}
 let sb=null;const subs={};
-const TB=col=>col==='ferti'?['ferti_doc','days']:['products','counts','purchases'].includes(col)?['store_doc',col]:['spray_doc',col];
+const TB=col=>col==='ferti'?['ferti_doc','days']:['products','counts','purchases','suppliers'].includes(col)?['store_doc',col]:['spray_doc',col];
 const fix=d=>d&&typeof d.photo==='string'&&d.photo.startsWith('/_blob/')?{...d,photo:'spray_img/'+d.photo.slice(7)+'.jpg'}:d;
 const clean=o=>JSON.parse(JSON.stringify(o));
 const fail=e=>{const x=new Error(e&&e.message||String(e));x.code=e&&(e.code||e.message)||'error';return x};
@@ -300,7 +320,7 @@ boot();
 const KINDS=[['Insecticide','杀虫剂'],['Fungicide','杀菌剂'],['Fertilizer','肥料'],['Wetting agent','展着剂'],['Bio','生物'],['Unknown','未知']];
 const KL=Object.fromEntries(KINDS);const kl=k=>KL[k]||k;
 const FARMS=(window.SG&&Array.isArray(window.SG.farms)&&window.SG.farms.length)?window.SG.farms:[{id:'ad1',name:'AD 1'},{id:'ad2',name:'AD 2'},{id:'ad3',name:'AD 3'}];
-const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品']].filter(t=>{const S=window.SG||{};if(S.mode==='store')return t[0]==='stock'||t[0]==='products';if(S.mode==='spray')return t[0]!=='stock'&&(t[0]!=='spray'||S.edit);return true});
+const TABS=[['today','☀️','今天'],['spray','🧴','喷药'],['stock','📦','库存'],['records','📋','记录'],['products','🧪','药品'],['subs','🔁','替代'],['suppliers','🏪','商家']].filter(t=>{const S=window.SG||{};if(S.mode==='store')return t[0]==='stock'||t[0]==='products'||t[0]==='subs'||t[0]==='suppliers';if(S.mode==='spray')return t[0]!=='stock'&&t[0]!=='suppliers'&&(t[0]!=='spray'||S.edit);return true});
 const MAIN=[
   {k:'name',l:'药名',type:'text',wide:1},
   {k:'use',l:'用途（小字显示在药名下面）',type:'text',wide:1},
@@ -332,9 +352,9 @@ function needed(p){const r=[];if(!p.kind||p.kind==='Unknown')r.push('kind');
   for(const k of keys){const v=p[k];if(v===undefined||v===null||v===''||v==='Not sure')r.push(k)}return r}
 
 /* ---------- state ---------- */
-let sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
+let supView='matrix',supShop='all',supKind='All',supArea='all',suppliers=[],sprayDocs=[],fdays=[],products=[],farms={},mixes=[],sprays=[],purchases=[],counts=[],loaded=false,db=null,assets=null;
 let tab=(window.SG&&window.SG.mode==='store')?'stock':'today',farm=(()=>{try{const f=localStorage.getItem('farm');return FARMS.some(x=>x.id===f)?f:'ad1'}catch(e){return 'ad1'}})();
-let ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
+let subQ='',subOut=false,ncOnly=false,focus=null,guideOpen=false,stockFarm='all',smFarm=null,recFarm='all',recStatus='all',pFilter='All',needOnly=false,showOther=false,activeMix=null,draft=null,editing=null,modalKind=null,modalArg=null;
 const sel=new Map();
 
 /* ---------- helpers ---------- */
@@ -376,6 +396,8 @@ function holdFor(fid){let best=null;const now=new Date();now.setHours(0,0,0,0);
   return best}
 
 /* ---------- stock math ---------- */
+function sizesFor(p){const m=new Map();const add=(ps,pu)=>{const n=Number(ps);if(!n||!pu)return;const b=(pu==='L'||pu==='kg')?n*1000:n;if(!m.has(b))m.set(b,{ps:n,pu,b})};
+  add(p.packSize,p.packUnit);for(const x of purchases)if(x.pid===p._id)add(x.packSize,x.packUnit);return [...m.values()].sort((a,b)=>b.b-a.b)}
 const packBase=p=>{const n=Number(p.packSize);if(!n)return null;return (p.packUnit==='L'||p.packUnit==='kg')?n*1000:n};
 function fmtAmt(v,p){const u=U(p);const n=Math.round(v);if(Math.abs(n)>=1000)return (Math.round(n/100)/10)+(u==='g'?' kg':' L');return n+' '+u}
 const RM=v=>window.SG&&!window.SG.cost?'':'RM '+(Math.round(v*100)/100).toFixed(2);
@@ -419,7 +441,7 @@ function render(){
   const y=window.scrollY;
   if(!db){$('root').innerHTML=`<div class="empty"><strong>连不上资料库</strong>请检查网络后重新整理。</div>`;updateSendbar();return}
   if(!loaded){$('root').innerHTML='<div class="loading">载入药品中…</div>';return}
-  $('root').innerHTML=({today:vToday,spray:vSpray,stock:vStock,records:vRecords,products:vProducts})[tab]();
+  $('root').innerHTML=({today:vToday,spray:vSpray,stock:vStock,records:vRecords,products:vProducts,subs:vSubs,suppliers:vSuppliers})[tab]();
   wire();updateSendbar();window.scrollTo({top:y});
 }
 
@@ -604,8 +626,8 @@ function vStockAll(){
       <p class="note">各园分开看，点上面的 AD 1 / AD 2 / AD 3。</p></div>
   </div></div>`;
 }
-function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const lp=purchases.filter(b=>b.pid===pid).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0];const shops=[...new Set(purchases.map(b=>b.shop).filter(Boolean))].sort();const r=stockRow(sf,p),pb=r.pb,u=U(p);
-  const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}`]);
+function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '';const lp=purchases.filter(b=>b.pid===pid).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))[0];const shops=[...new Set([...suppliers.map(x=>x.name),...purchases.map(b=>b.shop)].filter(Boolean))].sort();const r=stockRow(sf,p),pb=r.pb,u=U(p);
+  const ev=[];for(const c of counts)if(c.farm===sf&&c.pid===pid)ev.push([c.date,`点算：${fmtAmt(c.amt,p)}${Array.isArray(c.parts)&&c.parts.length?'（'+c.parts.map(x=>x.n+' × '+x.size).join(' + ')+'）':''}`]);
   for(const b of purchases)if(b.farm===sf&&b.pid===pid)ev.push([b.date,`进货：${b.packs&&b.packSize?`${b.packs} × ${b.packSize} ${b.packUnit}`:fmtAmt(b.amt,p)}${b.shop?' · '+b.shop:''}${Number(b.price)>0&&RM(1)?' · '+RM(Number(b.price)):''}`]);
   for(const s of sprays)if(s.farm===sf&&isDone(s))for(const i of s.items||[])if(i.id===pid)ev.push([s.doneDate||s.date,`${s.kind==='drip'?'滴灌':'喷药'}：${i.amt??'?'} ${i.unit||u}`]);
   ev.sort((a,b)=>b[0].localeCompare(a[0]));
@@ -613,7 +635,10 @@ function mStock(pid){const sf=smFarm||stockFarm;const p=byId(pid);if(!p)return '
   return `<div class="modalhead"><div><div class="eyebrow">库存 · ${fname(sf)}</div><h2>${e(p.name)}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
   <div class="info">${r.status==='nc'?'还没点算。':`剩：<b>${e(fmtAmt(Math.max(r.left,0),p))}</b>${pb?`（${(Math.max(r.left,0)/pb).toFixed(2)} 瓶/包）`:''}`}${r.d>0?` · 每天约用 ${e(fmtAmt(r.d,p))}`:''}${r.days!=null?` · 约够 ${r.days} 天`:''}${r.c?`<br>上次点算 ${e(dmy(r.c.date))}：${e(fmtAmt(r.c.amt,p))}`:''}</div>
   ${pb?'':'<div class="warning">还没设定每瓶/包容量。到药品页设定后可以按瓶数点算。</div>'}
-  <div class="panel"><h3>现在点算</h3><div class="field"><label for="cnt-in">${pb?`架上有几瓶/包（每个 ${e(p.packSize)} ${e(p.packUnit)}，例 1.5）`:`架上有多少（${e(u)}）`}</label><input id="cnt-in" inputmode="decimal"></div>
+  <div class="panel"><h3>现在点算</h3>${sizesFor(p).length?`<p class="note" style="margin-top:0">看瓶子填：满的有几瓶，开着那瓶剩几 %。全部没货就在「满的」填 0。</p>
+    ${sizesFor(p).map((z,i)=>`<div class="sizehead">${e(z.ps)} ${e(z.pu)} 的瓶/包</div><div class="fields"><div class="field"><label for="cnt-f${i}">满的有几瓶？</label><input id="cnt-f${i}" class="cnt-full" data-i="${i}" data-b="${z.b}" data-l="${e(z.ps+' '+z.pu)}" inputmode="numeric" placeholder="例 2"></div><div class="field"><label for="cnt-p${i}">开着那瓶剩几 %？</label><input id="cnt-p${i}" class="cnt-pct" data-i="${i}" inputmode="decimal" placeholder="例 40"></div></div>`).join('')}`:`<p class="note" style="margin-top:0">这样药还没设定每瓶容量，请填架上总共有多少（${e(u)}）。全部没货填 0。</p>
+    <div class="field"><label for="cnt-in">架上有多少（${e(u)}）</label><input id="cnt-in" inputmode="decimal"></div>`}
+    <div id="cnt-sum" class="cntsum" data-u="${e(u)}" data-pb="${pb||''}" aria-live="polite"></div>
     <button class="btn dark" data-act="savecount" data-id="${e(pid)}">保存点算</button></div>
   <div class="panel"><h3>进货</h3>${lp?`<p class="note" style="margin-top:0">上次：${e(lp.shop||'没写店名')} · ${lp.unitPrice!=null?'每件 RM '+e(lp.unitPrice):'没写单价'}${lp.packSize?` · 每件 ${e(lp.packSize)} ${e(lp.packUnit)}`:''} · ${e(dmy(lp.date))}</p>`:''}
     <div class="fields">
@@ -637,6 +662,96 @@ function vRecords(){
     <div class="note" style="margin-top:4px">${e((s.items||[]).map(i=>`${i.name} ${i.amt??'?'} ${i.unit}`).join(' · '))}</div></div>
     ${st==='planned'?`<div class="acts" id="acts-${e(s._id)}"><button class="btn small dark" data-act="doneask" data-id="${e(s._id)}">喷好了</button></div>`:''}</div>`}).join('')}</div>`:'<div class="empty"><strong>没有记录</strong>换个筛选，或从「喷药」发指令。</div>'}</div>`}
 
+/* ---------- Suppliers ---------- */
+const perBase=b=>{const n=Number(b.packSize),up=Number(b.unitPrice);if(!(n>0)||!(up>0))return null;const base=(b.packUnit==='L'||b.packUnit==='kg')?n*1000:n;return up/base*1000};
+const pk=b=>b.packSize?`${b.packSize} ${b.packUnit}`:'—';
+const shopsOf=p=>[...new Set([...purchases.filter(b=>b.pid===p._id&&b.shop).map(b=>b.shop),...(Array.isArray(p.shops)?p.shops:[])])];
+const FORM_RX=/\b(ec|sc|wp|wg|ew|dc|sl|od|cs|wdg|granules?|gr)\b/g;
+function aiParts(p){const a=String(p.ai||'').toLowerCase();if(!a||!/[a-z]/.test(a))return null;
+  return a.split('+').map(x=>{const m=x.match(/([\d.]+)\s*%/);return {n:x.replace(/[\d.]+\s*%?/g,'').replace(FORM_RX,'').replace(/[^a-z\- ]/g,' ').replace(/\s+/g,' ').trim(),c:m?Number(m[1]):null}}).filter(x=>x.n)}
+function aiKey(p){const P=aiParts(p);return P&&P.length?P.map(x=>x.n).sort().join(' + '):null}
+function grpTokens(p){const g=String(p.group||'').toUpperCase().replace(/\s+/g,' ').trim();if(!g)return [];const m=g.match(/^(IRAC|FRAC|HRAC)\s*(.*)$/);if(!m)return [g];return m[2].split('+').map(x=>m[1]+' '+x.trim()).filter(x=>x.length>5)}
+function sameAi(p){const k=aiKey(p);if(!k)return [];return products.filter(q=>q._id!==p._id&&aiKey(q)===k).sort(sortN)}
+function sameGrp(p){const G=grpTokens(p);if(!G.length)return [];const k=aiKey(p);return products.filter(q=>q._id!==p._id&&aiKey(q)!==k&&grpTokens(q).some(t=>G.includes(t))).sort(sortN)}
+function convAmt(p,q){const a=Number(p.bookAmt);const P=aiParts(p),Q=aiParts(q);if(!P||!Q||P.length!==1||Q.length!==1||!P[0].c||!Q[0].c)return null;
+  if(a>0)return r5(a*P[0].c/Q[0].c);const r=P[0].c/Q[0].c;return Math.abs(r-1)<0.02?'一样的量':`${U(p)} 数 × ${Math.round(r*100)/100}`}
+function subStock(q,need){return FARMS.map(f=>{const r=stockRow(f.id,q);const has=r.status!=='nc'&&r.left>0;const ok=has&&(typeof need!=='number'||r.left>=need);
+  const cls=r.status==='nc'?'amber':ok?'green':'grey';const t=r.status==='nc'?'未点算':has?fmtAmt(r.left,q):'没货';return `<span class="pill ${cls}">${e(f.name)} · ${e(t)}</span>`}).join('')}
+function mainStock(p){return FARMS.map(f=>{const r=stockRow(f.id,p);const st=ST[r.status]||['grey',''];const t=r.status==='nc'?'未点算':r.left>0?fmtAmt(r.left,p):'没货';return `<span class="pill ${st[0]}">${e(f.name)} · ${e(t)}</span>`}).join('')}
+function subLine(q,amt,tag){return `<div class="subline"><div class="subname">${photo(q)}<div><b>${e(q.name)}</b>${amt!=null?` <span class="subamt">${typeof amt==='number'?`${e(amt)} ${e(U(q))}`:e(amt)}</span>`:q.bookAmt?` <span class="subamt muted">平时 ${e(q.bookAmt)} ${e(U(q))}</span>`:''}<div class="note" style="margin:2px 0 0">${e(q.ai||'')}${tag?` · ${tag}`:''}</div></div></div><div class="subfarms">${subStock(q,amt)}</div></div>`}
+function subList(){const q=subQ.trim().toLowerCase();
+  const rows=products.filter(p=>p.kind!=='Wetting agent').filter(p=>!q||String(p.name).toLowerCase().includes(q)||String(p.ai||'').toLowerCase().includes(q))
+   .map(p=>({p,A:sameAi(p),G:sameGrp(p),M:(p.subs||[]).map(x=>({q:byId(x.id),amt:x.amt})).filter(x=>x.q)}))
+   .filter(x=>!subOut||FARMS.some(f=>{const st=stockRow(f.id,x.p).status;return st==='out'||st==='low'}))
+   .sort((a,b)=>sortN(a.p,b.p));
+  if(!rows.length)return '<div class="empty"><strong>没有找到</strong>换个药名或成分试试。</div>';
+  return rows.map(({p,A,G,M})=>{const used=new Set([...A,...G].map(x=>x._id));const M2=M.filter(x=>!used.has(x.q._id));
+    const none=!A.length&&!G.length&&!M2.length;
+    return `<section class="panel subcard"><div class="subhead">${photo(p)}<div style="min-width:0"><h3 style="margin:0">${e(p.name)}${p.bookAmt?` <span class="subamt muted">平时 ${e(p.bookAmt)} ${e(U(p))}</span>`:''}</h3><div class="note" style="margin:2px 0 6px">${e(p.ai||'成分未填')}${p.group?` · ${e(p.group)}`:''}</div><div class="subfarms">${mainStock(p)}</div></div></div>
+    ${A.length?`<div class="subsec"><div class="subtitle green">✅ 可以直接换（同成分，用量已换算）</div>${A.map(q=>subLine(q,convAmt(p,q),'')).join('')}</div>`:''}
+    ${G.length?`<div class="subsec"><div class="subtitle amber">🟡 也可以顶（同一类）</div>${G.map(q=>subLine(q,null,e(q.group||''))).join('')}</div>`:''}
+    ${M2.length?`<div class="subsec"><div class="subtitle blue">📝 设定的替代</div>${M2.map(x=>subLine(x.q,x.amt,'')).join('')}</div>`:''}
+    ${none?`<p class="note">还没有可替代的药。${p.ai?'':'这样药还没填成分。'}</p>`:''}</section>`}).join('')}
+function vSubs(){return `<div class="hero"><div><div class="eyebrow">替代</div><h1>缺货时用什么顶</h1><p class="sub">绿色 = 那个园有货，灰色 = 没货，橙色 = 还没点算。</p></div></div>
+  <div class="subbar"><input id="subq" class="inp" placeholder="搜药名或成分" value="${e(subQ)}" autocomplete="off"><button class="chip ${subOut?'on':''}" data-act="subout">只看缺货 / 快没</button></div>
+  <div id="sublist">${subList()}</div>`}
+document.addEventListener('input',ev=>{if(ev.target&&ev.target.id==='subq'){subQ=ev.target.value;const L=document.getElementById('sublist');if(L)L.innerHTML=subList()}});
+function vSuppliers(){
+  const byShop=new Map();for(const b of purchases){if(!b.shop)continue;if(!byShop.has(b.shop))byShop.set(b.shop,[]);byShop.get(b.shop).push(b)}
+  const known=new Set(suppliers.map(x=>x.name));const extra=[...byShop.keys()].filter(n=>!known.has(n)).map(n=>({_id:'',name:n}));
+  const list=[...suppliers.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))),...extra];
+  const tel=t=>String(t||'').split(/[,，\/]/).map(x=>x.trim()).filter(Boolean).map(x=>`<a href="tel:${e(x.replace(/[^0-9+]/g,''))}">${e(x)}</a>`).join(' · ');
+  const card=sp=>{const B=(byShop.get(sp.name)||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));const g=new Map();
+    for(const b of B){const k=b.pid+'|'+pk(b);if(!g.has(k))g.set(k,{b,n:0,sum:0});const x=g.get(k);x.n++;x.sum+=Number(b.price)||0}
+    const spent=B.reduce((a,b)=>a+(Number(b.price)||0),0);const last=B[0];
+    const rows=[...g.values()].sort((a,b)=>String((byId(a.b.pid)||{}).name).localeCompare(String((byId(b.b.pid)||{}).name))).map(({b,n})=>`<div class="line"><span>${e((byId(b.pid)||{}).name||b.pid)} · ${e(pk(b))}<br><small class="note">最后 ${e(dmy(b.date))} · 买过 ${n} 次</small></span><b class="cost">${b.unitPrice!=null?'RM '+e(b.unitPrice):'—'}</b></div>`).join('');
+    const bought=new Set(B.map(b=>b.pid));const also=products.filter(p=>Array.isArray(p.shops)&&p.shops.includes(sp.name)&&!bought.has(p._id)).sort(sortN);
+    const alsoRows=also.map(p=>`<div class="line"><span>${e(p.name)}<br><small class="note">问过有卖 · 还没买过</small></span><b>—</b></div>`).join('');
+    return `<div class="panel"><div class="splithead"><div><h2 style="margin-bottom:2px">${e(sp.name)}</h2>${sp.company?`<div class="note" style="margin:0">${e(sp.company)}${sp.reg?' · '+e(sp.reg):''}</div>`:''}</div>
+      ${sp._id?`<button class="btn small" data-act="supedit" data-id="${e(sp._id)}">编辑</button>`:'<span class="pill amber">只在进货里出现</span>'}</div>
+      <div class="note" style="line-height:1.7">${sp.address?`📍 ${e(sp.address)}<br>`:''}${sp.phone?`📞 ${tel(sp.phone)}<br>`:''}${sp.email?`✉️ <a href="mailto:${e(sp.email)}">${e(sp.email)}</a><br>`:''}${sp.terms?`付款：${e(sp.terms)}<br>`:''}${sp.sells?`卖：${e(sp.sells)}`:''}</div>
+      <div class="cost note">${sp.bank?`🏦 ${e(sp.bank)}<br>`:''}总共买了 <b>${RM(spent)}</b>${last?` · 最后一次 ${e(dmy(last.date))}`:''}</div>
+      ${rows?`<h3 style="margin-top:12px">买过的东西</h3><div>${rows}</div>`:'<p class="note">还没有进货记录。</p>'}
+      ${alsoRows?`<h3 style="margin-top:12px">也有卖</h3><div>${alsoRows}</div>`:''}</div>`};
+  const noShop=products.filter(p=>p.track!=='No'&&!shopsOf(p).length).sort(sortN);
+  const shopOpts=suppliers.map(x=>x.name).sort();
+  const missing=`<div class="panel" style="border:2px solid var(--red)"><h2 style="color:var(--red)">❗ 还没有商家的药（${noShop.length} 样）</h2>
+    <p class="note" style="margin-top:0">这些药不知道在哪里买。问到了就在这里选店，按「记下」。</p>
+    ${noShop.length?noShop.map(p=>`<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div>
+      <div class="pair supset"><select id="ns-${e(p._id)}" aria-label="${e(p.name)} 的商家"><option value="">选店…</option>${shopOpts.map(n=>`<option>${e(n)}</option>`).join('')}</select><button class="btn small dark" data-act="setshop" data-id="${e(p._id)}">记下</button></div></div>`).join(''):'<p class="note" style="color:var(--green)">✓ 每样药都知道在哪里买。</p>'}</div>`;
+  const pids=[...new Set(purchases.filter(b=>b.shop).map(b=>b.pid))].map(byId).filter(Boolean).sort(sortN);
+  const cmp=pids.map(p=>{const m=new Map();for(const b of purchases.filter(x=>x.pid===p._id&&x.shop).sort((a,c)=>String(c.date).localeCompare(String(a.date)))){const k=b.shop+'|'+pk(b);if(!m.has(k))m.set(k,b)}
+    const L=[...m.values()];const best=Math.min(...L.map(perBase).filter(x=>x!=null));
+    return `<div class="line"><span><b>${e(p.name)}</b><br>${L.map(b=>{const v=perBase(b);return `<small class="note">${e(b.shop)} · ${e(pk(b))} · <span class="cost">RM ${e(b.unitPrice??'—')}${v!=null?` · 每 ${b.packUnit==='g'||b.packUnit==='kg'?'kg':'L'} RM ${(Math.round(v*100)/100).toFixed(2)}`:''}${L.length>1&&v===best?' ✓ 最便宜':''}</span> · ${e(dmy(b.date))}</small>`}).join('<br>')}</span></div>`}).join('');
+  const areaOf=n=>{const sp=suppliers.find(x=>x.name===n);if(sp&&sp.area)return sp.area;const m=String(n||'').match(/\(([^)]+)\)\s*$/);return m?m[1].replace(/^.*,\s*/,'').trim():'其他'};
+  const tracked=products.filter(p=>p.track!=='No').sort(sortN);
+  const shopNames=[...new Set([...suppliers.map(x=>x.name),...purchases.map(b=>b.shop)].filter(Boolean))].sort();
+  const areas=[...new Set(shopNames.map(areaOf))].sort();
+  const KO=KINDS.map(k=>k[0]);const kOf=p=>KO.includes(p.kind)?p.kind:'Unknown';
+  let rowsP=tracked.filter(p=>{const sh=shopsOf(p);if(supShop==='none'&&sh.length)return false;if(supShop!=='all'&&supShop!=='none'&&!sh.includes(supShop))return false;
+    if(supArea!=='all'&&!sh.some(n=>areaOf(n)===supArea))return false;if(supKind!=='All'&&kOf(p)!==supKind)return false;return true});
+  const lastBy=(p,n)=>purchases.filter(b=>b.pid===p._id&&b.shop===n).sort((a,c)=>String(c.date).localeCompare(String(a.date)))[0];
+  const shopChip=(p,n)=>{const b=lastBy(p,n);const v=b?perBase(b):null;
+    return `<div class="shopchip"><b>${e(n)}</b><small>${b?`${e(pk(b))}<span class="cost"> · RM ${e(b.unitPrice??'—')}</span> · ${e(dmy(b.date))}`:'问过有卖 · 还没买过'}</small></div>`};
+  const mrow=p=>{const sh=shopsOf(p);if(supShop!=='all'&&supShop!=='none')sh.sort((a,b)=>(b===supShop)-(a===supShop));
+    return `<div class="mrow"><div class="mleft">${photo(p)}<div><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small class="note">${e(kl(kOf(p)))}</small></div></div>
+    <div class="mright">${sh.length?sh.map(n=>shopChip(p,n)).join(''):'<div class="shopchip none"><b>❗ 还没有商家</b><small>问到了就在右边选店</small></div>'}
+      <div class="pair supset"><select id="ns-${e(p._id)}" aria-label="${e(p.name)} 加商家"><option value="">＋ 加店…</option>${shopNames.filter(n=>!sh.includes(n)).map(n=>`<option>${e(n)}</option>`).join('')}</select><button class="btn small" data-act="setshop" data-id="${e(p._id)}">记下</button></div></div></div>`};
+  const noN=tracked.filter(p=>!shopsOf(p).length).length;
+  const chipRow=(lab,act,cur,opts)=>`<div class="frow"><span class="flab">${lab}</span><div class="chips">${opts.map(([v,t])=>`<button class="chip ${cur===v?'on':''}" data-act="${act}" data-id="${e(v)}">${t}</button>`).join('')}</div></div>`;
+  const cnt=f=>tracked.filter(f).length;
+  const filters=`<div class="panel">${chipRow('商家','fshop',supShop,[['all',`全部 ${tracked.length}`],['none',`❗ 没有商家 ${noN}`],...shopNames.map(n=>[n,`${e(n.replace(/\s*\(.*\)$/,''))} ${cnt(p=>shopsOf(p).includes(n))}`])])}
+    ${chipRow('地区','farea',supArea,[['all','全部'],...areas.map(a=>[a,`${e(a)} ${cnt(p=>shopsOf(p).some(n=>areaOf(n)===a))}`])])}
+    ${chipRow('类别','fkind',supKind,[['All','全部'],...KINDS.filter(([k])=>cnt(p=>kOf(p)===k)).map(([k,l])=>[k,`${l} ${cnt(p=>kOf(p)===k)}`])])}</div>`;
+  const tabs=`<div class="chips" style="margin-bottom:14px"><button class="chip ${supView==='matrix'?'on':''}" data-act="supview" data-id="matrix">🧪 药 × 商家</button><button class="chip ${supView==='shops'?'on':''}" data-act="supview" data-id="shops">🏪 商家资料</button></div>`;
+  const body=supView==='matrix'?`${filters}<div class="panel"><div class="splithead"><h2>${rowsP.length} 样药</h2>${supShop!=='all'||supArea!=='all'||supKind!=='All'?'<button class="btn small" data-act="fclear">清除筛选</button>':''}</div>${rowsP.map(mrow).join('')||'<div class="empty">没有符合的药。</div>'}</div>`
+    :`<div class="wizard"><div class="stack">${list.map(card).join('')||'<div class="empty">还没有商家。</div>'}</div>
+  <div class="stack sticky"><div class="panel"><h2>按药比价</h2>${cmp||'<p class="note">还没有进货记录。</p>'}<p class="note">价钱是每间店最后一次的单价。</p></div></div></div>`;
+  return `${head('商家','商家 · 跟谁买 · 价钱','每样药在哪间店买、多少钱。',`<button class="btn dark" data-act="supedit" data-id="">＋ 新增商家</button>`)}${tabs}${body}`}
+const SUPF=[['name','店名（进货时选的名字）'],['company','公司全名'],['reg','注册号'],['address','地址'],['phone','电话（多个用逗号分开）'],['email','Email'],['terms','付款条件'],['bank','银行户口'],['sells','卖什么'],['note','备注']];
+function mSupplier(){const d=draft;return `<div class="modalhead"><div><div class="eyebrow">商家</div><h2>${editing?'编辑商家':'新增商家'}</h2></div><button class="close" data-act="close" aria-label="关闭">×</button></div>
+  <div class="panel">${SUPF.map(([k,l])=>`<div class="field"><label for="sup-${k}">${l}</label>${k==='address'||k==='sells'||k==='note'?`<textarea id="sup-${k}" data-k="${k}" rows="2">${e(d[k]||'')}</textarea>`:`<input id="sup-${k}" data-k="${k}" value="${e(d[k]||'')}">`}</div>`).join('')}
+  <button class="btn dark" data-act="supsave">保存</button></div>`}
 /* ---------- Products ---------- */
 function vProducts(){
   const done=products.filter(p=>!needed(p).length).length;
@@ -684,7 +799,7 @@ function mDrip(){const d=draft;const L=dripProducts();
   <div class="panel"><h3>加了什么、加多少</h3><p class="note">只填有加的，其它留空。</p>
     ${L.map(p=>`<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="pair"><input class="inp" style="width:110px" inputmode="decimal" data-drip="${e(p._id)}" value="${e(d.amts[p._id]??'')}" aria-label="${e(p.name)} 用量"><span class="note">${e(U(p))}</span></div></div>`).join('')}
     <button class="btn dark" data-act="savedrip" style="margin-top:12px">保存</button></div>`}
-function drawModal(){const html=modalKind==='stock'?mStock(modalArg):modalKind==='edit'?mEdit():modalKind==='drip'?mDrip():'';
+function drawModal(){const html=modalKind==='stock'?mStock(modalArg):modalKind==='edit'?mEdit():modalKind==='drip'?mDrip():modalKind==='supplier'?mSupplier():'';
   const host=$('modalhost');const sc=host.querySelector('.modalwrap')?.scrollTop||0;
   host.innerHTML=`<div class="modalwrap" role="dialog" aria-modal="true"><div class="modal">${html}</div></div>`;host.querySelector('.modalwrap').scrollTop=sc;wireModal()}
 function closeModal(){$('modalhost').innerHTML='';modalKind=null;modalArg=null;draft=null;editing=null;document.body.style.overflow=''}
@@ -752,13 +867,26 @@ document.addEventListener('click',async ev=>{
     if(!items.length){toast('至少填一样的用量');break}
     const rec={kind:'drip',status:'done',date:ds,doneDate:ds,farm:draft.farm,farmName:fname(draft.farm),items,createdAt:new Date().toISOString()};
     try{await db.collection('sprays').doc(ds+'_'+draft.farm+'_drip_'+Date.now().toString(36)).set(rec);closeModal();toast('已记录滴灌加料')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
+  case 'supedit':{const x=id?suppliers.find(q=>q._id===id):null;editing=x?x._id:null;draft=x?{...x}:{};openModal('supplier');break}
+  case 'supview':supView=id;render();break;
+  case 'subout':subOut=!subOut;render();break;
+  case 'fshop':supShop=id;render();break;
+  case 'farea':supArea=id;render();break;
+  case 'fkind':supKind=id;render();break;
+  case 'fclear':supShop='all';supArea='all';supKind='All';render();break;
+  case 'setshop':{const v=$('ns-'+id)?.value;if(!v){toast('请先选店');break}const p=byId(id);const cur=Array.isArray(p.shops)?p.shops:[];
+    try{await db.collection('products').doc(id).update({shops:[...new Set([...cur,v])]});toast('已记下：'+p.name+' → '+v)}catch(err){toast('保存不了：'+(err.code||err.message))}break}
+  case 'supsave':{const o={};for(const [k] of SUPF)o[k]=String(draft[k]||'').trim();if(!o.name){toast('请填店名');break}
+    const sid=editing||o.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||('s-'+Date.now().toString(36));
+    try{await db.collection('suppliers').doc(sid).set(o);closeModal();toast('已保存')}catch(err){toast('保存不了：'+(err.code||err.message))}break}
   case 'nconly':ncOnly=!ncOnly;render();break;
   case 'focus':focus=focus&&focus.m===id?null:{m:id};render();break;
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:fmtAmt(x.need,x.p)}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${r.pb?`${r.packs} × ${r.p.packSize} ${r.p.packUnit}`:fmtAmt(r.need,r.p)}`));
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
-  case 'savecount':{const p=byId(id),pb=packBase(p),v=$('cnt-in').value,n=Number(v);if(v===''||Number.isNaN(n)||n<0){toast('请填数字');break}
-    saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:pb?n*pb:n,date:today(),createdAt:new Date().toISOString()});break}
+  case 'savecount':{const {parts,amt,any,bad}=cntRead();
+    if(bad){toast(bad);break}if(!any){toast('请至少填一格（没货就在「满的」填 0）');break}
+    saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:Math.round(amt*100)/100,parts,date:today(),createdAt:new Date().toISOString()});break}
   case 'savebuy':{const p=byId(id),n=Number($('buy-n').value),ps=$('buy-ps').value===''?null:Number($('buy-ps').value),pu=$('buy-pu').value,uv=$('buy-up').value,up=uv===''?null:Number(uv),rv=$('buy-rm').value;let rm=rv===''?null:Number(rv);
     const shop=($('buy-shop').value||'').trim(),ds=$('buy-date').value||today();
     if(!(n>0)){toast('请填买了几件');break}if(ps!=null&&!(ps>0)){toast('包装只能填数字');break}if(up!=null&&(Number.isNaN(up)||up<0)){toast('每件价钱只能填数字');break}if(rm!=null&&(Number.isNaN(rm)||rm<0)){toast('总共只能填数字');break}
@@ -780,13 +908,25 @@ document.addEventListener('click',async ev=>{
   case 'close':closeModal();break;
   }
 });
-document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow img,.productpick img');if(!im)return;if(im.closest('.productrow')&&ev.target.closest('button,a'))return;ev.preventDefault();ev.stopImmediatePropagation();
-  const row=im.closest('.productrow,.productpick');const ne=row&&(row.querySelector('.grow b')||row.querySelector('.p-name'));const nm=ne?String(ne.childNodes[0]?ne.childNodes[0].textContent:ne.textContent).replace(/^\s*✓\s*/,'').trim():'';
+document.addEventListener('click',ev=>{const im=ev.target.closest('.productrow img,.productpick img,.mleft img');if(!im)return;if(im.closest('.productrow')&&ev.target.closest('button,a'))return;ev.preventDefault();ev.stopImmediatePropagation();
+  const row=im.closest('.productrow,.productpick,.mleft');const ne=row&&(row.querySelector('.grow b')||row.querySelector('.p-name')||row.querySelector('b'));const nm=ne?String(ne.childNodes[0]?ne.childNodes[0].textContent:ne.textContent).replace(/^\s*✓\s*/,'').trim():'';
   const lb=document.createElement('div');lb.className='lightbox';lb.setAttribute('role','dialog');lb.setAttribute('aria-label','药品照片');
   lb.innerHTML=`<button class="x" aria-label="关闭">×</button><img src="${e(im.getAttribute('src'))}" alt="${e(nm)}"><b>${e(nm)}</b>`;lb.onclick=()=>lb.remove();document.body.appendChild(lb)},true);
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){const lb=document.querySelector('.lightbox');if(lb){lb.remove();return}}if(ev.key==='Escape'&&modalKind)closeModal()});
 
 /* ---------- data ---------- */
+function cntRead(){const parts=[];let amt=0,any=false,bad='';
+  document.querySelectorAll('#modalhost .cnt-full').forEach(f=>{const i=f.dataset.i,pe=document.getElementById('cnt-p'+i);const fv=f.value.trim(),pv=pe?pe.value.trim().replace('%',''):'';if(fv===''&&pv==='')return;
+    const fn=fv===''?0:Number(fv),pn=pv===''?0:Number(pv);if(Number.isNaN(fn)||fn<0||Number.isNaN(pn)||pn<0){bad='只能填数字';return}if(pn>100){bad='剩几 % 最多 100';return}
+    const n=Math.round((fn+pn/100)*10000)/10000;any=true;amt+=n*Number(f.dataset.b);parts.push({size:f.dataset.l,n,full:fn,pct:pn})});
+  const li=document.getElementById('cnt-in');if(li&&li.value.trim()!==''){const n=Number(li.value);if(Number.isNaN(n)||n<0)bad='只能填数字';else{any=true;amt+=n;if(n)parts.push({size:'零散',n})}}
+  return {parts,amt,any,bad}}
+function cntSum(){const box=document.getElementById('cnt-sum');if(!box)return;const u=box.dataset.u,pb=Number(box.dataset.pb)||0;const {amt,any,bad}=cntRead();
+  if(bad){box.className='cntsum bad';box.textContent=bad;return}if(!any){box.className='cntsum';box.textContent='';return}
+  const big=amt>=1000?` = ${Math.round(amt/10)/100} ${u==='g'?'kg':'L'}`:'';
+  const ml=amt>=1000?`${Math.round(amt/10)/100} ${u==='g'?'kg':'L'}`:`${Math.round(amt*100)/100} ${u}`;let t=pb?`合计：${(amt/pb).toFixed(2)} 瓶 ＝ ${ml}`:`合计：${ml}`;
+  box.className='cntsum'+(t.includes('⚠')?' warn':'');box.textContent=t}
+document.addEventListener('input',ev=>{if(ev.target&&ev.target.closest&&ev.target.closest('#modalhost')&&(ev.target.id==='cnt-in'||ev.target.classList.contains('cnt-full')||ev.target.classList.contains('cnt-pct')))cntSum()});
 function rerender(){const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('#root')&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;render();if(modalKind==='stock')drawModal()}
 renderNav();
 (async()=>{
@@ -804,6 +944,7 @@ renderNav();
   on('sprays',a=>{sprayDocs=a;mergeS()});
   on('ferti',a=>{fdays=a;mergeS()});
   on('purchases',a=>{purchases=a});
+  on('suppliers',a=>{suppliers=a});
   on('counts',a=>{counts=a});
 })();
 })();
