@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- worker_harvest_form_11 · content v19 · 2026-11-19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -151,6 +152,84 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   padding:14px 16px;font-size:20px;cursor:pointer;}
 .copy-btn:active{background:var(--bdr);}
 
+
+/* ── GRADE LIST (one row per grade, no opening) ── */
+.g-list{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.g-grp{border-bottom:1px solid var(--bdr);transition:background .15s;}
+.g-grp:last-child{border-bottom:none;}
+.g-grp.has-val{background:var(--g4);}
+.g-row{display:flex;align-items:center;gap:8px;padding:7px 10px;}
+.g-row .grade-pill{width:96px;justify-content:center;}
+.g-row.sub .g-sp{width:96px;flex-shrink:0;}
+.u-chip{flex-shrink:0;width:60px;height:42px;border:1.5px solid var(--bdr);background:var(--sur2);border-radius:8px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--txt2);cursor:pointer;}
+.u-chip.kg{color:#8a6100;border-color:#e8cc50;background:#fffadf;}
+.g-row .bk-row{flex:1;min-width:0;}
+.g-row .bk-minus,.g-row .bk-plus{width:38px;height:42px;}
+.g-row .bk-num{height:42px;font-size:20px;}
+.g-add{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px dashed #b8c2b0;background:none;color:var(--mut);font-size:15px;cursor:pointer;line-height:1;}
+
+/* ── BAKUL (Mah Sing baskets) ── */
+.bk-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:4px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.bk-line{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--bdr);}
+.bk-line:last-child{border-bottom:none;}
+.bk-lbl{flex:1;min-width:0;}
+.bk-lbl b{display:block;font-size:14px;font-weight:700;color:var(--txt);}
+.bk-lbl small{display:block;font-size:11px;color:var(--mut);margin-top:1px;}
+.bk-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--txt2);min-width:64px;text-align:right;}
+.bk-val.mut{color:var(--mut);font-size:15px;}
+.bk-line .bk-row{flex:0 0 150px;}
+.bk-line.total{background:var(--g4);margin:0 -14px;padding:12px 14px;border-radius:0 0 12px 12px;}
+.bk-line.total .bk-val{font-size:26px;color:var(--g);}
+.bk-line.err .bk-row{border-color:var(--red);}
+.bk-warn{font-size:11px;color:#8a6100;padding:0 0 8px;display:none;}
+.bk-warn.on{display:block;}
+
+
+/* ── NOTE VIEW (looks like the Mah Sing delivery note, for copying) ── */
+.note-cap{font-size:12px;font-weight:700;color:var(--g);margin:0 0 6px;}
+.note{background:#fbfbf8;border:1px solid #cfd6e8;border-radius:6px;padding:14px 12px 10px;margin-bottom:14px;color:#222;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.note .ink{color:#1a3fa8;font-weight:700;}
+.note-top{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;}
+.note-ms{font-size:10px;color:#555;}
+.note-l1{font-size:19px;border-bottom:1px solid #999;padding:0 4px;display:inline-block;}
+.note-l2{font-size:16px;border-bottom:1px solid #999;padding:0 4px;display:block;margin:4px 0 0 18px;}
+.note-date{font-size:10px;color:#555;text-align:right;}
+.note-date .ink{display:block;font-size:15px;border-bottom:1px solid #999;padding:0 2px;}
+.note table{width:100%;border-collapse:collapse;margin-top:10px;}
+.note th{background:#dde4f5;font-size:9px;font-weight:600;color:#333;padding:3px 2px;border:1px solid #8b9acb;}
+.note td{border:1px solid #aab5d6;height:30px;font-size:16px;padding:0 6px;white-space:nowrap;}
+.note td.n{width:24px;text-align:center;font-size:10px;color:#444;background:#eef1fa;padding:0;}
+.note td.q{width:64px;text-align:left;}
+.note td.e{width:34px;}
+.note td.ind{padding-left:74px;}
+.note td.ul{position:relative;}
+.note td.ul span{border-top:2px solid #1a3fa8;padding-top:1px;}
+.note-foot{display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;color:#555;margin-top:8px;}
+.note-foot .ink{font-size:15px;}
+
+/* ── PENDING BAKUL (step 2) ── */
+.pend{background:#fff7e0;border:1.5px solid #e8cc50;border-radius:12px;padding:10px 12px;margin-bottom:14px;}
+.pend b{display:block;font-size:13px;color:#7a5800;margin-bottom:6px;}
+.pend button{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px solid #e8cc50;background:#fff;border-radius:10px;
+  padding:12px;font-size:15px;font-weight:700;color:#7a5800;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;}
+.mode-bar{display:flex;align-items:center;justify-content:space-between;background:#fff7e0;border:1.5px solid #e8cc50;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#7a5800;font-weight:700;}
+.mode-bar button{border:1px solid #e8cc50;background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:#7a5800;cursor:pointer;}
+.hv-sum{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.9;}
+/* ── TOTAL (Owner only) ── */
+.farm-pick.four{grid-template-columns:repeat(4,1fr);}
+.farm-btn.tot{border-style:dashed;}
+.farm-btn.tot.on{border-style:solid;border-color:#1a3fa8;background:#eef1fa;color:#1a3fa8;}
+.tot-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:6px 8px;overflow-x:auto;}
+.tot-card table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:14px;}
+.tot-card th{font-size:11px;color:var(--mut);text-align:right;padding:8px 6px;border-bottom:1px solid var(--bdr);}
+.tot-card th:first-child,.tot-card td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-weight:700;}
+.tot-card td{text-align:right;padding:8px 6px;border-bottom:1px dashed var(--bdr);}
+.tot-card td.t,.tot-card th.t{background:var(--g4);font-weight:700;color:var(--g);}
+.tot-card tr.sum td{border-bottom:none;border-top:2px solid var(--g);font-weight:800;}
+.tot-note{font-size:12px;color:#8a6100;margin-top:8px;line-height:1.6;}
+.tot-msg{font-size:12px;color:var(--mut);text-align:center;padding:16px;}
+
 /* ── TOAST ── */
 .save-st{font-size:11px;text-align:center;margin-top:8px;color:var(--mut);}
 .save-st.ok{color:var(--g);}.save-st.wait{color:#8a6100;}
@@ -173,6 +252,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   </div>
 
   <div class="form-body" id="form-body">
+    <div id="bk-pending"></div>
+    <div id="mode-bar"></div>
     <!-- DATE -->
     <div class="frow">
       <label>Date <span class="req">*</span></label>
@@ -189,8 +270,64 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     </div>
 
     <!-- GRADES -->
-    <div class="sec-div">🏷️ Harvest by Grade</div>
-    <div id="grade-cards"></div>
+    <div id="sec-harvest">
+      <div class="sec-div">🏷️ Harvest by Grade</div>
+      <div id="grade-cards"></div>
+    </div>
+    <!-- step 2: tonight's harvest, from this phone -->
+    <div id="sec-hvsum" style="display:none">
+      <div class="sec-div">🏷️ Tonight's harvest</div>
+      <div class="hv-sum" id="hv-sum"></div>
+    </div>
+    <!-- TOTAL (Owner only) -->
+    <div id="sec-total" style="display:none">
+      <div class="sec-div">📊 Total for Mah Sing</div>
+      <div class="tot-card" id="tot-card"><div class="tot-msg">Loading…</div></div>
+      <div class="tot-note" id="tot-note"></div>
+    </div>
+    <div id="sec-bakul">
+
+    <!-- BAKUL (Mah Sing baskets) -->
+    <div class="sec-div">🧺 Bakul · Mah Sing</div>
+    <div class="bk-card" id="bk-card">
+      <div class="bk-line">
+        <div class="bk-lbl"><b>Bakul simpan</b><small id="bk-before-src">Baskets at the farm before the lorry</small></div>
+        <div class="bk-val mut" id="bk-before">—</div>
+        <div class="bk-row" id="bk-simpan-box" style="display:none">
+          <button class="bk-minus" onclick="bkAdj('typed',-1)">−</button>
+          <input class="bk-num" type="number" id="bk-typed" placeholder="?" min="0" inputmode="numeric" oninput="bkInput('typed')">
+          <button class="bk-plus" onclick="bkAdj('typed',1)">+</button>
+        </div>
+      </div>
+      <div class="bk-line" id="bk-turun-line">
+        <div class="bk-lbl"><b>Bakul turun <span class="req" id="turun-req" style="display:none">*</span></b><small id="turun-hint">Fill after the lorry leaves</small></div>
+        <div class="bk-row">
+          <button class="bk-minus" onclick="bkAdj('turun',-1)">−</button>
+          <input class="bk-num" type="number" id="bk-turun" placeholder="0" min="0" inputmode="numeric" oninput="bkInput('turun')">
+          <button class="bk-plus" onclick="bkAdj('turun',1)">+</button>
+        </div>
+      </div>
+      <div class="bk-line">
+        <div class="bk-lbl"><b>Naik sayur</b><small>Baskets of eggplant loaded (from above)</small></div>
+        <div class="bk-val" id="bk-naik">0</div>
+      </div>
+      <div class="bk-warn" id="bk-kgwarn">⚠ kg lines are not counted as baskets</div>
+      <div class="bk-line">
+        <div class="bk-lbl"><b>Besi hutang</b><small>Only if written on the note</small></div>
+        <div class="bk-row">
+          <button class="bk-minus" onclick="bkAdj('besi',-1)">−</button>
+          <input class="bk-num" type="number" id="bk-besi" placeholder="—" min="0" inputmode="numeric" oninput="bkInput('besi')">
+          <button class="bk-plus" onclick="bkAdj('besi',1)">+</button>
+        </div>
+      </div>
+      <div class="bk-line total">
+        <div class="bk-lbl"><b>Bakul balance</b><small>Must match the last number on the Mah Sing note</small></div>
+        <div class="bk-val" id="bk-after">—</div>
+      </div>
+    </div>
+    <div class="err-msg" id="err-bk">Please enter Bakul turun (0 if the lorry dropped none)</div>
+    <div class="err-msg" id="err-simpan">Please enter Bakul simpan — copy it from the last Mah Sing note</div>
+    </div>
   </div>
 
   <div class="gen-bar">
@@ -208,8 +345,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     </div>
   </div>
   <div class="prev-body">
+    <div id="note-wrap">
+      <div class="note-cap">✍️ Copy onto the Mah Sing note, line by line</div>
+      <div class="note" id="note-out"></div>
+    </div>
+    <div class="note-cap">💬 WhatsApp message</div>
     <div class="msg-card" id="msg-out"></div>
-    <div class="prev-note">Tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
+    <div class="prev-note">Copy the note first, then tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
     <div class="save-st" id="save-st"></div>
   </div>
   <div class="send-bar">
@@ -248,13 +390,17 @@ const GRADE_CODE = { aa:'AA', aak:'AA_KULIT', aap:'AA_PUTIH', a:'A', ak:'A_KULIT
 const UNIT_CODE  = { 'kg':'KG', '34/30':'B30', '30/27':'B27' };
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
-const QKEY = 'harvest_outbox_v1', FKEY = 'harvest_farms_v1';
+const QKEY = 'harvest_outbox_v1', FKEY = 'harvest_farms_v1', BKEY = 'bakul_last_v1';
 const short = code => code.replace(/\s+/g, '');
 
 // ══ STATE ════════════════════════════════════
 // Each grade = array of rows: [{ weight:30, baskets:0 }, ...]
-const S = { farm:'', grades:{}, pending:null };
-GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'kg', baskets:0 }]; });
+// bk = Mah Sing baskets: turun / besi typed by the Leader; before = balance at the farm before this lorry
+const S = { farm:'', grades:{}, pending:null, pendingBk:null,
+            bk:{ turun:null, besi:null, before:null, typed:null, src:'' },
+            mode:'HARVEST', bkKey:null, isOwner:false, total:null };
+const HKEY = 'harvest_last_v1';   // this phone's reports, so the Leader can add Bakul after the lorry
+GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'34/30', baskets:0 }]; });
 
 // ══ INIT ═════════════════════════════════════
 function init() {
@@ -266,16 +412,25 @@ function init() {
   try { const f = JSON.parse(localStorage.getItem(FKEY) || 'null'); if (Array.isArray(f) && f.length) FARMS = f; } catch(e) {}
   buildFarms();
   buildAllCards();
+  renderBakul();
   loadFarms();
   flushOutbox();
+  renderPending();
+  detectOwner();
+  const onDate = () => S.mode === 'TOTAL' ? loadTotal() : loadBakulBefore();
+  document.getElementById('f-date').addEventListener('change', onDate);
+  document.getElementById('f-date').addEventListener('blur', onDate);
 }
 
 // ══ FARMS (from the farm list) ════════════════
 function buildFarms() {
-  document.getElementById('farm-pick').innerHTML = FARMS.map(code => `
+  const fp = document.getElementById('farm-pick');
+  fp.classList.toggle('four', S.isOwner && FARMS.length === 3);
+  fp.innerHTML = FARMS.map(code => `
     <button class="farm-btn${S.farm===short(code)?' on':''}" data-farm="${short(code)}" onclick="pickFarm('${short(code)}')">
       ${short(code)}<small>Farm ${code.split(' ').pop()}</small>
-    </button>`).join('');
+    </button>`).join('')
+    + (S.isOwner ? `<button class="farm-btn tot${S.farm==='TOTAL'?' on':''}" data-farm="TOTAL" onclick="pickFarm('TOTAL')">TOTAL<small>All farms</small></button>` : '');
   document.getElementById('hdr-farms').textContent = 'Azura Delta Farm — ' + FARMS.map(short).join(', ');
 }
 async function loadFarms() {
@@ -290,85 +445,59 @@ async function loadFarms() {
 // ══ BUILD ALL CARDS ═══════════════════════════
 function buildAllCards() {
   const wrap = document.getElementById('grade-cards');
-  wrap.innerHTML = GRADES.map(g => `
-    <div class="grade-card" id="gc-${g.key}">
-      <div class="grade-card-hd" onclick="toggleCard('${g.key}')">
-        <span class="grade-pill ${g.cls}">${g.label}</span>
-        <span class="grade-summary" id="gs-${g.key}">—</span>
-        <span class="chevron" id="ch-${g.key}">⌄</span>
-      </div>
-      <div class="grade-card-body" id="gb-${g.key}">
-        <div id="rows-${g.key}"></div>
-        <div class="add-row-wrap">
-          <button class="add-row-btn" onclick="addRow('${g.key}');event.stopPropagation();">
-            ＋ Add
-          </button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-
+  wrap.className = 'g-list';
+  wrap.innerHTML = GRADES.map(g => `<div class="g-grp" id="gc-${g.key}"></div>`).join('');
   GRADES.forEach(g => renderRows(g.key));
 }
 
-// ══ TOGGLE CARD ══════════════════════════════
-function toggleCard(key) {
-  const body = document.getElementById(`gb-${key}`);
-  const ch   = document.getElementById(`ch-${key}`);
-  const open = body.classList.toggle('open');
-  ch.classList.toggle('open', open);
-}
-
-// ══ RENDER ROWS ══════════════════════════════
+// ══ RENDER ONE GRADE (first line + any extra lines) ══
 function renderRows(key) {
-  const rows = S.grades[key];
-  const wrap = document.getElementById(`rows-${key}`);
+  const g = GRADES.find(x => x.key === key), rows = S.grades[key];
+  const wrap = document.getElementById(`gc-${key}`);
   if (!wrap) return;
-
   wrap.innerHTML = rows.map((row, i) => {
-    const wBtns = WEIGHTS.map(w =>
-      `<button class="w-btn${row.wLabel===w.label?' on':''}"
-        onclick="setW('${key}',${i},'${w.label}');event.stopPropagation();">${w.label}</button>`
-    ).join('');
-
-    const isDirect = row.wLabel === 'kg';
-    const ph = isDirect ? 'kg' : 'bakul';
+    const isKg = row.wLabel === 'kg';
     return `
-      <div class="entry-row">
-        <div class="w-pick">${wBtns}</div>
+      <div class="g-row${i ? ' sub' : ''}">
+        ${i ? '<span class="g-sp"></span>' : `<span class="grade-pill ${g.cls}">${g.label}</span>`}
+        <button class="u-chip${isKg ? ' kg' : ''}" onclick="cycleW('${key}',${i})">${row.wLabel}</button>
         <div class="bk-row">
-          <button class="bk-minus" onclick="adj('${key}',${i},-1);event.stopPropagation();">−</button>
+          <button class="bk-minus" onclick="adj('${key}',${i},-1)">−</button>
           <input class="bk-num" type="number" id="bk-${key}-${i}"
-            value="${row.baskets||''}" placeholder="${ph}" min="0" inputmode="decimal"
+            value="${row.baskets||''}" placeholder="${isKg ? 'kg' : '0'}" min="0" inputmode="${isKg ? 'decimal' : 'numeric'}"
             oninput="onInput('${key}',${i})">
-          <button class="bk-plus" onclick="adj('${key}',${i},1);event.stopPropagation();">+</button>
+          <button class="bk-plus" onclick="adj('${key}',${i},1)">+</button>
         </div>
-        <button class="row-del${rows.length === 1 ? ' hidden' : ''}" onclick="delRow('${key}',${i});event.stopPropagation();">✕</button>
+        ${i ? `<button class="g-add" onclick="delRow('${key}',${i})" title="Remove">✕</button>`
+            : `<button class="g-add" onclick="addRow('${key}')" title="Add another line">＋</button>`}
       </div>`;
   }).join('');
+  wrap.classList.toggle('has-val', rows.some(r => r.baskets > 0));
 }
 
-// ══ ADD / DELETE ROW ═════════════════════════
+// ══ ADD / DELETE LINE ═════════════════════════
 function addRow(key) {
-  S.grades[key].push({ wLabel:'kg', baskets:0 });
-  renderRows(key);
-  refreshSummary(key);
-  // Focus new input
+  const used = S.grades[key].map(r => r.wLabel);
+  const next = ['30/27', 'kg', '34/30'].find(l => !used.includes(l)) || '34/30';
+  S.grades[key].push({ wLabel:next, baskets:0 });
+  renderRows(key); refreshSummary(key);
   const i = S.grades[key].length - 1;
-  setTimeout(() => { const el = document.getElementById(`bk-${key}-${i}`); if(el) el.focus(); }, 60);
+  setTimeout(() => { const el = document.getElementById(`bk-${key}-${i}`); if (el) el.focus(); }, 60);
 }
-
 function delRow(key, i) {
   S.grades[key].splice(i, 1);
-  renderRows(key);
-  refreshSummary(key);
+  renderRows(key); refreshSummary(key);
 }
 
-// ══ WEIGHT / BASKET ══════════════════════════
+// ══ UNIT: tap to change 34/30 → 30/27 → kg ══════
+function cycleW(key, i) {
+  const order = ['34/30', '30/27', 'kg'];
+  const cur = S.grades[key][i].wLabel;
+  setW(key, i, order[(order.indexOf(cur) + 1) % order.length]);
+}
 function setW(key, i, wLabel) {
   S.grades[key][i].wLabel = wLabel;
-  renderRows(key);
-  refreshSummary(key);
+  renderRows(key); refreshSummary(key);
 }
 
 function adj(key, i, delta) {
@@ -378,27 +507,94 @@ function adj(key, i, delta) {
   S.grades[key][i].baskets = nv;
   refreshSummary(key);
 }
-
 function onInput(key, i) {
   S.grades[key][i].baskets = parseFloat(document.getElementById(`bk-${key}-${i}`).value) || 0;
   refreshSummary(key);
 }
 
-// ══ SUMMARY (header right side) ══════════════
+// ══ FILLED ROWS TURN GREEN ═══════════════════
 function refreshSummary(key) {
-  const rows   = S.grades[key];
-  const gs     = document.getElementById(`gs-${key}`);
-  const gc     = document.getElementById(`gc-${key}`);
-  const filled = rows.filter(r => r.baskets > 0);
-  if (!filled.length) {
-    gs.textContent = '—'; gs.classList.remove('has-val'); gc.classList.remove('has-val');
-  } else {
-    gs.textContent = filled.map(r => {
-      const w = WEIGHTS.find(x => x.label === r.wLabel);
-      return w?.factor == null ? `${r.baskets}kg` : `${r.wLabel}·${r.baskets}`;
-    }).join('  ');
-    gs.classList.add('has-val'); gc.classList.add('has-val');
-  }
+  const gc = document.getElementById(`gc-${key}`);
+  if (gc) gc.classList.toggle('has-val', S.grades[key].some(r => r.baskets > 0));
+  renderBakul();
+}
+
+// ══ BAKUL (Mah Sing baskets) ══════════════════
+// Naik sayur = every basket line above (34/30 and 30/27). kg lines are not baskets.
+function naikCount() {
+  let n = 0, kg = false;
+  GRADES.forEach(g => S.grades[g.key].forEach(r => {
+    if (!(r.baskets > 0)) return;
+    if (WEIGHTS.find(w => w.label === r.wLabel)?.factor == null) kg = true; else n += r.baskets;
+  }));
+  return { n, kg };
+}
+// Simpan: from the system; only if the system has none, the Leader types it from the last note
+const bkSimpan = () => S.bk.before != null ? S.bk.before : S.bk.typed;
+function bkAfter() {
+  const { n } = naikCount();
+  if (bkSimpan() == null || S.bk.turun == null) return null;
+  return bkSimpan() + S.bk.turun - n;
+}
+function renderBakul() {
+  const { n, kg } = naikCount();
+  const el = id => document.getElementById(id);
+  if (!el('bk-naik')) return;
+  el('bk-naik').textContent = n;
+  el('bk-kgwarn').classList.toggle('on', kg);
+  const b = el('bk-before'), ask = S.bk.before == null && !!S.farm;
+  b.textContent = S.bk.before == null ? '—' : S.bk.before;
+  b.classList.toggle('mut', S.bk.before == null);
+  b.style.display = ask ? 'none' : '';
+  el('bk-simpan-box').style.display = ask ? '' : 'none';
+  el('bk-before-src').textContent = S.bk.before != null ? (S.bk.src || 'Baskets at the farm before the lorry')
+    : S.farm ? 'Type it from the last Mah Sing note' : 'Pick the farm first';
+  const a = bkAfter();
+  el('bk-after').textContent = a == null ? '—' : a;
+  el('bk-after').style.color = a != null && a < 0 ? 'var(--red)' : '';
+}
+function bkAdj(k, d) {
+  const cur = S.bk[k] == null ? 0 : S.bk[k];
+  const nv = Math.max(0, cur + d);
+  S.bk[k] = nv;
+  document.getElementById('bk-' + k).value = nv;
+  if (k === 'turun') document.getElementById('err-bk').classList.remove('on'), document.getElementById('bk-turun-line').classList.remove('err');
+  if (k === 'typed') document.getElementById('err-simpan').classList.remove('on');
+  renderBakul();
+}
+function bkInput(k) {
+  const v = document.getElementById('bk-' + k).value;
+  S.bk[k] = v === '' ? null : Math.max(0, Math.floor(Number(v) || 0));
+  if (k === 'turun') document.getElementById('err-bk').classList.remove('on'), document.getElementById('bk-turun-line').classList.remove('err');
+  if (k === 'typed') document.getElementById('err-simpan').classList.remove('on');
+  renderBakul();
+}
+// Balance before this lorry: from the cloud; if no signal, the last one this phone sent.
+function readBk() { try { return JSON.parse(localStorage.getItem(BKEY) || '{}'); } catch(e) { return {}; } }
+function bkFromPhone(farm, iso) {
+  const c = readBk()[farm];
+  if (!c) return null;
+  if (c.date === iso) return c.before;          // same day again (correction): use the number before it
+  if (c.date < iso && c.after != null) return c.after;
+  return null;
+}
+let bkSeq = 0;
+async function loadBakulBefore() {
+  const date = document.getElementById('f-date').value.trim();
+  if (!S.farm || !/^\d{1,2}\/\d{1,2}$/.test(date)) { S.bk.before = null; S.bk.src = ''; renderBakul(); return; }
+  const farm = FARMS.find(f => short(f) === S.farm) || S.farm, iso = isoDate(date), seq = ++bkSeq;
+  const local = bkFromPhone(S.farm, iso);
+  S.bk.before = local; S.bk.src = local == null ? '' : 'Last report from this phone'; renderBakul();
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/rpc/bakul_form_last', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p:{ farm, date: iso } }) });
+    if (!r.ok || seq !== bkSeq) return;
+    const j = await r.json();
+    if (j && j.balance != null) {
+      S.bk.before = j.balance;
+      S.bk.src = 'Farm system' + (j.as_of ? ' · after ' + j.as_of.slice(8,10) + '/' + j.as_of.slice(5,7) : '');
+      renderBakul();
+    }
+  } catch(e) {}
 }
 
 // ══ DATE INPUT ════════════════════════════════
@@ -410,9 +606,28 @@ function autoSlash(el) {
 
 // ══ FARM ═════════════════════════════════════
 function pickFarm(farm) {
+  if (S.mode === 'BAKUL') exitBakul(false);
   S.farm = farm;
+  S.mode = farm === 'TOTAL' ? 'TOTAL' : 'HARVEST';
   document.querySelectorAll('#farm-pick .farm-btn').forEach(b => b.classList.toggle('on', b.dataset.farm === farm));
   document.getElementById('err-farm').classList.remove('on');
+  showMode();
+  if (S.mode === 'TOTAL') loadTotal(); else loadBakulBefore();
+}
+// Which sections show: HARVEST (night report) · BAKUL (after the lorry) · TOTAL (Owner)
+function showMode() {
+  const m = S.mode, $ = id => document.getElementById(id);
+  $('sec-harvest').style.display = m === 'HARVEST' ? '' : 'none';
+  $('sec-hvsum').style.display   = m === 'BAKUL' ? '' : 'none';
+  $('sec-total').style.display   = m === 'TOTAL' ? '' : 'none';
+  $('sec-bakul').style.display   = m === 'TOTAL' ? 'none' : '';
+  $('turun-req').style.display   = m === 'BAKUL' ? '' : 'none';
+  $('turun-hint').textContent    = m === 'BAKUL' ? 'Empty baskets the lorry dropped' : 'Fill after the lorry leaves';
+  $('bk-pending').style.display  = m === 'HARVEST' ? '' : 'none';
+  $('mode-bar').innerHTML = m === 'BAKUL'
+    ? `<span>🧺 Bakul for ${S.farm} · ${document.getElementById('f-date').value}</span><button onclick="exitBakul(true)">✕ Cancel</button>` : '';
+  document.querySelector('.gen-btn').innerHTML = m === 'TOTAL' ? '▶ &nbsp;Preview Total for Mah Sing'
+    : m === 'BAKUL' ? '▶ &nbsp;Preview Bakul &amp; Send' : '▶ &nbsp;Preview &amp; Send to WhatsApp';
 }
 
 // ══ VALIDATE ═════════════════════════════════
@@ -427,16 +642,28 @@ function validate() {
   if (!S.farm) {
     document.getElementById('err-farm').classList.add('on'); ok = false;
   }
+  if (S.mode === 'TOTAL') return ok;
+  // Bakul: at night it can wait; after the lorry (step 2) turun is required
+  if (S.mode === 'BAKUL' && S.bk.turun == null) {
+    document.getElementById('err-bk').classList.add('on');
+    document.getElementById('bk-turun-line').classList.add('err'); ok = false;
+  }
+  if (S.farm && S.bk.turun != null && bkSimpan() == null) {
+    document.getElementById('err-simpan').classList.add('on'); ok = false;
+  }
   return ok;
 }
 
 // ══ GENERATE ═════════════════════════════════
 function generate() {
   if (!validate()) {
-    document.getElementById('form-body')?.scrollTo({top:0,behavior:'smooth'});
+    const first = document.querySelector('.err-msg.on');
+    if (first && (first.id === 'err-bk' || first.id === 'err-simpan')) document.getElementById('bk-card').scrollIntoView({behavior:'smooth', block:'center'});
+    else window.scrollTo({top:0,behavior:'smooth'});
     return;
   }
 
+  if (S.mode === 'TOTAL') return generateTotal();
   const lines = [];
     GRADES.forEach(g => {
     S.grades[g.key].forEach(row => {
@@ -454,20 +681,212 @@ function generate() {
   if (!lines.length) { toast('⚠ Please fill in at least one grade'); return; }
 
   const date = document.getElementById('f-date').value.trim();
-  const msg  = `Date: ${date}\nFarm: ${S.farm}\n————————————\n${lines.join('\n')}`;
+  // Bakul lines, written like the Mah Sing note: simpan + turun - naik = balance
+  // Bakul block in the same format as Mah Sing's own group message
+  const naik = naikCount().n, after = bkAfter(), hasBk = S.bk.turun != null;
+  const bkLines = [S.farm, '————————————',
+    `BAKUL SIMPAN - ${bkSimpan()}`, `BAKUL TURUN - ${S.bk.turun}`, `NAIK SAYUR - ${naik}`, `BAKUL BALANCE - SIMPAN ${after}`];
+  if (S.bk.besi != null) bkLines.push(`BESI HUTANG - ${S.bk.besi}`);
+  const head = `Date: ${date}\nFarm: ${S.farm}\n————————————\n`;
+  const msg  = S.mode === 'BAKUL' ? `Date: ${date}\nFarm: ${S.farm}\n\n${bkLines.join('\n')}`      // step 2: baskets only
+             : head + lines.join('\n') + (hasBk ? `\n\n${bkLines.join('\n')}` : '');
 
   document.getElementById('msg-out').textContent = msg;
-  S.pending = buildRecord(date, msg);
+  document.getElementById('note-wrap').style.display = hasBk ? '' : 'none';
+  if (hasBk) renderNote(date);
+  const saved = S.mode === 'BAKUL' ? readH()[S.bkKey] : null;
+  S.pending = S.mode === 'BAKUL' ? null : buildRecord(date, msg);      // step 2 never sends the harvest again
+  S.pendingBk = !hasBk ? null : { rpc:'bakul_submit', client_id: uuid(),
+                  harvest_client_id: S.pending ? S.pending.client_id : (saved && saved.client_id) || null,
+                  date: isoDate(date), farm: FARMS.find(f => short(f) === S.farm) || S.farm,
+                  turun: S.bk.turun, naik, besi: S.bk.besi, _before: bkSimpan(), _after: after };
   setSaveSt('');
   document.getElementById('scr-form').classList.remove('on');
   document.getElementById('scr-prev').classList.add('on');
+}
+
+
+// ══ NOTE VIEW: same layout as the Mah Sing delivery note ══
+function renderNote(ddmm) {
+  const iso = isoDate(ddmm), dateTxt = `${iso.slice(8,10)}.${iso.slice(5,7)}.${iso.slice(0,4)}`;
+  const farm = FARMS.find(f => short(f) === S.farm) || S.farm;
+  const items = [];
+  GRADES.forEach(g => S.grades[g.key].forEach(r => {
+    if (!(r.baskets > 0)) return;
+    const w = WEIGHTS.find(x => x.label === r.wLabel);
+    const name = g.label.replace(' Kulit', ' kulit').replace(' Putih', ' putih');
+    if (w?.factor == null) items.push({ t:`${name} ⇒ ${r.baskets} kg`, q:'' + r.baskets });
+    else items.push({ t:`${name} ⇒ ${r.wLabel} × ${r.baskets}`, q:'' + Math.round(r.baskets * w.factor) });
+  }));
+  const naik = naikCount().n, before = bkSimpan(), turun = S.bk.turun, mid = before + turun, after = bkAfter();
+  // rows: 1 Terung Panjang, blank, grades (blank between if they fit), then Bakul sum — 14 rows like the paper
+  const rows = [{ t:'Terung Panjang' }, {}];
+  const gap = 2 + items.length * 2 + 5 <= 14;
+  items.forEach((it, i) => { rows.push(it); if (gap && i < items.length - 1) rows.push({}); });
+  rows.push({});
+  rows.push({ t:`Bakul ⇒ ${before}` }, { t:`+ ${turun}`, ind:1 }, { t:`${mid}`, ind:1, ul:1 }, { t:`− ${naik}`, ind:1 }, { t:`${after}`, ind:1, ul:1 });
+  while (rows.length < 14) rows.push({});
+  const td = r => `<td class="${r.ind ? 'ind ' : ''}${r.ul ? 'ul' : ''}">${r.t ? `<span class="ink">${r.t}</span>` : ''}</td>`;
+  document.getElementById('note-out').innerHTML = `
+    <div class="note-top">
+      <div><span class="note-ms">M/s</span> <span class="note-l1 ink">Mah Sing (${farm})</span>
+        <span class="note-l2 ink">AZURA DELTA</span></div>
+      <div class="note-date">Date :<span class="ink">${dateTxt}</span></div>
+    </div>
+    <table>
+      <tr><th>NO.</th><th>Butir-Butir / Particulars</th><th>Kuantiti</th><th>Harga</th><th>Nilai</th></tr>
+      ${rows.map((r, i) => `<tr><td class="n">${i + 1}</td>${td(r)}<td class="q">${r.q ? `<span class="ink">${r.q}</span>` : ''}</td><td class="e"></td><td class="e"></td></tr>`).join('')}
+    </table>
+    <div class="note-foot"><div>${S.bk.besi != null ? `Besi hutang <span class="ink">${S.bk.besi}</span>` : ''}</div><div>${after != null ? `Baki bakul <span class="ink">${after}</span>` : ''}</div></div>`;
 }
 
 // ══ SEND / COPY ══════════════════════════════
 function sendWA() {
   // WhatsApp opens first, every time. Saving never blocks it.
   window.open('https://wa.me/?text=' + encodeURIComponent(document.getElementById('msg-out').textContent), '_blank');
-  if (S.pending) { queue(S.pending); flushOutbox(); }
+  if (S.mode === 'TOTAL') return;                       // the total is only a message, nothing is saved
+  if (S.pending) { queue(S.pending); rememberHarvest(S.pending, !!S.pendingBk); }
+  if (S.pendingBk) { queue(S.pendingBk); rememberBk(S.pendingBk); if (S.mode === 'BAKUL') markBakulDone(S.bkKey); }
+  if (S.pending || S.pendingBk) flushOutbox();
+}
+
+// ══ STEP 2: add Bakul after the lorry, for a report this phone already sent ══
+function readH() { try { return JSON.parse(localStorage.getItem(HKEY) || '{}'); } catch(e) { return {}; } }
+function writeH(h) { try { localStorage.setItem(HKEY, JSON.stringify(h)); } catch(e) {} }
+function rememberHarvest(rec, bakulDone) {
+  const h = readH(), key = short(rec.farm) + '|' + rec.date;
+  h[key] = { farm: short(rec.farm), date: rec.date, ddmm: document.getElementById('f-date').value.trim(),
+             grades: JSON.parse(JSON.stringify(S.grades)), client_id: rec.client_id, bakulDone };
+  const cut = isoDate(document.getElementById('f-date').value.trim());   // keep the phone tidy: last 10 days only
+  Object.keys(h).forEach(k => { if (h[k].date < addDaysIso(cut, -10)) delete h[k]; });
+  writeH(h);
+}
+function markBakulDone(key) { const h = readH(); if (h[key]) { h[key].bakulDone = true; writeH(h); } }
+function addDaysIso(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function todayIso() { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0'); }
+function renderPending() {
+  const h = readH(), from = addDaysIso(todayIso(), -2);
+  const list = Object.entries(h).filter(([, v]) => !v.bakulDone && v.date >= from).sort((a, b) => a[1].date < b[1].date ? 1 : -1);
+  document.getElementById('bk-pending').innerHTML = list.length ? `<div class="pend"><b>🧺 Lorry came? Add Bakul</b>${
+    list.map(([k, v]) => `<button onclick="startBakul('${k}')"><span>${v.farm} · ${v.ddmm}</span><span>Add Bakul ›</span></button>`).join('')}</div>` : '';
+}
+function startBakul(key) {
+  const v = readH()[key]; if (!v) return;
+  S.mode = 'BAKUL'; S.bkKey = key; S.farm = v.farm;
+  document.getElementById('f-date').value = v.ddmm;
+  GRADES.forEach(g => { S.grades[g.key] = v.grades[g.key] || [{ wLabel:'34/30', baskets:0 }]; });
+  S.bk.turun = null; S.bk.besi = null; S.bk.typed = null;
+  ['bk-turun','bk-besi','bk-typed'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  buildFarms(); buildAllCards();
+  const sum = [];
+  GRADES.forEach(g => S.grades[g.key].forEach(r => { if (r.baskets > 0) sum.push(r.wLabel === 'kg' ? `${g.label}: ${r.baskets}kg` : `${g.label}: ${r.wLabel} ${r.baskets}`); }));
+  document.getElementById('hv-sum').innerHTML = sum.join('<br>') || '—';
+  showMode(); loadBakulBefore(); renderBakul();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function exitBakul(reset) {
+  S.mode = 'HARVEST'; S.bkKey = null;
+  GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'34/30', baskets:0 }]; });
+  S.bk.turun = null; S.bk.besi = null; S.bk.typed = null;
+  ['bk-turun','bk-besi','bk-typed'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  buildAllCards();
+  if (reset) { S.farm = ''; buildFarms(); showMode(); renderBakul(); renderPending(); }
+}
+
+// ══ TOTAL (Owner only): uses the Owner's sign-in from the Home page on this phone ══
+function sessionKey() { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^sb-.*-auth-token$/.test(k)) return k; } return null; }
+async function ownerToken() {
+  const k = sessionKey(); if (!k) return null;
+  let ss; try { ss = JSON.parse(localStorage.getItem(k)); } catch(e) { return null; }
+  if (!ss || !ss.access_token) return null;
+  if (!ss.expires_at || ss.expires_at * 1000 < Date.now() + 60000) {
+    try {
+      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ refresh_token: ss.refresh_token }) });
+      if (!r.ok) return null;
+      const n = await r.json(); ss = Object.assign(ss, n);
+      try { localStorage.setItem(k, JSON.stringify(ss)); } catch(e) {}
+    } catch(e) { return null; }
+  }
+  return ss;
+}
+async function detectOwner() {
+  const ss = await ownerToken(); if (!ss || !ss.user) return;
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/hub_app_user?select=role,status&id=eq.' + ss.user.id, { headers:{ apikey:SB_KEY, Authorization:'Bearer ' + ss.access_token } });
+    if (!r.ok) return;
+    const me = (await r.json())[0];
+    if (me && me.role === 'OWNER' && me.status === 'ACTIVE') { S.isOwner = true; buildFarms(); }
+  } catch(e) {}
+}
+const CODE_GRADE = {}; Object.entries(GRADE_CODE).forEach(([k, c]) => CODE_GRADE[c] = k);
+const UNIT_ORDER = ['B30', 'B27', 'KG'], UNIT_TAG = { B30:'', B27:' 30/27', KG:' kg' };
+let totSeq = 0;
+async function loadTotal() {
+  const ddmm = document.getElementById('f-date').value.trim(), card = document.getElementById('tot-card'), note = document.getElementById('tot-note');
+  S.total = null; note.textContent = '';
+  if (!/^\d{1,2}\/\d{1,2}$/.test(ddmm)) { card.innerHTML = '<div class="tot-msg">Enter the date first</div>'; return; }
+  const iso = isoDate(ddmm), seq = ++totSeq;
+  card.innerHTML = '<div class="tot-msg">Loading…</div>';
+  const ss = await ownerToken();
+  if (!ss) { card.innerHTML = '<div class="tot-msg">Sign in on the Home page first</div>'; return; }
+  let list;
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/rpc/harvest_owner_list', { method:'POST', headers:{ apikey:SB_KEY, Authorization:'Bearer ' + ss.access_token, 'Content-Type':'application/json' }, body: JSON.stringify({ p_from: iso, p_to: iso }) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    list = await r.json();
+  } catch(e) { if (seq === totSeq) card.innerHTML = '<div class="tot-msg">No connection — try again</div>'; return; }
+  if (seq !== totSeq) return;
+  // latest report per farm (a Leader who sends twice is correcting the first one)
+  const farms = FARMS.map(short), byFarm = {}, many = [];
+  farms.forEach(f => {
+    const reps = (list || []).filter(x => short(x.farm) === f && x.status !== 'VOID').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
+    if (reps.length > 1) many.push(`${f}: ${reps.length} reports — using the latest`);
+    byFarm[f] = reps[0] || null;
+  });
+  const rows = [];
+  GRADES.forEach(g => UNIT_ORDER.forEach(u => {
+    const code = GRADE_CODE[g.key], vals = farms.map(f => {
+      const rep = byFarm[f]; if (!rep) return null;
+      return (rep.lines || []).filter(l => l.grade === code && l.unit === u).reduce((s, l) => s + Number(l.qty), 0);
+    });
+    if (vals.some(v => v > 0)) rows.push({ label: g.label + UNIT_TAG[u], kg: u === 'KG', vals, tot: vals.reduce((s, v) => s + (v || 0), 0) });
+  }));
+  const bk = rows.filter(r => !r.kg);
+  const sumVals = farms.map((f, i) => byFarm[f] ? bk.reduce((s, r) => s + (r.vals[i] || 0), 0) : null);
+  const sumTot = sumVals.reduce((s, v) => s + (v || 0), 0);
+  const missing = farms.filter(f => !byFarm[f]);
+  const n = v => v == null ? '-' : v === 0 ? '-' : String(v);
+  if (!rows.length) { card.innerHTML = `<div class="tot-msg">No harvest reports for ${ddmm} yet</div>`; return; }
+  card.innerHTML = `<table><tr><th>Grade</th>${farms.map(f => `<th>${f}</th>`).join('')}<th class="t">TOTAL</th></tr>
+    ${rows.map(r => `<tr><td>${r.label}</td>${r.vals.map(v => `<td>${n(v)}</td>`).join('')}<td class="t">${r.tot}</td></tr>`).join('')}
+    <tr class="sum"><td>TOTAL</td>${sumVals.map(v => `<td>${v == null ? '-' : v}</td>`).join('')}<td class="t">${sumTot}</td></tr></table>`;
+  const notes = [];
+  if (missing.length) notes.push('⚠ No report yet: ' + missing.join(', '));
+  many.forEach(m => notes.push('ℹ ' + m));
+  if (rows.some(r => r.kg)) notes.push('kg lines are not counted in TOTAL baskets');
+  note.innerHTML = notes.join('<br>');
+  // WhatsApp text: a table in monospace (```), so the columns line up
+  const head = ['Grade', ...farms, 'TOTAL'];
+  const body = rows.map(r => [r.label, ...r.vals.map(n), String(r.tot)]);
+  const last = ['TOTAL', ...sumVals.map(v => v == null ? '-' : String(v)), String(sumTot)];
+  const all = [head, ...body, last], w = head.map((_, c) => Math.max(...all.map(r => r[c].length)));
+  const fmtRow = r => r.map((c, i) => i ? c.padStart(w[i]) : c.padEnd(w[i])).join('  ');
+  const line = '-'.repeat(w.reduce((s, x) => s + x, 0) + 2 * (w.length - 1));
+  S.total = { ddmm, text: `Date: ${ddmm} · AZURA DELTA\n\`\`\`\n${fmtRow(head)}\n${line}\n${body.map(fmtRow).join('\n')}\n${line}\n${fmtRow(last)}\n\`\`\`` + (missing.length ? `\n(No report yet: ${missing.join(', ')})` : '') };
+}
+function generateTotal() {
+  if (!S.total) { toast('⚠ No total yet for this date'); return; }
+  document.getElementById('msg-out').textContent = S.total.text;
+  document.getElementById('note-wrap').style.display = 'none';
+  S.pending = null; S.pendingBk = null; setSaveSt('');
+  document.getElementById('scr-form').classList.remove('on');
+  document.getElementById('scr-prev').classList.add('on');
+}
+// Keep this farm's latest balance on the phone, for days with no signal
+function rememberBk(b) {
+  const all = readBk();
+  all[short(b.farm)] = { date: b.date, before: b._before, after: b._after };
+  try { localStorage.setItem(BKEY, JSON.stringify(all)); } catch(e) {}
 }
 
 // ══ SAVE TO THE FARM SYSTEM (outbox: kept on the phone until the cloud says OK) ══
@@ -500,7 +919,11 @@ async function flushOutbox() {
   let q = readQ();
   for (const rec of [...q]) {
     try {
-      const r = await fetch(SB_URL + '/rest/v1/rpc/harvest_submit', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p: rec }) });
+      // Harvest lines go to harvest_submit (unchanged); basket lines go to bakul_submit
+      const fn = rec.rpc === 'bakul_submit' ? 'bakul_submit' : 'harvest_submit';
+      let p = rec;
+      if (fn === 'bakul_submit') { p = {}; Object.keys(rec).forEach(k => { if (k !== 'rpc' && k[0] !== '_') p[k] = rec[k]; }); }
+      const r = await fetch(SB_URL + '/rest/v1/rpc/' + fn, { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p }) });
       if (r.ok) { q = q.filter(x => x.client_id !== rec.client_id); writeQ(q); if (S.pending && rec.client_id === S.pending.client_id) setSaveSt('✓ Saved to farm system', 'ok'); }
       else if (r.status >= 400 && r.status < 500) {        // the cloud refused it (e.g. date too old): do not retry forever
         q = q.filter(x => x.client_id !== rec.client_id); writeQ(q);
@@ -528,6 +951,7 @@ function copyMsg() {
 }
 
 function goBack() {
+  renderPending();
   document.getElementById('scr-prev').classList.remove('on');
   document.getElementById('scr-form').classList.add('on');
 }

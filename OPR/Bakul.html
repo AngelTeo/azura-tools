@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bakul v1</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --layer:#8B6C2A;
+  --sur:#ffffff; --sur2:#f7f6f2; --bdr:#e0ddd6;
+  --txt:#1a1a1a; --mut:#888888;
+  --ok:#0F6E56; --warn:#854F0B; --danger:#A32D2D; --info:#236FAD;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,"Microsoft YaHei",sans-serif;background:var(--sur2);color:var(--txt);font-size:13px;line-height:1.4}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.nav{background:var(--layer);display:flex;align-items:center;padding:0 12px;position:sticky;top:0;z-index:50;overflow-x:auto;min-height:56px}
+.nav-home{background:none;border:none;color:rgba(255,255,255,.75);font-size:18px;cursor:pointer;padding:0 10px 0 0;min-height:44px;min-width:40px}
+.nav-logo{font-size:13px;font-weight:600;padding:0 12px 0 0;border-right:.5px solid rgba(255,255,255,.2);margin-right:4px;white-space:nowrap;color:#fff;display:flex;align-items:center;min-height:44px}
+.ver{background:#F9CB42;color:var(--layer);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px}
+.ntab{padding:0 12px;font-size:12px;color:rgba(255,255,255,.7);cursor:pointer;border:none;background:transparent;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:inherit;min-height:44px}
+.ntab.on{color:#fff;border-bottom-color:#fff;font-weight:600}
+.nav-r{margin-left:auto;padding-left:12px;flex-shrink:0}
+.sync{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:18px;background:rgba(255,255,255,.14);color:#fff;font-size:11px;border:.5px solid rgba(255,255,255,.3);cursor:pointer;font-family:inherit;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:#7CD4A8;display:inline-block}
+.sync.bad i{background:#FF8A8A}.sync.busy i{background:#F9CB42}
+
+.page{display:none;padding:14px;max-width:1000px;margin:0 auto}
+.page.on{display:block}
+h1.pt{font-size:17px;margin:2px 0 12px}
+
+.btn{padding:0 14px;min-height:44px;border-radius:6px;border:.5px solid var(--bdr);background:var(--sur);color:var(--txt);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-pri{background:var(--layer);color:#fff;border-color:var(--layer);font-weight:600}
+.btn-sm{min-height:34px;padding:0 10px;font-size:12px}
+.btn-red{color:var(--danger);border-color:#e9c4c4}
+
+.card{background:var(--sur);border:.5px solid var(--bdr);border-radius:14px;padding:14px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px}
+
+/* farm cards */
+.farms{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:12px}
+.fc{background:var(--sur);border:.5px solid var(--bdr);border-radius:14px;padding:14px;border-top:4px solid var(--ok)}
+.fc.short{border-top-color:var(--danger)}
+.fc-h{display:flex;justify-content:space-between;align-items:baseline}
+.fc-h b{font-size:15px}.fc-h small{color:var(--mut);font-size:11px}
+.fc-big{font-size:40px;font-weight:700;line-height:1.1;margin:6px 0 2px}
+.fc-big span{font-size:13px;font-weight:500;color:var(--mut);margin-left:4px}
+.fc-st{font-size:12px;font-weight:600;margin-bottom:8px}
+.fc.short .fc-st{color:var(--danger)} .fc .fc-st{color:var(--ok)}
+.fc-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:.5px dashed var(--bdr)}
+.fc-row span{color:var(--mut)}
+
+/* tables */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.data{width:100%;border-collapse:collapse;font-size:12px}
+table.data th{text-align:left;font-size:11px;color:var(--mut);font-weight:600;padding:8px 6px;border-bottom:.5px solid var(--bdr);white-space:nowrap;background:var(--sur)}
+table.data td{padding:8px 6px;border-bottom:.5px solid #eeebe4;white-space:nowrap}
+table.data td.r,table.data th.r{text-align:right}
+table.data tr.void td{color:#bbb;text-decoration:line-through}
+table.data tr.bad td{background:#FCEBEB}
+td.x{color:var(--danger);font-weight:700}
+td.ok{color:var(--ok)}
+.tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:var(--sur2);border:.5px solid var(--bdr);color:var(--mut)}
+.tag.form{background:#E8F0F7;color:var(--info);border-color:#c7d9ea}
+.tag.man{background:#FFF3CD;color:var(--warn);border-color:#ecd9a6}
+.sub{display:block;font-size:10px;color:var(--mut)}
+
+/* alerts */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px;line-height:1.6}
+.alert-warn{background:#FFF3CD;color:var(--warn);border-left:3px solid var(--warn)}
+.alert-danger{background:#FCEBEB;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-info{background:#E8F0F7;color:var(--info);border-left:3px solid var(--info)}
+.alert-ok{background:#E3F4EC;color:var(--ok);border-left:3px solid var(--ok)}
+
+/* forms */
+.frow{margin-bottom:12px}
+.frow label{display:block;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:5px}
+input.in,textarea.in{width:100%;border:.5px solid var(--bdr);border-radius:8px;padding:11px 12px;font-size:15px;font-family:inherit;background:#fff}
+textarea.in{min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-height:44px;border:.5px solid var(--bdr);background:#fff;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--mut)}
+.seg button.on{border-color:var(--layer);background:#f6efe0;color:var(--layer)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.split-row{display:grid;grid-template-columns:60px 1fr 1fr 1fr 1fr;gap:6px;align-items:center;font-size:12px;padding:6px 0;border-top:.5px dashed var(--bdr)}
+.split-row.h{color:var(--mut);font-size:11px;border-top:none}
+.split-row input{width:100%;border:.5px solid var(--bdr);border-radius:6px;padding:7px;font-size:14px;text-align:right}
+.split-row b.give{font-size:18px;color:var(--layer);text-align:right}
+.split-row .r{text-align:right}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center;z-index:100}
+.mask.on{display:flex}
+.modal{background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px;max-height:92vh;overflow:auto}
+@media(min-width:700px){.mask{align-items:center}.modal{border-radius:16px}}
+.modal h2{font-size:16px;margin:0 0 12px}
+.mbar{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.gate{max-width:420px;margin:60px auto;padding:0 16px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1e17;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;z-index:200;pointer-events:none}
+#toast.show{opacity:1}
+.empty{color:var(--mut);text-align:center;padding:20px}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate" style="display:none">
+  <div id="gateMsg"></div>
+  <a class="btn btn-pri" id="gateHome" href="../index.html" style="width:100%;justify-content:center;text-decoration:none;display:none">← Back to Home</a>
+</div>
+
+<div id="app" style="display:none">
+  <div class="nav">
+    <button class="nav-home" title="Back to Home" onclick="location.href='../index.html'">←</button>
+    <div class="nav-logo">🧺 Bakul<span class="ver">v1</span></div>
+    <button class="ntab on" data-p="bal" onclick="tab('bal')">Balance</button>
+    <button class="ntab" data-p="ms" onclick="tab('ms')">Mah Sing check</button>
+    <button class="ntab" data-p="ent" onclick="tab('ent')">Entries</button>
+    <div class="nav-r"><button class="sync" id="sync" onclick="loadAll()"><i></i><span>Saved</span></button></div>
+  </div>
+
+  <!-- BALANCE -->
+  <div class="page on" id="p-bal">
+    <h1 class="pt">Baskets at each farm now</h1>
+    <div class="farms" id="farmCards"></div>
+
+    <div class="card">
+      <div class="card-title">Lorry brings empty baskets — how many to each farm?</div>
+      <div class="frow" style="max-width:220px">
+        <label>Empty baskets on the lorry</label>
+        <input class="in num" type="number" id="spTotal" inputmode="numeric" min="0" placeholder="e.g. 250" oninput="renderSplit()">
+      </div>
+      <div id="split"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Last lorries</div>
+      <div class="tw"><table class="data" id="recent"></table></div>
+    </div>
+  </div>
+
+  <!-- MAH SING CHECK -->
+  <div class="page" id="p-ms">
+    <h1 class="pt">Check against Mah Sing</h1>
+    <div class="card">
+      <div class="card-title">Paste Mah Sing's WhatsApp message</div>
+      <textarea class="in" id="msText" placeholder="16/11&#10;&#10;AD1&#10;BAKUL SIMPAN - 175&#10;BAKUL TURUN - 30&#10;NAIK SAYUR - 69&#10;BAKUL BALANCE - *SIMPAN 136*"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-pri" onclick="msParse()">Check</button>
+        <button class="btn" onclick="$('msText').value='';$('msPrev').innerHTML=''">Clear</button>
+      </div>
+      <div id="msPrev" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Every day Mah Sing reported</div>
+      <div id="msSum"></div>
+      <div class="tw"><table class="data" id="msAll"></table></div>
+    </div>
+  </div>
+
+  <!-- ENTRIES -->
+  <div class="page" id="p-ent">
+    <h1 class="pt" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">Entries
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="openAdd('COUNT')">＋ Count</button>
+        <button class="btn btn-sm btn-pri" onclick="openAdd('VISIT')">＋ Lorry</button>
+      </span>
+    </h1>
+    <div class="seg" id="entFarm" style="margin-bottom:10px"></div>
+    <div class="card" style="padding:6px 8px"><div class="tw"><table class="data" id="entries"></table></div></div>
+  </div>
+</div>
+
+<div class="mask" id="mask" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const APP_VERSION = 1;
+const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
+const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+let sb = null, ME = null;
+const D = { farms:[], entries:[], mahsing:[] };
+let ENT_FARM = 'ALL';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const dShort = s => s ? `${s.slice(8,10)}/${s.slice(5,7)}` : '';
+const num = v => v == null ? '—' : v;
+function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => e.classList.remove('show'), 2400); }
+function setSync(cls, t){ const s = $('sync'); s.className = 'sync' + (cls ? ' ' + cls : ''); s.querySelector('span').textContent = t; }
+const nice = e => { const m = (e && (e.message || String(e))) || ''; if(/Failed to fetch|NetworkError/i.test(m)) return 'No connection.'; if(/Not allowed/i.test(m)) return 'Bakul is not ready yet.'; return m; };
+const farmCode = id => (D.farms.find(f => f.id === id) || {}).code || '?';
+const farmShort = code => code.replace(/\s+/g, '');
+
+/* ══════ Login ══════ */
+const GATE_MSG = {
+  no_login:  'You are not signed in. Go back to the Home page, sign in, then open Bakul.',
+  no_access: 'Bakul is not ready yet. Please check back later.',
+  offline:   'Cannot reach the cloud — check your connection and refresh.'
+};
+function gate(kind, extra){
+  $('app').style.display = 'none'; $('gate').style.display = 'block';
+  $('gateMsg').innerHTML = `<div class="alert ${kind === 'no_access' ? 'alert-info' : 'alert-warn'}">${GATE_MSG[kind] || esc(kind)}${extra ? '<div style="font-size:11px;margin-top:4px">' + esc(extra) + '</div>' : ''}</div>`;
+  $('gateHome').style.display = 'inline-flex';
+}
+async function boot(){
+  if(!window.supabase){ gate('offline'); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY);
+  let ss = null;
+  try{ ss = (await sb.auth.getSession()).data.session; }catch(e){ gate('offline', e.message); return; }
+  if(!ss){ gate('no_login'); return; }
+  const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,status').eq('id', ss.user.id).maybeSingle();
+  if(e1){ gate('offline', e1.message); return; }
+  if(!me || me.status !== 'ACTIVE' || me.role !== 'OWNER'){ gate('no_access'); return; }
+  ME = me;
+  $('gate').style.display = 'none'; $('app').style.display = 'block';
+  await loadAll();
+}
+async function loadAll(){
+  setSync('busy', 'Loading');
+  const {data, error} = await sb.rpc('bakul_owner_data');
+  if(error){ setSync('bad', 'Not loaded'); $('farmCards').innerHTML = `<div class="alert alert-danger">${esc(nice(error))} Nothing was changed.</div>`; return; }
+  if(!data || !data.farms || !data.farms.length){ setSync('bad', 'Not loaded'); $('farmCards').innerHTML = '<div class="alert alert-danger">No farms came back from the cloud. Nothing was changed.</div>'; return; }
+  D.farms = data.farms; D.entries = data.entries || []; D.mahsing = data.mahsing || [];
+  setSync('', 'Saved');
+  renderAll();
+}
+function tab(p){
+  document.querySelectorAll('.ntab').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  document.querySelectorAll('.page').forEach(x => x.classList.toggle('on', x.id === 'p-' + p));
+  window.scrollTo(0, 0);
+}
+
+/* ══════ Ledger: simpan + turun − naik = balance ══════ */
+// Per farm, per date: before, turun, naik, count, after, besi. COUNT resets the balance (applied before the lorry that day).
+function ledger(farmId){
+  const es = D.entries.filter(e => e.farm_id === farmId && !e.voided_at)
+    .sort((a, b) => a.entry_date < b.entry_date ? -1 : a.entry_date > b.entry_date ? 1 : (a.kind === 'COUNT' ? -1 : 1) - (b.kind === 'COUNT' ? -1 : 1) || (a.submitted_at < b.submitted_at ? -1 : 1));
+  const days = []; let bal = null, besi = null;
+  for(const e of es){
+    let d = days[days.length - 1];
+    if(!d || d.date !== e.entry_date){ d = {date:e.entry_date, before:bal, turun:null, naik:null, count:null, visit:null, cnt:null, besi:null}; days.push(d); }
+    if(e.kind === 'COUNT'){ bal = e.counted; d.count = e.counted; d.cnt = e; }
+    else { bal = (bal ?? 0) + e.turun - e.naik; d.turun = e.turun; d.naik = e.naik; d.visit = e; }
+    if(e.besi != null){ besi = e.besi; d.besi = e.besi; }
+    d.after = bal; d.besiNow = besi;
+  }
+  return days;
+}
+const lastDay = days => days[days.length - 1] || null;
+function balanceBefore(days, date){ let b = null; for(const d of days){ if(d.date >= date) break; b = d.after; } return b; }
+const visits = days => days.filter(d => d.visit);
+function peakNaik(days){ const v = visits(days).slice(-6); return v.length ? Math.max(...v.map(d => d.naik)) : null; }
+
+/* ══════ Render ══════ */
+function renderAll(){ renderFarms(); renderSplit(); renderRecent(); renderMsAll(); renderEntries(); }
+
+function renderFarms(){
+  $('farmCards').innerHTML = D.farms.map(f => {
+    const days = ledger(f.id), last = lastDay(days), pk = peakNaik(days);
+    const bal = last ? last.after : null, lv = visits(days).slice(-1)[0];
+    const short = bal != null && pk != null && bal < pk;
+    const st = bal == null ? 'No records yet'
+      : pk == null ? 'No lorry yet'
+      : short ? `Short — biggest recent load ${pk}` : `Enough for next harvest (biggest recent ${pk})`;
+    return `<div class="fc${short ? ' short' : ''}">
+      <div class="fc-h"><b>${esc(f.code)}</b><small>${last ? 'after ' + dShort(last.date) : ''}</small></div>
+      <div class="fc-big num">${num(bal)}<span>baskets</span></div>
+      <div class="fc-st">${esc(st)}</div>
+      ${lv ? `<div class="fc-row"><span>Last lorry ${dShort(lv.date)}</span><b class="num">${num(lv.before)} + ${lv.turun} − ${lv.naik} = ${lv.after}</b></div>` : ''}
+      <div class="fc-row"><span>Besi hutang</span><b class="num">${last && last.besiNow != null ? last.besiNow : '—'}</b></div>
+    </div>`;
+  }).join('');
+}
+
+// Split the empties on a lorry: bring each farm up to its target, in proportion to what is missing;
+// anything left over is shared by target. Target default = 2 × biggest of the last 6 loads (needs 3+ lorries; else type it).
+const SPLIT_T = {};
+function renderSplit(){
+  const total = Math.max(0, Math.floor(Number($('spTotal').value) || 0));
+  const rows = D.farms.map(f => {
+    const days = ledger(f.id), last = lastDay(days), pk = peakNaik(days), nv = visits(days).length;
+    const bal = last ? (last.after ?? 0) : 0;
+    const auto = pk != null && nv >= 3 ? pk * 2 : null;
+    const target = SPLIT_T[f.id] != null ? SPLIT_T[f.id] : auto;
+    return {f, bal, pk, nv, target, need: Math.max(0, (target ?? 0) - bal)};
+  });
+  const missing = rows.filter(r => r.target == null);
+  let give = rows.map(() => 0);
+  const share = (weights, amount) => {      // largest remainder, adds up exactly
+    const ws = weights.reduce((s, x) => s + x, 0); if(!ws || !amount) return weights.map(() => 0);
+    const raw = weights.map(x => x * amount / ws), g = raw.map(Math.floor);
+    let left = amount - g.reduce((s, x) => s + x, 0);
+    raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if(left > 0){ g[i]++; left--; } });
+    return g;
+  };
+  if(total > 0 && !missing.length){
+    const needSum = rows.reduce((s, r) => s + r.need, 0), take = Math.min(total, needSum);
+    give = share(rows.map(r => r.need), take);
+    const g2 = share(rows.map(r => r.target), total - take);
+    give = give.map((g, i) => g + g2[i]);
+  }
+  $('split').innerHTML = (missing.length ? `<div class="alert alert-warn">Type a target for ${missing.map(r => esc(farmShort(r.f.code))).join(', ')} — fewer than 3 lorries, so no default yet.</div>` : '')
+    + `<div class="split-row h"><div>Farm</div><div class="r">Now</div><div class="r">Target</div><div class="r">Give</div><div class="r">After drop</div></div>`
+    + rows.map((r, i) => `<div class="split-row">
+        <div><b>${esc(farmShort(r.f.code))}</b></div>
+        <div class="r num">${r.bal}</div>
+        <div><input type="number" inputmode="numeric" min="0" value="${r.target ?? ''}" placeholder="type" style="${r.target == null ? 'border-color:var(--danger)' : ''}" onchange="SPLIT_T['${r.f.id}']=this.value===''?null:Math.max(0,Math.floor(Number(this.value)||0));renderSplit()" title="${r.pk != null ? 'Biggest recent load ' + r.pk : 'No lorry yet'}"></div>
+        <b class="give num">${total && !missing.length ? give[i] : '—'}</b>
+        <div class="r num">${total && !missing.length ? r.bal + give[i] : '—'}</div>
+      </div>`).join('')
+    + `<div style="font-size:11px;color:var(--mut);margin-top:8px">Target = 2 × the biggest load in the last 6 lorries (change it if needed). "After drop" is before loading the day's harvest.</div>`;
+}
+
+function renderRecent(){
+  const rows = [];
+  D.farms.forEach(f => ledger(f.id).forEach(d => rows.push({f, d})));
+  rows.sort((a, b) => a.d.date < b.d.date ? 1 : a.d.date > b.d.date ? -1 : a.f.code.localeCompare(b.f.code));
+  const top = rows.slice(0, 18);
+  $('recent').innerHTML = top.length ? `<tr><th>Date</th><th>Farm</th><th class="r">Simpan</th><th class="r">Turun</th><th class="r">Naik</th><th class="r">Balance</th></tr>`
+    + top.map(({f, d}) => `<tr><td>${dShort(d.date)}</td><td>${esc(farmShort(f.code))}</td>
+        <td class="r num">${d.count != null ? '<span class="tag">count</span> ' + d.count : num(d.before)}</td>
+        <td class="r num">${num(d.turun)}</td><td class="r num">${num(d.naik)}</td><td class="r num"><b>${num(d.after)}</b></td></tr>`).join('')
+    : '<tr><td class="empty">No records yet</td></tr>';
+}
+
+/* ══════ Mah Sing check ══════ */
+// Reads Mah Sing's group message, also straight from a WhatsApp chat export.
+function msParseText(txt){
+  const out = []; let date = null, farm = null, cur = null;
+  const now = new Date(), Y = now.getFullYear(), M = now.getMonth() + 1;
+  const flush = () => { if(cur && date && farm) out.push(cur); cur = null; };
+  for(let raw of txt.split(/\r?\n/)){
+    let line = raw.replace(/^\s*\d{4}\/\d{1,2}\/\d{1,2}[^-]*-\s*[^:]+:\s*/, '').replace(/[*_~]/g, '').trim();
+    if(!line) continue;
+    let m;
+    if((m = line.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/))){
+      flush(); const d = +m[1], mo = +m[2];
+      let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : (mo > M + 1 ? Y - 1 : Y);
+      date = `${y}-${pad(mo)}-${pad(d)}`; farm = null; continue;
+    }
+    if((m = line.match(/^AD\s*([0-9])$/i))){
+      flush(); farm = 'AD ' + m[1];
+      cur = {date, farm, simpan:null, turun:null, naik:null, balance:null, raw:''}; continue;
+    }
+    if(!cur) continue;
+    cur.raw += (cur.raw ? '\n' : '') + line;
+    const val = () => { const n = line.match(/(\d+)\s*$/); return n ? +n[1] : null; };
+    if(/BAKUL\s+SIMPAN/i.test(line)) cur.simpan = val();
+    else if(/BAKUL\s+TURUN/i.test(line)) cur.turun = val();
+    else if(/NAIK\s+SAYUR/i.test(line)) cur.naik = val();
+    else if(/BALANCE/i.test(line)) cur.balance = val();
+  }
+  flush();
+  return out.filter(r => r.simpan != null || r.turun != null || r.naik != null || r.balance != null);
+}
+// What our system says for this farm and date
+function sysDay(farmCodeStr, date){
+  const f = D.farms.find(x => x.code === farmCodeStr); if(!f) return null;
+  const days = ledger(f.id), d = days.find(x => x.date === date);
+  return { farm:f, before: balanceBefore(days, date), turun: d && d.visit ? d.turun : null, naik: d && d.visit ? d.naik : null,
+           after: d ? d.after : null, hasVisit: !!(d && d.visit), count: d ? d.count : null };
+}
+// Compare one Mah Sing row with ours. Mah Sing's own sum is checked too.
+function compare(ms){
+  const s = sysDay(ms.farm, ms.date);
+  const diff = {simpan:false, turun:false, naik:false, balance:false, own:false};
+  if(!s) return {s, diff, bad:true, unknownFarm:true};
+  const msBefore = s.count != null ? s.count : s.before;   // a count that day resets simpan
+  if(ms.simpan != null && msBefore != null && ms.simpan !== msBefore) diff.simpan = true;
+  if(s.hasVisit){
+    if(ms.turun != null && ms.turun !== s.turun) diff.turun = true;
+    if(ms.naik != null && ms.naik !== s.naik) diff.naik = true;
+    if(ms.balance != null && ms.balance !== s.after) diff.balance = true;
+  }
+  if(ms.simpan != null && ms.turun != null && ms.naik != null && ms.balance != null && ms.simpan + ms.turun - ms.naik !== ms.balance) diff.own = true;
+  const bad = diff.simpan || diff.turun || diff.naik || diff.balance || diff.own || !s.hasVisit;
+  return {s, diff, bad, missing: !s.hasVisit};
+}
+function cmpRow(ms, extra){
+  const c = compare(ms), s = c.s || {};
+  const cell = (k, mv, sv) => `<td class="r num ${c.diff[k] ? 'x' : ''}">${num(mv)}<span class="sub">${c.missing && k !== 'simpan' ? 'ours —' : 'ours ' + num(sv)}</span></td>`;
+  const verdict = c.unknownFarm ? '<span class="tag man">farm?</span>'
+    : c.missing ? '<span class="tag man" title="Not in our records">new</span>'
+    : c.diff.own ? '<span class="tag man" title="Mah Sing\'s own sum is wrong">sum ✗</span>'
+    : c.bad ? '<b style="color:var(--danger)">✗</b>' : '<b style="color:var(--ok)">✓</b>';
+  return `<tr class="${c.bad ? 'bad' : ''}"><td>${dShort(ms.date)}</td><td>${esc(farmShort(ms.farm))}</td>
+    ${cell('simpan', ms.simpan, s.count != null ? s.count : s.before)}${cell('turun', ms.turun, s.turun)}${cell('naik', ms.naik, s.naik)}${cell('balance', ms.balance, s.after)}
+    <td>${verdict}${extra ? extra(ms, c) : ''}</td></tr>`;
+}
+const CMP_HEAD = '<tr><th>Date</th><th>Farm</th><th class="r">Simpan</th><th class="r">Turun</th><th class="r">Naik</th><th class="r">Balance</th><th></th></tr>';
+let MS_PARSED = [];
+function msParse(){
+  MS_PARSED = msParseText($('msText').value);
+  if(!MS_PARSED.length){ $('msPrev').innerHTML = '<div class="alert alert-warn">No Mah Sing numbers found. Paste the message that starts with the date (e.g. 16/11) and has AD1 / AD2 lines.</div>'; return; }
+  const nBad = MS_PARSED.filter(r => compare(r).bad).length;
+  $('msPrev').innerHTML = `<div class="alert ${nBad ? 'alert-danger' : 'alert-ok'}">${MS_PARSED.length} farm-day${MS_PARSED.length > 1 ? 's' : ''} found · ${nBad ? nBad + ' not matching (red). Small grey number = ours. "new" = no lorry in our records yet' : 'all match our records'}</div>
+    <div class="tw"><table class="data">${CMP_HEAD}${MS_PARSED.map(r => cmpRow(r)).join('')}</table></div>
+    <div style="margin-top:10px"><button class="btn btn-pri" id="msSaveBtn" onclick="msSave()">Save Mah Sing numbers</button></div>`;
+}
+async function msSave(){
+  if(!MS_PARSED.length) return;
+  $('msSaveBtn').disabled = true; setSync('busy', 'Saving');
+  const {data, error} = await sb.rpc('bakul_owner_mahsing_save', {p: MS_PARSED});
+  if(error){ setSync('bad', 'Not saved'); toast(nice(error)); $('msSaveBtn').disabled = false; return; }
+  toast(`Saved · ${data.new} new · ${data.replaced} updated · ${data.same} already there`);
+  $('msText').value = ''; $('msPrev').innerHTML = ''; MS_PARSED = [];
+  await loadAll();
+}
+function renderMsAll(){
+  const rows = D.mahsing.filter(m => !m.voided_at).map(m => ({id:m.id, date:m.report_date, farm:farmCode(m.farm_id), simpan:m.simpan, turun:m.turun, naik:m.naik, balance:m.balance}))
+    .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : a.farm.localeCompare(b.farm));
+  const bad = rows.filter(r => compare(r).bad);
+  $('msSum').innerHTML = rows.length ? `<div class="alert ${bad.length ? 'alert-danger' : 'alert-ok'}">${rows.length} farm-days from Mah Sing · ${bad.length ? bad.length + ' need checking (red)' : 'all match our records'}</div>` : '';
+  const act = (ms, c) => c.missing && ms.turun != null && ms.naik != null
+    ? ` <button class="btn btn-sm" onclick="useMs('${ms.id}')">Add to our records</button>` : '';
+  $('msAll').innerHTML = rows.length ? CMP_HEAD + [...bad, ...rows.filter(r => !bad.includes(r))].map(r => cmpRow(r, act)).join('')
+    : '<tr><td class="empty">Nothing from Mah Sing yet. Paste their message above.</td></tr>';
+}
+async function useMs(id){
+  const m = D.mahsing.find(x => x.id === id); if(!m) return;
+  const {error} = await sb.rpc('bakul_owner_add', {p:{farm: farmCode(m.farm_id), date: m.report_date, kind:'VISIT', turun:m.turun, naik:m.naik, note:'From Mah Sing WhatsApp'}});
+  if(error){ toast(nice(error)); return; }
+  toast('Added'); await loadAll();
+}
+
+/* ══════ Entries ══════ */
+function renderEntries(){
+  $('entFarm').innerHTML = ['ALL', ...D.farms.map(f => f.id)].map(id =>
+    `<button class="${ENT_FARM === id ? 'on' : ''}" onclick="ENT_FARM='${id}';renderEntries()">${id === 'ALL' ? 'All' : esc(farmShort(farmCode(id)))}</button>`).join('');
+  const es = D.entries.filter(e => ENT_FARM === 'ALL' || e.farm_id === ENT_FARM)
+    .sort((a, b) => a.entry_date < b.entry_date ? 1 : a.entry_date > b.entry_date ? -1 : (a.submitted_at < b.submitted_at ? 1 : -1));
+  const src = s => s === 'FORM' ? '<span class="tag form">Leader</span>' : s === 'MANUAL' ? '<span class="tag man">Office</span>' : '<span class="tag">Import</span>';
+  $('entries').innerHTML = es.length ? `<tr><th>Date</th><th>Farm</th><th>Type</th><th class="r">Turun</th><th class="r">Naik</th><th class="r">Count</th><th class="r">Besi</th><th>From</th><th>Note</th><th></th></tr>`
+    + es.map(e => `<tr class="${e.voided_at ? 'void' : ''}"><td>${dShort(e.entry_date)}</td><td>${esc(farmShort(farmCode(e.farm_id)))}</td>
+        <td>${e.kind === 'COUNT' ? 'Count' : 'Lorry'}</td>
+        <td class="r num">${e.kind === 'VISIT' ? e.turun : ''}</td><td class="r num">${e.kind === 'VISIT' ? e.naik : ''}</td>
+        <td class="r num">${e.kind === 'COUNT' ? e.counted : ''}</td><td class="r num">${num(e.besi)}</td>
+        <td>${src(e.source)}</td><td style="white-space:normal;min-width:120px">${esc(e.voided_at ? 'Voided: ' + (e.void_reason || '') : (e.note || ''))}</td>
+        <td>${e.voided_at ? '' : `<button class="btn btn-sm btn-red" onclick="openVoid('${e.id}')">Void</button>`}</td></tr>`).join('')
+    : '<tr><td class="empty">No entries</td></tr>';
+}
+
+/* ══════ Modals ══════ */
+function closeModal(){ $('mask').classList.remove('on'); }
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+let ADD = null;
+function openAdd(kind){
+  ADD = {kind, farm: D.farms[0] ? D.farms[0].code : '', date: today()};
+  drawAdd(); $('mask').classList.add('on');
+}
+function drawAdd(){
+  const f = (id, label, ph) => `<div class="frow"><label>${label}</label><input class="in num" type="number" inputmode="numeric" min="0" id="${id}" placeholder="${ph || ''}"></div>`;
+  $('modal').innerHTML = `<h2>${ADD.kind === 'COUNT' ? 'Basket count (resets the balance)' : 'Lorry visit'}</h2>
+    <div class="frow"><label>Farm</label><div class="seg">${D.farms.map(x => `<button class="${ADD.farm === x.code ? 'on' : ''}" onclick="ADD.farm='${x.code}';drawAdd()">${esc(farmShort(x.code))}</button>`).join('')}</div></div>
+    <div class="frow"><label>Date</label><input class="in" type="date" id="aDate" value="${ADD.date}" onchange="ADD.date=this.value"></div>
+    ${ADD.kind === 'COUNT' ? f('aCount', 'Baskets counted at the farm') : `<div class="grid3">${f('aTurun', 'Bakul turun')}${f('aNaik', 'Naik sayur')}${f('aBesi', 'Besi hutang', 'blank')}</div>`}
+    <div class="frow"><label>Note</label><input class="in" id="aNote" maxlength="200" placeholder="e.g. note 02345"></div>
+    <div class="mbar"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" id="aSave" onclick="saveAdd()">Save</button></div>`;
+}
+async function saveAdd(){
+  const v = id => { const x = $(id); return x && x.value !== '' ? Math.floor(Number(x.value)) : null; };
+  ADD.date = $('aDate').value;
+  const p = {farm: ADD.farm, date: ADD.date, kind: ADD.kind, note: $('aNote').value};
+  if(!ADD.date) return toast('Pick the date');
+  if(ADD.kind === 'COUNT'){ p.counted = v('aCount'); if(p.counted == null || p.counted < 0) return toast('Enter the count'); }
+  else { p.turun = v('aTurun'); p.naik = v('aNaik'); p.besi = v('aBesi');
+         if(p.turun == null || p.naik == null || p.turun < 0 || p.naik < 0) return toast('Enter Bakul turun and Naik sayur (0 if none)'); }
+  $('aSave').disabled = true;
+  const {error} = await sb.rpc('bakul_owner_add', {p});
+  if(error){ $('aSave').disabled = false; return toast(nice(error)); }
+  closeModal(); toast('Saved'); await loadAll();
+}
+function openVoid(id){
+  const e = D.entries.find(x => x.id === id); if(!e) return;
+  $('modal').innerHTML = `<h2>Void this entry?</h2>
+    <p style="font-size:13px">${dShort(e.entry_date)} · ${esc(farmShort(farmCode(e.farm_id)))} · ${e.kind === 'COUNT' ? 'Count ' + e.counted : 'Turun ' + e.turun + ' · Naik ' + e.naik}</p>
+    <div class="frow"><label>Reason (required)</label><input class="in" id="vReason" maxlength="200" placeholder="e.g. wrong farm picked"></div>
+    <div class="mbar"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-pri" id="vBtn" onclick="doVoid('${id}')">Void</button></div>`;
+  $('mask').classList.add('on');
+}
+async function doVoid(id){
+  const r = $('vReason').value.trim(); if(!r) return toast('Reason is required');
+  $('vBtn').disabled = true;
+  const {error} = await sb.rpc('bakul_owner_void', {p_id: id, p_reason: r});
+  if(error){ $('vBtn').disabled = false; return toast(nice(error)); }
+  closeModal(); toast('Voided'); await loadAll();
+}
+
+boot();
+</script>
+</body>
+</html>
