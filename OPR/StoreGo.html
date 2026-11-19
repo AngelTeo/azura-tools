@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>StoreGo v14</title>
+<title>StoreGo v15</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* SprayGo look: white masthead + green brand tile, hero headers, soft panels, 3 farm cards, two-column spray wizard with sticky send panel; bottom tab bar on phones. */
@@ -257,7 +257,7 @@ body.mode-store .wpanel,body.mode-store [data-act="sprayfarm"],body.mode-store [
 
 <script>
 /* StoreGo platform shell: sign-in gate + spray_doc store (replaces the Claude artifact store). */
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 (()=>{'use strict';
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -434,6 +434,13 @@ function monthUse(fid){const mo=today().slice(0,7);const used={};
   lines.sort((a,b)=>b[0]-a[0]);return {total,lines,miss,any:Object.keys(used).length>0}}
 
 /* ---------- shell ---------- */
+function backupBtn(){return (window.SG&&window.SG.role==='OWNER')?`<button class="btn dark" data-act="backup">⬇ 下载备份 JSON</button>`:''}
+function doBackup(){const pad=n=>String(n).padStart(2,'0');const d=new Date();const stamp=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const data={products,counts,purchases,suppliers,sprays,mixes,farms,fdays,sprayDocs};
+  const n=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,Array.isArray(v)?v.length:Object.keys(v||{}).length]));
+  const out={app:'StoreGo',version:(typeof APP_VERSION!=='undefined'?APP_VERSION:null),exportedAt:d.toISOString(),exportedBy:(window.SG&&window.SG.name)||null,counts:n,data};
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`StoreGo_backup_${stamp}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  toast(`已下载：${Object.values(n).reduce((x,y)=>x+y,0)} 笔资料`)}
 function head(ey,title,sub,cta=''){return `<div class="hero"><div><div class="eyebrow">${ey}</div><h1>${title}</h1><p class="sub">${sub}</p></div>${cta}</div>`}
 function renderNav(){
   $('navDesktop').innerHTML=TABS.map(([t,i,l])=>`<button class="navbtn ${tab===t?'active':''}" data-nav="${t}"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
@@ -563,7 +570,7 @@ function vStock(){
   const list=rows.map(r=>{const p=r.p;const [c,t]=ST[r.status];
     const sub=r.status==='nc'?'还没点算':`剩 ${fmtAmt(Math.max(r.left,0),p)}${r.pb?`（${(Math.max(r.left,0)/r.pb).toFixed(2)} 瓶/包）`:''} · ${r.days!=null?'约 '+r.days+' 天':'不在配方里'}`;
     return `<div class="productrow">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}<small>${e(sub)}</small></div><span class="pill ${c}">${t}</span><button class="btn small" data-act="stockopen" data-id="${e(p._id)}">点算 / 进货</button></div>`}).join('');
-  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
+  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。',backupBtn())}
   ${sfChips(sf)}
   <div class="stats"><div class="stat"><div class="val ${now?'bad':''}">${now}</div><div class="lab">马上买（不够 7 天）</div></div>
   <div class="stat cost"><div class="val">${RM(tot)}</div><div class="lab">30 天进货${np?` · ${np} 样没价钱`:''}</div></div>
@@ -611,7 +618,7 @@ function vStockAll(){
     return `<button class="fcell ${r.status}${isF?' focus':''}" data-act="stockopen" data-id="${e(p._id)}" data-farm="${f.id}" aria-label="${f.name} ${e(p.name)}"><b>${f.name}</b>${t}</button>`};
   if(fm)prods.sort((a,b)=>(M.has(b._id)-M.has(a._id)));
   const list=prods.map(p=>`<div class="productrow${fm&&!M.has(p._id)?' dim':''}">${photo(p)}<div class="grow"><b>${e(p.name)}</b>${p.use?`<div class="p-use">${e(p.use)}</div>`:''}</div><div class="fcells">${FARMS.map(f=>cell(f,p)).join('')}</div></div>`).join('');
-  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。')}
+  return `${head('库存与成本','库存 · 进货 · 成本','按「喷好了」就扣库存，登记进货就加库存。',backupBtn())}
   ${sfChips('all')}
   <div class="stats"><div class="stat"><div class="val ${now?'bad':''}">${now}</div><div class="lab">马上买（三园合计）</div></div>
   <div class="stat cost"><div class="val">${RM(tot)}</div><div class="lab">30 天进货${np?` · ${np} 样没价钱`:''}</div></div>
@@ -885,6 +892,7 @@ document.addEventListener('click',async ev=>{
   case 'nconly':ncOnly=!ncOnly;render();break;
   case 'focus':focus=focus&&focus.m===id?null:{m:id};render();break;
   case 'stockopen':smFarm=b.dataset.farm||stockFarm;openModal('stock',id);break;
+  case 'backup':doBackup();break;
   case 'copybuy':{const sf=stockFarm||'all';if(sf==='all'){const L=[`三个园 · 购买清单 ${dmy(today())}`];allBuy().forEach((x,ix)=>L.push(`${ix+1}. ${x.p.name} — ${x.pb?`${x.packs} × ${x.p.packSize} ${x.p.packUnit}`:(x.min&&!x.pb&&x.need<=FARMS.length?'至少 1 件':fmtAmt(x.need,x.p))}（${x.by.join('，')}）`));try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}const L=[`${fname(sf)} · 购买清单 ${dmy(today())}`];buyList(sf).forEach((r,ix)=>L.push(`${ix+1}. ${r.p.name} — ${buyTxt(r)}`));
     try{await navigator.clipboard.writeText(L.join('\n'));toast('已复制')}catch(err){toast('这里不能复制')}break}
   case 'outnow':saveDoc('counts',{farm:smFarm||stockFarm,pid:id,amt:0,parts:[],note:'没货了',date:today(),createdAt:new Date().toISOString()});break;
