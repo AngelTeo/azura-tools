@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v22 · 2026-11-19: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v23 · 2026-11-19: grade colours by family — AA purple, A green (main dark, Kulit lighter, Putih lightest) · v22: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -71,12 +71,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .grade-card-hd{display:flex;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;gap:8px;}
 .grade-pill{display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;
   font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;border:1.5px solid;white-space:nowrap;flex-shrink:0;}
-.grade-pill.aa {background:var(--aa-bg); color:var(--aa); border-color:var(--aa-bd);}
-.grade-pill.aak{background:var(--aak-bg);color:var(--aak);border-color:var(--aak-bd);}
-.grade-pill.aap{background:var(--aap-bg);color:var(--aap);border-color:var(--aap-bd);}
-.grade-pill.a  {background:var(--a-bg);  color:var(--a);  border-color:var(--a-bd);}
-.grade-pill.ak {background:var(--ak-bg); color:var(--ak); border-color:var(--ak-bd);}
-.grade-pill.apb{background:var(--apb-bg);color:var(--apb);border-color:var(--apb-bd);}
+/* colour by family: main grade = dark, Kulit = same colour lighter, Putih = lightest */
+.grade-pill.aa {background:#6B2FA0;color:#ffffff;border-color:#521f7e;}
+.grade-pill.aak{background:#C5A3E6;color:#3b1166;border-color:#a77dd4;}
+.grade-pill.aap{background:#F1E7FA;color:#5a2a8a;border-color:#d8c2ef;}
+.grade-pill.a  {background:#2F9E8F;color:#ffffff;border-color:#237d71;}
+.grade-pill.ak {background:#A6DCD3;color:#0b4a42;border-color:#7cc8bd;}
+.grade-pill.apb{background:#E3F4F1;color:#1d5e55;border-color:#b7e0d9;}
 .grade-pill.b  {background:var(--b-bg);  color:var(--b);  border-color:var(--b-bd);}
 
 .grade-summary{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
