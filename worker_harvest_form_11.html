@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v26 · 2026-11-19: no dashed lines on blank Bakul numbers (v25: A group gold · v24: orange · v23: grade colours by family — AA purple) (main dark, Kulit lighter, Putih lightest) · v22: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v27 · 2026-11-19: language switch (Burmese default / English / 中文) · v26: no dashed lines on blank Bakul numbers (v25: A group gold · v24: orange · v23: grade colours by family — AA purple) (main dark, Kulit lighter, Putih lightest) · v22: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,7 @@
   --b:#8a1818;    --b-bg:#fce9e9;  --b-bd:#e88080;
 }
 
-body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);font-size:15px;min-height:100vh;}
+body{font-family:'DM Sans','Noto Sans Myanmar','Myanmar Text','Padauk',sans-serif;background:var(--sur2);color:var(--txt);font-size:15px;min-height:100vh;}
 
 /* ── SCREENS ── */
 .scr{display:none;min-height:100vh;flex-direction:column;}
@@ -255,6 +255,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .date-box input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;}
 .date-box input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer;}
 
+/* ── LANGUAGE SWITCH ── */
+.lang{margin-left:auto;display:flex;background:rgba(255,255,255,.15);border-radius:9px;padding:3px;gap:2px;flex-shrink:0;}
+.lang button{border:none;background:none;color:rgba(255,255,255,.8);font-size:12px;font-weight:700;padding:6px 8px;border-radius:7px;cursor:pointer;font-family:inherit;}
+.lang button.on{background:#fff;color:var(--g);}
+
 /* ── TOAST ── */
 .save-st{font-size:11px;text-align:center;margin-top:8px;color:var(--mut);}
 .save-st.ok{color:var(--g);}.save-st.wait{color:#8a6100;}
@@ -271,9 +276,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   <div class="form-hdr">
     <div class="hdr-icon">🌿</div>
     <div class="hdr-text">
-      <h1>Harvest WhatsApp Report</h1>
+      <h1 data-i18n="title">Harvest WhatsApp Report</h1>
       <p id="hdr-farms">Azura Delta Farm — AD1, AD2 &amp; AD3</p>
     </div>
+    <div class="lang"><button data-l="my" onclick="setLang('my')">မြန်မာ</button><button data-l="en" onclick="setLang('en')">EN</button><button data-l="zh" onclick="setLang('zh')">中文</button></div>
   </div>
 
   <div class="form-body" id="form-body">
@@ -281,36 +287,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     <div id="mode-bar"></div>
     <!-- DATE -->
     <div class="frow">
-      <label>Date <span class="req">*</span></label>
+      <label><span data-i18n="date">Date</span> <span class="req">*</span></label>
       <!-- date: tap opens the phone's calendar; shown as DD/MM/YYYY. f-date keeps DD/MM for the rest of the form -->
       <div class="date-box">
         <span class="date-show" id="f-date-show">—</span><span class="date-ico">📅</span>
         <input type="date" id="f-date-pick" onchange="onPick(this.value)">
       </div>
       <input type="hidden" id="f-date">
-      <div class="err-msg" id="err-date">Please pick the date</div>
+      <div class="err-msg" id="err-date" data-i18n="errDate">Please pick the date</div>
     </div>
 
     <!-- FARM -->
     <div class="frow">
-      <label>Farm <span class="req">*</span></label>
+      <label><span data-i18n="farm">Farm</span> <span class="req">*</span></label>
       <div class="farm-pick" id="farm-pick"></div>
-      <div class="err-msg" id="err-farm">Please select a farm</div>
+      <div class="err-msg" id="err-farm" data-i18n="errFarm">Please select a farm</div>
     </div>
 
     <!-- GRADES -->
     <div id="sec-harvest">
-      <div class="sec-div">🏷️ Harvest by Grade</div>
+      <div class="sec-div" data-i18n="secGrade">🏷️ Harvest by Grade</div>
       <div id="grade-cards"></div>
     </div>
     <!-- step 2: tonight's harvest, from this phone -->
     <div id="sec-hvsum" style="display:none">
-      <div class="sec-div">🏷️ Tonight's harvest</div>
+      <div class="sec-div" data-i18n="secTonight">🏷️ Tonight's harvest</div>
       <div class="hv-sum" id="hv-sum"></div>
     </div>
     <!-- TOTAL (Owner only) -->
     <div id="sec-total" style="display:none">
-      <div class="sec-div">📊 Total for Mah Sing</div>
+      <div class="sec-div" data-i18n="secTotal">📊 Total for Mah Sing</div>
       <div class="tot-card" id="tot-card"><div class="tot-msg">Loading…</div></div>
       <div class="tot-note" id="tot-note"></div>
     </div>
@@ -337,12 +343,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
         </div>
       </div>
       <div class="bk-line">
-        <div class="bk-lbl"><b>Naik sayur</b><small>Baskets of eggplant loaded (from above)</small></div>
+        <div class="bk-lbl"><b>Naik sayur</b><small data-i18n="naikHint">Baskets of eggplant loaded (from above)</small></div>
         <div class="bk-val" id="bk-naik">0</div>
       </div>
-      <div class="bk-warn" id="bk-kgwarn">⚠ kg lines are not counted as baskets</div>
+      <div class="bk-warn" id="bk-kgwarn" data-i18n="kgWarn">⚠ kg lines are not counted as baskets</div>
       <div class="bk-line">
-        <div class="bk-lbl"><b>Besi hutang</b><small>Only if written on the note</small></div>
+        <div class="bk-lbl"><b>Besi hutang</b><small data-i18n="besiHint">Only if written on the note</small></div>
         <div class="bk-row">
           <button class="bk-minus" onclick="bkAdj('besi',-1)">−</button>
           <input class="bk-num" type="number" id="bk-besi" placeholder="—" min="0" inputmode="numeric" oninput="bkInput('besi')">
@@ -350,18 +356,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
         </div>
       </div>
       <div class="bk-line total">
-        <div class="bk-lbl"><b>Bakul balance</b><small>Must match the last number on the Mah Sing note</small></div>
+        <div class="bk-lbl"><b>Bakul balance</b><small data-i18n="balHint">Must match the last number on the Mah Sing note</small></div>
         <div class="bk-val" id="bk-after">—</div>
       </div>
     </div>
-    <div class="err-msg" id="err-bk">Please enter Bakul turun (0 if the lorry dropped none)</div>
-    <div class="err-msg" id="err-simpan">Please enter Bakul simpan — copy it from the last Mah Sing note</div>
+    <div class="err-msg" id="err-bk" data-i18n="errBk">Please enter Bakul turun (0 if the lorry dropped none)</div>
+    <div class="err-msg" id="err-simpan" data-i18n="errSimpan">Please enter Bakul simpan — copy it from the last Mah Sing note</div>
     </div>
   </div>
 
   <div class="gen-bar">
     <button class="gen-btn" onclick="generate()"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg><span id="gen-lbl">Preview &amp; Send</span></button>
-    <button class="note-btn" id="note-btn" onclick="previewNote()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14v20l-2.3-1.6L14.3 22 12 20.4 9.7 22l-2.4-1.6L5 22z"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4"/></svg><span>Note</span></button>
+    <button class="note-btn" id="note-btn" onclick="previewNote()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14v20l-2.3-1.6L14.3 22 12 20.4 9.7 22l-2.4-1.6L5 22z"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4"/></svg><span data-i18n="btnNote">Note</span></button>
   </div>
 </div>
 
@@ -370,24 +376,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   <div class="prev-hdr">
     <button class="back-btn" onclick="goBack()">‹</button>
     <div class="hdr-text">
-      <h1 style="color:#fff;">Preview Report</h1>
-      <p>Check before sending</p>
+      <h1 style="color:#fff;" data-i18n="prevTitle">Preview Report</h1>
+      <p data-i18n="prevSub">Check before sending</p>
     </div>
   </div>
   <div class="prev-body">
     <div id="note-wrap">
-      <div class="note-cap">✍️ Copy onto the Mah Sing note, line by line</div>
+      <div class="note-cap" data-i18n="capNote">✍️ Copy onto the Mah Sing note, line by line</div>
       <div class="note" id="note-out"></div>
     </div>
-    <div class="note-cap">💬 WhatsApp message</div>
+    <div class="note-cap" data-i18n="capWa">💬 WhatsApp message</div>
     <div class="msg-card" id="msg-out"></div>
-    <div class="prev-note">Copy the note first, then tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
+    <div class="prev-note" data-i18n="prevNote">Copy the note first, then tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.</div>
     <div class="save-st" id="save-st"></div>
   </div>
   <div class="send-bar">
     <button class="wa-btn" onclick="sendWA()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Send to WhatsApp
+      <span data-i18n="sendWa">Send to WhatsApp</span>
     </button>
     <button class="copy-btn" onclick="copyMsg()">📋</button>
   </div>
@@ -397,7 +403,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 <div class="scr" id="scr-note">
   <div class="prev-hdr">
     <button class="back-btn" onclick="closeNote()">‹</button>
-    <div class="hdr-text"><h1 style="color:#fff;">Mah Sing note</h1><p>Copy line by line</p></div>
+    <div class="hdr-text"><h1 style="color:#fff;" data-i18n="noteTitle">Mah Sing note</h1><p data-i18n="noteSub">Copy line by line</p></div>
   </div>
   <div class="prev-body" style="padding-bottom:24px"><div class="note" id="note-only"></div></div>
 </div>
@@ -441,6 +447,76 @@ const S = { farm:'', grades:{}, pending:null, pendingBk:null,
 const HKEY = 'harvest_last_v1';   // this phone's reports, so the Leader can add Bakul after the lorry
 GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'34/30', baskets:0 }]; });
 
+// ══ LANGUAGE (screen only — WhatsApp text, the Mah Sing note, grades and numbers stay as they are) ══
+const LKEY = 'form_lang_v1';
+let LANG = (() => { try { return localStorage.getItem(LKEY) || 'my'; } catch(e) { return 'my'; } })();
+const L = {
+  my: {
+    title:'ခူးဆွတ်မှု အစီရင်ခံစာ', date:'ရက်စွဲ', farm:'ခြံ', errDate:'ရက်စွဲ ရွေးပါ', errFarm:'ခြံ ရွေးပါ',
+    secGrade:'🏷️ အဆင့်အလိုက် ခူးရသမျှ', secTonight:'🏷️ ဒီည ခူးရသမျှ', secTotal:'📊 Mah Sing အတွက် စုစုပေါင်း', loading:'ဖွင့်နေသည်…',
+    simpanHint:'ကားမလာခင် ခြံမှာရှိတဲ့ ခြင်း', simpanType:'နောက်ဆုံး Mah Sing ဘောက်ချာကနေ ကူးဖြည့်ပါ', pickFarmFirst:'ခြံကို အရင်ရွေးပါ',
+    srcSystem:d => d ? `စနစ်ထဲက · ${d} အပြီး` : 'စနစ်ထဲက', srcPhone:'ဒီဖုန်းက နောက်ဆုံးပို့ထားတာ',
+    turunFill:'ကားထွက်သွားမှ ဖြည့်ပါ', turunDrop:'ကားက ချပေးခဲ့တဲ့ ခြင်းအလွတ်', naikHint:'ကားပေါ်တင်တဲ့ ခရမ်းသီးခြင်း (အပေါ်ကအတိုင်း)',
+    kgWarn:'⚠ kg နဲ့ရေးတာကို ခြင်းအဖြစ် မရေတွက်ပါ', besiHint:'ဘောက်ချာမှာ ရေးထားမှ ဖြည့်ပါ', balHint:'Mah Sing ဘောက်ချာရဲ့ နောက်ဆုံးနံပါတ်နဲ့ တူရမယ်',
+    errBk:'Bakul turun ဖြည့်ပါ (မချပေးရင် 0)', errSimpan:'Bakul simpan ဖြည့်ပါ — နောက်ဆုံး Mah Sing ဘောက်ချာကနေ ကူးပါ',
+    prevTitle:'စစ်ကြည့်ရန်', prevSub:'မပို့ခင် စစ်ပါ', capNote:'✍️ Mah Sing ဘောက်ချာပေါ် တစ်ကြောင်းချင်း ကူးရေးပါ', capWa:'💬 WhatsApp စာ',
+    prevNote:'ဘောက်ချာ အရင်ကူးပြီးမှ <strong>WhatsApp ပို့ရန်</strong> ကိုနှိပ်ပါ၊<br>📋 ကိုနှိပ်ရင် စာကူးမယ်', sendWa:'WhatsApp ပို့ရန်',
+    noteTitle:'Mah Sing ဘောက်ချာ', noteSub:'တစ်ကြောင်းချင်း ကူးရေးပါ', btnSend:'ကြည့်ပြီး ပို့ရန်', btnTotal:'စုစုပေါင်း ကြည့်ရန်', btnNote:'ဘောက်ချာ',
+    farmN:n => `ခြံ ${n}`, allFarms:'ခြံအားလုံး', pendTitle:'🧺 ကားလာပြီလား? Bakul ထည့်ပါ', pendBtn:'Bakul ထည့်ရန် ›',
+    modeBakul:(f, d) => `🧺 ${f} · ${d} Bakul`, cancel:'✕ မလုပ်တော့', needGrade:'⚠ အဆင့် တစ်ခုခု ဖြည့်ပါ', copied:'✓ ကူးပြီး',
+    saved:'✓ စနစ်ထဲ သိမ်းပြီး', notSaved:m => `မသိမ်းရ: ${m} — WhatsApp ကတော့ အဆင်ပြေတယ်`, savedPhone:'ဖုန်းထဲ သိမ်းထား — လိုင်းရရင် တင်ပေးမယ်',
+    totEnterDate:'ရက်စွဲ အရင်ရွေးပါ', totSignIn:'Home စာမျက်နှာမှာ အရင် sign in ဝင်ပါ', totNoConn:'လိုင်းမရ — ထပ်ကြိုးစားပါ',
+    totNone:d => `${d} အတွက် အစီရင်ခံစာ မရှိသေးပါ`, totMany:(f, n) => `${f}: အစီရင်ခံစာ ${n} ခု — နောက်ဆုံးတစ်ခုကို ယူထား`,
+    totMissing:l => `⚠ မပို့ရသေး: ${l}`, totKg:'kg နဲ့ရေးတာ TOTAL ထဲ မပါ', noTotal:'⚠ ဒီရက်အတွက် စုစုပေါင်း မရှိသေး', gradeHdr:'အဆင့်'
+  },
+  en: {
+    title:'Harvest WhatsApp Report', date:'Date', farm:'Farm', errDate:'Please pick the date', errFarm:'Please select a farm',
+    secGrade:'🏷️ Harvest by Grade', secTonight:"🏷️ Tonight's harvest", secTotal:'📊 Total for Mah Sing', loading:'Loading…',
+    simpanHint:'Baskets at the farm before the lorry', simpanType:'Type it from the last Mah Sing note', pickFarmFirst:'Pick the farm first',
+    srcSystem:d => d ? `Farm system · after ${d}` : 'Farm system', srcPhone:'Last report from this phone',
+    turunFill:'Fill after the lorry leaves', turunDrop:'Empty baskets the lorry dropped', naikHint:'Baskets of eggplant loaded (from above)',
+    kgWarn:'⚠ kg lines are not counted as baskets', besiHint:'Only if written on the note', balHint:'Must match the last number on the Mah Sing note',
+    errBk:'Please enter Bakul turun (0 if the lorry dropped none)', errSimpan:'Please enter Bakul simpan — copy it from the last Mah Sing note',
+    prevTitle:'Preview Report', prevSub:'Check before sending', capNote:'✍️ Copy onto the Mah Sing note, line by line', capWa:'💬 WhatsApp message',
+    prevNote:'Copy the note first, then tap <strong>Send to WhatsApp</strong> to open WhatsApp,<br>or 📋 to copy the text.', sendWa:'Send to WhatsApp',
+    noteTitle:'Mah Sing note', noteSub:'Copy line by line', btnSend:'Preview &amp; Send', btnTotal:'Preview Total', btnNote:'Note',
+    farmN:n => `Farm ${n}`, allFarms:'All farms', pendTitle:'🧺 Lorry came? Add Bakul', pendBtn:'Add Bakul ›',
+    modeBakul:(f, d) => `🧺 Bakul for ${f} · ${d}`, cancel:'✕ Cancel', needGrade:'⚠ Please fill in at least one grade', copied:'✓ Copied!',
+    saved:'✓ Saved to farm system', notSaved:m => `Not saved: ${m} — WhatsApp is still fine`, savedPhone:'Saved on this phone — will upload when there is signal',
+    totEnterDate:'Enter the date first', totSignIn:'Sign in on the Home page first', totNoConn:'No connection — try again',
+    totNone:d => `No harvest reports for ${d} yet`, totMany:(f, n) => `${f}: ${n} reports — using the latest`,
+    totMissing:l => `⚠ No report yet: ${l}`, totKg:'kg lines are not counted in TOTAL baskets', noTotal:'⚠ No total yet for this date', gradeHdr:'Grade'
+  },
+  zh: {
+    title:'收成回报', date:'日期', farm:'农场', errDate:'请选日期', errFarm:'请选农场',
+    secGrade:'🏷️ 各等级收成', secTonight:'🏷️ 今晚收成', secTotal:'📊 给 Mah Sing 的总数', loading:'加载中…',
+    simpanHint:'罗里来之前园里有的篮子', simpanType:'照上一张 Mah Sing 单子填', pickFarmFirst:'先选农场',
+    srcSystem:d => d ? `系统 · ${d} 之后` : '系统', srcPhone:'这支手机上次报的',
+    turunFill:'罗里走后再填', turunDrop:'罗里放下的空篮', naikHint:'装上车的茄子篮（照上面）',
+    kgWarn:'⚠ kg 那几行不算篮子', besiHint:'单子上有写才填', balHint:'要跟 Mah Sing 单子最后一个数一样',
+    errBk:'请填 Bakul turun（没放下就填 0）', errSimpan:'请填 Bakul simpan，照上一张 Mah Sing 单子',
+    prevTitle:'预览', prevSub:'发送前检查', capNote:'✍️ 一行一行抄到 Mah Sing 单子上', capWa:'💬 WhatsApp 讯息',
+    prevNote:'先抄单子，再按 <strong>发 WhatsApp</strong>，<br>或按 📋 复制文字', sendWa:'发 WhatsApp',
+    noteTitle:'Mah Sing 单子', noteSub:'一行一行抄', btnSend:'预览并发送', btnTotal:'预览总数', btnNote:'单子',
+    farmN:n => `农场 ${n}`, allFarms:'全部农场', pendTitle:'🧺 罗里来了？补 Bakul', pendBtn:'补 Bakul ›',
+    modeBakul:(f, d) => `🧺 ${f} · ${d} 补 Bakul`, cancel:'✕ 取消', needGrade:'⚠ 至少填一个等级', copied:'✓ 已复制',
+    saved:'✓ 已存进系统', notSaved:m => `没存进系统：${m}（WhatsApp 照常）`, savedPhone:'先存在手机，有讯号会自动上传',
+    totEnterDate:'先选日期', totSignIn:'请先在首页登入', totNoConn:'没有网络，请再试',
+    totNone:d => `${d} 还没有回报`, totMany:(f, n) => `${f}：报了 ${n} 次，用最新那次`,
+    totMissing:l => `⚠ 还没报：${l}`, totKg:'kg 那几行不算进 TOTAL', noTotal:'⚠ 这天还没有总数', gradeHdr:'等级'
+  }
+};
+function T(k, ...a) { const v = (L[LANG] && L[LANG][k] !== undefined) ? L[LANG][k] : L.en[k]; return typeof v === 'function' ? v(...a) : (v ?? k); }
+function setLang(l) {
+  LANG = L[l] ? l : 'my';
+  try { localStorage.setItem(LKEY, LANG); } catch(e) {}
+  document.documentElement.lang = LANG === 'my' ? 'my' : LANG === 'zh' ? 'zh' : 'en';
+  document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.l === LANG));
+  document.querySelectorAll('[data-i18n]').forEach(e => { e.innerHTML = T(e.dataset.i18n); });
+  buildFarms(); renderBakul(); showMode(); renderPending();
+  if (S.mode === 'TOTAL') loadTotal();
+}
+
 // ══ INIT ═════════════════════════════════════
 function init() {
   // Pre-fill today's date
@@ -455,6 +531,7 @@ function init() {
   loadFarms();
   flushOutbox();
   renderPending();
+  setLang(LANG);
   detectOwner();
   const onDate = () => S.mode === 'TOTAL' ? loadTotal() : loadBakulBefore();
   document.getElementById('f-date').addEventListener('change', onDate);
@@ -469,9 +546,9 @@ function buildFarms() {
   fp.classList.toggle('four', S.isOwner && FARMS.length === 3);
   fp.innerHTML = FARMS.map(code => `
     <button class="farm-btn${S.farm===short(code)?' on':''}" data-farm="${short(code)}" onclick="pickFarm('${short(code)}')">
-      ${short(code)}<small>Farm ${code.split(' ').pop()}</small>
+      ${short(code)}<small>${T('farmN', code.split(' ').pop())}</small>
     </button>`).join('')
-    + (S.isOwner ? `<button class="farm-btn tot${S.farm==='TOTAL'?' on':''}" data-farm="TOTAL" onclick="pickFarm('TOTAL')">TOTAL<small>All farms</small></button>` : '');
+    + (S.isOwner ? `<button class="farm-btn tot${S.farm==='TOTAL'?' on':''}" data-farm="TOTAL" onclick="pickFarm('TOTAL')">TOTAL<small>${T('allFarms')}</small></button>` : '');
   document.getElementById('hdr-farms').textContent = 'Azura Delta Farm — ' + FARMS.map(short).join(', ');
 }
 async function loadFarms() {
@@ -588,8 +665,8 @@ function renderBakul() {
   b.classList.toggle('mut', S.bk.before == null);
   b.style.display = ask ? 'none' : '';
   el('bk-simpan-box').style.display = ask ? '' : 'none';
-  el('bk-before-src').textContent = S.bk.before != null ? (S.bk.src || 'Baskets at the farm before the lorry')
-    : S.farm ? 'Type it from the last Mah Sing note' : 'Pick the farm first';
+  el('bk-before-src').textContent = S.bk.before != null ? (S.bk.src === 'PHONE' ? T('srcPhone') : S.bk.src ? T('srcSystem', S.bk.srcAfter) : T('simpanHint'))
+    : S.farm ? T('simpanType') : T('pickFarmFirst');
   const a = bkAfter();
   el('bk-after').textContent = a == null ? '—' : a;
   el('bk-after').style.color = a != null && a < 0 ? 'var(--red)' : '';
@@ -625,14 +702,14 @@ async function loadBakulBefore() {
   if (!S.farm || !/^\d{1,2}\/\d{1,2}$/.test(date)) { S.bk.before = null; S.bk.src = ''; renderBakul(); return; }
   const farm = FARMS.find(f => short(f) === S.farm) || S.farm, iso = isoDate(date), seq = ++bkSeq;
   const local = bkFromPhone(S.farm, iso);
-  S.bk.before = local; S.bk.src = local == null ? '' : 'Last report from this phone'; renderBakul();
+  S.bk.before = local; S.bk.src = local == null ? '' : 'PHONE'; renderBakul();
   try {
     const r = await fetch(SB_URL + '/rest/v1/rpc/bakul_form_last', { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p:{ farm, date: iso } }) });
     if (!r.ok || seq !== bkSeq) return;
     const j = await r.json();
     if (j && j.balance != null) {
       S.bk.before = j.balance;
-      S.bk.src = 'Farm system' + (j.as_of ? ' · after ' + j.as_of.slice(8,10) + '/' + j.as_of.slice(5,7) : '');
+      S.bk.src = 'SYSTEM'; S.bk.srcAfter = j.as_of ? j.as_of.slice(8,10) + '/' + j.as_of.slice(5,7) : '';
       renderBakul();
     }
   } catch(e) {}
@@ -663,12 +740,12 @@ function showMode() {
   $('sec-total').style.display   = m === 'TOTAL' ? '' : 'none';
   $('sec-bakul').style.display   = m === 'TOTAL' ? 'none' : '';
   $('turun-req').style.display   = m === 'BAKUL' ? '' : 'none';
-  $('turun-hint').textContent    = m === 'BAKUL' ? 'Empty baskets the lorry dropped' : 'Fill after the lorry leaves';
+  $('turun-hint').textContent    = m === 'BAKUL' ? T('turunDrop') : T('turunFill');
   $('bk-pending').style.display  = m === 'HARVEST' ? '' : 'none';
   $('note-btn').style.display    = m === 'TOTAL' ? 'none' : '';
   $('mode-bar').innerHTML = m === 'BAKUL'
-    ? `<span>🧺 Bakul for ${S.farm} · ${document.getElementById('f-date').value}</span><button onclick="exitBakul(true)">✕ Cancel</button>` : '';
-  document.getElementById('gen-lbl').innerHTML = m === 'TOTAL' ? 'Preview Total' : 'Preview &amp; Send';
+    ? `<span>${T('modeBakul', S.farm, document.getElementById('f-date').value)}</span><button onclick="exitBakul(true)">${T('cancel')}</button>` : '';
+  document.getElementById('gen-lbl').innerHTML = m === 'TOTAL' ? T('btnTotal') : T('btnSend');
 }
 
 // ══ VALIDATE ═════════════════════════════════
@@ -719,7 +796,7 @@ function generate() {
     });
   });
 
-  if (!lines.length) { toast('⚠ Please fill in at least one grade'); return; }
+  if (!lines.length) { toast(T('needGrade')); return; }
 
   const date = document.getElementById('f-date').value.trim();
   // Bakul lines, written like the Mah Sing note: simpan + turun - naik = balance
@@ -803,7 +880,7 @@ function previewNote() {
   const date = document.getElementById('f-date').value.trim();
   if (!date || !/^\d{1,2}\/\d{1,2}$/.test(date)) { document.getElementById('err-date').classList.add('on'); window.scrollTo({top:0,behavior:'smooth'}); return; }
   if (!S.farm) { document.getElementById('err-farm').classList.add('on'); window.scrollTo({top:0,behavior:'smooth'}); return; }
-  if (!naikCount().n && !GRADES.some(g => S.grades[g.key].some(r => r.baskets > 0))) { toast('⚠ Please fill in at least one grade'); return; }
+  if (!naikCount().n && !GRADES.some(g => S.grades[g.key].some(r => r.baskets > 0))) { toast(T('needGrade')); return; }
   renderNote(date, 'note-only');
   document.getElementById('scr-form').classList.remove('on');
   document.getElementById('scr-note').classList.add('on');
@@ -841,8 +918,8 @@ function todayIso() { const t = new Date(); return t.getFullYear() + '-' + Strin
 function renderPending() {
   const h = readH(), from = addDaysIso(todayIso(), -2);
   const list = Object.entries(h).filter(([, v]) => !v.bakulDone && v.date >= from).sort((a, b) => a[1].date < b[1].date ? 1 : -1);
-  document.getElementById('bk-pending').innerHTML = list.length ? `<div class="pend"><b>🧺 Lorry came? Add Bakul</b>${
-    list.map(([k, v]) => `<button onclick="startBakul('${k}')"><span>${v.farm} · ${v.ddmm}</span><span>Add Bakul ›</span></button>`).join('')}</div>` : '';
+  document.getElementById('bk-pending').innerHTML = list.length ? `<div class="pend"><b>${T('pendTitle')}</b>${
+    list.map(([k, v]) => `<button onclick="startBakul('${k}')"><span>${v.farm} · ${v.ddmm}</span><span>${T('pendBtn')}</span></button>`).join('')}</div>` : '';
 }
 function startBakul(key) {
   const v = readH()[key]; if (!v) return;
@@ -898,23 +975,23 @@ let totSeq = 0;
 async function loadTotal() {
   const ddmm = document.getElementById('f-date').value.trim(), card = document.getElementById('tot-card'), note = document.getElementById('tot-note');
   S.total = null; note.textContent = '';
-  if (!/^\d{1,2}\/\d{1,2}$/.test(ddmm)) { card.innerHTML = '<div class="tot-msg">Enter the date first</div>'; return; }
+  if (!/^\d{1,2}\/\d{1,2}$/.test(ddmm)) { card.innerHTML = `<div class="tot-msg">${T('totEnterDate')}</div>`; return; }
   const iso = isoDate(ddmm), seq = ++totSeq;
-  card.innerHTML = '<div class="tot-msg">Loading…</div>';
+  card.innerHTML = `<div class="tot-msg">${T('loading')}</div>`;
   const ss = await ownerToken();
-  if (!ss) { card.innerHTML = '<div class="tot-msg">Sign in on the Home page first</div>'; return; }
+  if (!ss) { card.innerHTML = `<div class="tot-msg">${T('totSignIn')}</div>`; return; }
   let list;
   try {
     const r = await fetch(SB_URL + '/rest/v1/rpc/harvest_owner_list', { method:'POST', headers:{ apikey:SB_KEY, Authorization:'Bearer ' + ss.access_token, 'Content-Type':'application/json' }, body: JSON.stringify({ p_from: iso, p_to: iso }) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     list = await r.json();
-  } catch(e) { if (seq === totSeq) card.innerHTML = '<div class="tot-msg">No connection — try again</div>'; return; }
+  } catch(e) { if (seq === totSeq) card.innerHTML = `<div class="tot-msg">${T('totNoConn')}</div>`; return; }
   if (seq !== totSeq) return;
   // latest report per farm (a Leader who sends twice is correcting the first one)
   const farms = FARMS.map(short), byFarm = {}, many = [];
   farms.forEach(f => {
     const reps = (list || []).filter(x => short(x.farm) === f && x.status !== 'VOID').sort((a, b) => a.submitted_at < b.submitted_at ? 1 : -1);
-    if (reps.length > 1) many.push(`${f}: ${reps.length} reports — using the latest`);
+    if (reps.length > 1) many.push(T('totMany', f, reps.length));
     byFarm[f] = reps[0] || null;
   });
   const rows = [];
@@ -930,14 +1007,14 @@ async function loadTotal() {
   const sumTot = sumVals.reduce((s, v) => s + (v || 0), 0);
   const missing = farms.filter(f => !byFarm[f]);
   const n = v => v == null ? '-' : v === 0 ? '-' : String(v);
-  if (!rows.length) { card.innerHTML = `<div class="tot-msg">No harvest reports for ${ddmm} yet</div>`; return; }
-  card.innerHTML = `<table><tr><th>Grade</th>${farms.map(f => `<th>${f}</th>`).join('')}<th class="t">TOTAL</th></tr>
+  if (!rows.length) { card.innerHTML = `<div class="tot-msg">${T('totNone', ddmm)}</div>`; return; }
+  card.innerHTML = `<table><tr><th>${T('gradeHdr')}</th>${farms.map(f => `<th>${f}</th>`).join('')}<th class="t">TOTAL</th></tr>
     ${rows.map(r => `<tr><td>${r.label}</td>${r.vals.map(v => `<td>${n(v)}</td>`).join('')}<td class="t">${r.tot}</td></tr>`).join('')}
     <tr class="sum"><td>TOTAL</td>${sumVals.map(v => `<td>${v == null ? '-' : v}</td>`).join('')}<td class="t">${sumTot}</td></tr></table>`;
   const notes = [];
-  if (missing.length) notes.push('⚠ No report yet: ' + missing.join(', '));
+  if (missing.length) notes.push(T('totMissing', missing.join(', ')));
   many.forEach(m => notes.push('ℹ ' + m));
-  if (rows.some(r => r.kg)) notes.push('kg lines are not counted in TOTAL baskets');
+  if (rows.some(r => r.kg)) notes.push(T('totKg'));
   note.innerHTML = notes.join('<br>');
   // WhatsApp text: a table in monospace (```), so the columns line up
   const head = ['Grade', ...farms, 'TOTAL'];
@@ -949,7 +1026,7 @@ async function loadTotal() {
   S.total = { ddmm, text: `Date: ${ddmm} · AZURA DELTA\n\`\`\`\n${fmtRow(head)}\n${line}\n${body.map(fmtRow).join('\n')}\n${line}\n${fmtRow(last)}\n\`\`\`` + (missing.length ? `\n(No report yet: ${missing.join(', ')})` : '') };
 }
 function generateTotal() {
-  if (!S.total) { toast('⚠ No total yet for this date'); return; }
+  if (!S.total) { toast(T('noTotal')); return; }
   document.getElementById('msg-out').textContent = S.total.text;
   document.getElementById('note-wrap').style.display = 'none';
   S.pending = null; S.pendingBk = null; setSaveSt('');
@@ -999,15 +1076,15 @@ async function flushOutbox() {
       let p = rec;
       if (fn === 'bakul_submit') { p = {}; Object.keys(rec).forEach(k => { if (k !== 'rpc' && k[0] !== '_') p[k] = rec[k]; }); }
       const r = await fetch(SB_URL + '/rest/v1/rpc/' + fn, { method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ p }) });
-      if (r.ok) { q = q.filter(x => x.client_id !== rec.client_id); writeQ(q); if (S.pending && rec.client_id === S.pending.client_id) setSaveSt('✓ Saved to farm system', 'ok'); }
+      if (r.ok) { q = q.filter(x => x.client_id !== rec.client_id); writeQ(q); if (S.pending && rec.client_id === S.pending.client_id) setSaveSt(T('saved'), 'ok'); }
       else if (r.status >= 400 && r.status < 500) {        // the cloud refused it (e.g. date too old): do not retry forever
         q = q.filter(x => x.client_id !== rec.client_id); writeQ(q);
         let m = ''; try { m = (await r.json()).message || ''; } catch(e) {}
-        if (S.pending && rec.client_id === S.pending.client_id) setSaveSt('Not saved: ' + m + ' — WhatsApp is still fine', 'wait');
+        if (S.pending && rec.client_id === S.pending.client_id) setSaveSt(T('notSaved', m), 'wait');
       } else break;
     } catch(e) { break; }                                   // no signal: keep it, try again later
   }
-  if (readQ().length && S.pending && readQ().some(x => x.client_id === S.pending.client_id)) setSaveSt('Saved on this phone — will upload when there is signal', 'wait');
+  if (readQ().length && S.pending && readQ().some(x => x.client_id === S.pending.client_id)) setSaveSt(T('savedPhone'), 'wait');
   flushing = false;
 }
 window.addEventListener('online', flushOutbox);
@@ -1016,12 +1093,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) flus
 function copyMsg() {
   const txt = document.getElementById('msg-out').textContent;
   navigator.clipboard.writeText(txt)
-    .then(() => toast('✓ Copied!'))
+    .then(() => toast(T('copied')))
     .catch(() => {
       const ta = document.createElement('textarea');
       ta.value = txt; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); document.body.removeChild(ta);
-      toast('✓ Copied!');
+      toast(T('copied'));
     });
 }
 
