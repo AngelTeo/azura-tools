@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v19 · 2026-11-19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v20 · 2026-11-19: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -126,7 +126,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 
 /* ── GENERATE BAR ── */
 .gen-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);
-  border-top:1px solid var(--bdr);padding:12px 14px;z-index:50;}
+  border-top:1px solid var(--bdr);padding:12px 14px;z-index:50;display:flex;gap:8px;}
+.note-btn{flex:0 0 38%;background:#eef1fa;color:#1a3fa8;border:1.5px solid #8b9acb;border-radius:12px;
+  padding:15px 8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.note-btn:active{background:#dde4f5;}
+.gen-bar .gen-btn{flex:1;width:auto;}
+.note .blank{display:inline-block;min-width:46px;border-bottom:1.5px dashed #8b9acb;height:18px;}
 .gen-btn{width:100%;background:var(--g);color:#fff;border:none;border-radius:12px;
   padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
   display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -203,6 +208,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .note td.q{width:64px;text-align:left;}
 .note td.e{width:34px;}
 .note td.ind{padding-left:74px;}
+.note .bs{display:inline-flex;align-items:baseline;font-variant-numeric:tabular-nums;}
+.note .bs-l{width:84px;}
+.note .bs-o{width:18px;text-align:left;}
+.note .bs-n{width:46px;text-align:right;}
+.note .bs-r{display:inline-flex;align-items:baseline;}
+.note td.bline{position:relative;}
+.note td.bline::before{content:'';position:absolute;left:90px;width:64px;top:-1.5px;height:2.5px;background:#1a3fa8;border-radius:1px;}
 .note td.ul{position:relative;}
 .note td.ul span{border-top:2px solid #1a3fa8;padding-top:1px;}
 .note-foot{display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;color:#555;margin-top:8px;}
@@ -331,7 +343,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   </div>
 
   <div class="gen-bar">
-    <button class="gen-btn" onclick="generate()">▶ &nbsp;Preview &amp; Send to WhatsApp</button>
+    <button class="note-btn" id="note-btn" onclick="previewNote()">📄 Preview note</button>
+    <button class="gen-btn" onclick="generate()">▶ &nbsp;Preview &amp; Send</button>
   </div>
 </div>
 
@@ -361,6 +374,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     </button>
     <button class="copy-btn" onclick="copyMsg()">📋</button>
   </div>
+</div>
+
+<!-- ══ NOTE ONLY (copy onto the Mah Sing note) ══ -->
+<div class="scr" id="scr-note">
+  <div class="prev-hdr">
+    <button class="back-btn" onclick="closeNote()">‹</button>
+    <div class="hdr-text"><h1 style="color:#fff;">Mah Sing note</h1><p>Copy line by line</p></div>
+  </div>
+  <div class="prev-body" style="padding-bottom:24px"><div class="note" id="note-only"></div></div>
 </div>
 
 <div id="toast"></div>
@@ -624,10 +646,11 @@ function showMode() {
   $('turun-req').style.display   = m === 'BAKUL' ? '' : 'none';
   $('turun-hint').textContent    = m === 'BAKUL' ? 'Empty baskets the lorry dropped' : 'Fill after the lorry leaves';
   $('bk-pending').style.display  = m === 'HARVEST' ? '' : 'none';
+  $('note-btn').style.display    = m === 'TOTAL' ? 'none' : '';
   $('mode-bar').innerHTML = m === 'BAKUL'
     ? `<span>🧺 Bakul for ${S.farm} · ${document.getElementById('f-date').value}</span><button onclick="exitBakul(true)">✕ Cancel</button>` : '';
   document.querySelector('.gen-btn').innerHTML = m === 'TOTAL' ? '▶ &nbsp;Preview Total for Mah Sing'
-    : m === 'BAKUL' ? '▶ &nbsp;Preview Bakul &amp; Send' : '▶ &nbsp;Preview &amp; Send to WhatsApp';
+    : '▶ &nbsp;Preview &amp; Send';
 }
 
 // ══ VALIDATE ═════════════════════════════════
@@ -707,7 +730,7 @@ function generate() {
 
 
 // ══ NOTE VIEW: same layout as the Mah Sing delivery note ══
-function renderNote(ddmm) {
+function renderNote(ddmm, target) {
   const iso = isoDate(ddmm), dateTxt = `${iso.slice(8,10)}.${iso.slice(5,7)}.${iso.slice(0,4)}`;
   const farm = FARMS.find(f => short(f) === S.farm) || S.farm;
   const items = [];
@@ -718,16 +741,20 @@ function renderNote(ddmm) {
     if (w?.factor == null) items.push({ t:`${name} ⇒ ${r.baskets} kg`, q:'' + r.baskets });
     else items.push({ t:`${name} ⇒ ${r.wLabel} × ${r.baskets}`, q:'' + Math.round(r.baskets * w.factor) });
   }));
-  const naik = naikCount().n, before = bkSimpan(), turun = S.bk.turun, mid = before + turun, after = bkAfter();
+  const naik = naikCount().n, before = bkSimpan(), turun = S.bk.turun, after = bkAfter();
+  const B = '<span class="blank"></span>', v = x => x == null ? B : x;          // not known yet: a blank to write on
+  const mid = before != null && turun != null ? before + turun : null;
   // rows: 1 Terung Panjang, blank, grades (blank between if they fit), then Bakul sum — 14 rows like the paper
   const rows = [{ t:'Terung Panjang' }, {}];
   const gap = 2 + items.length * 2 + 5 <= 14;
   items.forEach((it, i) => { rows.push(it); if (gap && i < items.length - 1) rows.push({}); });
   rows.push({});
-  rows.push({ t:`Bakul ⇒ ${before}` }, { t:`+ ${turun}`, ind:1 }, { t:`${mid}`, ind:1, ul:1 }, { t:`− ${naik}`, ind:1 }, { t:`${after}`, ind:1, ul:1 });
+  // Bakul sum like on paper: numbers right-aligned in one column so units, tens, hundreds line up
+  const bs = (l, o, v, u) => ({ bl:u, h:`<span class="bs ink"><span class="bs-l">${l}</span><span class="bs-r${u ? ' bs-u' : ''}"><span class="bs-o">${o}</span><span class="bs-n">${v}</span></span></span>` });
+  rows.push(bs('Bakul ⇒', '', v(before)), bs('', '+', v(turun)), bs('', '', v(mid), 1), bs('', '−', naik), bs('', '', v(after), 1));
   while (rows.length < 14) rows.push({});
-  const td = r => `<td class="${r.ind ? 'ind ' : ''}${r.ul ? 'ul' : ''}">${r.t ? `<span class="ink">${r.t}</span>` : ''}</td>`;
-  document.getElementById('note-out').innerHTML = `
+  const td = r => `<td class="${r.ind ? 'ind ' : ''}${r.ul ? 'ul' : ''}${r.bl ? 'bline' : ''}">${r.h ? r.h : r.t ? `<span class="ink">${r.t}</span>` : ''}</td>`;
+  document.getElementById(target || 'note-out').innerHTML = `
     <div class="note-top">
       <div><span class="note-ms">M/s</span> <span class="note-l1 ink">Mah Sing (${farm})</span>
         <span class="note-l2 ink">AZURA DELTA</span></div>
@@ -738,6 +765,23 @@ function renderNote(ddmm) {
       ${rows.map((r, i) => `<tr><td class="n">${i + 1}</td>${td(r)}<td class="q">${r.q ? `<span class="ink">${r.q}</span>` : ''}</td><td class="e"></td><td class="e"></td></tr>`).join('')}
     </table>
     <div class="note-foot"><div>${S.bk.besi != null ? `Besi hutang <span class="ink">${S.bk.besi}</span>` : ''}</div><div>${after != null ? `Baki bakul <span class="ink">${after}</span>` : ''}</div></div>`;
+}
+
+// ══ PREVIEW NOTE ONLY ══
+function previewNote() {
+  if (S.mode === 'TOTAL') return;
+  const date = document.getElementById('f-date').value.trim();
+  if (!date || !/^\d{1,2}\/\d{1,2}$/.test(date)) { document.getElementById('err-date').classList.add('on'); window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if (!S.farm) { document.getElementById('err-farm').classList.add('on'); window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if (!naikCount().n && !GRADES.some(g => S.grades[g.key].some(r => r.baskets > 0))) { toast('⚠ Please fill in at least one grade'); return; }
+  renderNote(date, 'note-only');
+  document.getElementById('scr-form').classList.remove('on');
+  document.getElementById('scr-note').classList.add('on');
+  window.scrollTo(0, 0);
+}
+function closeNote() {
+  document.getElementById('scr-note').classList.remove('on');
+  document.getElementById('scr-form').classList.add('on');
 }
 
 // ══ SEND / COPY ══════════════════════════════
