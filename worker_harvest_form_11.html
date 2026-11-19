@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v21 · 2026-11-19: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v22 · 2026-11-19: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -127,10 +127,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 /* ── GENERATE BAR ── */
 .gen-bar{position:fixed;bottom:0;left:0;right:0;background:var(--sur);
   border-top:1px solid var(--bdr);padding:12px 14px;z-index:50;display:flex;gap:8px;}
-.note-btn{flex:0 0 38%;background:#eef1fa;color:#1a3fa8;border:1.5px solid #8b9acb;border-radius:12px;
-  padding:15px 8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.note-btn{flex:0 0 32%;background:#fbfbf8;color:#1a3fa8;border:1.5px solid #8b9acb;border-radius:12px;
+  padding:13px 8px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  background-image:repeating-linear-gradient(#fbfbf8 0 15px,#dde4f5 15px 16px);}
 .note-btn:active{background:#dde4f5;}
-.gen-bar .gen-btn{flex:1;width:auto;}
+.gen-bar .gen-btn{flex:1;width:auto;background:#25D366;}
+.gen-bar .gen-btn:active{background:#1da851;}
 .note .blank{display:inline-block;min-width:46px;border-bottom:1.5px dashed #8b9acb;height:18px;}
 .gen-btn{width:100%;background:var(--g);color:#fff;border:none;border-radius:12px;
   padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
@@ -164,7 +167,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .g-grp:last-child{border-bottom:none;}
 .g-grp.has-val{background:var(--g4);}
 .g-row{display:flex;align-items:center;gap:8px;padding:7px 10px;}
-.g-row .grade-pill{width:96px;justify-content:center;}
+.g-row .grade-pill{width:96px;height:42px;justify-content:center;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:800;padding:0 4px;}
 .g-row.sub .g-sp{width:96px;flex-shrink:0;}
 .u-chip{flex-shrink:0;width:60px;height:42px;border:1.5px solid var(--bdr);background:var(--sur2);border-radius:8px;
   font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--txt2);cursor:pointer;}
@@ -356,8 +359,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
   </div>
 
   <div class="gen-bar">
-    <button class="note-btn" id="note-btn" onclick="previewNote()">📄 Preview note</button>
-    <button class="gen-btn" onclick="generate()">▶ &nbsp;Preview &amp; Send</button>
+    <button class="gen-btn" onclick="generate()"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg><span id="gen-lbl">Preview &amp; Send</span></button>
+    <button class="note-btn" id="note-btn" onclick="previewNote()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14v20l-2.3-1.6L14.3 22 12 20.4 9.7 22l-2.4-1.6L5 22z"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4"/></svg><span>Note</span></button>
   </div>
 </div>
 
@@ -664,8 +667,7 @@ function showMode() {
   $('note-btn').style.display    = m === 'TOTAL' ? 'none' : '';
   $('mode-bar').innerHTML = m === 'BAKUL'
     ? `<span>🧺 Bakul for ${S.farm} · ${document.getElementById('f-date').value}</span><button onclick="exitBakul(true)">✕ Cancel</button>` : '';
-  document.querySelector('.gen-btn').innerHTML = m === 'TOTAL' ? '▶ &nbsp;Preview Total for Mah Sing'
-    : '▶ &nbsp;Preview &amp; Send';
+  document.getElementById('gen-lbl').innerHTML = m === 'TOTAL' ? 'Preview Total' : 'Preview &amp; Send';
 }
 
 // ══ VALIDATE ═════════════════════════════════
