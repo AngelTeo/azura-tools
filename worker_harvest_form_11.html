@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v20 · 2026-11-19: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v21 · 2026-11-19: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -242,6 +242,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
 .tot-note{font-size:12px;color:#8a6100;margin-top:8px;line-height:1.6;}
 .tot-msg{font-size:12px;color:var(--mut);text-align:center;padding:16px;}
 
+/* ── DATE (calendar) ── */
+.date-box{position:relative;display:flex;align-items:center;justify-content:space-between;width:100%;border:1px solid var(--bdr);
+  border-radius:10px;padding:13px 14px;background:var(--sur);font-size:16px;color:var(--txt);}
+.date-box:focus-within{border-color:var(--g);box-shadow:0 0 0 3px rgba(42,100,48,.1);}
+.date-show{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.02em;}
+.date-ico{font-size:18px;}
+.date-box input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;}
+.date-box input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer;}
+
 /* ── TOAST ── */
 .save-st{font-size:11px;text-align:center;margin-top:8px;color:var(--mut);}
 .save-st.ok{color:var(--g);}.save-st.wait{color:#8a6100;}
@@ -269,9 +278,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--sur2);color:var(--txt);fo
     <!-- DATE -->
     <div class="frow">
       <label>Date <span class="req">*</span></label>
-      <input type="text" id="f-date" placeholder="DD/MM" maxlength="5"
-        inputmode="numeric" oninput="autoSlash(this)">
-      <div class="err-msg" id="err-date">Please enter date (DD/MM)</div>
+      <!-- date: tap opens the phone's calendar; shown as DD/MM/YYYY. f-date keeps DD/MM for the rest of the form -->
+      <div class="date-box">
+        <span class="date-show" id="f-date-show">—</span><span class="date-ico">📅</span>
+        <input type="date" id="f-date-pick" onchange="onPick(this.value)">
+      </div>
+      <input type="hidden" id="f-date">
+      <div class="err-msg" id="err-date">Please pick the date</div>
     </div>
 
     <!-- FARM -->
@@ -430,7 +443,7 @@ function init() {
   const t  = new Date();
   const dd = String(t.getDate()).padStart(2,'0');
   const mm = String(t.getMonth()+1).padStart(2,'0');
-  document.getElementById('f-date').value = `${dd}/${mm}`;
+  setDate(`${t.getFullYear()}-${mm}-${dd}`, true);
   try { const f = JSON.parse(localStorage.getItem(FKEY) || 'null'); if (Array.isArray(f) && f.length) FARMS = f; } catch(e) {}
   buildFarms();
   buildAllCards();
@@ -442,6 +455,8 @@ function init() {
   const onDate = () => S.mode === 'TOTAL' ? loadTotal() : loadBakulBefore();
   document.getElementById('f-date').addEventListener('change', onDate);
   document.getElementById('f-date').addEventListener('blur', onDate);
+  const pk = document.getElementById('f-date-pick');
+  pk.max = addDaysIso(todayIso(), 1); pk.min = addDaysIso(todayIso(), -7);   // the cloud takes the last 7 days only
 }
 
 // ══ FARMS (from the farm list) ════════════════
@@ -767,6 +782,18 @@ function renderNote(ddmm, target) {
     <div class="note-foot"><div>${S.bk.besi != null ? `Besi hutang <span class="ink">${S.bk.besi}</span>` : ''}</div><div>${after != null ? `Baki bakul <span class="ink">${after}</span>` : ''}</div></div>`;
 }
 
+// ══ DATE (calendar) ══
+function setDate(iso, quiet) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return;
+  S.dateIso = iso;
+  document.getElementById('f-date').value = iso.slice(8,10) + '/' + iso.slice(5,7);
+  document.getElementById('f-date-pick').value = iso;
+  document.getElementById('f-date-show').textContent = iso.slice(8,10) + '/' + iso.slice(5,7) + '/' + iso.slice(0,4);
+  document.getElementById('err-date').classList.remove('on');
+  if (!quiet) document.getElementById('f-date').dispatchEvent(new Event('change'));
+}
+function onPick(v) { if (v) setDate(v); else setDate(S.dateIso, true); }   // clearing the calendar keeps the old date
+
 // ══ PREVIEW NOTE ONLY ══
 function previewNote() {
   if (S.mode === 'TOTAL') return;
@@ -817,7 +844,7 @@ function renderPending() {
 function startBakul(key) {
   const v = readH()[key]; if (!v) return;
   S.mode = 'BAKUL'; S.bkKey = key; S.farm = v.farm;
-  document.getElementById('f-date').value = v.ddmm;
+  setDate(v.date, true);
   GRADES.forEach(g => { S.grades[g.key] = v.grades[g.key] || [{ wLabel:'34/30', baskets:0 }]; });
   S.bk.turun = null; S.bk.besi = null; S.bk.typed = null;
   ['bk-turun','bk-besi','bk-typed'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
@@ -939,6 +966,7 @@ function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); });
 }
 function isoDate(ddmm) {
+  if (S.dateIso && ddmm === S.dateIso.slice(8,10) + '/' + S.dateIso.slice(5,7)) return S.dateIso;   // year from the calendar
   const [d, m] = ddmm.split('/').map(Number), t = new Date();
   let y = t.getFullYear();
   if (m > t.getMonth() + 2) y -= 1;                       // e.g. typing 31/12 on 2 January
