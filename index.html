@@ -213,11 +213,6 @@ async function showApp(){
         : `<div class="app-card" style="cursor:default"><span class="app-name">${esc(p.name)}</span><span class="pend-tag">${esc(p.note)}</span></div>`).join('')
     + '</div></div>';
   $('app').innerHTML = html;
-  if(ROLE==='OWNER'){ /* StoreGo v8 local-mode page: owner-only tile next to StoreGo */
-    const sg=[...document.querySelectorAll('.app-card[data-href]')].find(c=>/(^|\/)StoreGo\.html/.test(c.dataset.href));
-    if(sg){const a=document.createElement('a');a.className='app-card';a.style.cssText=sg.style.cssText;a.href='OPR/StoreGo_v8.html?v=8';
-      a.innerHTML='<span class="app-name">StoreGo v8</span><span class="app-sub">本机版 · Owner</span>'+(SHOWVER?'<span class="app-ver">v8</span>':'');sg.after(a);}
-  }
 }
 
 async function runVerCheck(){
