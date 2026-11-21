@@ -48,6 +48,9 @@ td.n,th.n{text-align:right}
 body.lock{position:fixed;left:0;right:0;overflow:hidden}
 .modal{overscroll-behavior:contain;touch-action:none}.sheet{overscroll-behavior:contain;touch-action:pan-y;max-height:88vh;max-height:88dvh;-webkit-overflow-scrolling:touch}
 #zoom{overscroll-behavior:contain;touch-action:none}
+.bar{padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}.bar button{border-radius:12px;transition:background .15s}
+.bar button.on{background:var(--mint);color:var(--green)}.bar button:active{background:#d7ebdf}
+.btn:active,.seg button:active,[data-act]:active{filter:brightness(.94)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
 <body><div id="root"><div class="top"><div class="in"><div class="logo">📦</div><div class="brand">StoreGo<small>AZURA DELTA · v16</small></div><div class="who" id="who"></div></div></div>
@@ -192,9 +195,10 @@ function waLink(phone,text){let d=String(phone||'').split(/[,/]/)[0].replace(/\D
 function vToday(){const {pr,t}=plan();const c=cfg(S);let red=[],amber=[];
   for(const f of FARMS)for(const pid in pr[f].slotShort){const d=pr[f].slotShort[pid];const p=P(pid);const lead=leadOf(S,p);
     const row={f,p,d,lead,sup:supName(p?.shops?.[0])};if(d<=lead)red.push(row);else if(d<=(Number(c.safety)||7))amber.push(row)}
-  const grp=L=>{const m={};for(const r of L){const k=r.p?.id||r.f;(m[k]=m[k]||{...r,fs:[]}).fs.push([r.f,r.d]);m[k].d=Math.min(m[k].d,r.d)}return Object.values(m).sort((a,b)=>a.d-b.d)};
+  const mixOf=(f,pid)=>{const pl=planOn(S,f,t);const r=pl&&S.recipe.find(x=>x.id===pl.ver);if(!r)return [];return MIXES.filter(m=>(r.mixes[m]||[]).some(it=>it.pid===pid||(it.alts||[]).some(x=>x.pid===pid)))};
+  const grp=L=>{const m={};for(const r of L){const k=r.p?.id||r.f;(m[k]=m[k]||{...r,fs:[],mx:new Set()}).fs.push([r.f,r.d]);mixOf(r.f,k).forEach(x=>m[k].mx.add(x));m[k].d=Math.min(m[k].d,r.d)}return Object.values(m).sort((a,b)=>a.d-b.d)};
   red=grp(red);amber=grp(amber);
-  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b><div class="tiny">${r.fs.map(([f,d])=>`${f} ${d<=1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div></div><span class="badge ${cls}">${r.d} 天</span></div>`).join('');
+  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b> ${[...r.mx].sort().map(x=>`<span class="mixtag" style="font-size:11px">Mix ${x}</span>`).join(' ')}<div class="tiny">${r.fs.map(([f,d])=>`${f} ${d<=1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div></div><span class="badge ${cls}">${r.d} 天</span></div>`).join('');
   /* today's mix */
   const {st}=stockAt(S,addDays(t,-1));
   const mix=FARMS.map(f=>{const pl=planOn(S,f,t);if(!pl)return `<div><b>${f}</b><span class="tiny">还没设定配方</span></div>`;const s={...st[f]};const r=sprayDay(S,f,t,s);
@@ -257,14 +261,14 @@ let draft=null;
 function buyPlanView(){const r=buyPlan(S);const {pr}=plan();const c=cfg(S);
   if(!draft||draft.key!==JSON.stringify(r.buys.map(b=>[b.pid,b.packs]))){draft={key:JSON.stringify(r.buys.map(b=>[b.pid,b.packs])),lines:{}};for(const b of r.buys)draft.lines[b.pid]={packs:b.packs||0,alloc:{...b.alloc}}}
   const urgent=pid=>FARMS.some(f=>{const d=pr[f].slotShort[pid];return d!=null&&d<=leadOf(S,P(pid))});
-  const moves=r.moves.map((m,i)=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> · ${m.from} → ${m.to}<div class="tiny">${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-i="${i}">已移</button></div>`}).join('');
+  const moves=r.moves.map((m,i)=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> · ${m.from} → ${m.to}<div class="tiny">${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-i="${i}">移好了，记下来</button></div>`}).join('');
   const groups={};for(const b of r.buys){const p=P(b.pid);const sid=p?.shops?.[0]||'_';(groups[sid]=groups[sid]||[]).push(b)}
   const gh=Object.entries(groups).map(([sid,L])=>{const sup=SUP(sid);return `<div class="card"><div class="row"><h2 class="grow">${h(sup?.name||'未指定供应商')}</h2><span class="tiny">${sup?(Number(sup.leadDays)||3)+' 天到':''}</span></div><div class="list" style="margin-top:6px">${L.map(b=>{const p=P(b.pid);const d=draft.lines[b.pid];
     return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${b.noPack?' · 包装待补，算不出瓶数':''}</div>
     <div class="tiny">分园：${FARMS.map(f=>`${f} <b>${d.alloc[f]||0}</b>`).join(' · ')}</div></div><div class="stepper neededit"><button data-act="qty" data-id="${h(b.pid)}" data-d="-1">−</button><b style="min-width:26px;text-align:center">${d.packs}</b><button data-act="qty" data-id="${h(b.pid)}" data-d="1">＋</button></div></div>`}).join('')}</div>
     <button class="btn p full neededit" style="margin-top:8px" data-act="make-po" data-sup="${h(sid)}">下单给 ${h(sup?.name||'这家')} →</button></div>`}).join('');
   return `<p class="tiny">买 ${r.H} 天份（${c.cycle||14} 天用＋${c.safety||7} 天安全）− 现在库存 · 下次采购 ${dd(c.nextBuy)}</p>
-  ${moves?`<div class="card amber"><h2>先移再买</h2><div class="list" style="margin-top:6px">${moves}</div></div>`:''}
+  ${moves?`<div class="card amber"><h2>先移再买</h2><p class="tiny">别的园有多，先移过去就不用买。叫工人移好之后，按「移好了，记下来」，库存才会跟着变。</p><div class="list" style="margin-top:6px">${moves}</div></div>`:''}
   ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}`}
 async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>(P(b.pid)?.shops?.[0]||'_')===sid);const items=L.map(b=>({pid:b.pid,packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
   if(!items.length){toast('⚠ 没有要买的');return}const sup=SUP(sid);
