@@ -200,8 +200,8 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
   const cards=FARMS.map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);if(!r)return `<div class="card"><b>${f}</b> <span class="tiny">还没设定配方（到 StoreGo 设定 → 换版本）</span></div>`;
     const ver=S.recipe.find(x=>x.id===r.ver);const bad=r.lines.filter(l=>l.none&&!l.off);
     const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`:cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
-    const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off)).map(l=>{const p=P(l.use);
-      return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.none?' <span class="badge red">没货，这样不放</span>':l.partial?' <span class="badge red">不够</span>':l.nocount?' <span class="badge amber">没点，先确认</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}${rec?.t==='spray'?'':(leftTxt(p,l)?' · '+leftTxt(p,l):'')}</div></div></div>`}).join('');
+    const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off).sort((a,b)=>(a.none?1:0)-(b.none?1:0))).map(l=>{const p=P(l.use);if(l.none)return `<div style="opacity:.75"><div class="pic" style="position:relative"><img src="storego_img/${h(l.use)}.jpg" alt="" style="opacity:.3" onerror="this.remove()"><b style="position:absolute;inset:0;display:grid;place-items:center;color:#c62828;font-size:40px">✗</b></div><div class="grow"><b style="text-decoration:line-through;color:var(--muted)">${h(p?.name||l.use)}</b><div class="tiny" style="text-decoration:line-through">每桶 ${fmt(l.dose)} ${unit(p)}</div></div><span class="badge red" style="font-size:14px">✗ 不放</span></div>`;
+      return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.partial?' <span class="badge red">不够</span>':l.nocount?' <span class="badge amber">没点，先确认</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}${rec?.t==='spray'?'':(leftTxt(p,l)?' · '+leftTxt(p,l):'')}</div></div></div>`}).join('');
     const off=r.lines.filter(l=>l.off&&!extrasOf(f,d).some(x=>x.pid===l.use)).map(l=>`${h(P(l.use)?.name)}（${h(l.cond)}）`).join('、');
     return `<div class="card ${rec?.t==='spray'?'green':''}"><div class="row"><span class="mixtag" style="font-size:18px;padding:3px 10px">${r.mix}</span><div class="grow"><h2>${f}</h2><div class="tiny">${h(ver?.name||r.ver)} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶</div></div>${st}</div>
       ${bad.length&&!rec?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货，连顶替药都没有</div>`:''}
@@ -213,20 +213,26 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
 /* ---------------- CARD (canvas) ---------------- */
 const MY="'Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans','Noto Sans SC',sans-serif";
 const loadImg=src=>new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src});
-async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off);const W=1080,ROW=210,H=330+L.length*ROW+170;
+async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off).sort((a,b)=>(a.none?1:0)-(b.none?1:0));const W=1080,ROW=210,H=330+L.length*ROW+170;
   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);
   g.fillStyle='#176448';g.fillRect(0,0,W,190);g.fillStyle='#fff';g.font=`800 64px ${MY}`;g.fillText(`${f}  ·  Mix ${r.mix}`,50,95);
   g.font=`600 36px ${MY}`;g.fillText(`${dd(d)}  ·  ${S.recipe.find(x=>x.id===r.ver)?.name||''}`,50,152);
   g.fillStyle='#1a3328';g.font=`800 44px ${MY}`;g.fillText(`ဆေးဖျန်းပုံး ${fmt(r.tanks)} ပုံး  ·  ${fmt(r.tanks)} 桶`,50,262);
   g.font=`500 28px ${MY}`;g.fillStyle='#687b70';g.fillText('တစ်ပုံး (200 L) ကို ထည့်ရမည့် ဆေး  ·  每桶 200 L 放的药',50,305);
-  let y=330;for(const l of L){const p=P(l.use);g.fillStyle=l.none?'#fff0ec':(y/ROW)%2<1?'#f6faf7':'#fff';g.fillRect(30,y,W-60,ROW-14);
-    const im=await loadImg(`storego_img/${l.use}.jpg`);if(im){const s=Math.min(170/im.width,170/im.height);g.drawImage(im,60+(170-im.width*s)/2,y+12+(170-im.height*s)/2,im.width*s,im.height*s)}
-    g.fillStyle='#1a3328';g.font=`800 46px ${MY}`;g.fillText(p?.name||l.use,260,y+70);
-    if(l.none){g.fillStyle='#a63638';g.font=`800 34px ${MY}`;g.fillText('ဆေးမရှိ — မထည့်ပါနဲ့  ·  没货，这样不放',260,y+130)}
-    else{g.fillStyle='#176448';g.font=`800 50px ${MY}`;g.fillText(`${fmt(l.dose)} ${unit(p)}`,260,y+135);
-      const lt=leftTxt(p,l);if(lt){g.fillStyle=l.nocount?'#926212':'#687b70';g.font=`600 28px ${MY}`;g.fillText(l.nocount?'မသိရ — စစ်ပါ  ·  没点，先确认':lt.replace('剩','ကျန် · 剩'),760,y+70)}g.fillStyle='#687b70';g.font=`500 28px ${MY}`;g.fillText(`တစ်ပုံးကို  ·  每桶`,560,y+130);
-      if(l.extra){g.fillStyle='#a63638';g.font=`800 30px ${MY}`;g.fillText('ရောဂါအတွက် ထပ်ထည့်  ·  病害加',260,y+180)}
-      if(l.sub&&!l.extra){g.fillStyle='#926212';g.font=`700 28px ${MY}`;g.fillText(`${P(l.slot)?.name||''} အစား  ·  顶 ${P(l.slot)?.name||''}`,260,y+180)}}
+  let y=330;for(const l of L){const p=P(l.use);const bx=W-250;g.fillStyle=l.none?'#f3f3f3':(y/ROW)%2<1?'#f6faf7':'#fff';g.fillRect(30,y,W-60,ROW-14);
+    const im=await loadImg(`storego_img/${l.use}.jpg`);g.save();if(l.none)g.globalAlpha=.3;if(im){const s=Math.min(170/im.width,170/im.height);g.drawImage(im,60+(170-im.width*s)/2,y+12+(170-im.height*s)/2,im.width*s,im.height*s)}g.restore();
+    if(l.none){g.strokeStyle='#c62828';g.lineWidth=12;g.lineCap='round';g.beginPath();g.moveTo(70,y+25);g.lineTo(220,y+170);g.moveTo(220,y+25);g.lineTo(70,y+170);g.stroke()}
+    g.fillStyle=l.none?'#9aa39e':'#1a3328';g.font=`800 46px ${MY}`;const nm=p?.name||l.use;g.fillText(nm,260,y+70);
+    if(l.none){const w=g.measureText(nm).width;g.strokeStyle='#9aa39e';g.lineWidth=4;g.beginPath();g.moveTo(255,y+55);g.lineTo(265+w,y+55);g.stroke();
+      g.fillStyle='#9aa39e';g.font=`700 40px ${MY}`;const dt=`${fmt(l.dose)} ${unit(p)}`;g.fillText(dt,260,y+135);const w2=g.measureText(dt).width;g.beginPath();g.moveTo(255,y+122);g.lineTo(265+w2,y+122);g.stroke();
+      g.fillStyle='#c62828';g.font=`700 26px ${MY}`;g.fillText('ဆေးမရှိ · 没货',260,y+180)}
+    else{g.fillStyle='#176448';g.font=`800 50px ${MY}`;g.fillText(`${fmt(l.dose)} ${unit(p)}`,260,y+135);g.fillStyle='#687b70';g.font=`500 26px ${MY}`;g.fillText(`တစ်ပုံးကို · 每桶`,480,y+132);
+      const lt=leftTxt(p,l);if(lt){g.fillStyle=l.nocount?'#926212':'#687b70';g.font=`600 26px ${MY}`;g.fillText(l.nocount?'မသိရ — စစ်ပါ · 没点，先确认':lt.replace('剩','ကျန် · 剩'),260,y+180)}
+      if(l.extra){g.fillStyle='#a63638';g.font=`800 28px ${MY}`;g.fillText('ရောဂါအတွက် ထပ်ထည့် · 病害加',560,y+70)}
+      else if(l.sub){g.fillStyle='#926212';g.font=`700 26px ${MY}`;g.fillText(`${P(l.slot)?.name||''} အစား · 顶 ${P(l.slot)?.name||''}`,560,y+70)}}
+    /* right status box */
+    const ok=!l.none;g.fillStyle=ok?'#dcfce7':'#fde2e2';const bxw=200,bxh=130,by=y+(ROW-14-bxh)/2;g.beginPath();g.roundRect?g.roundRect(bx+20,by,bxw,bxh,18):g.rect(bx+20,by,bxw,bxh);g.fill();
+    g.fillStyle=ok?'#15803d':'#c62828';g.textAlign='center';g.font=`900 50px ${MY}`;g.fillText(ok?'✓ 放':'✗ 不放',bx+120,by+62);g.font=`800 30px ${MY}`;g.fillText(ok?'ထည့်ပါ':'မထည့်ပါ',bx+120,by+108);g.textAlign='left';
     y+=ROW}
   g.fillStyle='#e6f4ec';g.fillRect(0,H-150,W,150);g.fillStyle='#176448';g.font=`700 32px ${MY}`;g.fillText('ရွက်ခြောက်မှ ဖျန်းပါ  ·  叶子干了才喷',50,H-92);g.fillText('ဖျန်းပြီးရင် ဓာတ်ပုံ group ထဲ ပို့ပါ  ·  喷完拍照发群',50,H-42);
   return c}
