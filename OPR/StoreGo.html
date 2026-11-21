@@ -226,7 +226,15 @@ function sheetDrug(id){const p=P(id);const {pr}=plan();const sup=SUP(p.shops?.[0
   sheet(`<div class="row top">${pic(p)}<div class="grow"><h2>${h(p.name)}</h2><div class="tiny">${h(p.target||'')}</div><div style="margin-top:4px">${kindBadge(p.kind)} <span class="badge grey">${h(packLabel(p))}</span></div></div></div>
   ${p.ai?`<p class="tiny">有效成分：${h(p.ai)} ${p.group?'· '+h(p.group):''}</p>`:''}<p class="tiny">供应商：${h(sup?.name||'未指定')} · ${leadOf(S,p)} 天到</p>
   <table class="t" style="margin-top:8px"><tr><th>园</th><th class="n">现在</th><th>还能撑</th><th>上次点算</th></tr>${FARMS.map(f=>{const st=pr[f].stock[id];const d=farmDays(pr,f,id);const lc=last(f);return `<tr><td>${f}</td><td class="n">${st==null?'—':qtyText(p,st)}</td><td><span class="f ${d.cls}">${d.txt}</span></td><td>${lc?dd(lc.date)+' · '+fmt(lc.packs)+' '+packWord(p):'—'}</td></tr>`}).join('')}</table>
+  ${subsBlock(id,pr)}
   <div class="row wrapf" style="margin-top:12px"><button class="btn s neededit" data-act="move" data-id="${h(id)}">移货</button><button class="btn neededit" data-act="edit-drug" data-id="${h(id)}">编辑药品</button><button class="btn" data-act="close">关闭</button></div>`)}
+function subsFor(id){const m={};for(const r of S.recipe.slice().sort((x,y)=>x.id.localeCompare(y.id,undefined,{numeric:true})))for(const mx of MIXES)for(const it of (r.mixes&&r.mixes[mx])||[]){
+    const chain=[{pid:it.pid,dose:it.dose},...(it.alts||[])];if(!chain.some(c=>c.pid===id))continue;
+    for(const c of chain){if(c.pid===id)continue;(m[c.pid]=m[c.pid]||{pid:c.pid,where:[]}).where.push(`${r.name} Mix ${mx} 每桶 ${fmt(c.dose)} ${unitOf(P(c.pid))}`)}}
+  return Object.values(m)}
+function subsBlock(id,pr){const L=subsFor(id);if(!L.length)return '';
+  return `<h3 style="margin-top:14px">替换</h3><p class="tiny">配方里写好可以互相顶替的药。点一下看那种药。</p><div class="list">${L.map(x=>{const p=P(x.pid);if(!p)return '';const tot=FARMS.reduce((a,f)=>a+(pr[f].stock[x.pid]>0?pr[f].stock[x.pid]:0),0);
+    return `<div data-act="drug" data-id="${h(x.pid)}" style="cursor:pointer"><div class="pic"><img src="storego_img/${h(x.pid)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div><div class="grow"><b>${h(p.name)}</b> ${kindBadge(p.kind)}<div class="tiny">${x.where.map(h).join('<br>')}</div><div class="tiny">三园共有 ${qtyText(p,tot)}</div></div><b style="color:var(--green)">›</b></div>`}).join('')}</div>`}
 function sheetMove(id,pre){const p=P(id);const m=pre||{from:'AD2',to:'AD1',packs:1};
   sheet(`<h2>移货 · ${h(p.name)}</h2><label class="l">从</label><div class="seg">${FARMS.map(f=>`<button class="${m.from===f?'on':''}" data-mv="from" data-v="${f}">${f}</button>`).join('')}</div>
   <label class="l">移去</label><div class="seg">${FARMS.map(f=>`<button class="${m.to===f?'on':''}" data-mv="to" data-v="${f}">${f}</button>`).join('')}</div>
