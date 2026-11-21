@@ -198,7 +198,8 @@ function vToday(){const {pr,t}=plan();const c=cfg(S);let red=[],amber=[];
   const mixOf=(f,pid)=>{const pl=planOn(S,f,t);const r=pl&&S.recipe.find(x=>x.id===pl.ver);if(!r)return [];return MIXES.filter(m=>(r.mixes[m]||[]).some(it=>it.pid===pid||(it.alts||[]).some(x=>x.pid===pid)))};
   const grp=L=>{const m={};for(const r of L){const k=r.p?.id||r.f;(m[k]=m[k]||{...r,fs:[],mx:new Set()}).fs.push([r.f,r.d]);mixOf(r.f,k).forEach(x=>m[k].mx.add(x));m[k].d=Math.min(m[k].d,r.d)}return Object.values(m).sort((a,b)=>a.d-b.d)};
   red=grp(red);amber=grp(amber);
-  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b> ${[...r.mx].sort().map(x=>`<span class="mixtag" style="font-size:11px">Mix ${x}</span>`).join(' ')}<div class="tiny">${r.fs.map(([f,d])=>`${f} ${d<=1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div></div><span class="badge ${cls}">${r.d} 天</span></div>`).join('');
+  const BP=buyPlan(S);BP.moves=[...poolMoves(BP,pr),...BP.moves];const mvHint=r=>{const L=BP.moves.filter(m=>m.forPid===r.p?.id&&r.fs.some(([f])=>f===m.to));return L.length?`<div class="tiny" style="color:var(--green);font-weight:750">${L.map(m=>`可从 ${m.from} 调 ${qtyText(P(m.pid),m.qty)}${m.pid!==m.forPid?' '+h(P(m.pid)?.name):''} 给 ${m.to}`).join(' · ')}</div>`:''};
+  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b> ${[...r.mx].sort().map(x=>`<span class="mixtag" style="font-size:11px">Mix ${x}</span>`).join(' ')}<div class="tiny">${r.fs.map(([f,d])=>`${f} ${d<=1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div>${mvHint(r)}</div><span class="badge ${cls}">${r.d} 天</span></div>`).join('');
   /* today's mix */
   const {st}=stockAt(S,addDays(t,-1));
   const mix=FARMS.map(f=>{const pl=planOn(S,f,t);if(!pl)return `<div><b>${f}</b><span class="tiny">还没设定配方</span></div>`;const s={...st[f]};const r=sprayDay(S,f,t,s);
@@ -208,6 +209,7 @@ function vToday(){const {pr,t}=plan();const c=cfg(S);let red=[],amber=[];
   const owe=unpaid.reduce((a,x)=>a+poTotal(x),0);
   return `<div class="eyebrow">TODAY · ${dd(t)}</div><h1>今天</h1>
   ${red.length?`<div class="card red"><h2>撑不过到货日（${red.length}）</h2><div class="list">${alert(red,'red')}</div><button class="btn w sm full" data-go="buy" style="margin-top:8px">去采购 →</button></div>`:`<div class="card green"><b>没有药会撑不过到货日</b></div>`}
+  ${movesCard(BP,pr,true)}
   ${amber.length?`<div class="card amber"><h2>撑不过安全天数（${amber.length}）</h2><div class="list">${alert(amber,'amber')}</div></div>`:''}
   <div class="card"><h2>今天各园喷什么</h2><div class="list" style="margin-top:6px">${mix}</div></div>
   <div class="card"><h2>等着做的</h2><div class="list" style="margin-top:6px">
@@ -234,7 +236,7 @@ function sheetDrug(id){const p=P(id);const {pr}=plan();const sup=SUP(p.shops?.[0
   ${p.ai?`<p class="tiny">有效成分：${h(p.ai)} ${p.group?'· '+h(p.group):''}</p>`:''}<p class="tiny">供应商：${h(sup?.name||'未指定')} · ${leadOf(S,p)} 天到</p>
   <table class="t" style="margin-top:8px"><tr><th>园</th><th class="n">现在</th><th>还能撑</th><th>上次点算</th></tr>${FARMS.map(f=>{const st=pr[f].stock[id];const d=farmDays(pr,f,id);const lc=last(f);return `<tr><td>${f}</td><td class="n">${st==null?'—':qtyText(p,st)}</td><td><span class="f ${d.cls}">${d.txt}</span></td><td>${lc?dd(lc.date)+' · '+fmt(lc.packs)+' '+packWord(p):'—'}</td></tr>`}).join('')}</table>
   ${subsBlock(id,pr)}
-  <div class="row wrapf" style="margin-top:12px"><button class="btn s neededit" data-act="move" data-id="${h(id)}">移货</button><button class="btn neededit" data-act="edit-drug" data-id="${h(id)}">编辑药品</button><button class="btn" data-act="close">关闭</button></div>`)}
+  <div class="row wrapf" style="margin-top:12px"><button class="btn s neededit" data-act="move" data-id="${h(id)}">调货</button><button class="btn neededit" data-act="edit-drug" data-id="${h(id)}">编辑药品</button><button class="btn" data-act="close">关闭</button></div>`)}
 function subsFor(id){const m={};for(const r of S.recipe.slice().sort((x,y)=>x.id.localeCompare(y.id,undefined,{numeric:true})))for(const mx of MIXES)for(const it of (r.mixes&&r.mixes[mx])||[]){
     const chain=[{pid:it.pid,dose:it.dose},...(it.alts||[])];if(!chain.some(c=>c.pid===id))continue;
     for(const c of chain){if(c.pid===id)continue;(m[c.pid]=m[c.pid]||{pid:c.pid,where:[]}).where.push(`${r.name} Mix ${mx} 每桶 ${fmt(c.dose)} ${unitOf(P(c.pid))}`)}}
@@ -243,32 +245,40 @@ function subsBlock(id,pr){const L=subsFor(id);if(!L.length)return '';
   return `<h3 style="margin-top:14px">替换</h3><p class="tiny">配方里写好可以互相顶替的药。点一下看那种药。</p><div class="list">${L.map(x=>{const p=P(x.pid);if(!p)return '';const tot=FARMS.reduce((a,f)=>a+(pr[f].stock[x.pid]>0?pr[f].stock[x.pid]:0),0);
     return `<div data-act="drug" data-id="${h(x.pid)}" style="cursor:pointer"><div class="pic"><img src="storego_img/${h(x.pid)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div><div class="grow"><b>${h(p.name)}</b> ${kindBadge(p.kind)}<div class="tiny">${x.where.map(h).join('<br>')}</div><div class="tiny">三园共有 ${qtyText(p,tot)}</div></div><b style="color:var(--green)">›</b></div>`}).join('')}</div>`}
 function sheetMove(id,pre){const p=P(id);const m=pre||{from:'AD2',to:'AD1',packs:1};
-  sheet(`<h2>移货 · ${h(p.name)}</h2><label class="l">从</label><div class="seg">${FARMS.map(f=>`<button class="${m.from===f?'on':''}" data-mv="from" data-v="${f}">${f}</button>`).join('')}</div>
+  const srcs=[...((pool(S)[id]||0)>0?['仓库']:[]),...FARMS];
+  sheet(`<h2>调货 · ${h(p.name)}</h2>${(pool(S)[id]||0)>0?`<p class="tiny">仓库待分货还有 ${qtyText(p,pool(S)[id])}</p>`:''}<label class="l">从</label><div class="seg">${srcs.map(f=>`<button class="${m.from===f?'on':''}" data-mv="from" data-v="${f}">${f}</button>`).join('')}</div>
   <label class="l">移去</label><div class="seg">${FARMS.map(f=>`<button class="${m.to===f?'on':''}" data-mv="to" data-v="${f}">${f}</button>`).join('')}</div>
   <label class="l">几${packWord(p)}（${h(packLabel(p))}）</label><input class="num" id="mvq" inputmode="decimal" value="${fmt(m.packs)}">
   <div class="row" style="margin-top:14px"><button class="btn p grow" data-act="move-save" data-id="${h(id)}">记下移货</button><button class="btn" data-act="close">取消</button></div>`);
   sheetMove.state={...m,id}}
 async function saveMove(){const m=sheetMove.state;const p=P(m.id);const n=Number($('#mvq').value);if(!(n>0)||m.from===m.to){toast('⚠ 数量或园不对');return}
   const qty=n*(packBase(p)||0);if(!qty){toast('⚠ 这种药包装大小还没设定');return}
-  await put('ledger',{id:uid('L'),t:'move',date:today(),at:nowIso(),by:ME.name,pid:m.id,from:m.from,to:m.to,qty,packs:n,forPid:m.forPid||null});closeSheet();toast(`已记：${m.from} → ${m.to} ${fmt(n)} ${packWord(p)}`);render()}
+  if(m.from==='仓库'){if(qty>(pool(S)[m.id]||0)+1e-6){toast('⚠ 仓库没那么多');return}await put('ledger',{id:uid('L'),t:'dist',date:today(),at:nowIso(),by:ME.name,pid:m.id,farm:m.to,qty,packs:n,note:'从仓库待分货调'})}
+  else await put('ledger',{id:uid('L'),t:'move',date:today(),at:nowIso(),by:ME.name,pid:m.id,from:m.from,to:m.to,qty,packs:n,forPid:m.forPid||null});closeSheet();toast(`已记：${m.from} → ${m.to} ${fmt(n)} ${packWord(p)}`);render()}
 
 /* ---------------- BUY ---------------- */
 function poTotal(po){return (po.items||[]).reduce((a,it)=>a+(Number(it.price)||0)*(Number(it.recvPacks??it.packs)||0),0)}
 function orderText(sup,lines){return `老板你好，Azura Delta 要订：\n${lines.map((l,i)=>`${i+1}. ${l.name}（${l.pack}）× ${l.packs} ${l.word}`).join('\n')}\n请回覆几时可以送到，谢谢。`}
+function poolMoves(r,pr){const P0=pool(S);const out=[];for(const pid in P0){let left=P0[pid];if(!(left>0))continue;const p=P(pid);const pb=packBase(p)||1;
+    const fs=FARMS.map(f=>({f,need:(r.short[f]||{})[pid]||0,d:pr[f].slotShort[pid]??999})).filter(x=>x.need>0).sort((x,y)=>x.d-y.d);
+    for(const x of fs){if(!(left>0))break;let give=Math.min(left,Math.ceil(x.need/pb)*pb);if(give<=0)continue;left-=give;out.push({pid,from:'仓库',to:x.f,qty:give,forPid:pid,pool:true})}}return out}
+function movesCard(r,pr,today){r.moves=[...poolMoves(r,pr),...r.moves.filter(m=>!m.pool)];if(!r.moves.length)return '';const urg=m=>{const d=pr[m.to]?.slotShort?.[m.forPid];return d!=null&&d<=leadOf(S,P(m.forPid))};
+  const L=r.moves.map((m,i)=>({m,i,u:urg(m)})).sort((x,y)=>y.u-x.u);
+  return `<div class="card amber"><h2>先调货：别园或仓库</h2><p class="tiny">${today?'不用等买，今天就能补。':'别的园有多，先调过去就不用买。'}叫工人调好之后，按「调好了，记下来」，两园的库存才会跟着变。</p><div class="list" style="margin-top:6px">${L.map(({m,i,u})=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> ${u?'<span class="badge red">急</span>':''}<div class="tiny">${m.from} → ${m.to} · ${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-i="${i}">调好了，记下来</button></div>`}).join('')}</div></div>`}
 function vBuy(){const s=sub.buy||'plan';const seg=[['plan','采购单'],['ordered','等收货'],['recv','等分货'],['pay','付款']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="buy" data-v="${k}">${l}${k==='ordered'?' '+S.po.filter(x=>x.status==='ordered').length:k==='recv'?' '+S.po.filter(x=>x.status==='received').length:''}</button>`).join('');
   return `<div class="eyebrow">BUY</div><h1>采购</h1><div class="seg">${seg}</div>${s==='plan'?buyPlanView():s==='ordered'?poList('ordered'):s==='recv'?poList('received'):payView()}`}
 let draft=null;
 function buyPlanView(){const r=buyPlan(S);const {pr}=plan();const c=cfg(S);
   if(!draft||draft.key!==JSON.stringify(r.buys.map(b=>[b.pid,b.packs]))){draft={key:JSON.stringify(r.buys.map(b=>[b.pid,b.packs])),lines:{}};for(const b of r.buys)draft.lines[b.pid]={packs:b.packs||0,alloc:{...b.alloc}}}
   const urgent=pid=>FARMS.some(f=>{const d=pr[f].slotShort[pid];return d!=null&&d<=leadOf(S,P(pid))});
-  const moves=r.moves.map((m,i)=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> · ${m.from} → ${m.to}<div class="tiny">${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-i="${i}">移好了，记下来</button></div>`}).join('');
+
   const groups={};for(const b of r.buys){const p=P(b.pid);const sid=p?.shops?.[0]||'_';(groups[sid]=groups[sid]||[]).push(b)}
   const gh=Object.entries(groups).map(([sid,L])=>{const sup=SUP(sid);return `<div class="card"><div class="row"><h2 class="grow">${h(sup?.name||'未指定供应商')}</h2><span class="tiny">${sup?(Number(sup.leadDays)||3)+' 天到':''}</span></div><div class="list" style="margin-top:6px">${L.map(b=>{const p=P(b.pid);const d=draft.lines[b.pid];
     return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${b.noPack?' · 包装待补，算不出瓶数':''}</div>
     <div class="tiny">分园：${FARMS.map(f=>`${f} <b>${d.alloc[f]||0}</b>`).join(' · ')}</div></div><div class="stepper neededit"><button data-act="qty" data-id="${h(b.pid)}" data-d="-1">−</button><b style="min-width:26px;text-align:center">${d.packs}</b><button data-act="qty" data-id="${h(b.pid)}" data-d="1">＋</button></div></div>`}).join('')}</div>
     <button class="btn p full neededit" style="margin-top:8px" data-act="make-po" data-sup="${h(sid)}">下单给 ${h(sup?.name||'这家')} →</button></div>`}).join('');
   return `<p class="tiny">买 ${r.H} 天份（${c.cycle||14} 天用＋${c.safety||7} 天安全）− 现在库存 · 下次采购 ${dd(c.nextBuy)}</p>
-  ${moves?`<div class="card amber"><h2>先移再买</h2><p class="tiny">别的园有多，先移过去就不用买。叫工人移好之后，按「移好了，记下来」，库存才会跟着变。</p><div class="list" style="margin-top:6px">${moves}</div></div>`:''}
+  ${movesCard(r,pr,false)}
   ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}`}
 async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>(P(b.pid)?.shops?.[0]||'_')===sid);const items=L.map(b=>({pid:b.pid,packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
   if(!items.length){toast('⚠ 没有要买的');return}const sup=SUP(sid);
@@ -412,7 +422,7 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'drug':sheetDrug(id);break;
     case 'move':sheetMove(id);break;
     case 'move-save':await saveMove();break;
-    case 'move-done':{const m=buyPlan(S).moves[Number(a.dataset.i)];const p=P(m.pid);sheetMove(m.pid,{from:m.from,to:m.to,packs:packs(p,m.qty),forPid:m.forPid});break}
+    case 'move-done':{const r0=buyPlan(S);const pr0=project(S,60);r0.moves=[...poolMoves(r0,pr0),...r0.moves];const m=r0.moves[Number(a.dataset.i)];const p=P(m.pid);sheetMove(m.pid,{from:m.from,to:m.to,packs:packs(p,m.qty),forPid:m.forPid});break}
     case 'qty':{const d=draft.lines[id];d.packs=Math.max(0,d.packs+Number(a.dataset.d));const sum=FARMS.reduce((x,f)=>x+(d.alloc[f]||0),0);if(sum!==d.packs){const f=Number(a.dataset.d)>0?FARMS.slice().sort((x,y)=>(d.alloc[x]||0)-(d.alloc[y]||0))[0]:FARMS.slice().sort((x,y)=>(d.alloc[y]||0)-(d.alloc[x]||0))[0];d.alloc[f]=Math.max(0,(d.alloc[f]||0)+Number(a.dataset.d))}render();break}
     case 'make-po':await makePO(a.dataset.sup);break;
     case 'copy':await navigator.clipboard.writeText($('#otext').value);toast('已复制');break;
