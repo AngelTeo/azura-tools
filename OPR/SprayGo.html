@@ -166,7 +166,7 @@ const APP_VERSION=13;
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan'];
 const S={};COLS.forEach(c=>S[c]=[]);S.old_sprays=[];
-let sb=null,ME={name:'',role:'',edit:false},tab='today',dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};
+let sb=null,ME={name:'',role:'',edit:false},tab='today',dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
 const $=s=>document.querySelector(s);
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(Number(n))?Number(Number(n).toFixed(2)).toLocaleString('en-MY',{maximumFractionDigits:2}):'—';
@@ -197,7 +197,9 @@ function plan(f,d,opts={}){const st={...before(d)[f]};const ex=opts.ex??extrasOf
 
 /* ---------------- TODAY ---------------- */
 function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天']].map(([k,l])=>`<button class="${dayOff===k?'on':''}" data-day="${k}">${l} ${dd(addDays(todayStr(),k))}</button>`).join('');
-  const cards=FARMS.map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);if(!r)return `<div class="card"><b>${f}</b> <span class="tiny">还没设定配方（到 StoreGo 设定 → 换版本）</span></div>`;
+  if(!FARMS.includes(farmSel))farmSel=FARMS[0];
+  const ftab=FARMS.map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);const bad=r&&r.lines.some(l=>l.none&&!l.off);const mk=rec?.t==='spray'?'<span style="color:var(--green)"> ✓</span>':rec?.t==='skip'?' <span class="tiny">没喷</span>':bad?'<span style="color:var(--red)"> ⚠</span>':'';return `<button class="${farmSel===f?'on':''}" data-farm="${f}">${f}${r?' · '+r.mix:''}${mk}</button>`}).join('');
+  const cards=[farmSel].map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);if(!r)return `<div class="card"><b>${f}</b> <span class="tiny">还没设定配方（到 StoreGo 设定 → 换版本）</span></div>`;
     const ver=S.recipe.find(x=>x.id===r.ver);const bad=r.lines.filter(l=>l.none&&!l.off);
     const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`:cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
     const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off)).map(l=>{const p=P(l.use);if(l.none)return `<div style="background:#fdeeee;border-radius:10px"><div class="pic"><img src="storego_img/${h(l.use)}.jpg" alt="" onerror="this.remove()"></div><div class="grow"><b>${h(p?.name||l.use)}</b><div style="color:#c62828;font-weight:800">没货，这样不放</div></div><b style="color:#c62828;font-size:44px;line-height:1;padding:0 8px">✗</b></div>`;
@@ -207,7 +209,7 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
       ${bad.length&&!rec?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货，连顶替药都没有</div>`:''}
       <div class="list" style="margin-top:6px">${lines}</div>${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
       <div class="row wrapf" style="margin-top:10px">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
-  return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div>${cards}
+  return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
   <p class="tiny">工人回报后按「喷好了」，库存照实际扣。下雨没喷按「没喷」，配方顺延一天。两样都没按，系统照设定桶数估。</p>`}
 
 /* ---------------- CARD (canvas) ---------------- */
@@ -302,6 +304,7 @@ document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev()});
 document.addEventListener('change',e=>{if(e.target.dataset.extra)donePrev()});
 document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){if(g.dataset.go==='store'){location.href='StoreGo.html';return}tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
   const dy=e.target.closest('[data-day]');if(dy){dayOff=Number(dy.dataset.day);render();return}
+  const fm=e.target.closest('[data-farm]');if(fm){farmSel=fm.dataset.farm;try{localStorage.setItem('sg_farm',farmSel)}catch(_){}render();return}
   const rs=e.target.closest('[data-reason]');if(rs){sheetSkip.reason=rs.dataset.reason;rs.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===rs));return}
   const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,f=a.dataset.f;if(act==='close-bg'&&e.target!==a)return;
   try{switch(act){case 'close':case 'close-bg':closeSheet();break;
