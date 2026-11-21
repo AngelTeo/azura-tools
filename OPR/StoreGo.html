@@ -81,9 +81,10 @@ function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return n
   for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
     if(it.cond&&!(opts.extras||[]).includes(it.pid)){lines.push({slot:it.pid,use:it.pid,dose:Number(it.dose),cond:it.cond,off:true});continue}
     const chain=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];
-    let pick=null;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
-      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null}
-    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,partial:!!pick&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
+    let pick=null,nocount=false;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
+      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null;
+      if(!pick&&st[chain[0].pid]===undefined){pick=chain[0];nocount=true}}
+    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,nocount,left:pick?st[pick.pid]:st[it.pid],partial:!!pick&&!nocount&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
   return {...pl,tanks:t,lines}}
 function recipeOf(S,ver){return S.recipe.find(r=>r.id===ver)||null}
 function itemsOn(S,f,day){const p=planOn(S,f,day);if(!p)return [];const r=recipeOf(S,p.ver);return (r&&r.mixes&&r.mixes[p.mix]||[])}

@@ -81,9 +81,10 @@ function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return n
   for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
     if(it.cond&&!(opts.extras||[]).includes(it.pid)){lines.push({slot:it.pid,use:it.pid,dose:Number(it.dose),cond:it.cond,off:true});continue}
     const chain=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];
-    let pick=null;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
-      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null}
-    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,partial:!!pick&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
+    let pick=null,nocount=false;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
+      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null;
+      if(!pick&&st[chain[0].pid]===undefined){pick=chain[0];nocount=true}}
+    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,nocount,left:pick?st[pick.pid]:st[it.pid],partial:!!pick&&!nocount&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
   return {...pl,tanks:t,lines}}
 function recipeOf(S,ver){return S.recipe.find(r=>r.id===ver)||null}
 function itemsOn(S,f,day){const p=planOn(S,f,day);if(!p)return [];const r=recipeOf(S,p.ver);return (r&&r.mixes&&r.mixes[p.mix]||[])}
@@ -180,10 +181,11 @@ async function put(c,doc){doc=JSON.parse(JSON.stringify(doc));const id=doc.id;
     if(error){toast('⚠ 没存到：'+(error.message||error.code));throw error}}
   const L=S[c];const i=L.findIndex(x=>x.id===id);if(i>=0)L[i]=doc;else L.push(doc);delete S._ri;return doc}
 const unit=p=>p&&p.unit==='g'?'g':'ml';
+const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';const v=l.left;if(v==null)return '没点';const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+(unit(p)==='g'?'包':'瓶'):fmt(v)+' '+unit(p))};
 const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
 function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
-function before(d){return stockAt(S,addDays(d,-1)).st}
+function before(d){const st0=cfg(S).start||'2026-11-21';return d<=st0?stockAt(S,st0).st:stockAt(S,addDays(d,-1)).st}
 function extrasOf(f,d){const L=S.ledger.filter(x=>x.t==='plan'&&x.farm===f&&x.date===d&&!x.void).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1);return L[0]?.extras||[]}
 function plan(f,d,opts={}){const st={...before(d)[f]};const ex=opts.ex??extrasOf(f,d);const condIds=ex.filter(x=>x.cond).map(x=>x.pid);
   const r=resolveDay(S,f,d,st,{...opts,extras:[...(opts.extras||[]),...condIds]});if(!r)return r;const t=opts.tanks??r.tanks;
@@ -196,7 +198,7 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
     const ver=S.recipe.find(x=>x.id===r.ver);const bad=r.lines.filter(l=>l.none&&!l.off);
     const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`:cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
     const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off)).map(l=>{const p=P(l.use);
-      return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.none?' <span class="badge red">没货，这样不放</span>':l.partial?' <span class="badge red">不够</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}</div></div></div>`}).join('');
+      return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.none?' <span class="badge red">没货，这样不放</span>':l.partial?' <span class="badge red">不够</span>':l.nocount?' <span class="badge amber">没点，先确认</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}${rec?.t==='spray'?'':(leftTxt(p,l)?' · '+leftTxt(p,l):'')}</div></div></div>`}).join('');
     const off=r.lines.filter(l=>l.off&&!extrasOf(f,d).some(x=>x.pid===l.use)).map(l=>`${h(P(l.use)?.name)}（${h(l.cond)}）`).join('、');
     return `<div class="card ${rec?.t==='spray'?'green':''}"><div class="row"><span class="mixtag" style="font-size:18px;padding:3px 10px">${r.mix}</span><div class="grow"><h2>${f}</h2><div class="tiny">${h(ver?.name||r.ver)} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶</div></div>${st}</div>
       ${bad.length&&!rec?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货，连顶替药都没有</div>`:''}
@@ -218,7 +220,8 @@ async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off)
     const im=await loadImg(`storego_img/${l.use}.jpg`);if(im){const s=Math.min(170/im.width,170/im.height);g.drawImage(im,60+(170-im.width*s)/2,y+12+(170-im.height*s)/2,im.width*s,im.height*s)}
     g.fillStyle='#1a3328';g.font=`800 46px ${MY}`;g.fillText(p?.name||l.use,260,y+70);
     if(l.none){g.fillStyle='#a63638';g.font=`800 34px ${MY}`;g.fillText('ဆေးမရှိ — မထည့်ပါနဲ့  ·  没货，这样不放',260,y+130)}
-    else{g.fillStyle='#176448';g.font=`800 50px ${MY}`;g.fillText(`${fmt(l.dose)} ${unit(p)}`,260,y+135);g.fillStyle='#687b70';g.font=`500 28px ${MY}`;g.fillText(`တစ်ပုံးကို  ·  每桶`,560,y+130);
+    else{g.fillStyle='#176448';g.font=`800 50px ${MY}`;g.fillText(`${fmt(l.dose)} ${unit(p)}`,260,y+135);
+      const lt=leftTxt(p,l);if(lt){g.fillStyle=l.nocount?'#926212':'#687b70';g.font=`600 28px ${MY}`;g.fillText(l.nocount?'မသိရ — စစ်ပါ  ·  没点，先确认':lt.replace('剩','ကျန် · 剩'),760,y+70)}g.fillStyle='#687b70';g.font=`500 28px ${MY}`;g.fillText(`တစ်ပုံးကို  ·  每桶`,560,y+130);
       if(l.extra){g.fillStyle='#a63638';g.font=`800 30px ${MY}`;g.fillText('ရောဂါအတွက် ထပ်ထည့်  ·  病害加',260,y+180)}
       if(l.sub&&!l.extra){g.fillStyle='#926212';g.font=`700 28px ${MY}`;g.fillText(`${P(l.slot)?.name||''} အစား  ·  顶 ${P(l.slot)?.name||''}`,260,y+180)}}
     y+=ROW}
