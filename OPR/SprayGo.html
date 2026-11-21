@@ -213,23 +213,43 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
 /* ---------------- CARD (canvas) ---------------- */
 const MY="'Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans','Noto Sans SC',sans-serif";
 const loadImg=src=>new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src});
-async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off);const W=1080,ROW=210,H=330+L.length*ROW+170;
-  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);
-  g.fillStyle='#176448';g.fillRect(0,0,W,190);g.fillStyle='#fff';g.font=`800 64px ${MY}`;g.fillText(`${f}  ·  Mix ${r.mix}`,50,95);
-  g.font=`600 36px ${MY}`;g.fillText(`${dd(d)}  ·  ${S.recipe.find(x=>x.id===r.ver)?.name||''}`,50,152);
-  g.fillStyle='#1a3328';g.font=`800 44px ${MY}`;g.fillText(`ဆေးဖျန်းပုံး ${fmt(r.tanks)} ပုံး  ·  ${fmt(r.tanks)} 桶`,50,262);
-  g.font=`500 28px ${MY}`;g.fillStyle='#687b70';g.fillText('တစ်ပုံး (200 L) ကို ထည့်ရမည့် ဆေး  ·  每桶 200 L 放的药',50,305);
-  let y=330,i=0;for(const l of L){const p=P(l.use);g.fillStyle=l.none?'#fdeeee':i%2?'#f6faf7':'#fff';g.fillRect(30,y,W-60,ROW-14);i++;
-    const im=await loadImg(`storego_img/${l.use}.jpg`);g.save();if(im){const s=Math.min(170/im.width,170/im.height);g.drawImage(im,60+(170-im.width*s)/2,y+12+(170-im.height*s)/2,im.width*s,im.height*s)}g.restore();
-    if(l.none){const cx=W-150,cy=y+(ROW-14)/2;g.strokeStyle='#c62828';g.lineWidth=16;g.lineCap='round';g.beginPath();g.moveTo(cx-60,cy-60);g.lineTo(cx+60,cy+60);g.moveTo(cx+60,cy-60);g.lineTo(cx-60,cy+60);g.stroke()}
-    g.fillStyle='#1a3328';g.font=`800 46px ${MY}`;g.fillText(p?.name||l.use,260,y+70);
-    if(l.none){g.fillStyle='#c62828';g.font=`800 36px ${MY}`;g.fillText('ဆေးမရှိ — မထည့်ပါနဲ့',260,y+130);g.font=`800 36px ${MY}`;g.fillText('没货，这样不放',260,y+176)}
-    else{g.fillStyle='#176448';g.font=`800 54px ${MY}`;g.fillText(`${fmt(l.dose)} ${unit(p)}`,260,y+140);g.fillStyle='#687b70';g.font=`500 28px ${MY}`;g.fillText('တစ်ပုံးကို · 每桶',590,y+136);
-      const lt=leftTxt(p,l);g.textAlign='right';if(l.nocount){g.fillStyle='#926212';g.font=`700 26px ${MY}`;g.fillText('မသိရ — စစ်ပါ · 没点，先确认',W-60,y+60)}else if(lt){g.fillStyle='#687b70';g.font=`600 28px ${MY}`;g.fillText(lt.replace('剩','ကျန် · 剩'),W-60,y+60)}g.textAlign='left';
-      if(l.extra){g.fillStyle='#a63638';g.font=`800 28px ${MY}`;g.fillText('ရောဂါအတွက် ထပ်ထည့် · 病害加',260,y+182)}
-      else if(l.sub){g.fillStyle='#926212';g.font=`700 26px ${MY}`;g.fillText(`${P(l.slot)?.name||''} အစား · 顶 ${P(l.slot)?.name||''}`,260,y+182)}}
-    y+=ROW}
-  g.fillStyle='#e6f4ec';g.fillRect(0,H-150,W,150);g.fillStyle='#176448';g.font=`700 32px ${MY}`;g.fillText('ရွက်ခြောက်မှ ဖျန်းပါ  ·  叶子干了才喷',50,H-92);g.fillText('ဖျန်းပြီးရင် ဓာတ်ပုံ group ထဲ ပို့ပါ  ·  喷完拍照发群',50,H-42);
+const MIXC={A:'#2f6b4f',B:'#3a5a8c',C:'#9a5a20'};
+const myD=s=>String(s).replace(/[0-9]/g,c=>'၀၁၂၃၄၅၆၇၈၉'[c]).replace(/\./g,'.');
+const myPack=p=>({'瓶':'ဘူး','包':'ထုပ်','桶':'ပုံး'})[packWord(p)]||'';
+const CF="'Noto Sans SC','Noto Sans CJK SC','Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans',sans-serif";
+function wrapTxt(g,t,maxW){const out=[];let cur='';const toks=t.match(/[က-႟]+|\s+|./gu)||[];for(const tk of toks){if(g.measureText(cur+tk).width>maxW&&cur.trim()){out.push(cur.trimEnd());cur=tk.trimStart()}else cur+=tk}if(cur.trim())out.push(cur);return out}
+function relDay(d){const t=todayStr();return d===t?'今天':d===addDays(t,1)?'明天':d===addDays(t,-1)?'昨天':''}
+async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off);const C=MIXC[r.mix]||'#176448';const stF=before(d)[f]||{};
+  const K=1680/1028,W=1028;const c=document.createElement('canvas');const g=c.getContext('2d');
+  const F=(w,s)=>`${w} ${s}px ${CF}`;const MIDX=144,MIDW=826-190-20-MIDX;
+  /* rows: measure */
+  const rows=L.map(l=>{const p=P(l.use);const pb=packBase(p);let cls='ok';if(l.none)cls='no';else if(l.nocount)cls='ask';
+    let sub=null;if(l.none)sub='没有就先不放，等老板通知 ｜ မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ';else if(l.sub){const n=P(l.slot)?.name||'';sub=`代替 ${n}（${f} 没有 ${n}）｜ ${n} အစား`}else if(l.extra)sub='病害加 ｜ ရောဂါအတွက် ထပ်ထည့်';
+    let st=null;if(!l.untracked&&pb){const v=l.left!=null?l.left:stF[l.use];if(l.nocount||v==null)st='没报 ｜ မသိရ';else if(l.none||v<=0)st='剩 0 ｜ ကျန် ၀';else{const n=fmt(v/pb);const cov=Math.floor(v/l.dose+1e-9);st=`剩 ${n} ${packWord(p)}${cov<2*r.tanks?` · 约 ${cov} 桶`:''} ｜ ကျန် ${myD(n)} ${myPack(p)}`}}
+    g.font=F(700,19);const subL=sub?wrapTxt(g,sub,MIDW):[];g.font=F(400,19);const stL=st?wrapTxt(g,st,MIDW):[];
+    const th=46+subL.length*30+stL.length*30;const h=Math.max(136,th+24);return {l,p,cls,subL,stL,th,h}});
+  const ROWS=rows.reduce((a,x)=>a+x.h,0);const H=24+163+13+80+5+ROWS+16+32*3+30;
+  c.width=Math.round(W*K);c.height=Math.round(H*K);g.scale(K,K);g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  const rr=(x,y,w,h,rad)=>{g.beginPath();g.roundRect?g.roundRect(x,y,w,h,rad):g.rect(x,y,w,h)};
+  /* header */
+  g.fillStyle=C;rr(24,24,980,163,22);g.fill();g.fillStyle='#fff';g.textBaseline='alphabetic';g.font=F(900,130);g.fillText(r.mix||'',50,152);const bw=g.measureText(r.mix||'').width;
+  const tx=Math.max(153,50+bw+24);const vn=S.recipe.find(x=>x.id===r.ver)?.name||'';g.font=F(900,54);const fwB=g.measureText(f).width+44;const t1=`Formula ${r.mix} ｜ 配方 ${r.mix} · ${vn}`;let fs1=46;g.font=F(900,fs1);while(fs1>30&&g.measureText(t1).width>974-fwB-24-tx){fs1-=2;g.font=F(900,fs1)}g.fillText(t1,tx,98);
+  g.font=F(400,22);const rd=relDay(d);g.fillText(`ဖော်မြူလာ ${r.mix} · ${dd(d)}${rd?' '+rd:''} · 一桶 200 L 的分量`,tx,147);
+  g.font=F(900,54);const fw=g.measureText(f).width+44;g.fillStyle='#fff';rr(974-fw,61,fw,90,16);g.fill();g.fillStyle=C;g.textAlign='center';g.fillText(f,974-fw/2,126);g.textAlign='left';
+  /* cap */
+  g.font=F(800,26);const cap='一桶 · တစ်ပုံး';const cw=g.measureText(cap).width+60;g.fillStyle=C;g.fillRect(1004-cw,200,cw,80);g.fillStyle='#fff';g.fillText(cap,1004-cw+30,250);
+  /* rows */
+  let y=285;for(const R of rows){const {l,p,cls}=R;if(cls!=='ok'){g.fillStyle=cls==='no'?'#fef2f2':'#fffbeb';g.fillRect(24,y,980,R.h)}
+    g.fillStyle='#e5e7eb';g.fillRect(24,y+R.h-2,980,2);
+    const im=await loadImg(`storego_img/${l.use}.jpg`);if(im){const s=Math.min(92/im.width,112/im.height);g.fillStyle='#fff';g.fillRect(32,y+(R.h-112)/2,92,112);g.drawImage(im,32+(92-im.width*s)/2,y+(R.h-112)/2+(112-im.height*s)/2,im.width*s,im.height*s)}
+    let ty=y+(R.h-R.th)/2;g.fillStyle=cls==='no'?'#b91c1c':'#1f2937';g.font=F(800,34);g.fillText(p?.name||l.use,MIDX,ty+36);ty+=46;
+    g.fillStyle='#b45309';g.font=F(700,19);for(const s of R.subL){g.fillText(s,MIDX,ty+23);ty+=30}
+    g.fillStyle='#4b5563';g.font=F(400,19);for(const s of R.stL){g.fillText(s,MIDX,ty+23);ty+=30}
+    g.fillStyle=C;g.font=F(900,44);g.textAlign='right';g.fillText(`${Number(l.dose)} ${unit(p)}`,826,y+R.h/2+16);
+    const [bg,fg,zh,my]=cls==='ok'?['#dcfce7','#166534','✓ 有','ရှိ']:cls==='no'?['#fee2e2','#b91c1c','✗ 没有','မရှိ']:['#fef3c7','#92400e','? 要确认','စစ်ပါ'];
+    g.fillStyle=bg;rr(846,y+(R.h-88)/2,150,88,12);g.fill();g.fillStyle=fg;g.textAlign='center';g.font=F(900,24);g.fillText(zh,921,y+R.h/2-6);g.font=F(700,17);g.fillText(my,921,y+R.h/2+26);g.textAlign='left';
+    y+=R.h}
+  g.fillStyle='#374151';g.font=F(400,20);y+=16;for(const t of['放之前对一下：每样药都在、分量照这张卡。缺的、不确定的，先拍照问老板。','ဆေးတွေ ရှိမရှိ စစ်ပါ။ မရှိတာ၊ မသေချာတာ ရှိရင် ဓာတ်ပုံ ရိုက်ပြီး သူဌေးကို မေးပါ။','Semak semua ubat ada. Kalau tiada atau tak pasti, ambil gambar dan tanya bos.']){g.fillText(t,24,y+24);y+=32}
   return c}
 async function showCard(f){const d=day();const c=await drawCard(f,d);const url=c.toDataURL('image/png');cardSeen[f+d]=1;const bad=plan(f,d).lines.filter(l=>l.none&&!l.off);
   sheet(`<h2>${f} 喷药卡</h2>${bad.length?`<div class="card red" style="margin:8px 0"><b>⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货</b><p class="tiny">卡上写了「没货，这样不放」。要先补药，还是照这样喷，你决定。</p></div>`:''}
