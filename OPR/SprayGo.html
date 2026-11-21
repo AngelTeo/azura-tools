@@ -66,11 +66,11 @@ function packBase(p){if(!p)return null;const s=Number(p.packSize),m=mult(p.packU
 function unitOf(p){return p&&p.unit==='g'?'g':'ml'}
 function packLabel(p){if(!p||!(Number(p.packSize)>0))return '包装待补';return `${p.packSize} ${p.packUnit||''}`.trim()}
 function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
-/* shared stock: product.home='AD2' -> one container for all farms; every farm draws from home */
-function sharedPids(S){return S.products.filter(p=>p.home&&FARMS.includes(p.home)).map(p=>[p.id,p.home])}
+/* refill source: product.home='AD2' (big container); other farms keep small containers product.sub={size,unit,word} filled from home */
 function homeOf(S,pid){const p=S.products.find(x=>x.id===pid);return p&&p.home&&FARMS.includes(p.home)?p.home:null}
-function mirror(S,stAll){for(const [pid,h] of sharedPids(S))for(const f of FARMS)if(f!==h){if(stAll[h][pid]===undefined)delete stAll[f][pid];else stAll[f][pid]=stAll[h][pid]}}
-function sprayAt(S,f,d,stAll){const sh=sharedPids(S);mirror(S,stAll);const r=sprayDay(S,f,d,stAll[f]);for(const [pid,h] of sh)if(f!==h&&stAll[f][pid]!==undefined)stAll[h][pid]=stAll[f][pid];mirror(S,stAll);return r}
+function subBase(p){if(!p||!p.sub)return null;const s=Number(p.sub.size),m=mult(p.sub.unit);return s>0&&m?s*m:null}
+function packAt(p,f){return p&&p.home&&f&&f!==p.home&&subBase(p)?subBase(p):packBase(p)}
+function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'小桶'):packWord(p)}
 
 /* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
 /* spray / skip records per farm-day (latest wins) */
@@ -121,16 +121,14 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayAt(S,f,d,st)}};
+    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}};
     /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
     if(d>start)doSpray();
-    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packBase(S.products.find(p=>p.id===x.pid));if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
-      const hm=homeOf(S,x.pid);
-      if(x.t==='count'){if(hm&&x.farm!==hm)continue;st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
-      else if(x.t==='dist'){const tf=hm||x.farm;st[tf][x.pid]=(st[tf][x.pid]||0)+q}
-      else if(x.t==='move'){if(hm)continue;st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
+    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
+      if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
+      else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
+      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
     if(d===start)doSpray()}
-  mirror(S,st);for(const [pid,h] of sharedPids(S))for(const f of FARMS)if(counted[h][pid])counted[f][pid]=counted[h][pid];
   return {st,counted}}
 
 /* pool (received, not yet distributed) per pid */
@@ -138,13 +136,12 @@ function pool(S){const p={};for(const x of ledger(S)){if(x.t==='recv')p[x.pid]=(
   for(const k in p)if(Math.abs(p[k])<1e-6)delete p[k];return p}
 
 /* forward projection from today: per farm, per pid, days until runs out; per slot, first short day */
-function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};const s={},runOut={},slotShort={};
-  for(const f of FARMS){s[f]={...st[f]};runOut[f]={};slotShort[f]={}}
-  for(let i=0;i<=days;i++){const d=addDays(t,i);for(const f of FARMS){if(i===0&&recOn(S,f,d))continue;const before={...s[f]};const r=sprayAt(S,f,d,s);
-      for(const k in r.used)if(!(s[f][k]>1e-9)&&before[k]>1e-9&&runOut[f][k]==null)runOut[f][k]=i;
-      for(const sh of r.short)if(slotShort[f][sh.pid]==null)slotShort[f][sh.pid]=i}}
-  for(const [pid] of sharedPids(S)){const m=Math.min(...FARMS.map(f=>runOut[f][pid]??Infinity));if(Number.isFinite(m))for(const f of FARMS)runOut[f][pid]=m}
-  for(const f of FARMS)out[f]={stock:st[f],runOut:runOut[f],slotShort:slotShort[f]};
+function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};
+  for(const f of FARMS){const s={...st[f]};const runOut={};const slotShort={};
+    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=sprayDay(S,f,d,s);
+      for(const k in r.used)if(!(s[k]>1e-9)&&before[k]>1e-9&&runOut[k]==null)runOut[k]=i;
+      for(const sh of r.short)if(slotShort[sh.pid]==null)slotShort[sh.pid]=i}
+    out[f]={stock:st[f],runOut,slotShort}}
   return out}
 
 function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;return S.suppliers.find(s=>s.id===id)||null}
@@ -153,13 +150,12 @@ function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);retur
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
 function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
-  for(const f of FARMS){res[f]={};end[f]={...st[f]}}
-  for(let i=0;i<H;i++){const d0=addDays(t,i);for(const f of FARMS){if(i===0&&recOn(S,f,d0))continue;const r=sprayAt(S,f,d0,end);for(const x of r.short)res[f][x.pid]=(res[f][x.pid]||0)+x.amt}}
+  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=sprayDay(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
   /* moves: cover a farm's short from another farm's leftover (same pid or an alt of the slot) */
   const moves=[];const slotAlts={};for(const r of S.recipe)for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[])slotAlts[it.pid]=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)}))];
-  for(const f of FARMS)for(const pid in res[f]){if(homeOf(S,pid))continue;let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
-    for(const g of FARMS){if(g===f||need<=1e-6)continue;for(const c of chain){if(homeOf(S,c.pid))continue;const left=end[g][c.pid];const gUses=res[g][c.pid]>0;if(!(left>1e-6)||gUses)continue;
-      const p=S.products.find(x=>x.id===c.pid);const pb=packBase(p);const want=need*(c.dose||pd)/pd;let give=Math.min(left,want);const loose=p&&p.unit==='g';if(pb&&!loose){give=Math.floor(give/pb+1e-9)*pb;if(give<=0&&left>=pb)give=pb}else if(pb){give=Math.round(give/50)*50}if(give<=0)continue;give=Math.min(give,left);
+  for(const f of FARMS)for(const pid in res[f]){let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
+    for(const g of FARMS){if(g===f||need<=1e-6)continue;for(const c of chain){const left=end[g][c.pid];const gUses=res[g][c.pid]>0;if(!(left>1e-6)||gUses)continue;
+      const p=S.products.find(x=>x.id===c.pid);const pb=packAt(p,f);const want=need*(c.dose||pd)/pd;let give=Math.min(left,want);const loose=p&&p.unit==='g';if(pb&&!loose){give=Math.floor(give/pb+1e-9)*pb;if(give<=0&&left>=pb)give=pb}else if(pb){give=Math.round(give/50)*50}if(give<=0)continue;give=Math.min(give,left);
       end[g][c.pid]-=give;need-=give*pd/(c.dose||pd);moves.push({pid:c.pid,from:g,to:f,qty:give,forPid:pid})}}
     res[f][pid]=Math.max(0,need)}
   /* pool counts against shortage first */
@@ -172,7 +168,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,short:res}}
-if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,sprayAt,homeOf,sharedPids,ledger};
+if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* SprayGo v13 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=13;
@@ -197,7 +193,7 @@ async function put(c,doc){doc=JSON.parse(JSON.stringify(doc));const id=doc.id;
     if(error){toast('⚠ 没存到：'+(error.message||error.code));throw error}}
   const L=S[c];const i=L.findIndex(x=>x.id===id);if(i>=0)L[i]=doc;else L.push(doc);delete S._ri;return doc}
 const unit=p=>p&&p.unit==='g'?'g':'ml';
-const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';const v=l.left;if(v==null)return '没点';const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+packWord(p):fmt(v)+' '+unit(p))};
+const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';const v=l.left;if(v==null)return '没点';if(p&&p.sub)return '剩 '+fmt(v/1000)+' L';const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+packWord(p):fmt(v)+' '+unit(p))};
 const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
 function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
@@ -243,7 +239,7 @@ function relDay(d){const t=todayStr();return d===t?'今天':d===addDays(t,1)?'�
 function cardRows(f,d,r,L,my){const stF=before(d)[f]||{};return L.map(l=>{const p=P(l.use);const pb=packBase(p);let cls='ok';if(l.none)cls='no';else if(l.nocount)cls='ask';
     const M=(zh,mm)=>my?`${zh} ｜ ${mm}`:zh;
     let sub=null;if(l.none)sub=M('没有就先不放，等老板通知','မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ');else if(l.sub){const n=P(l.slot)?.name||'';sub=M(`代替 ${n}（${f} 没有 ${n}）`,`${n} အစား`)}else if(l.extra)sub=M('病害加','ရောဂါအတွက် ထပ်ထည့်');
-    let st=null;if(!l.untracked&&pb&&!l.rec){const v=l.left!=null?l.left:stF[l.use];if(l.nocount||v==null)st=M('没报','မသိရ');else if(l.none||v<=0)st=M('剩 0','ကျန် ၀');else{const n=fmt(v/pb);const cov=Math.floor(v/l.dose+1e-9);st=M(`剩 ${n} ${packWord(p)}${cov<2*r.tanks?` · 约 ${cov} 桶`:''}`,`ကျန် ${myD(n)} ${myPack(p)}`)}}
+    let st=null;if(!l.untracked&&pb&&!l.rec){const v=l.left!=null?l.left:stF[l.use];if(l.nocount||v==null)st=M('没报','မသိရ');else if(l.none||v<=0)st=M('剩 0','ကျန် ၀');else if(p.sub){const n=fmt(v/1000);const cov=Math.floor(v/l.dose+1e-9);st=M(`剩 ${n} L${cov<2*r.tanks?` · 约 ${cov} 桶`:''}`,`ကျန် ${myD(n)} L`)}else{const n=fmt(v/pb);const cov=Math.floor(v/l.dose+1e-9);st=M(`剩 ${n} ${packWord(p)}${cov<2*r.tanks?` · 约 ${cov} 桶`:''}`,`ကျန် ${myD(n)} ${myPack(p)}`)}}
     if(l.partial&&!l.none&&st)st+=my?'':' · 不够';
     return {l,p,cls,sub,st}})}
 async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off);const C=MIXC[r.mix]||'#176448';const stF=before(d)[f]||{};
