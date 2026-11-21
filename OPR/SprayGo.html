@@ -113,11 +113,14 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    if(d>start||opts.sprayStart)for(const f of FARMS){if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}
+    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}};
+    /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
+    if(d>start)doSpray();
     while(li<L.length&&L[li].date===d){const x=L[li++];if(x.qty==null)continue;const q=Number(x.qty);if(!Number.isFinite(q))continue;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
-      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}}
+      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
+    if(d===start)doSpray()}
   return {st,counted}}
 
 /* pool (received, not yet distributed) per pid */
@@ -185,7 +188,7 @@ const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';cons
 const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
 function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
-function before(d){const st0=cfg(S).start||'2026-11-21';return d<=st0?stockAt(S,st0).st:stockAt(S,d,{last:'none'}).st}
+function before(d){return stockAt(S,d,{last:'none'}).st}
 function extrasOf(f,d){const L=S.ledger.filter(x=>x.t==='plan'&&x.farm===f&&x.date===d&&!x.void).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1);return L[0]?.extras||[]}
 function plan(f,d,opts={}){const st={...before(d)[f]};const ex=opts.ex??extrasOf(f,d);const condIds=ex.filter(x=>x.cond).map(x=>x.pid);
   const r=resolveDay(S,f,d,st,{...opts,extras:[...(opts.extras||[]),...condIds]});if(!r)return r;const t=opts.tanks??r.tanks;
