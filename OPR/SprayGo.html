@@ -113,7 +113,7 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    if(d>start||opts.sprayStart)for(const f of FARMS)sprayDay(S,f,d,st[f]);
+    if(d>start||opts.sprayStart)for(const f of FARMS){if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}
     while(li<L.length&&L[li].date===d){const x=L[li++];if(x.qty==null)continue;const q=Number(x.qty);if(!Number.isFinite(q))continue;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
@@ -125,9 +125,9 @@ function pool(S){const p={};for(const x of ledger(S)){if(x.t==='recv')p[x.pid]=(
   for(const k in p)if(Math.abs(p[k])<1e-6)delete p[k];return p}
 
 /* forward projection from today: per farm, per pid, days until runs out; per slot, first short day */
-function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t);const out={};
+function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};
   for(const f of FARMS){const s={...st[f]};const runOut={};const slotShort={};
-    for(let i=1;i<=days;i++){const d=addDays(t,i);const before={...s};const r=sprayDay(S,f,d,s);
+    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=sprayDay(S,f,d,s);
       for(const k in r.used)if(!(s[k]>1e-9)&&before[k]>1e-9&&runOut[k]==null)runOut[k]=i;
       for(const sh of r.short)if(slotShort[sh.pid]==null)slotShort[sh.pid]=i}
     out[f]={stock:st[f],runOut,slotShort}}
@@ -137,9 +137,9 @@ function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;retu
 function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);return Number.isFinite(n)&&n>0?n:3}
 
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
-function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t);
+function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
-  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=1;i<=H;i++){const r=sprayDay(S,f,addDays(t,i),s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
+  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=sprayDay(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
   /* moves: cover a farm's short from another farm's leftover (same pid or an alt of the slot) */
   const moves=[];const slotAlts={};for(const r of S.recipe)for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[])slotAlts[it.pid]=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)}))];
   for(const f of FARMS)for(const pid in res[f]){let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
@@ -185,7 +185,7 @@ const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';cons
 const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
 function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
-function before(d){const st0=cfg(S).start||'2026-11-21';return d<=st0?stockAt(S,st0).st:stockAt(S,addDays(d,-1)).st}
+function before(d){const st0=cfg(S).start||'2026-11-21';return d<=st0?stockAt(S,st0).st:stockAt(S,d,{last:'none'}).st}
 function extrasOf(f,d){const L=S.ledger.filter(x=>x.t==='plan'&&x.farm===f&&x.date===d&&!x.void).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1);return L[0]?.extras||[]}
 function plan(f,d,opts={}){const st={...before(d)[f]};const ex=opts.ex??extrasOf(f,d);const condIds=ex.filter(x=>x.cond).map(x=>x.pid);
   const r=resolveDay(S,f,d,st,{...opts,extras:[...(opts.extras||[]),...condIds]});if(!r)return r;const t=opts.tanks??r.tanks;

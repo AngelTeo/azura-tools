@@ -113,7 +113,7 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    if(d>start||opts.sprayStart)for(const f of FARMS)sprayDay(S,f,d,st[f]);
+    if(d>start||opts.sprayStart)for(const f of FARMS){if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}
     while(li<L.length&&L[li].date===d){const x=L[li++];if(x.qty==null)continue;const q=Number(x.qty);if(!Number.isFinite(q))continue;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
@@ -125,9 +125,9 @@ function pool(S){const p={};for(const x of ledger(S)){if(x.t==='recv')p[x.pid]=(
   for(const k in p)if(Math.abs(p[k])<1e-6)delete p[k];return p}
 
 /* forward projection from today: per farm, per pid, days until runs out; per slot, first short day */
-function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t);const out={};
+function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};
   for(const f of FARMS){const s={...st[f]};const runOut={};const slotShort={};
-    for(let i=1;i<=days;i++){const d=addDays(t,i);const before={...s};const r=sprayDay(S,f,d,s);
+    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=sprayDay(S,f,d,s);
       for(const k in r.used)if(!(s[k]>1e-9)&&before[k]>1e-9&&runOut[k]==null)runOut[k]=i;
       for(const sh of r.short)if(slotShort[sh.pid]==null)slotShort[sh.pid]=i}
     out[f]={stock:st[f],runOut,slotShort}}
@@ -137,9 +137,9 @@ function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;retu
 function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);return Number.isFinite(n)&&n>0?n:3}
 
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
-function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t);
+function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
-  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=1;i<=H;i++){const r=sprayDay(S,f,addDays(t,i),s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
+  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=sprayDay(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
   /* moves: cover a farm's short from another farm's leftover (same pid or an alt of the slot) */
   const moves=[];const slotAlts={};for(const r of S.recipe)for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[])slotAlts[it.pid]=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)}))];
   for(const f of FARMS)for(const pid in res[f]){let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
@@ -217,9 +217,9 @@ function vToday(){const {pr,t}=plan();const c=cfg(S);let red=[],amber=[];
   const grp=L=>{const m={};for(const r of L){const k=r.p?.id||r.f;(m[k]=m[k]||{...r,fs:[],mx:new Set()}).fs.push([r.f,r.d]);mixOf(r.f,k).forEach(x=>m[k].mx.add(x));m[k].d=Math.min(m[k].d,r.d)}return Object.values(m).sort((a,b)=>a.d-b.d)};
   red=grp(red);amber=grp(amber);
   const BP=buyPlan(S);BP.moves=[...poolMoves(BP,pr),...BP.moves];const mvHint=r=>{const L=BP.moves.filter(m=>m.forPid===r.p?.id&&r.fs.some(([f])=>f===m.to));return L.length?`<div class="tiny" style="color:var(--green);font-weight:750">${L.map(m=>`可从 ${m.from} 调 ${qtyText(P(m.pid),m.qty)}${m.pid!==m.forPid?' '+h(P(m.pid)?.name):''} 给 ${m.to}`).join(' · ')}</div>`:''};
-  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b> ${[...r.mx].sort().map(x=>`<span class="mixtag" style="font-size:11px">Mix ${x}</span>`).join(' ')}<div class="tiny">${r.fs.map(([f,d])=>`${f} ${d<=1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div>${mvHint(r)}</div><span class="badge ${cls}">${r.d} 天</span></div>`).join('');
+  const alert=(L,cls)=>L.map(r=>`<div><div class="grow"><b>${h(r.p?.name||r.pid)}</b> ${[...r.mx].sort().map(x=>`<span class="mixtag" style="font-size:11px">Mix ${x}</span>`).join(' ')}<div class="tiny">${r.fs.map(([f,d])=>`${f} ${d===0?'今天就':d===1?'明天':d+' 天后'}不够`).join(' · ')}</div><div class="tiny">${h(r.sup)} 要 ${r.lead} 天到</div>${mvHint(r)}</div><span class="badge ${cls}">${r.d===0?'今天':r.d+' 天'}</span></div>`).join('');
   /* today's mix */
-  const {st}=stockAt(S,addDays(t,-1));
+  const {st}=stockAt(S,t,{last:'none'});
   const mix=FARMS.map(f=>{const pl=planOn(S,f,t);if(!pl)return `<div><b>${f}</b><span class="tiny">还没设定配方</span></div>`;const s={...st[f]};const r=sprayDay(S,f,t,s);
     const ver=S.recipe.find(x=>x.id===pl.ver);const miss=r.short.map(x=>P(x.pid)?.name||x.pid);
     return `<div><span class="mixtag">${pl.mix}</span><div class="grow"><b>${f}</b> · ${h(ver?.name||pl.ver)} · ${fmt(tanksOf(S,f))} 桶<div class="tiny">${miss.length?'<span style="color:var(--red);font-weight:700">缺：'+h(miss.join('、'))+'</span>':'配方里的药都够今天用'}</div></div></div>`}).join('');
