@@ -184,7 +184,7 @@ async function put(c,doc){doc=JSON.parse(JSON.stringify(doc));const id=doc.id;
     if(error){toast('⚠ 没存到：'+(error.message||error.code));throw error}}
   const L=S[c];const i=L.findIndex(x=>x.id===id);if(i>=0)L[i]=doc;else L.push(doc);delete S._ri;return doc}
 const unit=p=>p&&p.unit==='g'?'g':'ml';
-const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';const v=l.left;if(v==null)return '没点';const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+(unit(p)==='g'?'包':'瓶'):fmt(v)+' '+unit(p))};
+const leftTxt=(p,l)=>{if(l.untracked)return '';if(l.nocount)return '没点';const v=l.left;if(v==null)return '没点';const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+packWord(p):fmt(v)+' '+unit(p))};
 const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
 function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
