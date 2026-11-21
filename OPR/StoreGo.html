@@ -68,9 +68,23 @@ function packLabel(p){if(!p||!(Number(p.packSize)>0))return '包装待补';retur
 function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
 
 /* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
+/* spray / skip records per farm-day (latest wins) */
+function recIdx(S){const k=S.ledger.length+':'+(S.ledger.at(-1)?.id||'');if(S._ri&&S._ri.k===k)return S._ri.m;const m={};
+  for(const x of S.ledger)if((x.t==='spray'||x.t==='skip')&&!x.void){const key=x.farm+'|'+x.date;if(!m[key]||(x.at||'')>(m[key].at||''))m[key]=x}S._ri={k,m};return m}
+function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
+function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
 function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
   const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
-  const i=(MIXES.indexOf(h.mix0)+((diffDays(h.from,day)%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from}}
+  const n=diffDays(h.from,day)-skipsBetween(S,f,h.from,day);const i=(MIXES.indexOf(h.mix0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from}}
+/* what to actually put in each tank today, given stock before spraying (st) */
+function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return null;const r=recipeOf(S,pl.ver);const t=opts.tanks??tanksOf(S,f);const lines=[];
+  for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
+    if(it.cond&&!(opts.extras||[]).includes(it.pid)){lines.push({slot:it.pid,use:it.pid,dose:Number(it.dose),cond:it.cond,off:true});continue}
+    const chain=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];
+    let pick=null;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
+      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null}
+    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,partial:!!pick&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
+  return {...pl,tanks:t,lines}}
 function recipeOf(S,ver){return S.recipe.find(r=>r.id===ver)||null}
 function itemsOn(S,f,day){const p=planOn(S,f,day);if(!p)return [];const r=recipeOf(S,p.ver);return (r&&r.mixes&&r.mixes[p.mix]||[])}
 function tanksOf(S,f){const c=cfg(S);return Number(c.tanks&&c.tanks[f])||0}
@@ -81,7 +95,10 @@ function pidsUsed(S,f,ver){const r=recipeOf(S,ver);const set=new Set();if(!r)ret
   for(const m of MIXES)for(const it of (r.mixes[m]||[])){set.add(it.pid);for(const a of it.alts||[])set.add(a.pid)}return set}
 
 /* one farm-day of spraying: mutates st (pid->base qty|undefined). returns shortages [{pid,amt(base of primary),slot}] */
-function sprayDay(S,f,day,st){const items=itemsOn(S,f,day);const t=tanksOf(S,f);const short=[];const used={};
+function sprayDay(S,f,day,st){const rec=recOn(S,f,day);
+  if(rec&&rec.t==='skip')return {short:[],used:{},skip:true};
+  if(rec&&rec.t==='spray'){const used={};for(const it of rec.items||[]){const q=Number(it.qty);if(!(q>0))continue;if(st[it.pid]!=null||q){st[it.pid]=(st[it.pid]||0)-q;used[it.pid]=(used[it.pid]||0)+q}}return {short:[],used,rec:true}}
+  const items=itemsOn(S,f,day);const t=tanksOf(S,f);const short=[];const used={};
   for(const it of items){if(it.cond)continue;const P0=S.products.find(x=>x.id===it.pid);if(!P0||P0.track==='No'||!packBase(P0))continue;const dose=Number(it.dose)||0;if(!dose||!t)continue;let need=dose*t;
     const chain=[{pid:it.pid,dose},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||dose}))];
     for(const c of chain){if(need<=1e-9)break;const have=st[c.pid];if(!(have>0))continue;const want=need*c.dose/dose;const take=Math.min(have,want);st[c.pid]=have-take;used[c.pid]=(used[c.pid]||0)+take;need-=take*dose/c.dose}
@@ -138,7 +155,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,short:res}}
-if(typeof module!=='undefined'&&typeof window==='undefined')module.exports={FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger};
+if(typeof module!=='undefined'&&typeof window==='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger};
 </script><script>/* StoreGo v16 UI. Needs engine.js loaded first. */
 (()=>{'use strict';
 const APP_VERSION=16;
@@ -358,7 +375,7 @@ async function countSave(){const f=sub.farm||'AD1';const ins=[...document.queryS
   render()}
 
 /* ---------------- ARCHIVE ---------------- */
-const TL={count:'点算',recv:'收货',dist:'分货',move:'移货'};
+const TL={count:'点算',recv:'收货',dist:'分货',move:'调货',spray:'喷好了',skip:'没喷'};
 function vArchive(){const s=sub.arc||'log';const seg=[['log','纪录'],['po','订单'],['old','旧资料']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="arc" data-v="${k}">${l}</button>`).join('');let body='';
   if(s==='log'){const L=S.ledger.slice().sort((a,b)=>(b.at||'')<(a.at||'')?-1:1).slice(0,300);body=`<div class="card"><div class="list">${L.map(x=>{const p=P(x.pid);return `<div><span class="badge ${x.t==='count'?'blue':x.t==='move'?'amber':'green'}">${TL[x.t]||x.t}</span><div class="grow"><b>${h(p?.name||x.pid)}</b><div class="tiny">${dd(x.date)} · ${x.t==='move'?x.from+' → '+x.to:h(x.farm||'待分货')} · ${h(x.by||'')}</div></div><b>${fmt(x.packs)}</b></div>`}).join('')||'<div class="empty">还没有</div>'}</div></div>`}
   else if(s==='po'){body=S.po.slice().sort((a,b)=>b.no-a.no).map(po=>`<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(supName(po.sup))}</h3><span class="badge ${po.status==='done'?'green':'amber'}">${{ordered:'等收货',received:'等分货',done:'已分货'}[po.status]||po.status}</span></div><div class="tiny">${(po.items||[]).map(it=>`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div><div class="tiny">下单 ${dd(po.orderedAt?.slice(0,10))}${po.recvAt?' · 收货 '+dd(po.recvAt.slice(0,10)):''} · ${money(poTotal(po))} ${po.paid?'· 已付':''}</div></div>`).join('')||'<div class="empty">还没有</div>'}
@@ -490,7 +507,7 @@ async function boot(){
     const [{data:see},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'STORE',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'edit'})]);if(!see){gate('你的账号没有 StoreGo 权限。');return}
     ME={name:me.display_name,role:me.role,edit:!!edit,owner:me.role==='OWNER'}}
   document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);
-  $('#who').innerHTML=`${h(ME.name)}<br><a href="#" data-go="set" style="color:var(--green);font-weight:750;text-decoration:none">⚙ 设定</a>`;
+  $('#who').innerHTML=`${h(ME.name)}<br><a href="SprayGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">🧴 SprayGo</a><a href="#" data-go="set" style="color:var(--green);font-weight:750;text-decoration:none">⚙ 设定</a>`;
   try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}
   if(!S.cfg.length){$('#view').innerHTML='<div class="card amber"><b>资料还没搬上来。</b><p class="tiny">请等 Claude 把 21/11 盘点、药品、配方搬上资料库。</p></div>';return}
   render();
