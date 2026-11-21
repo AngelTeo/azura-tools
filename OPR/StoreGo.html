@@ -119,7 +119,7 @@ function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21
     const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}};
     /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
     if(d>start)doSpray();
-    while(li<L.length&&L[li].date===d){const x=L[li++];if(x.qty==null)continue;const q=Number(x.qty);if(!Number.isFinite(q))continue;
+    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packBase(S.products.find(p=>p.id===x.pid));if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
       else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
