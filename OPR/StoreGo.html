@@ -45,6 +45,9 @@ td.n,th.n{text-align:right}
 #zoom{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}#zoom[hidden]{display:none}
 #zoom img{max-width:100%;max-height:82vh;object-fit:contain;border-radius:10px;background:#fff}.zc{color:#fff;font-weight:800;margin-top:12px;text-align:center}.zc span{display:block;font-weight:500;font-size:12px;opacity:.7;margin-top:2px}
 .pic[data-act="zoom"]{cursor:zoom-in}
+body.lock{position:fixed;left:0;right:0;overflow:hidden}
+.modal{overscroll-behavior:contain;touch-action:none}.sheet{overscroll-behavior:contain;touch-action:pan-y;max-height:88vh;max-height:88dvh;-webkit-overflow-scrolling:touch}
+#zoom{overscroll-behavior:contain;touch-action:none}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
 <body><div id="root"><div class="top"><div class="in"><div class="logo">📦</div><div class="brand">StoreGo<small>AZURA DELTA · v16</small></div><div class="who" id="who"></div></div></div>
@@ -180,8 +183,8 @@ function plan(){return {pr:project(S,60),t:today()}}
 function farmDays(pr,f,pid){const x=pr[f];const st=x.stock[pid];if(st==null)return {cls:'',txt:'没点'};const r=x.runOut[pid];
   const p=P(pid);const lead=leadOf(S,p),safe=Number(cfg(S).safety)||7;
   if(!(st>1e-9))return {cls:'red',txt:'没有'};if(r==null)return {cls:'',txt:'没在用'};return {cls:r<=lead?'red':r<=safe?'amber':'green',txt:`撑 ${r} 天`}}
-function sheet(html){$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
-function closeSheet(){$('#modal').innerHTML=''}
+function sheet(html){const had=!!$('#modal').innerHTML;if(!had){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
+function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
 function supName(id){const s=SUP(id);return s?s.name:'未指定供应商'}
 function waLink(phone,text){let d=String(phone||'').split(/[,/]/)[0].replace(/\D/g,'');if(!d)return null;if(d.startsWith('0'))d='6'+d;if(!d.startsWith('6'))d='60'+d;return `https://wa.me/${d}?text=${encodeURIComponent(text)}`}
 
