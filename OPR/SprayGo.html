@@ -169,7 +169,7 @@ const APP_VERSION=13;
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan'];
 const S={};COLS.forEach(c=>S[c]=[]);S.old_sprays=[];
-let sb=null,ME={name:'',role:'',edit:false},tab='today',dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
+let sb=null,ME={name:'',role:'',edit:false},tab='today',dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};document.head.insertAdjacentHTML('beforeend',`<style>.fc{background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px;margin:12px 0}.fh{color:#fff;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px}.fh .big{font-size:56px;font-weight:900;line-height:.9}.fh .t1{font-size:19px;font-weight:900}.fh .t2{font-size:13px;opacity:.95;margin-top:3px}.fh .farm{background:#fff;font-size:24px;font-weight:900;border-radius:10px;padding:4px 10px}.fc .cap{display:flex;justify-content:flex-end}.fc .cap span{color:#fff;font-weight:800;font-size:14px;padding:5px 14px}.cr{display:flex;align-items:center;gap:10px;border-bottom:1px solid #e5e7eb;padding:8px 4px}.cr img{width:48px;height:60px;object-fit:contain;background:#fff;flex:none}.cr .mid{flex:1;min-width:0}.cr .nm{font-size:17px;font-weight:800}.cr .sub{font-size:12.5px;color:#b45309;font-weight:700;margin-top:2px}.cr .st{font-size:12.5px;color:#4b5563;margin-top:2px}.cr .ds{font-size:20px;font-weight:900;white-space:nowrap;text-align:right}.cr .chip{flex:none;width:66px;text-align:center;border-radius:9px;padding:7px 0;font-weight:900;font-size:13px}.chip.ok{background:#dcfce7;color:#166534}.chip.no{background:#fee2e2;color:#b91c1c}.chip.ask{background:#fef3c7;color:#92400e}.cr.no{background:#fef2f2}.cr.no .nm{color:#b91c1c}.cr.ask{background:#fffbeb}#root{padding-bottom:120px}</style>`);let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
 const $=s=>document.querySelector(s);
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(Number(n))?Number(Number(n).toFixed(2)).toLocaleString('en-MY',{maximumFractionDigits:2}):'—';
@@ -205,13 +205,18 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
   const cards=[farmSel].map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);if(!r)return `<div class="card"><b>${f}</b> <span class="tiny">还没设定配方（到 StoreGo 设定 → 换版本）</span></div>`;
     const ver=S.recipe.find(x=>x.id===r.ver);const bad=r.lines.filter(l=>l.none&&!l.off);
     const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`:cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
-    const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off)).map(l=>{const p=P(l.use);if(l.none)return `<div style="background:#fdeeee;border-radius:10px"><div class="pic"><img src="storego_img/${h(l.use)}.jpg" alt="" onerror="this.remove()"></div><div class="grow"><b>${h(p?.name||l.use)}</b><div style="color:#c62828;font-weight:800">没货，这样不放</div></div><b style="color:#c62828;font-size:44px;line-height:1;padding:0 8px">✗</b></div>`;
-      return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.partial?' <span class="badge red">不够</span>':l.nocount?' <span class="badge amber">没点，先确认</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}${rec?.t==='spray'?'':(leftTxt(p,l)?' · '+leftTxt(p,l):'')}</div></div></div>`}).join('');
+    const L=rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for,rec:true})):r.lines.filter(l=>!l.off);
+    const C=MIXC[r.mix]||'#176448';
+    const rows=cardRows(f,d,r,L,false).map(({l,p,cls,sub,st})=>{const [zh]=cls==='ok'?['✓ 有']:cls==='no'?['✗ 没有']:['? 要确认'];
+      return `<div class="cr ${cls}"><img src="storego_img/${h(l.use)}.jpg" alt="" onerror="this.style.visibility='hidden'"><div class="mid"><div class="nm">${h(p?.name||l.use)}</div>${sub?`<div class="sub">${h(sub)}</div>`:''}${st?`<div class="st">${h(st)}</div>`:''}</div><div class="ds" style="color:${C}">${Number(l.dose)} ${unit(p)}</div><div class="chip ${cls}">${zh}</div></div>`}).join('');
     const off=r.lines.filter(l=>l.off&&!extrasOf(f,d).some(x=>x.pid===l.use)).map(l=>`${h(P(l.use)?.name)}（${h(l.cond)}）`).join('、');
-    return `<div class="card ${rec?.t==='spray'?'green':''}"><div class="row"><span class="mixtag" style="font-size:18px;padding:3px 10px">${r.mix}</span><div class="grow"><h2>${f}</h2><div class="tiny">${h(ver?.name||r.ver)} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶${r.set?` · <b style="color:var(--amber,#926212)">改成 Mix ${r.mix}（原本排 ${h(r.auto||'')}）</b>`:''}</div></div>${st}</div>
-      ${bad.length&&!rec?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货，连顶替药都没有</div>`:''}
-      <div class="list" style="margin-top:6px">${lines}</div>${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
-      <div class="row wrapf" style="margin-top:10px">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="mix" data-f="${f}">换 Mix</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
+    const rd=relDay(d);
+    return `<div class="fc">
+      <div class="fh" style="background:${C}"><div class="big">${r.mix}</div><div class="grow"><div class="t1">配方 ${r.mix} · ${h(ver?.name||r.ver)}</div><div class="t2">${dd(d)}${rd?' '+rd:''} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶${r.set?` · 改过（原本 ${h(r.auto||'')}）`:''}</div></div><div class="farm" style="color:${C}">${f}</div></div>
+      <div class="row" style="margin:10px 0 4px;gap:8px">${st}${rec?'':`<button class="btn sm neededit" data-act="mix" data-f="${f}" style="margin-left:auto">换 Mix</button>`}</div>
+      <div class="cap"><span style="background:${C}">一桶</span></div>
+      ${rows}${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
+      <div class="row wrapf" style="margin-top:12px">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
   return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
   <p class="tiny">工人回报后按「喷好了」，库存照实际扣。下雨没喷按「没喷」，配方顺延一天。两样都没按，系统照设定桶数估。</p>`}
 
@@ -224,13 +229,19 @@ const myPack=p=>({'瓶':'ဘူး','包':'ထုပ်','桶':'ပုံး'})[
 const CF="'Noto Sans SC','Noto Sans CJK SC','Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans',sans-serif";
 function wrapTxt(g,t,maxW){const out=[];let cur='';const toks=t.match(/[က-႟]+|\s+|./gu)||[];for(const tk of toks){if(g.measureText(cur+tk).width>maxW&&cur.trim()){out.push(cur.trimEnd());cur=tk.trimStart()}else cur+=tk}if(cur.trim())out.push(cur);return out}
 function relDay(d){const t=todayStr();return d===t?'今天':d===addDays(t,1)?'明天':d===addDays(t,-1)?'昨天':''}
+
+/* one row per drug, same data for WhatsApp card (my=true, with Burmese) and the screen (my=false) */
+function cardRows(f,d,r,L,my){const stF=before(d)[f]||{};return L.map(l=>{const p=P(l.use);const pb=packBase(p);let cls='ok';if(l.none)cls='no';else if(l.nocount)cls='ask';
+    const M=(zh,mm)=>my?`${zh} ｜ ${mm}`:zh;
+    let sub=null;if(l.none)sub=M('没有就先不放，等老板通知','မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ');else if(l.sub){const n=P(l.slot)?.name||'';sub=M(`代替 ${n}（${f} 没有 ${n}）`,`${n} အစား`)}else if(l.extra)sub=M('病害加','ရောဂါအတွက် ထပ်ထည့်');
+    let st=null;if(!l.untracked&&pb&&!l.rec){const v=l.left!=null?l.left:stF[l.use];if(l.nocount||v==null)st=M('没报','မသိရ');else if(l.none||v<=0)st=M('剩 0','ကျန် ၀');else{const n=fmt(v/pb);const cov=Math.floor(v/l.dose+1e-9);st=M(`剩 ${n} ${packWord(p)}${cov<2*r.tanks?` · 约 ${cov} 桶`:''}`,`ကျန် ${myD(n)} ${myPack(p)}`)}}
+    if(l.partial&&!l.none&&st)st+=my?'':' · 不够';
+    return {l,p,cls,sub,st}})}
 async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off);const C=MIXC[r.mix]||'#176448';const stF=before(d)[f]||{};
   const K=1680/1028,W=1028;const c=document.createElement('canvas');const g=c.getContext('2d');
   const F=(w,s)=>`${w} ${s}px ${CF}`;const MIDX=144,MIDW=826-190-20-MIDX;
   /* rows: measure */
-  const rows=L.map(l=>{const p=P(l.use);const pb=packBase(p);let cls='ok';if(l.none)cls='no';else if(l.nocount)cls='ask';
-    let sub=null;if(l.none)sub='没有就先不放，等老板通知 ｜ မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ';else if(l.sub){const n=P(l.slot)?.name||'';sub=`代替 ${n}（${f} 没有 ${n}）｜ ${n} အစား`}else if(l.extra)sub='病害加 ｜ ရောဂါအတွက် ထပ်ထည့်';
-    let st=null;if(!l.untracked&&pb){const v=l.left!=null?l.left:stF[l.use];if(l.nocount||v==null)st='没报 ｜ မသိရ';else if(l.none||v<=0)st='剩 0 ｜ ကျန် ၀';else{const n=fmt(v/pb);const cov=Math.floor(v/l.dose+1e-9);st=`剩 ${n} ${packWord(p)}${cov<2*r.tanks?` · 约 ${cov} 桶`:''} ｜ ကျန် ${myD(n)} ${myPack(p)}`}}
+  const rows=cardRows(f,d,r,L,true).map(({l,p,cls,sub,st})=>{
     g.font=F(700,19);const subL=sub?wrapTxt(g,sub,MIDW):[];g.font=F(400,19);const stL=st?wrapTxt(g,st,MIDW):[];
     const th=46+subL.length*30+stL.length*30;const h=Math.max(136,th+24);return {l,p,cls,subL,stL,th,h}});
   const ROWS=rows.reduce((a,x)=>a+x.h,0);const H=24+163+13+80+5+ROWS+16+32*3+30;
