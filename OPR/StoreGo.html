@@ -75,7 +75,10 @@ function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
 function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
 function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
   const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
-  const n=diffDays(h.from,day)-skipsBetween(S,f,h.from,day);const i=(MIXES.indexOf(h.mix0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from}}
+  const ms=mixSetOf(S,f,h.from,day);const base=ms?ms.date:h.from,m0=ms?ms.mix:h.mix0;
+  const n=diffDays(base,day)-skipsBetween(S,f,base,day);const i=(MIXES.indexOf(m0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from,set:!!ms&&ms.date===day,auto:ms&&ms.date===day?ms.auto:null}}
+/* manual Mix change (ledger t:'mixset'): latest per farm-day wins; rotation continues from it */
+function mixSetOf(S,f,from,day){let best=null;for(const x of S.ledger){if(x.t!=='mixset'||x.void||x.farm!==f||x.date<from||x.date>day||!MIXES.includes(x.mix))continue;if(!best||x.date>best.date||(x.date===best.date&&(x.at||'')>(best.at||'')))best=x}return best}
 /* what to actually put in each tank today, given stock before spraying (st) */
 function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return null;const r=recipeOf(S,pl.ver);const t=opts.tanks??tanksOf(S,f);const lines=[];
   for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
@@ -159,7 +162,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,short:res}}
-if(typeof module!=='undefined'&&typeof window==='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger};
+if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger};
 </script><script>/* StoreGo v16 UI. Needs engine.js loaded first. */
 (()=>{'use strict';
 const APP_VERSION=16;

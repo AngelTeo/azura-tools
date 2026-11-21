@@ -75,7 +75,10 @@ function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
 function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
 function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
   const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
-  const n=diffDays(h.from,day)-skipsBetween(S,f,h.from,day);const i=(MIXES.indexOf(h.mix0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from}}
+  const ms=mixSetOf(S,f,h.from,day);const base=ms?ms.date:h.from,m0=ms?ms.mix:h.mix0;
+  const n=diffDays(base,day)-skipsBetween(S,f,base,day);const i=(MIXES.indexOf(m0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from,set:!!ms&&ms.date===day,auto:ms&&ms.date===day?ms.auto:null}}
+/* manual Mix change (ledger t:'mixset'): latest per farm-day wins; rotation continues from it */
+function mixSetOf(S,f,from,day){let best=null;for(const x of S.ledger){if(x.t!=='mixset'||x.void||x.farm!==f||x.date<from||x.date>day||!MIXES.includes(x.mix))continue;if(!best||x.date>best.date||(x.date===best.date&&(x.at||'')>(best.at||'')))best=x}return best}
 /* what to actually put in each tank today, given stock before spraying (st) */
 function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return null;const r=recipeOf(S,pl.ver);const t=opts.tanks??tanksOf(S,f);const lines=[];
   for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
@@ -205,10 +208,10 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
     const lines=(rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for})):r.lines.filter(l=>!l.off)).map(l=>{const p=P(l.use);if(l.none)return `<div style="background:#fdeeee;border-radius:10px"><div class="pic"><img src="storego_img/${h(l.use)}.jpg" alt="" onerror="this.remove()"></div><div class="grow"><b>${h(p?.name||l.use)}</b><div style="color:#c62828;font-weight:800">没货，这样不放</div></div><b style="color:#c62828;font-size:44px;line-height:1;padding:0 8px">✗</b></div>`;
       return `<div>${pic(p)}<div class="grow"><b>${h(p?.name||l.use)}</b>${l.sub?` <span class="badge amber">顶 ${h(P(l.slot)?.name)}</span>`:''}${l.extra?' <span class="badge red">病害加</span>':''}${l.partial?' <span class="badge red">不够</span>':l.nocount?' <span class="badge amber">没点，先确认</span>':''}<div class="tiny">每桶 ${fmt(l.dose)} ${unit(p)}${rec?.t==='spray'?'':(leftTxt(p,l)?' · '+leftTxt(p,l):'')}</div></div></div>`}).join('');
     const off=r.lines.filter(l=>l.off&&!extrasOf(f,d).some(x=>x.pid===l.use)).map(l=>`${h(P(l.use)?.name)}（${h(l.cond)}）`).join('、');
-    return `<div class="card ${rec?.t==='spray'?'green':''}"><div class="row"><span class="mixtag" style="font-size:18px;padding:3px 10px">${r.mix}</span><div class="grow"><h2>${f}</h2><div class="tiny">${h(ver?.name||r.ver)} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶</div></div>${st}</div>
+    return `<div class="card ${rec?.t==='spray'?'green':''}"><div class="row"><span class="mixtag" style="font-size:18px;padding:3px 10px">${r.mix}</span><div class="grow"><h2>${f}</h2><div class="tiny">${h(ver?.name||r.ver)} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶${r.set?` · <b style="color:var(--amber,#926212)">改成 Mix ${r.mix}（原本排 ${h(r.auto||'')}）</b>`:''}</div></div>${st}</div>
       ${bad.length&&!rec?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货，连顶替药都没有</div>`:''}
       <div class="list" style="margin-top:6px">${lines}</div>${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
-      <div class="row wrapf" style="margin-top:10px">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
+      <div class="row wrapf" style="margin-top:10px">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="mix" data-f="${f}">换 Mix</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
   return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
   <p class="tiny">工人回报后按「喷好了」，库存照实际扣。下雨没喷按「没喷」，配方顺延一天。两样都没按，系统照设定桶数估。</p>`}
 
@@ -286,6 +289,14 @@ function drawExtra(){const {f,ex}=sheetExtra.st;const d=day();const pl=planOn(S,
 async function exSave(){const {f,ex}=sheetExtra.st;await put('ledger',{id:uid('L'),t:'plan',date:day(),at:nowIso(),by:ME.name,farm:f,extras:ex});closeSheet();toast(ex.length?`${f} 今天加了：${ex.map(x=>P(x.pid)?.name).join('、')}`:`${f} 今天没有加病害药`);render()}
 function sheetSkip(f){sheet(`<h2>${f} 没喷</h2><p class="tiny">记了之后，${f} 的配方顺延一天（今天的 Mix 明天喷），库存不扣。</p><label class="l">原因</label><div class="seg">${['下雨','叶子湿','缺药','其他'].map((x,i)=>`<button class="${i===0?'on':''}" data-reason="${x}">${x}</button>`).join('')}</div>
   <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="skip-save" data-f="${f}">记下来</button><button class="btn" data-act="close">取消</button></div>`);sheetSkip.reason='下雨'}
+function sheetMix(f){const d=day();const cur=plan(f,d);const auto=autoMix(f,d);
+  sheet(`<h2>${f} · ${dd(d)} 换 Mix</h2><p class="tiny">原本排的是 Mix ${auto}。换了之后，接下去照这个往下排（例：今天 B → 明天 C → 后天 A）。</p>
+  <div class="seg" style="margin:12px 0">${MIXES.map(m=>`<button class="${cur.mix===m?'on':''}" data-act="mix-set" data-f="${f}" data-mix="${m}">Mix ${m}</button>`).join('')}</div>
+  ${cur.set?`<button class="btn w" data-act="mix-reset" data-f="${f}">取消，照原本排（Mix ${auto}）</button>`:''}<button class="btn w" data-act="close" style="margin-top:8px">关闭</button>`)}
+function autoMix(f,d){const L=S.ledger.filter(x=>x.t==='mixset'&&x.farm===f&&x.date===d&&!x.void);L.forEach(x=>x.void=true);delete S._ri;const m=planOn(S,f,d)?.mix;L.forEach(x=>delete x.void);delete S._ri;return m}
+async function mixSave(f,mix){const d=day();const auto=autoMix(f,d);for(const x of S.ledger.filter(x=>x.t==='mixset'&&x.farm===f&&x.date===d&&!x.void))await put('ledger',{...x,void:true,voidAt:nowIso(),voidBy:ME.name});
+  if(mix&&mix!==auto)await put('ledger',{id:uid('L'),t:'mixset',date:d,at:nowIso(),by:ME.name,farm:f,mix,auto});
+  closeSheet();toast(mix&&mix!==auto?`${f} ${dd(d)} 改成 Mix ${mix}，之后照这个往下排`:`${f} ${dd(d)} 照原本排 Mix ${auto}`);render()}
 async function skipSave(f){await put('ledger',{id:uid('L'),t:'skip',date:day(),at:nowIso(),by:ME.name,farm:f,reason:sheetSkip.reason});closeSheet();toast(`${f} 已记：没喷，配方顺延`);render()}
 async function undo(f){const rec=recOn(S,f,day());if(!rec||!confirm(`撤回 ${f} ${dd(day())} 的「${rec.t==='spray'?'喷好了':'没喷'}」？`))return;await put('ledger',{...rec,void:true,voidBy:ME.name,voidAt:nowIso()});toast('已撤回');render()}
 
@@ -312,6 +323,7 @@ document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]'
     case 'done':sheetDone(f);break;case 'tk':{const n=$('#dtk');n.value=fmt(Math.max(0,(Number(n.value)||0)+Number(a.dataset.d)));donePrev();break}
     case 'done-save':a.disabled=true;await doneSave(f);break;case 'skip':sheetSkip(f);break;case 'skip-save':a.disabled=true;await skipSave(f);break;case 'undo':await undo(f);break;
     case 'extra':sheetExtra(f);break;
+    case 'mix':sheetMix(f);break;case 'mix-set':a.disabled=true;await mixSave(f,a.dataset.mix);break;case 'mix-reset':a.disabled=true;await mixSave(f,null);break;
     case 'ex-add':sheetExtra.st.ex.push({pid:a.dataset.id,dose:Number(a.dataset.dose),cond:a.dataset.cond==='1'});drawExtra();break;
     case 'ex-add-other':{const pid=$('#ex-p').value,dose=Number($('#ex-d').value);if(!pid||!(dose>0)){toast('⚠ 选药、填每桶多少');return}sheetExtra.st.ex.push({pid,dose});drawExtra();break}
     case 'ex-del':sheetExtra.st.ex.splice(Number(a.dataset.i),1);drawExtra();break;
