@@ -398,17 +398,16 @@ function vArchive(){const s=sub.arc||'log';const seg=[['log','纪录'],['po','�
   return `<div class="eyebrow">ARCHIVE</div><h1>档案</h1><div class="seg">${seg}</div>${body}`}
 
 /* ---------------- SETTINGS ---------------- */
-function vSet(){const s=sub.set||'sup';const seg=[['sup','供应商'],['cfg','桶数周期'],['rec','配方'],['ver','换版本'],['drug','药品'],['log','修改纪录']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="set" data-v="${k}">${l}</button>`).join('');
+function vSet(){const s=sub.set||'sup';const seg=[['sup','供应商'],['cfg','采购周期'],['rec','配方'],['drug','药品'],['log','修改纪录']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="set" data-v="${k}">${l}</button>`).join('');
   let b='';const c=cfg(S);
   if(s==='sup')b=S.suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const owe=S.po.filter(po=>po.sup===x.id&&!po.paid&&po.status!=='ordered').reduce((a,po)=>a+poTotal(po),0);const sells=S.products.filter(p=>p.shops?.[0]===x.id).map(p=>p.name);
     return `<div class="card"><div class="row"><h3 class="grow">${h(x.name)}</h3><span class="badge grey">${Number(x.leadDays)||'?'} 天到</span></div><div class="tiny">${h(x.phone||'电话待补')} · ${h(x.terms||'付款方式待补')}${owe?' · 欠 '+money(owe):''}</div>${x.bank?`<div class="tiny">银行：${h(x.bank)}</div>`:''}<div class="tiny">卖：${h(sells.join('、')||'—')}</div>
     <div class="row wrapf" style="margin-top:8px">${x.phone?`<a class="btn sm" href="tel:${h(String(x.phone).split(/[,/]/)[0].replace(/[^0-9+]/g,''))}">拨电话</a>`:''}${waLink(x.phone,'')?`<a class="btn sm s" target="_blank" href="${h(waLink(x.phone,''))}">WhatsApp</a>`:''}<button class="btn sm neededit" data-act="edit-sup" data-id="${h(x.id)}">编辑</button></div></div>`}).join('')+`<button class="btn full neededit" data-act="edit-sup" data-id="">＋ 新供应商</button>`;
-  else if(s==='cfg')b=`<div class="card"><h2>每园每天几桶</h2>${FARMS.map(f=>`<label class="l">${f}</label><input class="txt" inputmode="decimal" id="tk${f}" value="${fmt(c.tanks?.[f])}">`).join('')}<p class="tiny">${h(c.note||'')}</p>
+  else if(s==='cfg')b=`<div class="card"><h2>采购周期</h2><p class="tiny">每园每天几桶在 SprayGo「配方」改：${FARMS.map(f=>f+' '+fmt(c.tanks?.[f])+' 桶').join(' · ')}</p>
    <label class="l">安全天数</label><input class="txt" inputmode="numeric" id="cs" value="${c.safety??7}"><label class="l">几天买一次</label><input class="txt" inputmode="numeric" id="cc" value="${c.cycle??14}">
    <label class="l">下次采购</label><input class="txt" type="date" id="cnb" value="${h(c.nextBuy||'')}"><label class="l">下次点算</label><input class="txt" type="date" id="cnc" value="${h(c.nextCount||'')}">
    <button class="btn p full neededit" style="margin-top:12px" data-act="cfg-save">存</button></div>`;
-  else if(s==='rec')b=recipeView();
-  else if(s==='ver')b=verView();
+  else if(s==='rec')b=`<div class="card"><h2>配方搬去 SprayGo 了</h2><p class="tiny">改 Mix A / B / C 的药和用量、换版本、每园几桶，都在 SprayGo 下面的「⚙️ 配方」。</p><a class="btn p full" href="SprayGo.html#set" style="margin-top:10px;text-align:center;text-decoration:none">去 SprayGo 改配方 →</a></div>`;
   else if(s==='drug')b=`<div class="card"><div class="list">${S.products.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<div data-act="edit-drug" data-id="${h(p.id)}">${pic(p)}<div class="grow"><b>${h(p.name)}</b> ${p.active===false?'<span class="badge grey">停用</span>':''}<div class="tiny">${h(packLabel(p))} · ${h(supName(p.shops?.[0]))}</div></div>${kindBadge(p.kind)}</div>`).join('')}</div></div><button class="btn full neededit" data-act="edit-drug" data-id="">＋ 新药</button>`;
   else b=`<div class="card"><div class="list">${S.audit.slice().sort((a,b)=>a.at<b.at?1:-1).slice(0,200).map(x=>`<div><div class="grow"><b>${h(x.what)}</b><div class="tiny">${h(x.by)} · ${h((x.at||'').slice(0,16).replace('T',' '))}</div></div></div>`).join('')||'<div class="empty">还没有</div>'}</div></div>`;
   return `<div class="eyebrow">SETTINGS</div><h1>设定</h1><div class="seg">${seg}</div>${b}`}
@@ -494,8 +493,8 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'drug-save':{const old=P(id)||{};const st=sheetEditDrug.st;const x={...old,id:id||$('#dg-name').value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-')||uid('p'),name:$('#dg-name').value.trim(),kind:$('#dg-kind').value,target:$('#dg-target').value.trim(),
       packSize:Number($('#dg-size').value)||null,packUnit:$('#dg-pu').value,unit:['g','kg'].includes($('#dg-pu').value)?'g':'ml',shops:$('#dg-shop').value?[$('#dg-shop').value]:[],track:st.track,active:st.active};if(!x.name){toast('⚠ 要药名');return}
       await put('products',x);await audit(`${id?'改':'加'}药品 ${x.name}（${packLabel(x)}）`,'products',x.id);closeSheet();render();break}
-    case 'cfg-save':{const c={...cfg(S),id:'main'};c.tanks={};for(const f of FARMS)c.tanks[f]=Number($('#tk'+f).value)||0;c.safety=Number($('#cs').value)||7;c.cycle=Number($('#cc').value)||14;c.nextBuy=$('#cnb').value;c.nextCount=$('#cnc').value;
-      await put('cfg',c);await audit(`桶数 ${FARMS.map(f=>f+' '+c.tanks[f]).join(' / ')} · 安全 ${c.safety} 天 · ${c.cycle} 天买一次`,'cfg','main');toast('已存');render();break}
+    case 'cfg-save':{const c={...cfg(S),id:'main'};c.safety=Number($('#cs').value)||7;c.cycle=Number($('#cc').value)||14;c.nextBuy=$('#cnb').value;c.nextCount=$('#cnc').value;
+      await put('cfg',c);await audit(`安全 ${c.safety} 天 · ${c.cycle} 天买一次`,'cfg','main');toast('已存');render();break}
     case 'rec-edit':sheetRecEdit(a.dataset.v,a.dataset.m,Number(a.dataset.i));break;
     case 'rec-save':case 'rec-del':{if(!ME.owner){toast('⚠ 只有 Owner 能改配方');return}const r=JSON.parse(JSON.stringify(S.recipe.find(x=>x.id===a.dataset.v)));const m=a.dataset.m,i=Number(a.dataset.i);let what;
       if(act==='rec-del'){what=`${r.name} Mix ${m} 拿掉 ${P(r.mixes[m][i].pid)?.name}`;r.mixes[m].splice(i,1)}else{const it={pid:$('#re-p').value,dose:Number($('#re-d').value)};if(!it.pid||!(it.dose>0)){toast('⚠ 选药、填用量');return}

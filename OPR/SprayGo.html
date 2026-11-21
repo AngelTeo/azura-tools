@@ -175,7 +175,7 @@ const APP_VERSION=13;
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan'];
 const S={};COLS.forEach(c=>S[c]=[]);S.old_sprays=[];
-let sb=null,ME={name:'',role:'',edit:false},tab='today',dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};document.head.insertAdjacentHTML('beforeend',`<style>.fc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;margin:8px 0}.fh{color:#fff;border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:8px}.fh .big{font-size:28px;font-weight:900;line-height:1}.fh .t1{font-size:14px;font-weight:850}.fh .t2{font-size:11px;opacity:.95}.fh .farm{background:#fff;font-size:14px;font-weight:900;border-radius:7px;padding:2px 7px}.fbar{display:flex;align-items:center;gap:6px;margin:6px 0 2px}.fbar .badge{font-size:11px}.fbar .btn{padding:4px 10px;font-size:12px;min-height:0}.fbar .cap{margin-left:auto;color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:5px}.cr{display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef0f2;padding:4px 2px}.cr img{width:30px;height:38px;object-fit:contain;background:#fff;flex:none}.cr .mid{flex:1;min-width:0}.cr .nm{font-size:13.5px;font-weight:800;line-height:1.2}.cr .sub{font-size:11px;color:#b45309;font-weight:700}.cr .st{font-size:11px;color:#4b5563}.cr .ds{font-size:14px;font-weight:900;white-space:nowrap;text-align:right}.cr .chip{flex:none;width:50px;text-align:center;border-radius:6px;padding:4px 0;font-weight:900;font-size:11px}.chip.ok{background:#dcfce7;color:#166534}.chip.no{background:#fee2e2;color:#b91c1c}.chip.ask{background:#fef3c7;color:#92400e}.cr.no{background:#fef2f2}.cr.no .nm{color:#b91c1c}.cr.ask{background:#fffbeb}.fc .acts{margin-top:8px;gap:6px}.fc .acts .btn{padding:7px 12px;font-size:13px;min-height:0}#root{padding-bottom:110px}</style>`);let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
+let sb=null,ME={name:'',role:'',edit:false,owner:false},tab='today',sub={},dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};document.head.insertAdjacentHTML('beforeend',`<style>.fc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;margin:8px 0}.fh{color:#fff;border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:8px}.fh .big{font-size:28px;font-weight:900;line-height:1}.fh .t1{font-size:14px;font-weight:850}.fh .t2{font-size:11px;opacity:.95}.fh .farm{background:#fff;font-size:14px;font-weight:900;border-radius:7px;padding:2px 7px}.fbar{display:flex;align-items:center;gap:6px;margin:6px 0 2px}.fbar .badge{font-size:11px}.fbar .btn{padding:4px 10px;font-size:12px;min-height:0}.fbar .cap{margin-left:auto;color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:5px}.cr{display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef0f2;padding:4px 2px}.cr img{width:30px;height:38px;object-fit:contain;background:#fff;flex:none}.cr .mid{flex:1;min-width:0}.cr .nm{font-size:13.5px;font-weight:800;line-height:1.2}.cr .sub{font-size:11px;color:#b45309;font-weight:700}.cr .st{font-size:11px;color:#4b5563}.cr .ds{font-size:14px;font-weight:900;white-space:nowrap;text-align:right}.cr .chip{flex:none;width:50px;text-align:center;border-radius:6px;padding:4px 0;font-weight:900;font-size:11px}.chip.ok{background:#dcfce7;color:#166534}.chip.no{background:#fee2e2;color:#b91c1c}.chip.ask{background:#fef3c7;color:#92400e}.cr.no{background:#fef2f2}.cr.no .nm{color:#b91c1c}.cr.ask{background:#fffbeb}.fc .acts{margin-top:8px;gap:6px}.fc .acts .btn{padding:7px 12px;font-size:13px;min-height:0}#root{padding-bottom:110px}</style>`);let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
 const $=s=>document.querySelector(s);
 const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(Number(n))?Number(Number(n).toFixed(2)).toLocaleString('en-MY',{maximumFractionDigits:2}):'—';
@@ -324,17 +324,70 @@ function vHist(){const L=S.ledger.filter(x=>(x.t==='spray'||x.t==='skip')).sort(
   <div class="card amber"><b>旧 SprayGo（v12）纪录 ${S.old_sprays.length} 笔</b><p class="tiny">只供查看，不算进库存。</p><div class="list">${S.old_sprays.slice().sort((a,b)=>String(b.date||b.createdAt||'')<String(a.date||a.createdAt||'')?-1:1).slice(0,60).map(x=>`<div><div class="grow"><b>${h(String(x.date||x.createdAt||'').slice(0,10))} · ${h(x.farm||x.farmName||'')}</b><div class="tiny">${h(x.mix||x.mixName||x.status||'')}</div></div></div>`).join('')}</div></div>`}
 
 /* ---------------- render / events / boot ---------------- */
-const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['store','📦','StoreGo']];
-function render(keepSheet){const v=tab==='hist'?vHist:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
+
+/* ---------------- SETTINGS: 配方 / 换版本 / 桶数 (moved from StoreGo 22/11) ---------------- */
+async function audit(what,c,id){try{S.audit=S.audit||[];await put('audit',{id:uid('A'),at:nowIso(),by:ME.name,col:c,ref:id,what})}catch(x){}}
+function vSet(){const s=sub.set||'rec';const seg=[['rec','配方'],['ver','换版本'],['tk','每园桶数']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="set" data-v="${k}">${l}</button>`).join('');
+  const c=cfg(S);let b='';
+  if(s==='rec')b=recipeView();else if(s==='ver')b=verView();
+  else b=`<div class="card"><h2>每园每天几桶</h2>${FARMS.map(f=>`<label class="l">${f}</label><input class="txt" inputmode="decimal" id="tk${f}" value="${fmt(c.tanks?.[f])}">`).join('')}<p class="tiny">一桶 200 L。喷药卡、扣库存、采购都照这个算。</p><button class="btn p full owneronly" style="margin-top:12px" data-act="tk-save">存</button></div>`;
+  return `<div class="eyebrow">SETTINGS</div><h1>配方设定</h1><div class="seg">${seg}</div>${b}<p class="tiny">配方、换版本、桶数只有 Owner 能改，其他人只能看。药品、供应商、采购设定在 StoreGo。</p>`}
+function recipeView(){const v=sub.rv||(planOn(S,'AD1',todayStr())?.ver)||'v3';const r=S.recipe.find(x=>x.id===v);
+  const using=FARMS.filter(f=>planOn(S,f,todayStr())?.ver===v);
+  const seg=S.recipe.slice().sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true})).map(x=>`<button class="${x.id===v?'on':''}" data-sub="rv" data-v="${h(x.id)}">${h(x.name)}</button>`).join('');
+  if(!r)return `<div class="seg">${seg}</div>`;
+  return `<div class="seg" style="margin-top:8px">${seg}</div><p class="tiny">${using.length?`<b>${using.join('、')} 现在用这版</b>`:'现在没有园用这版'}${r.note?' · '+h(r.note):''}</p>${MIXES.map(m=>`<div class="card"><div class="row"><span class="mixtag" style="background:${MIXC[m]}">${m}</span><h2 class="grow">Mix ${m}</h2></div><table class="t" style="margin-top:6px">${(r.mixes[m]||[]).map((it,i)=>{const p=P(it.pid);return `<tr><td><b>${h(p?.name||it.pid)}</b>${it.cond?` <span class="badge amber">${h(it.cond)}</span>`:''}${(it.alts||[]).length?`<div class="tiny">没货用：${it.alts.map(a=>h(P(a.pid)?.name||a.pid)+' '+fmt(a.dose)).join(' / ')}</div>`:''}</td><td class="n">${fmt(it.dose)} ${unitOf(p)}</td><td class="n owneronly"><button class="btn sm" data-act="rec-edit" data-v="${h(v)}" data-m="${m}" data-i="${i}">改</button></td></tr>`}).join('')}</table>
+   <button class="btn sm owneronly" style="margin-top:6px" data-act="rec-edit" data-v="${h(v)}" data-m="${m}" data-i="-1">＋ 加一样</button></div>`).join('')}
+  <button class="btn full owneronly" data-act="rec-copy" data-v="${h(v)}">复制成新版本</button><p class="tiny">每桶 200 L 放的量。大改建议先复制成新版本，确认好再到「换版本」让园开始用。</p>`}
+function sheetRecEdit(v,m,i){const r=S.recipe.find(x=>x.id===v);const it=i>=0?r.mixes[m][i]:{pid:'',dose:'',alts:[]};const opts=sel=>S.products.filter(p=>p.active!==false).sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${h(p.id)}" ${p.id===sel?'selected':''}>${h(p.name)}</option>`).join('');
+  sheet(`<h2>${h(r.name)} · Mix ${m}</h2><label class="l">药</label><select id="re-p"><option value="">— 选 —</option>${opts(it.pid)}</select><label class="l">每桶用量（ml 或 g）</label><input class="txt" inputmode="decimal" id="re-d" value="${it.dose??''}">
+  <label class="l">什么时候才加（空白＝每次都加）</label><input class="txt" id="re-c" value="${h(it.cond||'')}" placeholder="例：有病害才加">
+  <label class="l">没货时用（顶替药 · 用量）</label>${[0,1].map(k=>`<div class="row" style="margin-bottom:6px"><select id="re-a${k}"><option value="">—</option>${opts(it.alts?.[k]?.pid)}</select><input class="num" inputmode="decimal" id="re-ad${k}" value="${it.alts?.[k]?.dose??''}"></div>`).join('')}
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="rec-save" data-v="${h(v)}" data-m="${m}" data-i="${i}">存</button>${i>=0?`<button class="btn w" data-act="rec-del" data-v="${h(v)}" data-m="${m}" data-i="${i}">拿掉</button>`:''}<button class="btn" data-act="close">取消</button></div>`)}
+function verView(){const t=todayStr();return FARMS.map(f=>{const pl=planOn(S,f,t);const fp=S.farmplan.find(x=>x.id===f);
+  return `<div class="card"><div class="row"><h2 class="grow">${f}</h2>${pl?`<span class="mixtag">${pl.mix}</span>`:''}</div><div class="tiny">现在：${h(S.recipe.find(x=>x.id===pl?.ver)?.name||'未设定')} · 从 ${dd(pl?.from)} 起 · ${fmt(tanksOf(S,f))} 桶 / 天</div>
+  <div class="tiny">历史：${(fp?.hist||[]).map(x=>`${dd(x.from)} ${h(S.recipe.find(r=>r.id===x.ver)?.name||x.ver)}（那天 Mix ${x.mix0}）`).join(' → ')}</div>
+  <button class="btn sm owneronly" style="margin-top:8px" data-act="ver-switch" data-f="${f}">换版本</button></div>`}).join('')}
+function sheetVer(f){const t=todayStr();const pl=planOn(S,f,addDays(t,1));sheetVer.st={f,ver:pl?.ver,from:addDays(t,1),mix0:pl?.mix||'A'};drawVer()}
+function drawVer(){const s=sheetVer.st;const t=todayStr();const old=planOn(S,s.f,t)?.ver;const oldSet=pidsUsed(S,s.f,old),newSet=pidsUsed(S,s.f,s.ver);const st=before(t);
+  const left=[...oldSet].filter(pid=>!newSet.has(pid)&&st[s.f][pid]>0);
+  sheet(`<h2>${s.f} 换配方版本</h2><label class="l">换成</label><div class="seg">${S.recipe.map(r=>`<button class="${r.id===s.ver?'on':''}" data-vs="ver" data-v="${h(r.id)}">${h(r.name)}</button>`).join('')}</div>
+  <label class="l">从哪天开始</label><input class="txt" type="date" id="vs-from" value="${h(s.from)}"><label class="l">那天喷哪个 Mix</label><div class="seg">${MIXES.map(m=>`<button class="${m===s.mix0?'on':''}" data-vs="mix0" data-v="${m}">Mix ${m}</button>`).join('')}</div>
+  ${left.length?`<div class="card amber"><b>旧版剩下、新版没用到的药</b><p class="tiny">每一样你决定：顶替新版的哪一项，还是放着不用（放着的只记库存，不算采购）。</p><div class="list">${left.map(pid=>`<div><div class="grow"><b>${h(P(pid)?.name)}</b><div class="tiny">${leftTxt(P(pid),{left:st[s.f][pid]})}</div></div><button class="btn sm" data-act="ver-sub" data-id="${h(pid)}">顶替…</button></div>`).join('')}</div></div>`:''}
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="ver-save">换</button><button class="btn" data-act="close">取消</button></div>`)}
+async function setAct(act,a){const id=a.dataset.id;
+  switch(act){
+    case 'tk-save':{if(!ME.owner){toast('⚠ 只有 Owner 能改桶数');return true}const c={...cfg(S),id:'main'};c.tanks={...(c.tanks||{})};for(const f of FARMS)c.tanks[f]=Number($('#tk'+f).value)||0;
+      await put('cfg',c);await audit(`桶数 ${FARMS.map(f=>f+' '+c.tanks[f]).join(' / ')}`,'cfg','main');toast('已存');render();return true}
+    case 'rec-edit':sheetRecEdit(a.dataset.v,a.dataset.m,Number(a.dataset.i));return true;
+    case 'rec-save':case 'rec-del':{if(!ME.owner){toast('⚠ 只有 Owner 能改配方');return true}const r=JSON.parse(JSON.stringify(S.recipe.find(x=>x.id===a.dataset.v)));const m=a.dataset.m,i=Number(a.dataset.i);let what;
+      if(act==='rec-del'){what=`${r.name} Mix ${m} 拿掉 ${P(r.mixes[m][i].pid)?.name}`;r.mixes[m].splice(i,1)}else{const it={pid:$('#re-p').value,dose:Number($('#re-d').value)};if(!it.pid||!(it.dose>0)){toast('⚠ 选药、填用量');return true}
+        const c=$('#re-c').value.trim();if(c)it.cond=c;const alts=[0,1].map(k=>({pid:$('#re-a'+k).value,dose:Number($('#re-ad'+k).value)})).filter(x=>x.pid&&x.dose>0);if(alts.length)it.alts=alts;
+        if(i>=0)r.mixes[m][i]=it;else r.mixes[m].push(it);what=`${r.name} Mix ${m} ${i>=0?'改':'加'} ${P(it.pid)?.name} ${it.dose}`}
+      await put('recipe',r);await audit(what,'recipe',r.id);closeSheet();toast('已存：'+what);render();return true}
+    case 'rec-copy':{if(!ME.owner)return true;const src=S.recipe.find(x=>x.id===a.dataset.v);const n=Math.max(...S.recipe.map(x=>Number(String(x.id).replace(/\D/g,''))||0))+1;
+      const r={...JSON.parse(JSON.stringify(src)),id:'v'+n,name:`第 ${n} 版`,note:`从 ${src.name} 复制`};await put('recipe',r);await audit(`新配方 ${r.name}（从 ${src.name} 复制）`,'recipe',r.id);sub.rv=r.id;render();return true}
+    case 'ver-switch':sheetVer(a.dataset.f);return true;
+    case 'ver-sub':{const s=sheetVer.st;const r=JSON.parse(JSON.stringify(S.recipe.find(x=>x.id===s.ver)));const slots=MIXES.flatMap(m=>(r.mixes[m]||[]).map((it,i)=>({m,i,it})));
+      const pick=prompt(`${P(id)?.name} 顶替哪一项？输入号码：\n${slots.map((x,k)=>`${k+1}. Mix ${x.m} ${P(x.it.pid)?.name}`).join('\n')}`);const k=Number(pick)-1;if(!slots[k])return true;const dose=Number(prompt(`${P(id)?.name} 每桶用量（${unitOf(P(id))}）`,slots[k].it.dose));if(!(dose>0))return true;
+      const it=r.mixes[slots[k].m][slots[k].i];it.alts=[...(it.alts||[]),{pid:id,dose}];await put('recipe',r);await audit(`${r.name} Mix ${slots[k].m} ${P(it.pid)?.name} 加顶替：${P(id)?.name} ${dose}`,'recipe',r.id);drawVer();return true}
+    case 'ver-save':{if(!ME.owner){toast('⚠ 只有 Owner 能换版本');return true}const s=sheetVer.st;s.from=$('#vs-from').value;if(!s.ver||!s.from)return true;const fp=JSON.parse(JSON.stringify(S.farmplan.find(x=>x.id===s.f)||{id:s.f,hist:[]}));
+      fp.hist=fp.hist.filter(x=>x.from<s.from);fp.hist.push({from:s.from,ver:s.ver,mix0:s.mix0});await put('farmplan',fp);await audit(`${s.f} ${dd(s.from)} 起换 ${S.recipe.find(r=>r.id===s.ver)?.name}（那天 Mix ${s.mix0}）`,'farmplan',s.f);closeSheet();toast('已换');render();return true}}
+  return false}
+
+const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['store','📦','StoreGo']];
+function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
   $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
 document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev()});
 document.addEventListener('change',e=>{if(e.target.dataset.extra)donePrev()});
 document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){if(g.dataset.go==='store'){location.href='StoreGo.html';return}tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
   const dy=e.target.closest('[data-day]');if(dy){dayOff=Number(dy.dataset.day);render();return}
+  const sbn=e.target.closest('[data-sub]');if(sbn){sub[sbn.dataset.sub]=sbn.dataset.v;render();return}
+  const vs=e.target.closest('[data-vs]');if(vs){sheetVer.st[vs.dataset.vs]=vs.dataset.v;sheetVer.st.from=$('#vs-from').value;drawVer();return}
   const fm=e.target.closest('[data-farm]');if(fm){farmSel=fm.dataset.farm;try{localStorage.setItem('sg_farm',farmSel)}catch(_){}render();return}
   const rs=e.target.closest('[data-reason]');if(rs){sheetSkip.reason=rs.dataset.reason;rs.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===rs));return}
   const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,f=a.dataset.f;if(act==='close-bg'&&e.target!==a)return;
-  try{switch(act){case 'close':case 'close-bg':closeSheet();break;
+  try{if(await setAct(act,a))return;switch(act){case 'close':case 'close-bg':closeSheet();break;
     case 'card':a.disabled=true;await showCard(f);a.disabled=false;break;case 'share':await shareCard();break;
     case 'done':sheetDone(f);break;case 'tk':{const n=$('#dtk');n.value=fmt(Math.max(0,(Number(n.value)||0)+Number(a.dataset.d)));donePrev();break}
     case 'done-save':a.disabled=true;await doneSave(f);break;case 'skip':sheetSkip(f);break;case 'skip-save':a.disabled=true;await skipSave(f);break;case 'undo':await undo(f);break;
@@ -347,14 +400,14 @@ document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]'
   catch(x){console.error(x);toast('⚠ '+(x.message||x))}});
 function gate(msg){$('#root').innerHTML=`<div class="gate"><h2>SprayGo</h2><p class="muted">${h(msg)}</p><a class="btn" href="../index.html">← 回主页登入</a></div>`}
 async function boot(){
-  if(MOCK)ME={name:MOCK.me||'Teo',role:'OWNER',edit:true};
+  if(MOCK)ME={name:MOCK.me||'Teo',role:MOCK.role||'OWNER',edit:true,owner:(MOCK.role||'OWNER')==='OWNER'};
   else{if(!window.supabase){gate('连不上资料库，请检查网络后重新整理。');return}sb=window.supabase.createClient(SB_URL,SB_KEY);
     let ss=null;try{ss=(await sb.auth.getSession()).data.session}catch(x){gate('连不上资料库：'+x.message);return}if(!ss){gate('还没登入。请回主页登入后再打开 SprayGo。');return}
     const {data:me}=await sb.from('hub_app_user').select('display_name,role,status').eq('id',ss.user.id).maybeSingle();if(!me||me.status!=='ACTIVE'){gate('你的账号没有 SprayGo 权限。');return}
     const [{data:see1},{data:see2},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'SPRAY',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'edit'})]);
-    if(!see1&&!see2){gate('你的账号没有 SprayGo 权限。');return}ME={name:me.display_name,role:me.role,edit:!!edit}}
-  document.body.classList.toggle('noedit',!ME.edit);$('#who').innerHTML=`${h(ME.name)}`;
-  try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}render();
+    if(!see1&&!see2){gate('你的账号没有 SprayGo 权限。');return}ME={name:me.display_name,role:me.role,edit:!!edit,owner:me.role==='OWNER'}}
+  document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);$('#who').innerHTML=`${h(ME.name)}`;
+  try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}if(location.hash==='#set')tab='set';render();
   setInterval(async()=>{if(!document.hidden&&!$('#modal').innerHTML){try{await load();render()}catch(x){}}},90000)}
 boot();
 })();
