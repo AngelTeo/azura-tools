@@ -114,6 +114,17 @@ function sprayDay(S,f,day,st){const rec=recOn(S,f,day);
     if(need>1e-6)short.push({pid:it.pid,amt:need,slot:it.pid})}
   return {short,used}}
 
+
+/* ---- drip additives (DripGo): cfg doc 'drip' = {start, items:{pid:{AD1,AD2,AD3}}, week:{0..6:[[slot1 pids],[slot2 pids]]}, slots:[..]}; ledger 'dripskip' {farm,date,pid} = not dripped */
+function dripCfg(S){return S.cfg.find(x=>x.id==='drip')||null}
+function dripOn(S,f,day){const c=dripCfg(S);if(!c||day<(c.start||'9999'))return [];const wd=new Date(day+'T00:00:00Z').getUTCDay();const slots=(c.week&&c.week[wd])||[];const out=[];
+  slots.forEach((L,si)=>{for(const pid of L||[]){const q=Number(c.items?.[pid]?.[f]);if(q>0)out.push({slot:si,pid,qty:q})}});return out}
+function dripSkipped(S,f,day,pid){return S.ledger.some(x=>x.t==='dripskip'&&!x.void&&x.farm===f&&x.date===day&&x.pid===pid)}
+function dripDay(S,f,day,st){const used={},short=[];for(const it of dripOn(S,f,day)){if(dripSkipped(S,f,day,it.pid))continue;const p=S.products.find(x=>x.id===it.pid);if(!p||p.track==='No'||!packBase(p))continue;
+    const have=st[it.pid];if(!(have>0)){short.push({pid:it.pid,amt:it.qty,slot:it.pid});continue}const take=Math.min(have,it.qty);st[it.pid]=have-take;used[it.pid]=take;if(it.qty-take>1e-6)short.push({pid:it.pid,amt:it.qty-take,slot:it.pid})}
+  return {used,short}}
+/* spray + drip for one farm-day */
+function dayUse(S,f,day,st){const a=sprayDay(S,f,day,st);const b=dripDay(S,f,day,st);const used={...(a.used||{})};for(const k in b.used)used[k]=(used[k]||0)+b.used[k];return {...a,used,short:[...(a.short||[]),...b.short]}}
 /* ledger entries (from cfg.start) sorted */
 function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=>x.date>=st).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1)}
 
@@ -121,7 +132,7 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}sprayDay(S,f,d,st[f])}};
+    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
     /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
     if(d>start)doSpray();
     while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
@@ -138,7 +149,7 @@ function pool(S){const p={};for(const x of ledger(S)){if(x.t==='recv')p[x.pid]=(
 /* forward projection from today: per farm, per pid, days until runs out; per slot, first short day */
 function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};
   for(const f of FARMS){const s={...st[f]};const runOut={};const slotShort={};
-    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=sprayDay(S,f,d,s);
+    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=dayUse(S,f,d,s);
       for(const k in r.used)if(!(s[k]>1e-9)&&before[k]>1e-9&&runOut[k]==null)runOut[k]=i;
       for(const sh of r.short)if(slotShort[sh.pid]==null)slotShort[sh.pid]=i}
     out[f]={stock:st[f],runOut,slotShort}}
@@ -150,7 +161,7 @@ function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);retur
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
 function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
-  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=sprayDay(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
+  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=dayUse(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
   /* moves: cover a farm's short from another farm's leftover (same pid or an alt of the slot) */
   const moves=[];const slotAlts={};for(const r of S.recipe)for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[])slotAlts[it.pid]=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)}))];
   for(const f of FARMS)for(const pid in res[f]){let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
@@ -168,7 +179,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,short:res}}
-if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,ledger,homeOf,packAt,packWordAt,subBase};
+if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* StoreGo v16 UI. Needs engine.js loaded first. */
 (()=>{'use strict';
 const APP_VERSION=16;
@@ -521,7 +532,7 @@ async function boot(){
     const [{data:see},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'STORE',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'edit'})]);if(!see){gate('你的账号没有 StoreGo 权限。');return}
     ME={name:me.display_name,role:me.role,edit:!!edit,owner:me.role==='OWNER'}}
   document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);
-  $('#who').innerHTML=`${h(ME.name)}<br><a href="SprayGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">🧴 SprayGo</a><a href="#" data-go="set" style="color:var(--green);font-weight:750;text-decoration:none">⚙ 设定</a>`;
+  $('#who').innerHTML=`${h(ME.name)}<br><a href="SprayGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">🧴 SprayGo</a><a href="DripGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">💧 DripGo</a><a href="#" data-go="set" style="color:var(--green);font-weight:750;text-decoration:none">⚙ 设定</a>`;
   try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}
   if(!S.cfg.length){$('#view').innerHTML='<div class="card amber"><b>资料还没搬上来。</b><p class="tiny">请等 Claude 把 21/11 盘点、药品、配方搬上资料库。</p></div>';return}
   render();

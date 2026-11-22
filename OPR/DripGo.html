@@ -1,0 +1,342 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DripGo v1</title><style>:root{--bg:#f4f7f3;--paper:#fff;--ink:#1a3328;--muted:#687b70;--line:#dfe8df;--green:#176448;--mint:#e6f4ec;--red:#a63638;--rose:#fff0ec;--amber:#926212;--cream:#fff5df;--blue:#365f91;--sky:#e8f1ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI','Noto Sans SC',sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+.top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top .in{max-width:760px;margin:auto;display:flex;align-items:center;gap:10px;padding:10px 14px}
+.logo{background:var(--green);color:#fff;border-radius:11px;width:38px;height:38px;display:grid;place-items:center;font-size:20px}
+.brand{font-weight:850;font-size:17px}.brand small{display:block;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px}
+.who{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+.wrap{max-width:760px;margin:auto;padding:14px 14px 110px}
+.bar{position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+.bar button{flex:1;border:0;background:none;padding:8px 0 9px;font-size:11px;font-weight:750;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px}
+.bar button b{font-size:20px;line-height:1.2}.bar button.on{color:var(--green)}.bar button.on b{transform:scale(1.08)}
+h1{font-size:24px;margin:2px 0 4px;letter-spacing:-.5px}h2{font-size:17px;margin:0}h3{font-size:15px;margin:0}
+.muted{color:var(--muted)}.tiny{font-size:12px;color:var(--muted)}.eyebrow{font-size:11px;font-weight:850;letter-spacing:1.4px;color:var(--green)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
+.card.red{border-color:#f0c7c3;background:var(--rose)}.card.amber{border-color:#f2dcae;background:var(--cream)}.card.green{background:var(--mint);border-color:#cfe6d8}
+.row{display:flex;align-items:center;gap:10px}.row.top{align-items:flex-start}.grow{flex:1;min-width:0}.wrapf{flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:8px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper);font-weight:750;text-decoration:none;color:var(--ink)}
+.btn.p{background:var(--green);border-color:var(--green);color:#fff}.btn.s{background:var(--mint);border-color:var(--mint);color:var(--green)}.btn.w{background:var(--rose);border-color:#f0c7c3;color:var(--red)}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:13px;border-radius:9px}.btn.full{width:100%}
+.badge{display:inline-block;font-size:11.5px;font-weight:800;border-radius:20px;padding:2px 8px;white-space:nowrap}
+.badge.red{background:var(--rose);color:var(--red)}.badge.amber{background:var(--cream);color:var(--amber)}.badge.green{background:var(--mint);color:var(--green)}.badge.grey{background:#eef0ee;color:var(--muted)}.badge.blue{background:var(--sky);color:var(--blue)}
+.seg{display:flex;background:#e9efe9;border-radius:11px;padding:3px;gap:3px;margin:8px 0;overflow-x:auto}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:7px 8px;font-weight:750;font-size:13.5px;color:var(--muted);white-space:nowrap}.seg button.on{background:var(--paper);color:var(--green);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.list>div{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.list>div:first-child{border-top:0}
+.pic{width:52px;height:52px;border-radius:10px;background:#f1f4f1;flex-shrink:0;overflow:hidden;display:grid;place-items:center;font-size:22px}.pic img{width:100%;height:100%;object-fit:contain}
+.farms{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.f{font-size:11.5px;border-radius:8px;padding:2px 7px;background:#eef3ef;font-weight:700}.f.red{background:var(--rose);color:var(--red)}.f.amber{background:var(--cream);color:var(--amber)}.f.green{background:var(--mint);color:var(--green)}
+input.num{width:84px;text-align:center;font-size:17px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+input.num.miss{border-color:var(--red);background:var(--rose)}
+input.txt,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+textarea{min-height:120px}
+label.l{display:block;font-size:12px;font-weight:750;color:var(--muted);margin:10px 0 3px}
+table.t{width:100%;border-collapse:collapse;font-size:13px}table.t td,table.t th{padding:6px 5px;border-bottom:1px solid var(--line);text-align:left}table.t th{font-size:11.5px;color:var(--muted)}
+td.n,th.n{text-align:right}
+.modal{position:fixed;inset:0;background:rgba(20,35,26,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 15px 28px}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;z-index:60;font-size:14px;max-width:90vw}
+.gate{max-width:420px;margin:80px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px}
+.empty{color:var(--muted);text-align:center;padding:16px 0;font-size:14px}
+.mixtag{display:inline-block;min-width:26px;text-align:center;border-radius:7px;font-weight:850;background:var(--green);color:#fff;padding:1px 6px}
+.stepper{display:flex;align-items:center;gap:4px}.stepper button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;font-weight:800}
+.noedit .neededit{display:none!important}.notowner .owneronly{display:none!important}
+#zoom{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}#zoom[hidden]{display:none}
+#zoom img{max-width:100%;max-height:82vh;object-fit:contain;border-radius:10px;background:#fff}.zc{color:#fff;font-weight:800;margin-top:12px;text-align:center}.zc span{display:block;font-weight:500;font-size:12px;opacity:.7;margin-top:2px}
+.pic[data-act="zoom"]{cursor:zoom-in}
+body.lock{position:fixed;left:0;right:0;overflow:hidden}
+.modal{overscroll-behavior:contain;touch-action:none}.sheet{overscroll-behavior:contain;touch-action:pan-y;max-height:88vh;max-height:88dvh;-webkit-overflow-scrolling:touch}
+#zoom{overscroll-behavior:contain;touch-action:none}
+.bar{padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}.bar button{border-radius:12px;transition:background .15s}
+.bar button.on{background:var(--mint);color:var(--green)}.bar button:active{background:#d7ebdf}
+.btn:active,.seg button:active,[data-act]:active{filter:brightness(.94)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
+<body><div id="root"><div class="top"><div class="in"><div class="logo" style="background:#1f5f7a">💧</div><div class="brand">DripGo<small>AZURA DELTA · v1</small></div><div class="who" id="who"></div></div></div>
+<div class="wrap" id="view"><div class="empty">载入中…</div></div><nav class="bar" id="bar"></nav></div><div id="modal"></div><div class="toast" id="toast" hidden></div>
+<script>/* StoreGo v16 engine: stock / usage / days-left / purchase plan. Pure functions over S (loaded docs). */
+const FARMS=['AD1','AD2','AD3'];const MIXES=['A','B','C'];
+const D=s=>new Date(s+'T00:00:00Z');const ymd=d=>d.toISOString().slice(0,10);
+const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return ymd(d)};
+const diffDays=(a,b)=>Math.round((D(b)-D(a))/86400000);
+const todayStr=()=>{if(globalThis.__TODAY)return globalThis.__TODAY;const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const mult=u=>({L:1000,l:1000,kg:1000,KG:1000,ml:1,g:1})[u]||null;
+function packBase(p){if(!p)return null;const s=Number(p.packSize),m=mult(p.packUnit);return s>0&&m?s*m:null}
+function unitOf(p){return p&&p.unit==='g'?'g':'ml'}
+function packLabel(p){if(!p||!(Number(p.packSize)>0))return '包装待补';return `${p.packSize} ${p.packUnit||''}`.trim()}
+function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
+/* refill source: product.home='AD2' (big container); other farms keep small containers product.sub={size,unit,word} filled from home */
+function homeOf(S,pid){const p=S.products.find(x=>x.id===pid);return p&&p.home&&FARMS.includes(p.home)?p.home:null}
+function subBase(p){if(!p||!p.sub)return null;const s=Number(p.sub.size),m=mult(p.sub.unit);return s>0&&m?s*m:null}
+function packAt(p,f){return p&&p.home&&f&&f!==p.home&&subBase(p)?subBase(p):packBase(p)}
+function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'小桶'):packWord(p)}
+
+/* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
+/* spray / skip records per farm-day (latest wins) */
+function recIdx(S){const k=S.ledger.length+':'+(S.ledger.at(-1)?.id||'');if(S._ri&&S._ri.k===k)return S._ri.m;const m={};
+  for(const x of S.ledger)if((x.t==='spray'||x.t==='skip')&&!x.void){const key=x.farm+'|'+x.date;if(!m[key]||(x.at||'')>(m[key].at||''))m[key]=x}S._ri={k,m};return m}
+function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
+function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
+function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
+  const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
+  const ms=mixSetOf(S,f,h.from,day);const base=ms?ms.date:h.from,m0=ms?ms.mix:h.mix0;
+  const n=diffDays(base,day)-skipsBetween(S,f,base,day);const i=(MIXES.indexOf(m0)+((n%3)+3)%3)%3;return {ver:h.ver,mix:MIXES[i],from:h.from,set:!!ms&&ms.date===day,auto:ms&&ms.date===day?ms.auto:null}}
+/* manual Mix change (ledger t:'mixset'): latest per farm-day wins; rotation continues from it */
+function mixSetOf(S,f,from,day){let best=null;for(const x of S.ledger){if(x.t!=='mixset'||x.void||x.farm!==f||x.date<from||x.date>day||!MIXES.includes(x.mix))continue;if(!best||x.date>best.date||(x.date===best.date&&(x.at||'')>(best.at||'')))best=x}return best}
+/* what to actually put in each tank today, given stock before spraying (st) */
+function resolveDay(S,f,day,st,opts={}){const pl=planOn(S,f,day);if(!pl)return null;const r=recipeOf(S,pl.ver);const t=opts.tanks??tanksOf(S,f);const lines=[];
+  for(const it of (r&&r.mixes[pl.mix])||[]){const P0=S.products.find(x=>x.id===it.pid);const tracked=P0&&P0.track!=='No'&&packBase(P0);
+    if(it.cond&&!(opts.extras||[]).includes(it.pid)){lines.push({slot:it.pid,use:it.pid,dose:Number(it.dose),cond:it.cond,off:true});continue}
+    const chain=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];
+    let pick=null,nocount=false;if(!tracked)pick=chain[0];else{for(const c of chain){const need=c.dose*t;if((st[c.pid]||0)>=need-1e-6){pick=c;break}}
+      if(!pick)pick=chain.find(c=>(st[c.pid]||0)>0)||null;
+      if(!pick&&st[chain[0].pid]===undefined){pick=chain[0];nocount=true}}
+    lines.push({slot:it.pid,use:pick?pick.pid:it.pid,dose:pick?pick.dose:Number(it.dose),cond:it.cond||'',sub:!!pick&&pick.pid!==it.pid,none:!pick,nocount,left:pick?st[pick.pid]:st[it.pid],partial:!!pick&&!nocount&&tracked&&(st[pick.pid]||0)<pick.dose*t-1e-6,untracked:!tracked})}
+  return {...pl,tanks:t,lines}}
+function recipeOf(S,ver){return S.recipe.find(r=>r.id===ver)||null}
+function itemsOn(S,f,day){const p=planOn(S,f,day);if(!p)return [];const r=recipeOf(S,p.ver);return (r&&r.mixes&&r.mixes[p.mix]||[])}
+function tanksOf(S,f){const c=cfg(S);return Number(c.tanks&&c.tanks[f])||0}
+function cfg(S){return S.cfg.find(x=>x.id==='main')||{tanks:{},safety:7,cycle:14,start:'2026-11-21'}}
+
+/* all pids a farm's current+future recipe could touch (primary + alts) */
+function pidsUsed(S,f,ver){const r=recipeOf(S,ver);const set=new Set();if(!r)return set;
+  for(const m of MIXES)for(const it of (r.mixes[m]||[])){set.add(it.pid);for(const a of it.alts||[])set.add(a.pid)}return set}
+
+/* one farm-day of spraying: mutates st (pid->base qty|undefined). returns shortages [{pid,amt(base of primary),slot}] */
+function sprayDay(S,f,day,st){const rec=recOn(S,f,day);
+  if(rec&&rec.t==='skip')return {short:[],used:{},skip:true};
+  if(rec&&rec.t==='spray'){const used={};for(const it of rec.items||[]){const q=Number(it.qty);if(!(q>0))continue;if(st[it.pid]!=null||q){st[it.pid]=(st[it.pid]||0)-q;used[it.pid]=(used[it.pid]||0)+q}}return {short:[],used,rec:true}}
+  const items=itemsOn(S,f,day);const t=tanksOf(S,f);const short=[];const used={};
+  for(const it of items){if(it.cond)continue;const P0=S.products.find(x=>x.id===it.pid);if(!P0||P0.track==='No'||!packBase(P0))continue;const dose=Number(it.dose)||0;if(!dose||!t)continue;let need=dose*t;
+    const chain=[{pid:it.pid,dose},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||dose}))];
+    for(const c of chain){if(need<=1e-9)break;const have=st[c.pid];if(!(have>0))continue;const want=need*c.dose/dose;const take=Math.min(have,want);st[c.pid]=have-take;used[c.pid]=(used[c.pid]||0)+take;need-=take*dose/c.dose}
+    if(need>1e-6)short.push({pid:it.pid,amt:need,slot:it.pid})}
+  return {short,used}}
+
+
+/* ---- drip additives (DripGo): cfg doc 'drip' = {start, items:{pid:{AD1,AD2,AD3}}, week:{0..6:[[slot1 pids],[slot2 pids]]}, slots:[..]}; ledger 'dripskip' {farm,date,pid} = not dripped */
+function dripCfg(S){return S.cfg.find(x=>x.id==='drip')||null}
+function dripOn(S,f,day){const c=dripCfg(S);if(!c||day<(c.start||'9999'))return [];const wd=new Date(day+'T00:00:00Z').getUTCDay();const slots=(c.week&&c.week[wd])||[];const out=[];
+  slots.forEach((L,si)=>{for(const pid of L||[]){const q=Number(c.items?.[pid]?.[f]);if(q>0)out.push({slot:si,pid,qty:q})}});return out}
+function dripSkipped(S,f,day,pid){return S.ledger.some(x=>x.t==='dripskip'&&!x.void&&x.farm===f&&x.date===day&&x.pid===pid)}
+function dripDay(S,f,day,st){const used={},short=[];for(const it of dripOn(S,f,day)){if(dripSkipped(S,f,day,it.pid))continue;const p=S.products.find(x=>x.id===it.pid);if(!p||p.track==='No'||!packBase(p))continue;
+    const have=st[it.pid];if(!(have>0)){short.push({pid:it.pid,amt:it.qty,slot:it.pid});continue}const take=Math.min(have,it.qty);st[it.pid]=have-take;used[it.pid]=take;if(it.qty-take>1e-6)short.push({pid:it.pid,amt:it.qty-take,slot:it.pid})}
+  return {used,short}}
+/* spray + drip for one farm-day */
+function dayUse(S,f,day,st){const a=sprayDay(S,f,day,st);const b=dripDay(S,f,day,st);const used={...(a.used||{})};for(const k in b.used)used[k]=(used[k]||0)+b.used[k];return {...a,used,short:[...(a.short||[]),...b.short]}}
+/* ledger entries (from cfg.start) sorted */
+function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=>x.date>=st).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1)}
+
+/* stock of every farm at END of `upto` day. Order per day: spraying first, then that day's records (counts = end-of-day). */
+function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
+  const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
+  for(let d=start;d<=upto;d=addDays(d,1)){
+    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
+    /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
+    if(d>start)doSpray();
+    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
+      if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
+      else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
+      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
+    if(d===start)doSpray()}
+  return {st,counted}}
+
+/* pool (received, not yet distributed) per pid */
+function pool(S){const p={};for(const x of ledger(S)){if(x.t==='recv')p[x.pid]=(p[x.pid]||0)+Number(x.qty||0);if(x.t==='dist')p[x.pid]=(p[x.pid]||0)-Number(x.qty||0)}
+  for(const k in p)if(Math.abs(p[k])<1e-6)delete p[k];return p}
+
+/* forward projection from today: per farm, per pid, days until runs out; per slot, first short day */
+function project(S,days=60){const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});const out={};
+  for(const f of FARMS){const s={...st[f]};const runOut={};const slotShort={};
+    for(let i=0;i<=days;i++){const d=addDays(t,i);if(i===0&&recOn(S,f,d))continue;const before={...s};const r=dayUse(S,f,d,s);
+      for(const k in r.used)if(!(s[k]>1e-9)&&before[k]>1e-9&&runOut[k]==null)runOut[k]=i;
+      for(const sh of r.short)if(slotShort[sh.pid]==null)slotShort[sh.pid]=i}
+    out[f]={stock:st[f],runOut,slotShort}}
+  return out}
+
+function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;return S.suppliers.find(s=>s.id===id)||null}
+function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);return Number.isFinite(n)&&n>0?n:3}
+
+/* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
+function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
+  const P=pool(S);const res={};const end={};
+  for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=dayUse(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
+  /* moves: cover a farm's short from another farm's leftover (same pid or an alt of the slot) */
+  const moves=[];const slotAlts={};for(const r of S.recipe)for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[])slotAlts[it.pid]=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)}))];
+  for(const f of FARMS)for(const pid in res[f]){let need=res[f][pid];const chain=slotAlts[pid]||[{pid,dose:1}];const pd=chain[0].dose||1;
+    for(const g of FARMS){if(g===f||need<=1e-6)continue;for(const c of chain){const left=end[g][c.pid];const gUses=res[g][c.pid]>0;if(!(left>1e-6)||gUses)continue;
+      const p=S.products.find(x=>x.id===c.pid);const pb=packAt(p,f);const want=need*(c.dose||pd)/pd;let give=Math.min(left,want);const loose=p&&p.unit==='g';if(pb&&!loose){give=Math.floor(give/pb+1e-9)*pb;if(give<=0&&left>=pb)give=pb}else if(pb){give=Math.round(give/50)*50}if(give<=0)continue;give=Math.min(give,left);
+      end[g][c.pid]-=give;need-=give*pd/(c.dose||pd);moves.push({pid:c.pid,from:g,to:f,qty:give,forPid:pid})}}
+    res[f][pid]=Math.max(0,need)}
+  /* pool counts against shortage first */
+  const buys=[];const pids=new Set();for(const f of FARMS)for(const k in res[f])if(res[f][k]>1e-6)pids.add(k);
+  for(const pid of pids){const p=S.products.find(x=>x.id===pid);const pb=packBase(p);let tot=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0);const fromPool=Math.min(tot,Math.max(0,P[pid]||0));tot-=fromPool;
+    const packs=pb?Math.ceil(tot/pb-1e-9):null;const alloc={};
+    if(packs){const base=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0)||1;const q={};let sum=0;for(const f of FARMS){q[f]=packs*(res[f][pid]||0)/base;alloc[f]=Math.floor(q[f]);sum+=alloc[f]}
+      FARMS.slice().sort((a,b)=>(q[b]-alloc[b])-(q[a]-alloc[a])).slice(0,packs-sum).forEach(f=>alloc[f]++)}
+    const hm=homeOf(S,pid);if(hm&&packs){for(const f of FARMS)alloc[f]=0;alloc[hm]=packs}
+    buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
+  buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
+  return {H,moves,buys,short:res}}
+if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+</script><script>/* DripGo v1 UI. Needs engine.js. Shares data with StoreGo v16 / SprayGo v13 (store_doc sg16_*). */
+(()=>{'use strict';
+const APP_VERSION=1;
+const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
+const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan'];
+const S={};COLS.forEach(c=>S[c]=[]);S.old_sprays=[];
+let sb=null,ME={name:'',role:'',edit:false,owner:false},tab='today',sub={},dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};
+const $=s=>document.querySelector(s);
+const h=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number.isFinite(Number(n))?Number(Number(n).toFixed(2)).toLocaleString('en-MY',{maximumFractionDigits:2}):'—';
+const nowIso=()=>new Date().toISOString();const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const P=id=>S.products.find(x=>x.id===id);const dd=s=>s?s.slice(8,10)+'/'+s.slice(5,7):'—';
+const day=()=>addDays(todayStr(),dayOff);
+function toast(t){const n=$('#toast');n.textContent=t;n.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>n.hidden=true,t.startsWith('⚠')?6000:2600)}
+async function load(){if(MOCK){for(const c of COLS)S[c]=(MOCK[PRE+c]||[]).map(x=>({...x}));S.old_sprays=(MOCK.sprays||[]);return}
+  const {data,error}=await sb.from(T).select('col,id,doc').in('col',COLS.map(c=>PRE+c));if(error)throw error;COLS.forEach(c=>S[c]=[]);
+  for(const r of data)S[r.col.slice(PRE.length)].push({...r.doc,id:r.id});
+  try{const o=await sb.from('spray_doc').select('id,doc').eq('col','sprays');S.old_sprays=(o.data||[]).map(r=>({...r.doc,id:r.id}))}catch(x){}}
+async function put(c,doc){doc=JSON.parse(JSON.stringify(doc));const id=doc.id;
+  if(!MOCK){const col=PRE+c;let {error}=await sb.from(T).insert({col,id,doc});
+    if(error&&error.code==='23505')({error}=await sb.from(T).update({doc,updated_at:nowIso()}).eq('col',col).eq('id',id).select('id').single());
+    if(error){toast('⚠ 没存到：'+(error.message||error.code));throw error}}
+  const L=S[c];const i=L.findIndex(x=>x.id===id);if(i>=0)L[i]=doc;else L.push(doc);delete S._ri;return doc}
+const unit=p=>p&&p.unit==='g'?'g':'ml';
+const pic=p=>`<div class="pic"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.replaceWith(document.createTextNode('🧴'))"></div>`;
+function sheet(html){if(!$('#modal').innerHTML){sheet.y=scrollY;document.body.style.top=`-${sheet.y}px`;document.body.classList.add('lock')}$('#modal').innerHTML=`<div class="modal" data-act="close-bg"><div class="sheet">${html}</div></div>`}
+
+function closeSheet(){if(!$('#modal').innerHTML)return;$('#modal').innerHTML='';document.body.classList.remove('lock');document.body.style.top='';scrollTo(0,sheet.y||0)}
+
+const loadImg=src=>new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src});
+const myD=s=>String(s).replace(/[0-9]/g,c=>'၀၁၂၃၄၅၆၇၈၉'[c]).replace(/\./g,'.');
+
+const myPack=p=>({'瓶':'ဘူး','包':'ထုပ်','桶':'ပုံး'})[packWord(p)]||'';
+
+const CF="'Noto Sans SC','Noto Sans CJK SC','Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans',sans-serif";
+
+function wrapTxt(g,t,maxW){const out=[];let cur='';const toks=t.match(/[က-႟]+|\s+|./gu)||[];for(const tk of toks){if(g.measureText(cur+tk).width>maxW&&cur.trim()){out.push(cur.trimEnd());cur=tk.trimStart()}else cur+=tk}if(cur.trim())out.push(cur);return out}
+function relDay(d){const t=todayStr();return d===t?'今天':d===addDays(t,1)?'明天':d===addDays(t,-1)?'昨天':''}
+const leftTxt=(p,v)=>{if(v==null)return '没点';if(p&&p.sub)return '剩 '+fmt(v/1000)+' L';if(packBase(p)>=5000&&!p.packWord)return '剩 '+(unit(p)==='g'?fmt(v/1000)+' kg':fmt(v/1000)+' L');const pb=packBase(p);return '剩 '+(pb?fmt(v/pb)+' '+packWord(p):fmt(v)+' '+unit(p))};
+const qtyTxt=(p,q)=>unit(p)==='g'?(q>=1000?fmt(q/1000)+' kg':fmt(q)+' g'):(q>=1000?fmt(q/1000)+' L':fmt(q)+' ml');
+const WD=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+const WD_MY=['တနင်္ဂနွေ','တနင်္လာ','အင်္ဂါ','ဗုဒ္ဓဟူး','ကြာသပတေး','သောကြာ','စနေ'];
+const SLOT_MY=['၁၁ နာရီ','၁၂ နာရီ'];
+const DC='#1f5f7a';
+let farmSel=(()=>{try{return localStorage.getItem('dg_farm')||'AD1'}catch(e){return 'AD1'}})();
+function dcfg(){return S.cfg.find(x=>x.id==='drip')||{items:{},week:{},slots:['11 点那轮','12 点那轮'],rules:[]}}
+function before(d){return stockAt(S,d,{last:'none'}).st}
+function skipRec(f,d,pid){return S.ledger.filter(x=>x.t==='dripskip'&&!x.void&&x.farm===f&&x.date===d&&x.pid===pid).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1)[0]||null}
+function rowsFor(f,d){const st=before(d)[f]||{};return dripOn(S,f,d).map(it=>{const p=P(it.pid);const v=st[it.pid];const pb=packBase(p);let cls='ok';if(pb){if(v==null)cls='ask';else if(!(v>=it.qty-1e-6))cls=v>0?'part':'no'}return {...it,p,v,cls,skip:skipRec(f,d,it.pid)}})}
+document.head.insertAdjacentHTML('beforeend',`<style>.fc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;margin:8px 0}.fh{color:#fff;border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:8px;background:${DC}}.fh .big{font-size:28px;font-weight:900;line-height:1}.fh .t1{font-size:14px;font-weight:850}.fh .t2{font-size:11px;opacity:.95}.fh .farm{background:#fff;color:${DC};font-size:14px;font-weight:900;border-radius:7px;padding:2px 7px}.slt{font-size:12px;font-weight:850;color:${DC};margin:8px 2px 2px}.cr{display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef0f2;padding:4px 2px}.cr img{width:30px;height:38px;object-fit:contain;background:#fff;flex:none}.cr .mid{flex:1;min-width:0}.cr .nm{font-size:13.5px;font-weight:800;line-height:1.2}.cr .st{font-size:11px;color:#4b5563}.cr .ds{font-size:14px;font-weight:900;white-space:nowrap;color:${DC}}.chip{flex:none;width:54px;text-align:center;border-radius:6px;padding:4px 0;font-weight:900;font-size:11px}.chip.ok{background:#dcfce7;color:#166534}.chip.no{background:#fee2e2;color:#b91c1c}.chip.part{background:#fee2e2;color:#b91c1c}.chip.ask{background:#fef3c7;color:#92400e}.chip.skip{background:#e5e7eb;color:#4b5563}.cr.no,.cr.part{background:#fef2f2}.cr.skip{opacity:.5}.cr.skip .nm{text-decoration:line-through}.acts{margin-top:8px;gap:6px}.acts .btn{padding:7px 12px;font-size:13px;min-height:0}.rules{font-size:11.5px;color:#4b5563;margin-top:6px;line-height:1.5}#root{padding-bottom:110px}.wk td,.wk th{font-size:12.5px}.tag{display:inline-block;border-radius:6px;padding:2px 7px;font-weight:800;font-size:12px;color:#fff;margin:1px}</style>`);
+const TAGC={seaweed:'#2f7d4f',amino:'#7b4ea3','hydrogen-peroxide-50':'#2457a6',h2gro:'#167a86',trichoderma:'#6b8e23'};
+const short=p=>({'hydrogen-peroxide-50':'Bromocide',trichoderma:'CP Trichoderma',h2gro:'H2Gro ED'})[p?.id]||p?.name||'';
+
+/* ---------------- TODAY ---------------- */
+function vToday(){const d=day();const c=dcfg();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天']].map(([k,l])=>`<button class="${dayOff===k?'on':''}" data-day="${k}">${l} ${dd(addDays(todayStr(),k))}</button>`).join('');
+  if(!FARMS.includes(farmSel))farmSel=FARMS[0];
+  const ftab=FARMS.map(f=>{const R=rowsFor(f,d);const bad=R.some(r=>!r.skip&&(r.cls==='no'||r.cls==='part'));return `<button class="${farmSel===f?'on':''}" data-farm="${f}">${f}${bad?'<span style="color:var(--red)"> ⚠</span>':''}</button>`}).join('');
+  const f=farmSel;const R=rowsFor(f,d);const wd=new Date(d+'T00:00:00Z').getUTCDay();const rd=relDay(d);
+  let body='';if(!R.length)body='<p class="tiny" style="padding:10px 4px">这天没有排滴灌加料。</p>';
+  else (c.slots||[]).forEach((sl,si)=>{const L=R.filter(r=>r.slot===si);if(!L.length)return;body+=`<div class="slt">${h(sl)}</div>`+L.map(r=>{const cls=r.skip?'skip':r.cls;const chip=r.skip?'没放':cls==='ok'?'✓ 有':cls==='ask'?'? 要确认':cls==='part'?'✗ 不够':'✗ 没有';
+    return `<div class="cr ${cls}"><img src="storego_img/${h(r.pid)}.jpg" alt="" onerror="this.style.visibility='hidden'"><div class="mid"><div class="nm">${h(short(r.p))}</div><div class="st">${r.skip?`没放${r.skip.reason?' · '+h(r.skip.reason):''} · ${h(r.skip.by||'')}`:(packBase(r.p)?leftTxt(r.p,r.v):'')}</div></div><div class="ds">${qtyTxt(r.p,r.qty)}</div><div class="chip ${cls}">${chip}</div>${r.skip?`<button class="btn sm neededit" data-act="unskip" data-id="${h(r.pid)}">撤回</button>`:`<button class="btn sm neededit" data-act="skip" data-id="${h(r.pid)}">没放</button>`}</div>`}).join('')});
+  const warn=R.filter(r=>!r.skip&&(r.cls==='no'||r.cls==='part')).map(r=>short(r.p));
+  return `<div class="eyebrow">DRIP · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}滴什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>
+  <div class="fc"><div class="fh"><div class="big">滴</div><div class="grow"><div class="t1">滴灌加料 · ${WD[wd]}</div><div class="t2">${dd(d)}${rd?' '+rd:''} · 默认照排放了，没放才按</div></div><div class="farm">${f}</div></div>
+  ${warn.length?`<div class="tiny" style="color:var(--red);font-weight:750;margin-top:6px">⚠ ${h(warn.join('、'))} 不够，到 StoreGo 调货或买</div>`:''}
+  ${body}<div class="row wrapf acts">${R.length?`<button class="btn s" data-act="card">出滴灌卡</button>`:''}</div>
+  <div class="rules">${(c.rules||[]).map(x=>'· '+h(x)).join('<br>')}</div></div>`}
+
+/* ---------------- SCHEDULE ---------------- */
+function vWeek(){const c=dcfg();const pids=Object.keys(c.items||{});
+  const wk=[1,2,3,4,5,6,0].map(w=>`<tr><td><b>${WD[w]}</b></td>${(c.slots||[]).map((_,si)=>`<td>${((c.week?.[w]||[])[si]||[]).map(pid=>`<span class="tag" style="background:${TAGC[pid]||DC}">${h(short(P(pid)))}</span>`).join('')||'<span class="tiny">—</span>'}</td>`).join('')}<td class="owneronly"><button class="btn sm" data-act="wk-edit" data-v="${w}">改</button></td></tr>`).join('');
+  const am=pids.map(pid=>{const p=P(pid);return `<tr><td><b>${h(short(p))}</b>${p?.target?`<div class="tiny">${h(p.target)}</div>`:''}</td>${FARMS.map(f=>`<td class="n">${qtyTxt(p,c.items[pid][f]||0)}</td>`).join('')}<td class="owneronly"><button class="btn sm" data-act="am-edit" data-id="${h(pid)}">改</button></td></tr>`}).join('');
+  const st=before(todayStr());
+  const use=pids.map(pid=>{const p=P(pid);let wkq=0;for(let w=0;w<7;w++)for(const L of (c.week?.[w]||[]))if((L||[]).includes(pid))for(const f of FARMS)wkq+=Number(c.items[pid][f])||0;const tot=FARMS.reduce((a,f)=>a+(st[f][pid]>0?st[f][pid]:0),0);
+    return `<tr><td><b>${h(short(p))}</b></td><td class="n">${qtyTxt(p,wkq)}</td><td class="n">${packBase(p)?qtyTxt(p,tot):'—'}</td><td class="n">${wkq>0&&packBase(p)?fmt(Math.floor(tot/wkq*7))+' 天':'—'}</td></tr>`}).join('');
+  return `<div class="eyebrow">SCHEDULE</div><h1>滴灌排表</h1><p class="tiny">${h(c.src||'')}</p>
+  <div class="card"><h2>每星期放哪一天</h2><table class="t wk" style="margin-top:6px"><tr><th>星期</th>${(c.slots||[]).map(x=>`<th>${h(x)}</th>`).join('')}<th class="owneronly"></th></tr>${wk}</table></div>
+  <div class="card"><h2>每次放多少</h2><table class="t" style="margin-top:6px"><tr><th></th>${FARMS.map(f=>`<th class="n">${f}</th>`).join('')}<th class="owneronly"></th></tr>${am}</table></div>
+  <div class="card"><h2>用得多快</h2><p class="tiny">三园加起来，照这张排表。现在库存是今天放之前。</p><table class="t" style="margin-top:6px"><tr><th>药</th><th class="n">一星期用</th><th class="n">现在三园共有</th><th class="n">够几天</th></tr>${use}</table></div>
+  <div class="card"><h2>规矩</h2><div class="rules" style="font-size:13px">${(c.rules||[]).map(x=>'· '+h(x)).join('<br>')}</div></div>
+  <p class="tiny">排表、分量只有 Owner 能改。滴灌用掉的会从 StoreGo 同一份库存扣，采购单一起算。</p>`}
+function sheetWk(w){const c=dcfg();const pids=Object.keys(c.items||{});
+  sheet(`<h2>${WD[w]} 放什么</h2>${(c.slots||[]).map((sl,si)=>`<label class="l">${h(sl)}</label><div class="list">${pids.map(pid=>`<label style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" data-wk="${si}" value="${h(pid)}" ${((c.week?.[w]||[])[si]||[]).includes(pid)?'checked':''}> ${h(short(P(pid)))}</label>`).join('')}</div>`).join('')}
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="wk-save" data-v="${w}">存</button><button class="btn" data-act="close">取消</button></div>`)}
+function sheetAm(pid){const c=dcfg();const p=P(pid);
+  sheet(`<h2>${h(short(p))} 每次放多少</h2><p class="tiny">单位：${unit(p)}</p>${FARMS.map(f=>`<label class="l">${f}</label><input class="num" inputmode="decimal" id="am-${f}" value="${c.items[pid][f]??''}">`).join('')}
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="am-save" data-id="${h(pid)}">存</button><button class="btn" data-act="close">取消</button></div>`)}
+
+/* ---------------- HISTORY ---------------- */
+function vHist(){const t=todayStr();const c=dcfg();let out='';
+  for(let i=0;i<14;i++){const d=addDays(t,-i);if(d<(c.start||t))break;const L=FARMS.map(f=>{const R=dripOn(S,f,d);if(!R.length)return '';return `<div class="tiny"><b>${f}</b> ${R.map(r=>{const sk=skipRec(f,d,r.pid);return `${h(short(P(r.pid)))} ${qtyTxt(P(r.pid),r.qty)}${sk?' <span style="color:var(--red)">没放</span>':''}`}).join(' · ')}</div>`}).join('');
+    out+=`<div><div class="grow"><b>${dd(d)} · ${WD[new Date(d+'T00:00:00Z').getUTCDay()]}</b>${L||'<div class="tiny">没有排</div>'}</div></div>`}
+  return `<div class="eyebrow">HISTORY</div><h1>滴灌纪录</h1><p class="tiny">照排表算放了；按了「没放」的才不扣库存。从 ${dd(c.start)} 开始。</p><div class="card"><div class="list">${out}</div></div>`}
+
+/* ---------------- CARD (canvas) ---------------- */
+async function drawCard(f,d){const c=dcfg();const R=rowsFor(f,d).filter(r=>!r.skip);const W=1028,K=1680/1028;const cv=document.createElement('canvas');const g=cv.getContext('2d');const F=(w,s)=>`${w} ${s}px ${CF}`;
+  const groups=(c.slots||[]).map((sl,si)=>({sl,si,L:R.filter(r=>r.slot===si)})).filter(x=>x.L.length);
+  const ROWH=150,GH=56;const H=24+163+20+groups.reduce((a,x)=>a+GH+x.L.length*ROWH,0)+20+34*4+30;
+  cv.width=Math.round(W*K);cv.height=Math.round(H*K);g.scale(K,K);g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  const rr=(x,y,w,hh,rad)=>{g.beginPath();g.roundRect?g.roundRect(x,y,w,hh,rad):g.rect(x,y,w,hh)};
+  g.fillStyle=DC;rr(24,24,980,163,22);g.fill();g.fillStyle='#fff';g.font=F(900,120);g.fillText('滴',50,150);
+  const wd=new Date(d+'T00:00:00Z').getUTCDay();g.font=F(900,46);g.fillText('Drip · 滴灌加料',190,98);g.font=F(400,22);const rd=relDay(d);g.fillText(`ရေလွှတ်ဆေး · ${WD_MY[wd]} ${WD[wd]} · ${dd(d)}${rd?' '+rd:''}`,190,147);
+  g.font=F(900,54);const fw=g.measureText(f).width+44;g.fillStyle='#fff';rr(974-fw,61,fw,90,16);g.fill();g.fillStyle=DC;g.textAlign='center';g.fillText(f,974-fw/2,126);g.textAlign='left';
+  let y=207;for(const gp of groups){g.fillStyle='#e8f1f5';g.fillRect(24,y,980,GH-8);g.fillStyle=DC;g.font=F(900,28);g.fillText(`${gp.sl} · ${SLOT_MY[gp.si]||''}`,40,y+34);y+=GH;
+    for(const r of gp.L){const no=r.cls==='no'||r.cls==='part';if(no){g.fillStyle='#fef2f2';g.fillRect(24,y,980,ROWH)}g.fillStyle='#e5e7eb';g.fillRect(24,y+ROWH-2,980,2);
+      const im=await loadImg(`storego_img/${r.pid}.jpg`);if(im){const s=Math.min(92/im.width,112/im.height);g.drawImage(im,32+(92-im.width*s)/2,y+(ROWH-112)/2+(112-im.height*s)/2,im.width*s,im.height*s)}
+      g.fillStyle=no?'#b91c1c':'#1f2937';g.font=F(800,36);g.fillText(short(r.p),144,y+64);g.fillStyle='#4b5563';g.font=F(400,20);if(no)g.fillText('没有就先不放，等老板通知 ｜ မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ',144,y+102);
+      g.fillStyle=DC;g.font=F(900,48);g.textAlign='right';g.fillText(qtyTxt(r.p,r.qty),826,y+ROWH/2+16);
+      const [bg,fg,zh,my]=no?['#fee2e2','#b91c1c','✗ 没有','မရှိ']:r.cls==='ask'?['#fef3c7','#92400e','? 要确认','စစ်ပါ']:['#dcfce7','#166534','✓ 有','ရှိ'];
+      g.fillStyle=bg;rr(846,y+(ROWH-88)/2,150,88,12);g.fill();g.fillStyle=fg;g.textAlign='center';g.font=F(900,24);g.fillText(zh,921,y+ROWH/2-6);g.font=F(700,17);g.fillText(my,921,y+ROWH/2+26);g.textAlign='left';y+=ROWH}}
+  g.fillStyle='#374151';g.font=F(400,21);y+=24;for(const t of['မိုးရွာရွာ နေပူပူ ရက်အတိုင်း ထည့်ပါ · 不管下雨出太阳，照日子放','CP နဲ့ Bromocide တစ်နေ့တည်း မထည့်ရ · CP 不跟 Bromocide 同一天放','Bromocide အရေပြားလောင်တယ်၊ လက်အိတ်ဝတ်ပါ · Bromocide 会烧皮肤，要戴手套','ထည့်ပြီးရင် ဓာတ်ပုံ group ထဲ ပို့ပါ · 放完拍照发群']){g.fillText(t,24,y);y+=34}
+  return cv}
+let lastCard=null;
+async function showCard(){const d=day();const cv=await drawCard(farmSel,d);const url=cv.toDataURL('image/png');lastCard={url,name:`滴灌卡_${farmSel}_${d}.png`};
+  sheet(`<img src="${url}" style="width:100%;border-radius:10px"><div class="row" style="margin-top:10px"><button class="btn p grow" data-act="share">存图 / 发 WhatsApp</button><button class="btn" data-act="close">关闭</button></div>`)}
+async function shareCard(){if(!lastCard)return;const b=await (await fetch(lastCard.url)).blob();const file=new File([b],lastCard.name,{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return}catch(x){if(x.name==='AbortError')return}}
+  const a=document.createElement('a');a.href=lastCard.url;a.download=lastCard.name;a.click()}
+
+/* ---------------- skip ---------------- */
+function sheetSkip(pid){const p=P(pid);sheetSkip.st={pid,reason:''};
+  sheet(`<h2>${farmSel} · ${h(short(p))} 没放</h2><p class="tiny">${dd(day())}。按了这一样就不扣库存。</p><div class="row wrapf" style="gap:6px">${['没货','工头忘了','水管坏','其他'].map(x=>`<button class="btn sm" data-reason="${x}">${x}</button>`).join('')}</div>
+  <div class="row" style="margin-top:12px"><button class="btn p grow neededit" data-act="skip-save">记下没放</button><button class="btn" data-act="close">取消</button></div>`)}
+
+const NAV=[['today','💧','滴灌'],['week','📅','排表'],['hist','🗂️','纪录']];
+function render(){const v=tab==='week'?vWeek:tab==='hist'?vHist:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
+  $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
+async function audit(what,c,id){try{S.audit=S.audit||[];await put('audit',{id:uid('A'),at:nowIso(),by:ME.name,col:c,ref:id,what})}catch(x){}}
+document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
+  const dy=e.target.closest('[data-day]');if(dy){dayOff=Number(dy.dataset.day);render();return}
+  const fm=e.target.closest('[data-farm]');if(fm){farmSel=fm.dataset.farm;try{localStorage.setItem('dg_farm',farmSel)}catch(_){}render();return}
+  const rs=e.target.closest('[data-reason]');if(rs){sheetSkip.st.reason=rs.dataset.reason;rs.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===rs));return}
+  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,id=a.dataset.id;if(act==='close-bg'&&e.target!==a)return;
+  try{switch(act){case 'close':case 'close-bg':closeSheet();break;
+    case 'card':a.disabled=true;await showCard();a.disabled=false;break;case 'share':await shareCard();break;
+    case 'skip':sheetSkip(id);break;
+    case 'skip-save':{if(!ME.edit){toast('⚠ 你没有修改权限');return}a.disabled=true;const s=sheetSkip.st;await put('ledger',{id:uid('L'),t:'dripskip',date:day(),at:nowIso(),by:ME.name,farm:farmSel,pid:s.pid,reason:s.reason});closeSheet();toast(`${farmSel} ${short(P(s.pid))} 记了没放，不扣库存`);render();break}
+    case 'unskip':{const r=skipRec(farmSel,day(),id);if(r){await put('ledger',{...r,void:true,voidAt:nowIso(),voidBy:ME.name});toast('已撤回，照放了算')}render();break}
+    case 'wk-edit':sheetWk(Number(a.dataset.v));break;
+    case 'wk-save':{if(!ME.owner){toast('⚠ 只有 Owner 能改排表');return}const w=Number(a.dataset.v);const c=JSON.parse(JSON.stringify(dcfg()));c.week=c.week||{};c.week[w]=(c.slots||[]).map((_,si)=>[...document.querySelectorAll(`[data-wk="${si}"]:checked`)].map(x=>x.value));
+      await put('cfg',c);await audit(`滴灌排表 ${WD[w]} 改成：${c.week[w].map((L,si)=>(c.slots[si]+' '+(L.map(p=>short(P(p))).join('、')||'—'))).join(' / ')}`,'cfg','drip');closeSheet();toast('已存');render();break}
+    case 'am-edit':sheetAm(id);break;
+    case 'am-save':{if(!ME.owner){toast('⚠ 只有 Owner 能改分量');return}const c=JSON.parse(JSON.stringify(dcfg()));for(const f of FARMS){const v=Number($('#am-'+f).value);if(!(v>=0)){toast('⚠ 数字不对');return}c.items[id][f]=v}
+      await put('cfg',c);await audit(`滴灌 ${short(P(id))} 每次：${FARMS.map(f=>f+' '+c.items[id][f]).join(' / ')}`,'cfg','drip');closeSheet();toast('已存');render();break}
+  }}catch(x){console.error(x);toast('⚠ '+(x.message||x))}});
+function gate(msg){$('#root').innerHTML=`<div class="gate"><h2>DripGo</h2><p class="muted">${h(msg)}</p><a class="btn" href="../index.html">← 回主页登入</a></div>`}
+async function boot(){
+  if(MOCK)ME={name:MOCK.me||'Teo',role:MOCK.role||'OWNER',edit:true,owner:(MOCK.role||'OWNER')==='OWNER'};
+  else{if(!window.supabase){gate('连不上资料库，请检查网络后重新整理。');return}sb=window.supabase.createClient(SB_URL,SB_KEY);
+    let ss=null;try{ss=(await sb.auth.getSession()).data.session}catch(x){gate('连不上资料库：'+x.message);return}if(!ss){gate('还没登入。请回主页登入后再打开 DripGo。');return}
+    const {data:me}=await sb.from('hub_app_user').select('display_name,role,status').eq('id',ss.user.id).maybeSingle();if(!me||me.status!=='ACTIVE'){gate('你的账号没有 DripGo 权限。');return}
+    const [{data:see1},{data:see2},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'SPRAY',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'edit'})]);
+    if(!see1&&!see2){gate('你的账号没有 DripGo 权限。');return}ME={name:me.display_name,role:me.role,edit:!!edit,owner:me.role==='OWNER'}}
+  document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);
+  $('#who').innerHTML=`${h(ME.name)}<br><a href="SprayGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">🧴 SprayGo</a><a href="StoreGo.html" style="color:var(--green);font-weight:750;text-decoration:none">📦 StoreGo</a>`;
+  try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}render();
+  setInterval(async()=>{if(!document.hidden&&!$('#modal').innerHTML){try{await load();render()}catch(x){}}},90000)}
+boot();
+})();
+</script></body></html>
