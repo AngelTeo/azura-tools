@@ -389,8 +389,18 @@ async function setAct(act,a){const id=a.dataset.id;
       fp.hist=fp.hist.filter(x=>x.from<s.from);fp.hist.push({from:s.from,ver:s.ver,mix0:s.mix0});await put('farmplan',fp);await audit(`${s.f} ${dd(s.from)} 起换 ${S.recipe.find(r=>r.id===s.ver)?.name}（那天 Mix ${s.mix0}）`,'farmplan',s.f);closeSheet();toast('已换');render();return true}}
   return false}
 
-const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['store','📦','StoreGo']];
-function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
+
+/* ---------------- 病虫字典：遇到什么虫 / 病 → 用什么药 ---------------- */
+function drugsFor(name){const kw=PROBS.flatMap(x=>x[1]).find(x=>x[0]===name)[1];return S.products.filter(p=>p.active!==false&&kw.some(k=>String(p.target||'').includes(k))&&!String(p.target||'').includes('不放进喷药桶'))}
+function usedIn(pid){const out=[];for(const r of S.recipe)for(const m of MIXES)for(const it of r.mixes[m]||[]){if(it.pid===pid)out.push(`${r.name} Mix ${m}${it.cond?'（'+it.cond+'）':''}`);else if((it.alts||[]).some(a=>a.pid===pid))out.push(`${r.name} Mix ${m} 顶替`)}return out}
+function vDict(){const sel=sub.prob||null;const stock=before(todayStr());
+  const chips=PROBS.map(([g,L])=>`<div class="card"><h2>${g==='虫'?'🐛 虫':'🍂 病'}</h2><div class="row wrapf" style="gap:6px;margin-top:6px">${L.map(([n])=>{const c=drugsFor(n).length;return `<button class="btn sm ${sel===n?'p':''}" data-sub="prob" data-v="${h(n)}">${h(n)} <span class="tiny">${c}</span></button>`}).join('')}</div></div>`).join('');
+  let body='';if(sel){const L=drugsFor(sel).map(p=>{const pb=packBase(p);const tot=FARMS.reduce((a,f)=>a+(stock[f][p.id]>0?stock[f][p.id]:0),0);return {p,pb,tot,g:grpOf(p),dose:doseHint(p.id),used:usedIn(p.id)}}).sort((a,b)=>((b.tot>0)-(a.tot>0))||a.g.localeCompare(b.g)||a.p.name.localeCompare(b.p.name));
+    body=`<div class="card"><h2>${h(sel)} · 可以用的药</h2><p class="tiny">照每样药的「杀什么」说明找出来。同一组的药不要连着用，换组效果比较好。</p><div class="list" style="margin-top:6px">${L.map(x=>`<div style="${x.tot>0||!x.pb?'':'opacity:.6'}">${pic(x.p)}<div class="grow"><b>${h(x.p.name)}</b>${x.g?` <span class="badge grey">${h(x.g)} 组</span>`:''}<div class="tiny" style="color:#a63638">${h(x.p.target)}</div>${x.p.ai?`<div class="tiny">成分：${h(x.p.ai)}</div>`:''}<div class="tiny">${x.pb?FARMS.map(f=>`${f} ${stock[f][x.p.id]==null?'没点':leftTxt(x.p,{left:stock[f][x.p.id]}).replace('剩 ','')}`).join(' · '):'不追踪库存'}${x.dose?` · 每桶 ${fmt(x.dose)} ${unit(x.p)}`:''}</div><div class="tiny">${x.used.length?'配方里：'+h(x.used.join('、')):'配方里没有'}</div></div></div>`).join('')||'<div class="empty">还没有药写「杀这个」</div>'}</div></div>`}
+  return `<div class="eyebrow">DICTIONARY</div><h1>病虫字典</h1><p class="tiny">点遇到的虫或病，看可以用什么药、三园各剩多少。要今天加药，到「喷药」那园按「＋ 加病害药」。</p>${body}${chips}`}
+
+const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['dict','📖','病虫字典']];
+function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:tab==='dict'?vDict:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
   $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
 document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev()});
 document.addEventListener('change',e=>{if(e.target.dataset.extra)donePrev()});
@@ -422,7 +432,7 @@ async function boot(){
     const {data:me}=await sb.from('hub_app_user').select('display_name,role,status').eq('id',ss.user.id).maybeSingle();if(!me||me.status!=='ACTIVE'){gate('你的账号没有 SprayGo 权限。');return}
     const [{data:see1},{data:see2},{data:edit}]=await Promise.all([sb.rpc('hub_can',{p_system:'SPRAY',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'see'}),sb.rpc('hub_can',{p_system:'STORE',p_action:'edit'})]);
     if(!see1&&!see2){gate('你的账号没有 SprayGo 权限。');return}ME={name:me.display_name,role:me.role,edit:!!edit,owner:me.role==='OWNER'}}
-  document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);$('#who').innerHTML=`${h(ME.name)}`;
+  document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);$('#who').innerHTML=`${h(ME.name)}<br><a href="StoreGo.html" style="color:var(--green);font-weight:750;text-decoration:none">📦 StoreGo</a>`;
   try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}if(location.hash==='#set')tab='set';render();
   setInterval(async()=>{if(!document.hidden&&!$('#modal').innerHTML){try{await load();render()}catch(x){}}},90000)}
 boot();
