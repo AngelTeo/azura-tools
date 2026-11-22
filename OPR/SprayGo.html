@@ -298,7 +298,7 @@ function sheetExtra(f){const d=day();const pl=planOn(S,f,d);const r=S.recipe.fin
 const PROBS=[['虫',[['蓟马',['蓟马']],['白粉虱',['白粉虱']],['蚜虫',['蚜虫']],['叶蝉',['叶蝉']],['红蜘蛛',['红蜘蛛']],['钻心虫 / 钻果虫',['钻心虫','钻果虫']],['毛虫',['毛虫']],['椿象',['椿象']],['甲虫',['甲虫']]]],
   ['病',[['叶斑',['叶斑']],['炭疽',['炭疽']],['疫病',['疫病']],['霜霉',['霜霉']],['白锈',['白锈']],['果身巧克力色水渍斑',['水渍斑']]]]];
 const grpOf=p=>{const m=String(p?.target||'').match(/([0-9]+[A-Z]?(?:\+[0-9]+[A-Z]?)?)\s*组/);return m?m[1]:''};
-function doseHint(pid){for(const r of S.recipe)for(const m of MIXES)for(const it of r.mixes[m]||[]){if(it.pid===pid)return Number(it.dose);for(const a of it.alts||[])if(a.pid===pid)return Number(a.dose)}return null}
+function doseHint(pid){const p0=P(pid);if(p0&&Number(p0.dose)>0)return Number(p0.dose);for(const r of S.recipe)for(const m of MIXES)for(const it of r.mixes[m]||[]){if(it.pid===pid)return Number(it.dose);for(const a of it.alts||[])if(a.pid===pid)return Number(a.dose)}return null}
 function probBlock(f,d,has){const st=sheetExtra.st;const chips=PROBS.map(([g,L])=>`<div class="tiny" style="margin-top:6px;font-weight:800">${g}</div><div class="row wrapf" style="gap:6px;margin-top:4px">${L.map(([n])=>`<button class="btn sm ${st.prob===n?'p':''}" data-act="ex-prob" data-v="${h(n)}">${h(n)}</button>`).join('')}</div>`).join('');
   let list='';if(st.prob){const kw=PROBS.flatMap(x=>x[1]).find(x=>x[0]===st.prob)[1];const stock=before(d)[f]||{};const r=plan(f,d);
     const todayG=new Map();for(const l of r.lines.filter(l=>!l.off&&!l.none)){const g=grpOf(P(l.use));if(g)for(const x of g.split('+'))todayG.set(x,P(l.use)?.name)}
