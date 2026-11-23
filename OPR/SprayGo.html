@@ -1,5 +1,5 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SprayGo v14</title><style>:root{--bg:#f4f7f3;--paper:#fff;--ink:#1a3328;--muted:#687b70;--line:#dfe8df;--green:#176448;--mint:#e6f4ec;--red:#a63638;--rose:#fff0ec;--amber:#926212;--cream:#fff5df;--blue:#365f91;--sky:#e8f1ff}
+<title>SprayGo v15</title><style>:root{--bg:#f4f7f3;--paper:#fff;--ink:#1a3328;--muted:#687b70;--line:#dfe8df;--green:#176448;--mint:#e6f4ec;--red:#a63638;--rose:#fff0ec;--amber:#926212;--cream:#fff5df;--blue:#365f91;--sky:#e8f1ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI','Noto Sans SC',sans-serif;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
 .top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
@@ -53,7 +53,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 .btn:active,.seg button:active,[data-act]:active{filter:brightness(.94)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
-<body><div id="root"><div class="top"><div class="in"><div class="logo">🧴</div><div class="brand">SprayGo<small>AZURA DELTA · v14</small></div><div class="who" id="who"></div></div></div>
+<body><div id="root"><div class="top"><div class="in"><div class="logo">🧴</div><div class="brand">SprayGo<small>AZURA DELTA · v15</small></div><div class="who" id="who"></div></div></div>
 <div class="wrap" id="view"><div class="empty">载入中…</div></div><nav class="bar" id="bar"></nav></div><div id="modal"></div><div class="toast" id="toast" hidden></div>
 <script>/* StoreGo v16 engine: stock / usage / days-left / purchase plan. Pure functions over S (loaded docs). */
 const FARMS=['AD1','AD2','AD3'];const MIXES=['A','B','C'];
@@ -185,11 +185,11 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,covered,short:res}}
 if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
-</script><script>/* SprayGo v14 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
+</script><script>/* SprayGo v15 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=13;
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
-const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan'];
+const T='store_doc',PRE='sg16_',COLS=['products','suppliers','ledger','cfg','recipe','farmplan','finding'];
 const S={};COLS.forEach(c=>S[c]=[]);S.old_sprays=[];
 let sb=null,ME={name:'',role:'',edit:false,owner:false},tab='today',sub={},dayOff=0,MOCK=window.__SG_MOCK||null;const cardSeen={};document.head.insertAdjacentHTML('beforeend',`<style>.fc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;margin:8px 0}.fh{color:#fff;border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:8px}.fh .big{font-size:28px;font-weight:900;line-height:1}.fh .t1{font-size:14px;font-weight:850}.fh .t2{font-size:11px;opacity:.95}.fh .farm{background:#fff;font-size:14px;font-weight:900;border-radius:7px;padding:2px 7px}.fbar{display:flex;align-items:center;gap:6px;margin:6px 0 2px}.fbar .badge{font-size:11px}.fbar .btn{padding:4px 10px;font-size:12px;min-height:0}.fbar .cap{margin-left:auto;color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:5px}.cr{display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef0f2;padding:4px 2px}.cr img{width:30px;height:38px;object-fit:contain;background:#fff;flex:none}.cr .mid{flex:1;min-width:0}.cr .nm{font-size:13.5px;font-weight:800;line-height:1.2}.cr .sub{font-size:11px;color:#b45309;font-weight:700}.cr .st{font-size:11px;color:#4b5563}.cr .ds{font-size:14px;font-weight:900;white-space:nowrap;text-align:right}.cr .chip{flex:none;width:50px;text-align:center;border-radius:6px;padding:4px 0;font-weight:900;font-size:11px}.chip.ok{background:#dcfce7;color:#166534}.chip.no{background:#fee2e2;color:#b91c1c}.chip.ask{background:#fef3c7;color:#92400e}.cr.no{background:#fef2f2}.cr.no .nm{color:#b91c1c}.cr.ask{background:#fffbeb}.fc .acts{margin-top:8px;gap:6px}.fc .acts .btn{padding:7px 12px;font-size:13px;min-height:0}#root{padding-bottom:110px}</style>`);let farmSel=(()=>{try{return localStorage.getItem('sg_farm')||'AD1'}catch(e){return 'AD1'}})();
 const $=s=>document.querySelector(s);
@@ -239,7 +239,7 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
       <div class="fbar">${st}${rec?'':`<button class="btn neededit" data-act="mix" data-f="${f}">换 Mix</button>`}<span class="cap" style="background:${C}">每桶</span></div>
       ${rows}${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
       <div class="row wrapf acts">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
-  return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
+  return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><button class="btn full" style="margin:4px 0 10px;background:#fff7ed;border:2px solid #ea580c;color:#9a3412;font-weight:900;font-size:16px" data-go="dict" data-dxhome="1">📷 发现问题 · 看图判断</button><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
   <p class="tiny">工人回报后按「喷好了」，库存照实际扣。没喷按「没喷」，可选隔天早上补喷（顺序不变）或顺延一天。两样都没按，系统照设定桶数估。</p>`}
 
 /* ---------------- CARD (canvas) ---------------- */
@@ -422,12 +422,12 @@ function vDict(){const sel=sub.prob||null;const stock=before(todayStr());
     body=`<div class="card"><h2>${h(sel)} · 可以用的药</h2><p class="tiny">照每样药的「杀什么」说明找出来。同一组的药不要连着用，换组效果比较好。</p><div class="list" style="margin-top:6px">${L.map(x=>`<div style="${x.tot>0||!x.pb?'':'opacity:.6'}">${pic(x.p)}<div class="grow"><b>${h(x.p.name)}</b>${x.g?` <span class="badge grey">${h(x.g)} 组</span>`:''}<div class="tiny" style="color:#a63638">${h(x.p.target)}</div>${x.p.ai?`<div class="tiny">成分：${h(x.p.ai)}</div>`:''}<div class="tiny">${x.pb?FARMS.map(f=>`${f} ${stock[f][x.p.id]==null?'没点':leftTxt(x.p,{left:stock[f][x.p.id]}).replace('剩 ','')}`).join(' · '):'不追踪库存'}${x.dose?` · 每桶 ${fmt(x.dose)} ${unit(x.p)}`:''}</div><div class="tiny">${x.used.length?'配方里：'+h(x.used.join('、')):'配方里没有'}</div></div></div>`).join('')||'<div class="empty">还没有药写「杀这个」</div>'}</div></div>`}
   return `<div class="eyebrow">DICTIONARY</div><h1>病虫字典</h1><p class="tiny">点遇到的虫或病，看可以用什么药、三园各剩多少。要今天加药，到「喷药」那园按「＋ 加病害药」。</p>${body}${chips}`}
 
-const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['dict','📖','病虫字典']];
-function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:tab==='dict'?vDict:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
+const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['dict','📷','发现问题']];
+function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:tab==='dict'?vDx:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
   $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
 document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev();const xd=e.target.dataset&&e.target.dataset.exdose;if(xd!=null&&sheetExtra.st){const v=Number(e.target.value);if(v>0)sheetExtra.st.ex[Number(xd)].dose=v}});
 document.addEventListener('change',e=>{if(e.target.dataset.extra)donePrev()});
-document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){if(g.dataset.go==='store'){location.href='StoreGo.html';return}tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
+document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){if(g.dataset.go==='store'){location.href='StoreGo.html';return}tab=g.dataset.go;if(g.dataset.dxhome)sub.dx='home';closeSheet();render();scrollTo(0,0);return}
   const dy=e.target.closest('[data-day]');if(dy){dayOff=Number(dy.dataset.day);render();return}
   const sbn=e.target.closest('[data-sub]');if(sbn){sub[sbn.dataset.sub]=sbn.dataset.v;render();return}
   const vs=e.target.closest('[data-vs]');if(vs){sheetVer.st[vs.dataset.vs]=vs.dataset.v;sheetVer.st.from=$('#vs-from').value;drawVer();return}
@@ -459,6 +459,182 @@ async function boot(){
   document.body.classList.toggle('noedit',!ME.edit);document.body.classList.toggle('notowner',!ME.owner);$('#who').innerHTML=`${h(ME.name)}<br><a href="DripGo.html" style="color:var(--green);font-weight:750;text-decoration:none;margin-right:10px">💧 DripGo</a><a href="StoreGo.html" style="color:var(--green);font-weight:750;text-decoration:none">📦 StoreGo</a>`;
   try{await load()}catch(x){gate('读不到资料：'+(x.message||x));return}if(location.hash==='#set')tab='set';render();
   setInterval(async()=>{if(!document.hidden&&!$('#modal').innerHTML){try{await load();render()}catch(x){}}},90000)}
+/* ================= 发现问题 / 看图判断（SprayGo v15） =================
+   图鉴卡 23 张（DX）· 真实巡园案例 21 张（CASES，照片存资料库 sg16_dximg，要登入才看得到）
+   发现记录存 sg16_finding；现场照片存私人储存区 storego-receipts/finding/… */
+const DX_IMG='spraygo_dx/';
+const DX_TYPES=[['虫害','🐛'],['病害','🍂'],['容易混淆','🔍']];
+/* img: [文件, 说明]；src: 示意图 = AI 生成教学图（不是实拍）；status: 待核实 = 不确定适用于长茄 */
+const DX=[
+ {id:'thrips',t:'蓟马',ty:'虫害',pri:'红',kw:['蓟马'],look:'花里、嫩叶',key:'细长小虫（1–2 mm，黄褐或黑褐），跑得快；花瓣、嫩叶有银白擦伤和小黑点（虫粪）',judge:'花里有细长小虫在爬，或花瓣、嫩叶有银白擦伤',confirm:'把花轻拍在白纸上，看有没有细长小虫跑动',a:'抽查 10 朵花 + 10 片嫩叶，记下几朵有虫；严重的花拍近照',b:'同一区再看 10 株；看幼果表面有没有擦伤疤',img:[['thrips_1','虫体'],['thrips_2','受害症状']],cases:[2,7,15,16]},
+ {id:'whitefly',t:'白粉虱',ty:'虫害',pri:'橙',kw:['白粉虱','粉虱'],look:'叶背（中上层叶）',key:'白色小飞虫，一碰就成群飞起；叶背有白色卵、扁平若虫；叶面可能黏（蜜露）、发黑（煤污）',judge:'叶背有白色小虫，轻碰会飞',confirm:'翻叶背后轻拍叶片，看有没有白色小虫飞起；用放大看是卵、若虫还是脱皮',a:'抽查 10 片叶背，录一段轻碰叶片的影片',b:'看叶面有没有黏液、黑霉；同区 10 株统计有虫叶数',img:[['whitefly_1','虫体'],['whitefly_2','受害症状（叶背若虫）']],cases:[4,8,9]},
+ {id:'aphid',t:'蚜虫',ty:'虫害',pri:'橙',kw:['蚜虫'],look:'嫩梢、花梗、叶背',key:'一群一群的小软虫（绿、黄或黑），常有蚂蚁来回；嫩叶卷、黏',judge:'嫩梢或叶背有成群小软虫',confirm:'看是不是成群、不会飞、有蜜露或蚂蚁',a:'标记有虫的株，拍群聚近照；严重卷叶的嫩梢可以剪掉',b:'同区 10 株看嫩梢；记下有没有蚂蚁',img:[['aphid_1','虫体'],['aphid_2','受害症状']],cases:[]},
+ {id:'leafhopper',t:'叶蝉',ty:'虫害',pri:'橙',kw:['叶蝉','跳甲'],look:'叶背、叶面',key:'楔形小虫，惊动时斜着跳走；叶面细小黄白点，严重时叶边发黄卷',judge:'叶面很多细小失绿点，有会跳的小绿虫',confirm:'轻碰叶片，看有没有小虫斜跳；分清失绿点跟螨害（螨不会跳）',a:'抽查新叶和中层叶，记下发生范围',b:'同区 10 株；看叶边有没有发黄卷曲（叶蝉烧）',img:[['leafhopper_1','虫体'],['leafhopper_2','受害症状']],cases:[]},
+ {id:'mite',t:'红蜘蛛',ty:'虫害',pri:'红',kw:['红蜘蛛','螨'],look:'叶背（中下层叶开始）',key:'叶背极小红点（不到 0.5 mm），会慢慢爬；叶面细密失绿点、发灰，严重时有细丝',judge:'叶面密密麻麻失绿小点、颜色发灰',confirm:'用手机放大拍叶背，看有没有会爬的小红点、细丝',a:'马上抽查叶背，记下有螨叶的比例',b:'同区 10 株；看是不是从干、热、靠路边的地方开始',img:[['mite_1','螨体（放大）'],['mite_2','受害症状']],cases:[1]},
+ {id:'broadmite',t:'茶黄螨',ty:'虫害',pri:'红',kw:['茶黄螨','螨'],look:'生长点、最嫩的叶',key:'肉眼几乎看不到；嫩叶变小、变厚、皱缩、叶背发亮像涂油（古铜色），嫩梢停长',judge:'最嫩的叶皱缩变形、叶背发亮',confirm:'嫩叶背面用放大镜看；跟病毒、药害比：螨害只在最嫩的地方，药害是整批同时出现',a:'标记受害株，剪下几片嫩叶装袋带回看',b:'同区 10 株看生长点；回查最近有没有用过杀螨剂',img:[['broadmite_1','受害症状（嫩叶皱缩）']],cases:[13,21]},
+ {id:'borer',t:'钻心虫 / 钻果虫（茄螟）',ty:'虫害',pri:'红',kw:['钻心虫','钻果虫','螟'],look:'嫩梢、花蕾、幼果、果蒂',key:'嫩梢突然萎垂；果面、果蒂有小孔和黑褐色虫粪；里面是粉白色幼虫',judge:'嫩梢萎、果有孔、旁边有虫粪',confirm:'剖开萎垂的嫩梢或有孔的果，看里面有没有幼虫',a:'剪掉萎垂嫩梢和有孔的果，装袋带出园，不要丢地上',b:'同区 10 株数一数萎梢、虫果；看茎上有没有出虫孔',img:[['borer_1','花、幼虫、钻孔果']],cases:[5]},
+ {id:'caterpillar',t:'毛虫（夜蛾、尺蠖等）',ty:'虫害',pri:'红',kw:['毛虫','夜蛾','青虫'],look:'叶片、花、嫩果',key:'看得到幼虫；叶片缺刻、破洞，旁边有黑绿色颗粒虫粪',judge:'叶有大缺口或破洞，附近有虫粪或幼虫',confirm:'翻叶背、花和嫩果找虫体；顺着虫粪找',a:'看到的幼虫先用手捉掉；拍虫体',b:'同区 10 株数虫；看花、幼果有没有被咬',img:[['caterpillar_1','虫体与咬洞'],['caterpillar_2','花被咬']],cases:[3,6,14]},
+ {id:'stinkbug',t:'椿象',ty:'虫害',pri:'橙',kw:['椿象'],look:'果、嫩梢',key:'盾形、比较大（1 cm 左右）的虫，有臭味；果面有针刺小点、局部变色变形',judge:'果面有小刺点或局部凹陷，附近有盾形虫',confirm:'清晨看果和嫩梢，找虫体；看果面刺点',a:'清晨人工抓成虫，拍果面和虫体',b:'同区 10 株看果面异常的比例',img:[['stinkbug_1','虫体与受害果']],cases:[]},
+ {id:'beetle',t:'甲虫（吃叶）',ty:'虫害',pri:'橙',kw:['甲虫','跳甲'],look:'叶片',key:'叶片被啃成洞或缺口，看得到硬壳甲虫',judge:'叶有洞，附近有硬壳小虫',confirm:'先分清是害虫还是吃虫的益虫（益虫瓢虫背上通常亮、没有毛）',a:'先数成虫数量，拍背部',b:'看叶背有没有幼虫、卵块',img:[['beetle_1','虫体与食痕']],cases:[]},
+ {id:'epilachna',t:'二十八星瓢虫（吃叶瓢虫）',ty:'虫害',pri:'橙',kw:['瓢虫','甲虫'],look:'叶背、叶面',key:'橙褐色、背上很多黑点、身上有细毛（不亮）；幼虫黄色带刺；叶面被刮成一条条网状透明食痕',judge:'叶面有梯子状、网状的透明刮痕，有毛毛的橙色瓢虫',confirm:'看背部：有细毛、不发亮、黑点多 → 是害虫；发亮、点少 → 多数是益虫，不要打',a:'人工捉成虫和幼虫，摘掉有卵块的叶',b:'同区 10 株看叶背幼虫、卵块',img:[],cases:[1]},
+ {id:'leafspot',t:'叶斑病',ty:'病害',pri:'橙',kw:['叶斑'],look:'老叶、中层叶',key:'褐色或灰褐色斑点，圆形或不规则，边缘可能有黄圈',judge:'老叶先出现一个个褐色斑',confirm:'看斑的边缘、中间颜色，有没有轮纹；几天后有没有变多变大',a:'剪下严重的叶，拍正面和背面',b:'2 天后同一株再看有没有扩散',img:[['leafspot_1','病斑']],cases:[]},
+ {id:'anthracnose',t:'炭疽病',ty:'病害',pri:'红',kw:['炭疽'],look:'果实，其次叶',key:'果面圆形褐斑、凹下去，常有一圈圈轮纹，潮湿时有橙粉色或黑色小点',judge:'果面有下陷的圆斑、一圈圈',confirm:'看斑有没有凹下去、有没有小黑点或粉状物',a:'病果马上摘掉，装袋带出园',b:'同区 10 株看果；记下下雨后有没有变多',img:[['anthracnose_1','果面病斑']],cases:[]},
+ {id:'blight',t:'疫病',ty:'病害',pri:'红',kw:['疫病'],look:'果、茎基、叶',key:'水浸状深褐色斑，扩得很快；潮湿时表面有白色霉；果烂得快',judge:'像被水泡过的深色烂斑，一两天就变大',confirm:'看是不是湿烂、边缘不清楚、有白霉；靠地面、积水的地方先发',a:'马上拔除或隔离严重病株、病果，带出园；先排水',b:'当天下午和隔天再看扩散',img:[['blight_1','叶、果病斑']],cases:[]},
+ {id:'wilt',t:'青枯病（细菌性萎蔫）',ty:'病害',pri:'红',kw:['青枯','萎蔫'],look:'整株、茎基',key:'白天整株突然萎下去、叶子还是绿的，晚上可能恢复；几天后整株死',judge:'绿绿的整株突然垂下来',confirm:'剪一段茎基放进清水杯，几分钟内有白色乳汁状细丝流出 → 很可能是青枯；没有 → 再查根部、茎基有没有虫或伤',a:'病株连根拔起带出园，不要留在畦上；工具用完要洗',b:'看同一行、同一水管的附近几株；记下发生位置',img:[],cases:[17]},
+ {id:'downy',t:'霜霉（待核实）',ty:'病害',pri:'橙',status:'待核实',kw:['霜霉'],look:'叶背',key:'叶面黄斑，对应的叶背有灰白霉层',judge:'叶面黄斑、背面有霉',confirm:'清晨看叶背有没有霉层。长茄少见，要请人确认后才算',a:'拍叶正反面一对照片',b:'先送给懂的人看，不要当作已确诊',img:[['downy_1','示例（未核实适用于长茄）']],cases:[]},
+ {id:'rust',t:'白锈 / 锈状斑（待核实）',ty:'病害',pri:'橙',status:'待核实',kw:['白锈','锈'],look:'叶背',key:'叶背白色或浅色小疱点，隆起',judge:'叶背一粒粒白色凸点',confirm:'先分清是不是粉虱卵、介壳虫或水珠。长茄少见，要请人确认',a:'拍叶背微距，标记叶位',b:'先送给懂的人看，不要当作已确诊',img:[['rust_1','示例（未核实适用于长茄）']],cases:[]},
+ {id:'fruitspot',t:'果身巧克力色水渍斑',ty:'病害',pri:'红',kw:['水渍斑','炭疽','疫病'],look:'果面',key:'巧克力色、水浸状斑，可能扩大很快。这是症状，不是病名',judge:'果面有深褐色湿湿的斑',confirm:'先排除反光、水珠；看有没有凹陷、轮纹（像炭疽）或湿烂白霉（像疫病）',a:'这个果单独标记、拍多角度，重的摘掉带出园',b:'同区 10 株看果；对照炭疽、疫病两张卡',img:[['chocolate_1','果面水渍斑'],['chocolate_2','病斑 vs 正常']],cases:[19]},
+ {id:'virus',t:'病毒性花叶',ty:'容易混淆',pri:'红',kw:['病毒'],look:'新叶、整株',key:'叶片黄绿相间、斑驳，常伴随皱缩、变小；多株一起出现',judge:'新叶黄绿斑驳像地图',confirm:'看新长出来的叶是不是持续花叶；查附近有没有白粉虱、蚜虫、蓟马（传病毒的虫）',a:'标记病株、算比例；重的整株拔掉带出园',b:'查传毒的虫；不要乱喷杀菌剂（对病毒没用）',img:[['virus_1','花叶'],['virus_2','卷叶畸形']],cases:[20,21]},
+ {id:'curl',t:'卷叶皱缩',ty:'容易混淆',pri:'红',kw:['螨','蓟马','蚜虫'],look:'嫩叶、生长点',key:'叶卷、皱、畸形。可能是：茶黄螨、蓟马、蚜虫、病毒、药害——要分开查',judge:'嫩叶卷曲变形',confirm:'看叶背有没有虫或发亮（螨）；有没有黄绿斑驳（病毒）；是不是喷药后整批出现（药害）',a:'补拍叶背、生长点和整株各一张',b:'对照茶黄螨、病毒、药害三张卡；同区 10 株',img:[['curl_1','叶片卷曲'],['curl_2','卷叶畸形']],cases:[13,18,21]},
+ {id:'sprayburn',t:'药害 / 生理异常',ty:'容易混淆',pri:'橙',kw:[],look:'整批植株',key:'喷药后一两天突然出现；整批、同一方向、分布整齐；叶灼伤、卷、发黄',judge:'很多株同时、同样地出问题',confirm:'回查最近几次喷了什么、混了什么、浓度、几点喷（太阳大时喷容易伤）',a:'先停止追加喷药；对照 SprayGo 喷药纪录',b:'观察新长的叶是不是正常',img:[['sprayburn_1','叶卷发黄'],['sprayburn_2','整批一致']],cases:[]},
+ {id:'mechanical',t:'机械伤 / 茎部受损',ty:'容易混淆',pri:'橙',kw:[],look:'茎、节位',key:'裂伤、擦伤、折断、表皮剥离，伤口形状整齐，附近没有虫粪',judge:'茎上有伤，但找不到虫',confirm:'看伤口里面有没有虫孔、虫粪；整株萎的要对照青枯病',a:'绑好植株，伤口保持干；严重的枝剪掉',b:'整株萎的做清水杯测试（见青枯病卡）',img:[['mechanical_1','茎纵裂'],['mechanical_2','节位擦伤']],cases:[17]},
+ {id:'normal',t:'正常结构（茸毛、落花、反光）',ty:'容易混淆',pri:'绿',kw:[],look:'茎节、叶柄、叶面、果面',key:'长茄茎叶本来就有密密的白茸毛；掉下的花、花瓣卡在叶上；果面反光——都不是病虫',judge:'看起来白白的、怪怪的，但不会动、不扩散',confirm:'用手指轻擦：茸毛擦不掉、不成团；粉介壳虫是一团棉絮、会动；反光换个角度就不见',a:'不清楚就补拍极近的照片，先不要喷',b:'过两天同一个位置再拍一次，看有没有变',img:[['fruitshine_1','果面反光（正常）']],cases:[10,11,12,19]},
+];
+/* 21 张真实巡园照片：全部只是「初判」，不是确诊 */
+const CASES=[
+ {n:1,t:'叶面一粒红色小虫',g:'红色小虫，待分辨',why:'叶面上一粒很小的红点，像小虫',mix:'红蜘蛛（多在叶背、很小、成群）；二十八星瓢虫（较大、橙褐、多黑点）；其他小螨',need:'拍极近的照片看有没有脚、背部花纹；翻叶背看有没有一群小红点和细丝',to:'mite'},
+ {n:2,t:'花萼茸毛里细长褐色小虫',g:'疑似蓟马',why:'细长、褐色、很小，躲在茸毛里',mix:'茸毛里的碎屑；小毛虫',need:'把花轻拍在白纸上，看小虫会不会跑',to:'thrips'},
+ {n:3,t:'花瓣上一条褐色细长物',g:'疑似小毛虫，或掉落的花器碎片',why:'花瓣上有一条弯曲、褐色、约 1 cm 的东西',mix:'尺蠖小幼虫；干掉的花丝、花萼碎片',need:'用东西轻碰，看会不会动；检查花蕾、幼果有没有被咬',to:'caterpillar'},
+ {n:4,t:'叶背一个白色小虫',g:'疑似白粉虱成虫',why:'叶背单独一个白色、楔形的小东西',mix:'脱下的虫皮；叶蝉若虫',need:'轻碰叶片看会不会飞；数同一片叶背有几只',to:'whitefly'},
+ {n:5,t:'嫩梢、花蕾旁浅色幼虫，旁边有虫粪',g:'疑似钻心虫 / 钻果虫幼虫',why:'浅色幼虫卷在嫩梢花蕾处，下方叶片有褐色颗粒（像虫粪）',mix:'一般毛虫',need:'看嫩梢有没有萎、有没有钻孔；剖开看里面',to:'borer'},
+ {n:6,t:'茎上绿色幼虫',g:'毛虫（夜蛾或尺蠖类）',why:'看得到完整的绿色幼虫',mix:'—',need:'看附近叶、花、幼果有没有咬痕；茎上的小黑孔要看是不是出虫孔',to:'caterpillar'},
+ {n:7,t:'花里一个小黑褐点',g:'疑似蓟马',why:'花瓣上很小的深色点，靠近花蕊',mix:'花粉、污点',need:'抽查 10 朵花，轻拍到白纸上',to:'thrips'},
+ {n:8,t:'叶背很小的白点',g:'疑似白粉虱卵或若虫，待分辨',why:'叶背叶脉旁一个很小的白点',mix:'灰尘、茸毛反光',need:'放大拍；看同一片叶有没有更多',to:'whitefly'},
+ {n:9,t:'叶背两处白点',g:'疑似白粉虱卵或若虫',why:'叶背两处小白点，靠近叶脉',mix:'灰尘、介壳虫',need:'拍更近；轻碰看有没有成虫飞起',to:'whitefly'},
+ {n:10,t:'叶面上一朵掉下的花',g:'落花，多数正常',why:'是凋谢的花连花梗，掉在叶面上',mix:'落花很多时，要查蓟马伤花、高温、缺水',need:'看同一株是不是大量落花；看花里有没有蓟马',to:'normal'},
+ {n:11,t:'茎节发白',g:'多数是天然茸毛，待分辨',why:'叶柄跟茎交接处颜色偏白',mix:'粉介壳虫（棉絮团、会慢慢动）；白粉病',need:'拍极近；用手指轻擦看会不会成团掉',to:'normal'},
+ {n:12,t:'枝节白色绒毛',g:'多数是天然茸毛',why:'节位白色绒毛，均匀分布',mix:'粉介壳虫',need:'极近特写；看有没有蚂蚁在附近（介壳虫常有蚂蚁）',to:'normal'},
+ {n:13,t:'生长点嫩叶皱缩、边缘紫褐',g:'疑似螨害（茶黄螨）或蓟马伤生长点',why:'最嫩的叶皱缩、卷、边缘变色，集中在生长点',mix:'病毒、药害',need:'嫩叶背面放大看；回查最近喷药',to:'broadmite'},
+ {n:14,t:'叶面毛虫和虫粪',g:'毛虫危害',why:'看得到幼虫，旁边有黑色颗粒虫粪',mix:'—',need:'看附近叶、花、果；数同区有几条',to:'caterpillar'},
+ {n:15,t:'花蕊旁黑褐小点',g:'疑似蓟马',why:'花蕊附近一些深色小点',mix:'花粉、虫粪、污点',need:'轻拍花到白纸上',to:'thrips'},
+ {n:16,t:'花瓣上暗色细长痕',g:'疑似蓟马或蓟马伤痕',why:'花瓣上一条深色细长痕',mix:'花瓣本身的纹路',need:'微距拍；统计 10 朵花有几朵',to:'thrips'},
+ {n:17,t:'整棵拔起、枝条发软',g:'疑似青枯病或茎基受损，待查',why:'整株连根在地上，茎枝偏黄软',mix:'机械伤、根部虫害、拔起后自然萎',need:'问工人是不是整株突然萎才拔；剪茎基做清水杯测试',to:'wilt'},
+ {n:18,t:'叶面凹凸皱缩、颜色深浅不一',g:'皱缩，待分辨（病毒 / 螨 / 药害）',why:'整片叶表面凹凸不平、有浅色斑块',mix:'病毒花叶、茶黄螨、药害',need:'看新叶、叶背；同区几株一样',to:'curl'},
+ {n:19,t:'幼果白亮斑',g:'多数是反光，待确认',why:'深紫色幼果表面有白色亮点',mix:'果面病斑（炭疽、水渍斑）、药液残留',need:'换角度重拍；用手摸是不是平滑。另外叶上有一条褐色东西，要看是不是毛虫',to:'normal'},
+ {n:20,t:'多片叶黄绿斑驳',g:'优先怀疑病毒性花叶',why:'好几片叶同时黄绿相间、斑驳',mix:'缺素（镁、锰等）、螨害',need:'看新叶是不是一直花叶；查粉虱、蚜虫、蓟马',to:'virus'},
+ {n:21,t:'嫩叶皱缩加花叶',g:'疑似病毒，或茶黄螨',why:'顶部嫩叶皱、卷、颜色斑驳',mix:'药害',need:'叶背放大看有没有螨；看同区几株',to:'curl'},
+];
+const DXP=id=>DX.find(x=>x.id===id);
+const PRI={红:['red','先处理'],橙:['amber','要复查'],绿:['green','先观察']};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.dxhome{display:grid;grid-template-columns:1fr 1fr;gap:10px}.dxhome button{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:left;font:inherit;cursor:pointer}.dxhome b{display:block;font-size:17px}.dxhome .tiny{margin-top:2px}.dxhome .wide{grid-column:1/-1}
+.dxgrid{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:760px){.dxgrid{grid-template-columns:1fr 1fr}}
+.dxc{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.dxc .ph{display:flex;gap:2px;background:#eef2ee;aspect-ratio:2.4/1}.dxc .ph img{flex:1;min-width:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}.dxc .ph .none{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800;font-size:13px}
+.dxc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1}.dxc h3{margin:0;font-size:18px}.dxc .f{font-size:13.5px;line-height:1.45}.dxc .f b{color:var(--muted);font-weight:800;margin-right:4px}
+.dxdo{margin-top:auto;background:#176448;color:#fff;border-radius:10px;padding:8px 10px;font-size:13.5px;line-height:1.45}.dxdo b{display:block;font-size:12px;opacity:.85;letter-spacing:.5px}
+.tagai{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.62);color:#fff;font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 6px}.tagreal{background:#7c2d12}.phw{position:relative;flex:1;min-width:0}
+.dxz{position:fixed;inset:0;background:#000;z-index:99;display:flex;flex-direction:column}.dxz[hidden]{display:none}.dxz .zi{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;touch-action:pinch-zoom}.dxz img{max-width:none;width:100%;height:auto}.dxz.big img{width:220%}.dxz .zb{display:flex;gap:8px;padding:10px;background:#111;justify-content:space-between;align-items:center;color:#fff;font-size:13px}
+.cs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:760px){.cs{grid-template-columns:repeat(4,1fr)}}.cs .it{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}.cs .it .im{aspect-ratio:9/12;background:#e5e7eb;position:relative}.cs .it img{width:100%;height:100%;object-fit:cover}.cs .it .n{position:absolute;left:6px;top:6px;background:#111;color:#fff;border-radius:6px;font-weight:900;padding:1px 7px;font-size:12px}.cs .it .tx{padding:6px 8px;font-size:12.5px;line-height:1.35}
+.fr{display:flex;gap:10px;align-items:flex-start}.fr .th{width:64px;height:64px;border-radius:8px;object-fit:cover;background:#eee;flex:none}
+</style>`);
+let DXC=null;/* case thumbs cache {n:dataURL} */const DXF={};/* full images cache */
+async function dxThumbs(){if(DXC)return DXC;DXC={};if(MOCK){for(const c of CASES)DXC[c.n]=(MOCK.dximg||{})['t'+c.n]||'';return DXC}
+  const {data,error}=await sb.from(T).select('id,doc').eq('col',PRE+'dximg').like('id','%_t');if(error){DXC=null;throw error}for(const r of data){const n=Number(r.id.replace(/\D/g,''));DXC[n]=r.doc.src}return DXC}
+async function dxFull(n){if(DXF[n])return DXF[n];if(MOCK)return DXF[n]=(MOCK.dximg||{})['f'+n]||'';const id='case_'+String(n).padStart(2,'0');const {data,error}=await sb.from(T).select('doc').eq('col',PRE+'dximg').eq('id',id).maybeSingle();if(error)throw error;return DXF[n]=data?.doc?.src||''}
+function dxImgs(x,cls){if(!x.img.length)return `<div class="none">待补高清实拍</div>`;return x.img.map(([f,cap])=>`<div class="phw"><img src="${DX_IMG}${f}.jpg" alt="${h(x.t)} ${h(cap)}" data-dxzoom="${DX_IMG}${f}.jpg" data-cap="${h(x.t+' · '+cap+' · 示意图')}" loading="lazy"><span class="tagai">示意图</span></div>`).join('')}
+function dxCard(x){const [pc,pl]=PRI[x.pri]||PRI['橙'];return `<article class="dxc"><div class="ph">${dxImgs(x)}</div><div class="bd">
+  <div class="row wrapf" style="gap:6px"><span class="badge ${pc}">${pl}</span><span class="badge grey">${h(x.ty)}</span>${x.status?`<span class="badge amber">${h(x.status)}</span>`:''}${x.cases.length?`<span class="badge blue">实拍案例 ${x.cases.length}</span>`:''}</div>
+  <h3>${h(x.t)}</h3>
+  <div class="f"><b>先看哪里</b>${h(x.look)}</div><div class="f"><b>关键特征</b>${h(x.key)}</div><div class="f"><b>第一眼判断</b>${h(x.judge)}</div><div class="f"><b>怎么确认</b>${h(x.confirm)}</div>
+  <div class="dxdo"><b>怎么做</b>${h(x.a)}</div>
+  <button class="btn s" data-dx="open" data-id="${x.id}">打开整张卡 · 用药参考 · 记录</button></div></article>`}
+function dxFilter(L){const q=(sub.dxq||'').trim();return q?L.filter(x=>[x.t,x.ty,x.look,x.key,x.judge,x.confirm,x.a].join(' ').includes(q)):L}
+function vDx(){const s=sub.dx||'home';const back=`<button class="btn sm" data-sub="dx" data-v="home">← 发现问题</button>`;
+  const search=`<input class="in" id="dxq" placeholder="搜：花、叶背、卷、虫粪、白点…" value="${h(sub.dxq||'')}" style="width:100%;margin:8px 0">`;
+  if(s==='home'){const nF=(S.finding||[]).filter(x=>!x.void&&x.status!=='已确认').length;
+    return `<div class="eyebrow">SCOUT</div><h1>📷 发现问题</h1><p class="tiny">看工人照片 → 找相似的卡 → 看清楚是什么 → 看怎么做 → 记下来。图鉴是「示意图」，真实巡园图是园里拍的，两样都只是帮你判断，不是确诊。</p>
+    ${search}<div class="dxhome">
+      <button data-sub="dx" data-v="guide"><b>① 日常观察标准</b><span class="tiny">每天拍哪 6 个位置</span></button>
+      <button data-sub="dx" data-v="虫害"><b>② 🐛 虫害</b><span class="tiny">${DX.filter(x=>x.ty==='虫害').length} 张卡</span></button>
+      <button data-sub="dx" data-v="病害"><b>③ 🍂 病害</b><span class="tiny">${DX.filter(x=>x.ty==='病害').length} 张卡</span></button>
+      <button data-sub="dx" data-v="容易混淆"><b>④ 🔍 容易混淆</b><span class="tiny">${DX.filter(x=>x.ty==='容易混淆').length} 张卡</span></button>
+      <button data-sub="dx" data-v="cases" class="wide"><b>⑤ 📸 真实巡园案例</b><span class="tiny">21 张园里实拍 · 每张有初判和要补查的</span></button>
+      <button data-sub="dx" data-v="log" class="wide"><b>📝 发现记录</b><span class="tiny">${nF?nF+' 条待确认':'还没有待确认的'}</span></button>
+    </div>${(sub.dxq||'').trim()?`<h2 style="margin-top:14px">搜「${h(sub.dxq)}」</h2><div class="dxgrid">${dxFilter(DX).map(dxCard).join('')||'<div class="empty">找不到</div>'}</div>`:''}`}
+  if(s==='guide')return `${back}<h1 style="margin-top:8px">日常观察标准</h1><div class="card"><b>每天必拍 6 张</b><div class="tiny" style="margin-top:4px">整株 · 嫩叶正面 · 叶背 · 花 · 幼果／果 · 茎与节位。同一株多拍几张；看不清楚就标「待确认」，不要猜。</div></div>
+    <div class="card"><b>先分 3 大类</b><div class="tiny" style="margin-top:4px">看得到虫或虫粪 → 虫害；斑点、霉、烂 → 病害；整批一样、喷药后出现、茸毛反光 → 容易混淆。</div></div>
+    <div class="card"><b>这些马上报</b><div class="tiny" style="margin-top:4px">茎部受损、整株突然萎、叶片花叶黄化、嫩叶卷曲、果实异常、叶背可疑虫或卵。</div></div>
+    <div class="card" style="padding:6px"><div class="phw"><img src="${DX_IMG}guide.jpg" style="width:100%;border-radius:10px;cursor:zoom-in" data-dxzoom="${DX_IMG}guide.jpg" data-cap="日常观察标准 · 示意图"><span class="tagai">示意图</span></div></div>`;
+  if(['虫害','病害','容易混淆'].includes(s)){const L=dxFilter(DX.filter(x=>x.ty===s));return `${back}<h1 style="margin-top:8px">${s}</h1>${search}<div class="dxgrid">${L.map(dxCard).join('')||'<div class="empty">找不到</div>'}</div>`}
+  if(s==='cases'){if(DXC&&!Object.values(DXC).some(Boolean))return `${back}<h1 style="margin-top:8px">真实巡园案例</h1><div class="card amber"><b>巡园原图还没上传</b><div class="tiny" style="margin-top:4px">照片不放在公开网页，只存进资料库，要登入才看得到。请在电脑选 P 槽这个资料夹里的 21 张图（case_01.jpg … case_21.jpg）上传一次：<br>P:\\Teo\\azura-delta\\Claude outputs\\23112026\\SprayGo_巡园案例原图\\</div><input type="file" id="dximp" accept="image/jpeg,image/*" multiple class="neededit" style="margin-top:8px"><div id="dximpst" class="tiny"></div></div>`;
+    if(!DXC){dxThumbs().then(()=>render(true)).catch(x=>{toast('⚠ 读不到巡园照片：'+(x.message||x));});return `${back}<h1 style="margin-top:8px">真实巡园案例</h1><p class="tiny">读取照片中…</p>`}
+    return `${back}<h1 style="margin-top:8px">真实巡园案例</h1><p class="tiny">园里实拍（绿圈是工人画的）。下面写的是<b>初判</b>，不是确诊。点开看大图、判断依据和要补查的。</p><div class="cs">${CASES.map(c=>`<div class="it" data-dx="case" data-n="${c.n}"><div class="im">${DXC[c.n]?`<img src="${DXC[c.n]}" alt="案例 ${c.n}">`:''}<span class="n">${c.n}</span></div><div class="tx"><b>${h(c.t)}</b><div class="tiny">初判：${h(c.g)}</div></div></div>`).join('')}</div>`}
+  if(s==='log')return `${back}<h1 style="margin-top:8px">发现记录</h1><button class="btn p neededit" data-dx="rec" data-id="">＋ 记一条发现</button>${dxLog()}`;
+  return back}
+function dxLog(){const L=(S.finding||[]).filter(x=>!x.void).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1).slice(0,60);if(!L.length)return '<div class="empty" style="margin-top:10px">还没有记录</div>';
+  return `<div class="list" style="margin-top:10px">${L.map(x=>{const p=DXP(x.issue);return `<div class="fr"><div class="grow"><b>${h(x.farm)} · ${h(x.loc||'')}</b> <span class="badge ${x.status==='已确认'?'green':'amber'}">${h(x.status)}</span>${x.sev?` <span class="badge grey">${h(x.sev)}</span>`:''}
+    <div class="tiny">疑似：${h(p?.t||x.issueText||'未选')}${x.hit?` · ${h(x.hit)}`:''}</div><div class="tiny">拍：${h((x.shotAt||'').replace('T',' ').slice(5,16))} · ${h(x.by)} 记</div>${x.note?`<div class="tiny">${h(x.note)}</div>`:''}
+    <div class="row wrapf" style="gap:6px;margin-top:4px">${(x.photos||[]).length?`<button class="btn sm" data-dx="fphoto" data-id="${h(x.id)}">看照片 ${x.photos.length}</button>`:''}${x.status!=='已确认'?`<button class="btn sm s neededit" data-dx="fconf" data-id="${h(x.id)}">改成已确认</button>`:`<button class="btn sm neededit" data-dx="funconf" data-id="${h(x.id)}">改回待确认</button>`}${p?`<button class="btn sm" data-dx="open" data-id="${p.id}">看卡</button>`:''}<button class="btn sm w neededit" data-dx="fdel" data-id="${h(x.id)}">撤回</button></div></div></div>`}).join('')}</div>`}
+/* 用药参考：只列你仓库里「杀什么」写到这个问题的药；不是处方 */
+function dxDrugs(x){if(!x.kw.length)return '<p class="tiny">这个不是靠喷药解决的问题，先查原因。</p>';const stock=before(todayStr());
+  const L=S.products.filter(p=>p.active!==false&&x.kw.some(k=>String(p.target||'').includes(k))&&!String(p.target||'').includes('不放进喷药桶')).map(p=>{const pb=packBase(p);const tot=FARMS.reduce((a,f)=>a+(stock[f][p.id]>0?stock[f][p.id]:0),0);return {p,pb,tot,g:grpOf(p)}}).sort((a,b)=>((b.tot>0)-(a.tot>0))||a.g.localeCompare(b.g));
+  return `<div class="card amber" style="margin:6px 0"><b>⚠ 只是参考，不是喷药指令</b><div class="tiny" style="margin-top:4px">要喷之前全部确认：① 问题已经确认 ② 马来西亚有登记、标签写可用于茄子 ③ 有效成分和用量照标签 ④ 跟上次换不同组（抗药性） ⑤ 混配可以 ⑥ 采收安全间隔（PHI）来得及 ⑦ <b>AT 批准</b>。批准后到「喷药」那园按「＋ 加病害药」。</div></div>
+  ${L.length?`<div class="list">${L.map(c=>`<div style="${c.tot>0||!c.pb?'':'opacity:.55'}">${pic(c.p)}<div class="grow"><b>${h(c.p.name)}</b>${c.g?` <span class="badge grey">${h(c.g)} 组</span>`:''}<div class="tiny">${c.p.ai?'成分：'+h(c.p.ai)+' · ':''}${h(c.p.target||'')}</div><div class="tiny">${c.pb?FARMS.map(f=>`${f} ${stock[f][c.p.id]==null?'没点':leftTxt(c.p,{left:stock[f][c.p.id]}).replace('剩 ','')}`).join(' · '):'不追踪库存'}</div></div></div>`).join('')}</div>`:'<p class="tiny">仓库里还没有药写「杀这个」。不要照网上或海报的药名直接买来喷，先问清楚再加进 StoreGo。</p>'}`}
+function sheetDx(id){const x=DXP(id);if(!x)return;const [pc,pl]=PRI[x.pri]||PRI['橙'];
+  sheet(`<div class="row wrapf" style="gap:6px"><span class="badge ${pc}">${pl}</span><span class="badge grey">${h(x.ty)}</span>${x.status?`<span class="badge amber">${h(x.status)} · 不能当确诊教材</span>`:''}</div><h2 style="margin:6px 0">${h(x.t)}</h2>
+  <div style="display:flex;gap:4px;border-radius:10px;overflow:hidden;background:#eef2ee;min-height:90px">${dxImgs(x)}</div><p class="tiny">示意图＝AI 生成的教学图，帮你认样子，不是园里实拍。点图可以放大。</p>
+  ${x.cases.length?`<label class="l">园里实拍（初判）</label><div class="row wrapf" style="gap:6px">${x.cases.map(n=>`<button class="btn sm" data-dx="case" data-n="${n}">案例 ${n}</button>`).join('')}</div>`:''}
+  <label class="l">先看哪里</label><div>${h(x.look)}</div><label class="l">关键特征</label><div>${h(x.key)}</div><label class="l">第一眼判断</label><div>${h(x.judge)}</div><label class="l">怎么确认</label><div>${h(x.confirm)}</div>
+  <label class="l" style="font-size:16px;color:var(--green)">怎么做</label>
+  <div class="dxdo" style="margin:4px 0"><b>A · 立即措施</b>${h(x.a)}</div><div class="dxdo" style="margin:4px 0;background:#365f91"><b>B · 进一步确认</b>${h(x.b)}</div>
+  <div style="margin-top:4px"><b style="font-size:13px">C · 用药参考</b>${dxDrugs(x)}</div>
+  <div class="row" style="margin-top:12px"><button class="btn p grow neededit" data-dx="rec" data-id="${x.id}">记录发现（带入这个问题）</button><button class="btn" data-act="close">关</button></div>`)}
+async function sheetCase(n){const c=CASES.find(v=>v.n===n);const x=DXP(c.to);
+  sheet(`<div class="row wrapf" style="gap:6px"><span class="badge" style="background:#7c2d12;color:#fff">真实巡园图 ${n}</span><span class="badge amber">初判，未确诊</span></div><h2 style="margin:6px 0">${h(c.t)}</h2>
+  <div id="cimg" style="background:#111;border-radius:10px;min-height:240px;display:flex;align-items:center;justify-content:center;color:#fff">读取原图…</div><p class="tiny">原图完整保留（绿圈是工人画的）。点图片放大。</p>
+  <label class="l">第一眼判断（初判）</label><div>${h(c.g)}</div><label class="l">判断依据</label><div>${h(c.why)}</div><label class="l">可能混淆的问题</label><div>${h(c.mix)}</div><label class="l">还要补查</label><div>${h(c.need)}</div>
+  <label class="l">对应教学卡</label><button class="btn s" data-dx="open" data-id="${c.to}">${h(x?.t||c.to)} →</button>
+  <div class="row" style="margin-top:12px"><button class="btn p grow neededit" data-dx="rec" data-id="${c.to}">园里也看到这个 → 记录发现</button><button class="btn" data-act="close">关</button></div>`);
+  try{const src=await dxFull(n);const box=$('#cimg');if(box)box.innerHTML=src?`<img src="${src}" style="width:100%;border-radius:10px;cursor:zoom-in" data-dxzoom="${src}" data-cap="真实巡园图 ${n} · ${h(c.t)}">`:'没有原图'}catch(e){const box=$('#cimg');if(box)box.textContent='⚠ 读不到原图：'+(e.message||e)}}
+function dxZoom(src,cap){let z=document.getElementById('dxz');if(!z){z=document.createElement('div');z.id='dxz';z.className='dxz';document.body.appendChild(z)}
+  z.innerHTML=`<div class="zi"><img src="${src}" alt=""></div><div class="zb"><span>${cap||''}</span><span><button class="btn sm" data-dx="zbig">放大 / 缩小</button> <button class="btn sm p" data-dx="zclose">关</button></span></div>`;z.hidden=false;z.classList.remove('big')}
+/* 一次性：把 21 张巡园原图存进资料库（sg16_dximg，原图不压缩；另存一张小图） */
+async function dxImport(files){const st=$('#dximpst');let ok=0,bad=[];const L=[...files].map(f=>({f,n:Number((f.name.match(/(\d+)/)||[])[1])})).filter(x=>x.n>=1&&x.n<=21);if(!L.length){toast('⚠ 档名要有编号，例如 case_01.jpg');return}
+  const rd=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(r.error);r.readAsDataURL(f)});
+  for(const {f,n} of L){try{st.textContent=`上传中 ${ok+1}/${L.length}…`;let full=await rd(f);if(f.size>1500000){const b=await shrinkImg(f);full=await rd(b)}
+      const img=await new Promise((y,no)=>{const i=new Image();i.onload=()=>y(i);i.onerror=()=>no(new Error('打不开'));i.src=full});const k=Math.min(1,480/img.height,360/img.width);const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const th=c.toDataURL('image/jpeg',.72);
+      const id='case_'+String(n).padStart(2,'0');const rows=[{col:PRE+'dximg',id,doc:{src:full,name:f.name,by:ME.name,at:nowIso()}},{col:PRE+'dximg',id:id+'_t',doc:{src:th}}];
+      if(MOCK){MOCK.dximg=MOCK.dximg||{};MOCK.dximg['f'+n]=full;MOCK.dximg['t'+n]=th}else{const {error}=await sb.from(T).upsert(rows,{onConflict:'col,id'});if(error)throw error}ok++}
+    catch(e){bad.push(n+'：'+(e.message||e))}}
+  DXC=null;for(const k in DXF)delete DXF[k];toast(bad.length?`⚠ 存了 ${ok} 张，${bad.length} 张失败`:`已存 ${ok} 张巡园原图`);if(bad.length)alert('没存到：\n'+bad.join('\n'));render()}
+document.addEventListener('change',e=>{if(e.target.id==='dximp'&&e.target.files.length)dxImport(e.target.files)});
+/* ---- 发现记录 ---- */
+function nowLocal(){const d=new Date(Date.now()-new Date().getTimezoneOffset()*60000);return d.toISOString().slice(0,16)}
+function sheetRec(issue){sheetRec.st={farm:farmSel||'AD1',sev:'轻',status:'待确认'};const seg=(k,L)=>`<div class="seg" data-rseg="${k}">${L.map(v=>`<button class="${sheetRec.st[k]===v?'on':''}" data-rv="${h(v)}">${h(v)}</button>`).join('')}</div>`;
+  sheet(`<h2>记录发现</h2><p class="tiny">只填看得到的。看不准就选「待确认」。</p>
+  <label class="l">哪个园</label>${seg('farm',FARMS)}
+  <label class="l">位置（区、行、哪一边）</label><input class="in" id="rloc" placeholder="例如：B 区第 3 行近水管" style="width:100%">
+  <label class="l">拍摄时间</label><input class="in" type="datetime-local" id="rshot" value="${nowLocal()}" style="width:100%">
+  <label class="l">现场照片（可多张，从 WhatsApp 存下来的也可以）</label><input type="file" id="rph" accept="image/*" multiple>
+  <label class="l">疑似问题</label><select id="riss" style="width:100%"><option value="">— 还不知道 —</option>${DX_TYPES.map(([t])=>`<optgroup label="${t}">${DX.filter(x=>x.ty===t).map(x=>`<option value="${x.id}"${x.id===issue?' selected':''}>${h(x.t)}</option>`).join('')}</optgroup>`).join('')}</select>
+  <label class="l">判断</label>${seg('status',['待确认','已确认'])}
+  <label class="l">严重程度</label>${seg('sev',['轻','中','重'])}
+  <label class="l">受害范围（可不填）</label><div class="row" style="gap:6px"><span class="tiny">看了</span><input class="num" id="rn" inputmode="numeric" placeholder="10" style="width:70px"><span class="tiny">株，有</span><input class="num" id="rk" inputmode="numeric" style="width:70px"><span class="tiny">株有问题</span></div>
+  <label class="l">备注（可不填）</label><input class="in" id="rnote" style="width:100%">
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-dx="rsave">存</button><button class="btn" data-act="close">取消</button></div>`)}
+async function shrinkImg(file){const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('这张照片打不开'));i.src=URL.createObjectURL(file)});const k=Math.min(1,1600/Math.max(img.width,img.height));
+  const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82))}
+async function recSave(btn){const st=sheetRec.st;const files=[...($('#rph').files||[])];const id=uid('F');const photos=[];btn.disabled=true;btn.textContent='存照片中…';
+  try{for(let i=0;i<files.length;i++){const blob=await shrinkImg(files[i]);const path=`finding/${id}/${i+1}.jpg`;if(!MOCK){const {error}=await sb.storage.from('storego-receipts').upload(path,blob,{contentType:'image/jpeg'});if(error)throw new Error('照片没存到：'+error.message)}photos.push(path)}
+    const n=Number($('#rn').value)||null,k=Number($('#rk').value)||null;const iss=$('#riss').value;
+    await put('finding',{id,farm:st.farm,loc:$('#rloc').value.trim(),shotAt:$('#rshot').value,photos,issue:iss||null,status:st.status,sev:st.sev,hit:n&&k!=null?`${k}/${n} 株`:(k?`${k} 株`:''),note:$('#rnote').value.trim(),by:ME.name,at:nowIso()});
+    closeSheet();toast('已存：'+st.farm+' 发现记录');sub.dx='log';tab='dict';render()}
+  catch(e){btn.disabled=false;btn.textContent='存';toast('⚠ 没存到：'+(e.message||e))}}
+async function fPhoto(id){const x=S.finding.find(v=>v.id===id);if(!x)return;if(MOCK){toast('（测试模式没有照片）');return}
+  const urls=[];for(const p of x.photos||[]){const {data,error}=await sb.storage.from('storego-receipts').createSignedUrl(p,600);if(error){toast('⚠ 读不到照片：'+error.message);return}urls.push(data.signedUrl)}
+  sheet(`<h2>${h(x.farm)} · ${h(x.loc||'')}</h2>${urls.map(u=>`<img src="${u}" style="width:100%;border-radius:10px;margin:4px 0;cursor:zoom-in" data-dxzoom="${u}" data-cap="现场照片">`).join('')}<div class="row" style="margin-top:8px"><button class="btn" data-act="close">关</button></div>`)}
+document.addEventListener('input',e=>{if(e.target.id==='dxq'){sub.dxq=e.target.value;clearTimeout(vDx.t);vDx.t=setTimeout(()=>{const pos=e.target.selectionStart;render();const q=$('#dxq');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}},350)}});
+document.addEventListener('click',async e=>{const zm=e.target.closest('[data-dxzoom]');if(zm){dxZoom(zm.dataset.dxzoom,zm.dataset.cap);return}
+  const rs=e.target.closest('[data-rv]');if(rs){const k=rs.parentNode.dataset.rseg;sheetRec.st[k]=rs.dataset.rv;rs.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===rs));return}
+  const a=e.target.closest('[data-dx]');if(!a)return;const act=a.dataset.dx;
+  try{switch(act){case 'open':sheetDx(a.dataset.id);break;case 'case':await sheetCase(Number(a.dataset.n));break;case 'rec':sheetRec(a.dataset.id||'');break;case 'rsave':await recSave(a);break;
+    case 'zbig':document.getElementById('dxz').classList.toggle('big');break;case 'zclose':{const z=document.getElementById('dxz');z.hidden=true;z.innerHTML='';break}
+    case 'fphoto':await fPhoto(a.dataset.id);break;
+    case 'fconf':case 'funconf':{const x=S.finding.find(v=>v.id===a.dataset.id);await put('finding',{...x,status:act==='fconf'?'已确认':'待确认',confBy:ME.name,confAt:nowIso()});toast('已改');render();break}
+    case 'fdel':{const x=S.finding.find(v=>v.id===a.dataset.id);if(!confirm('撤回这条发现记录？'))return;await put('finding',{...x,void:true,voidBy:ME.name,voidAt:nowIso()});toast('已撤回');render();break}}}
+  catch(x){console.error(x);toast('⚠ '+(x.message||x))}});
+
 boot();
 })();
 </script></body></html>
