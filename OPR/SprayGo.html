@@ -321,7 +321,7 @@ function drawExtra(){const {f,ex}=sheetExtra.st;const d=day();const pl=planOn(S,
   for(const v of vers){const r=S.recipe.find(x=>x.id===v);if(!r)continue;for(const m of MIXES)for(const it of r.mixes[m]||[])if(it.cond&&!seen.has(it.pid)){seen.add(it.pid);cands.push({pid:it.pid,dose:Number(it.dose),cond:v===pl?.ver&&(r.mixes[pl.mix]||[]).some(x=>x.pid===it.pid&&x.cond),note:it.cond})}}
   const has=pid=>ex.some(x=>x.pid===pid);
   sheet(`<h2>${f} 加病害药 · ${dd(d)}</h2><p class="tiny">只加今天这一园。加了会出现在喷药卡上，按「喷好了」时一起扣库存。</p>
-  ${ex.length?`<label class="l">今天已加</label><div class="list">${ex.map((x,i)=>`<div>${pic(P(x.pid))}<div class="grow"><b>${h(P(x.pid)?.name)}</b><div class="tiny">每桶 ${fmt(x.dose)} ${unit(P(x.pid))}</div></div><button class="btn w sm" data-act="ex-del" data-i="${i}">拿掉</button></div>`).join('')}</div>`:''}
+  ${ex.length?`<label class="l">今天已加</label><div class="list">${ex.map((x,i)=>`<div>${pic(P(x.pid))}<div class="grow"><b>${h(P(x.pid)?.name)}</b><div class="row" style="gap:6px;margin-top:4px"><span class="tiny">每桶</span><input class="num" inputmode="decimal" data-exdose="${i}" value="${x.dose}" style="width:90px"><span class="tiny">${unit(P(x.pid))}</span></div></div><button class="btn w sm" data-act="ex-del" data-i="${i}">拿掉</button></div>`).join('')}<p class="tiny">用量可以直接改，改好按下面「存」。</p></div>`:''}
   ${cands.filter(c=>!has(c.pid)).length?`<label class="l">配方里写好的病害药</label><div class="list">${cands.filter(c=>!has(c.pid)).map(c=>`<div>${pic(P(c.pid))}<div class="grow"><b>${h(P(c.pid)?.name)}</b><div class="tiny">每桶 ${fmt(c.dose)} ${unit(P(c.pid))} · ${h(c.note)}</div>${P(c.pid)?.target?`<div class="tiny" style="color:#a63638">${h(P(c.pid).target)}</div>`:''}</div><button class="btn s sm" data-act="ex-add" data-id="${h(c.pid)}" data-dose="${c.dose}" data-cond="${c.cond?1:0}">加</button></div>`).join('')}</div>`:''}
   ${probBlock(f,d,has)}
   <label class="l">${sheetExtra.st.prob?'都不合适？自己选药':'或直接选药'}</label><select id="ex-p"><option value="">— 选药 —</option>${S.products.filter(p=>p.active!==false&&['杀虫剂','杀菌剂','生物制剂','营养 / 叶面肥'].includes(p.kind)&&!has(p.id)).sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${h(p.id)}">${h(p.name)}（${h(p.kind.replace(' / 叶面肥',''))}）${p.target?' · '+h(p.target.split(/（|·/)[0].trim()):''}</option>`).join('')}</select>
@@ -413,7 +413,7 @@ function vDict(){const sel=sub.prob||null;const stock=before(todayStr());
 const NAV=[['today','🧴','喷药'],['hist','🗂️','纪录'],['set','⚙️','配方'],['dict','📖','病虫字典']];
 function render(keepSheet){const v=tab==='hist'?vHist:tab==='set'?vSet:tab==='dict'?vDict:vToday;try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
   $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
-document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev()});
+document.addEventListener('input',e=>{if(e.target.id==='dtk')donePrev();const xd=e.target.dataset&&e.target.dataset.exdose;if(xd!=null&&sheetExtra.st){const v=Number(e.target.value);if(v>0)sheetExtra.st.ex[Number(xd)].dose=v}});
 document.addEventListener('change',e=>{if(e.target.dataset.extra)donePrev()});
 document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]');if(g){if(g.dataset.go==='store'){location.href='StoreGo.html';return}tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
   const dy=e.target.closest('[data-day]');if(dy){dayOff=Number(dy.dataset.day);render();return}
