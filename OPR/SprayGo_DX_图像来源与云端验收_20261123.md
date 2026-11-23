@@ -18,7 +18,23 @@
 7. 发现记录云端写入后立即执行一次按 ID 的只读校验；无确认结果则明确显示失败，不声称成功。
 8. 经 JavaScript 语法解析检查，未发现新语法错误。仍须在正式认证环境测试 UI、权限和照片。
 
-## 3. 图片核验规则
+## 3. 教学图片实际像素抽查（GitHub main，2026-11-23）
+
+当前图片资产并非可以放心放大培训的高分辨率微距原照：
+
+| 现有文件 | 原始像素 | 结论 |
+|---|---:|---|
+| `spraygo_dx/thrips_1.jpg` | 205 × 139 | 低清 AI 示意 |
+| `spraygo_dx/whitefly_1.jpg` | 205 × 141 | 低清 AI 示意 |
+| `spraygo_dx/broadmite_1.jpg` | 232 × 148 | 低清 AI 示意 |
+| `spraygo_dx/leafspot_1.jpg` | 278 × 169 | 低清 AI 示意 |
+| `spraygo_dx/virus_1.jpg` | 232 × 144 | 低清 AI 示意 |
+| `spraygo_dx/mechanical_1.jpg` | 232 × 140 | 低清 AI 示意 |
+| `spraygo_dx/guide.jpg` | 1055 × 1491 | 导览海报，可保留为导览，非单卡微距证据 |
+
+以上是实际读取 GitHub JPEG 源文件得出的尺寸，不是估计。**必须先有独立可信的高分辨率参考图、来源和许可，才能宣称“专业高清图鉴”完成。**
+
+## 4. 图片核验规则
 - **AI 生成示意**：全部保持“示意图”标签，不能改成“真实确诊照片”。
 - **实拍巡园 21 张**：可保持“真实照片／初步判断”，不能自行升级成确诊病例。
 - **可信科研原图**：一张一张核对摄影来源、拍摄作物、害虫形态或病原、授权；入库前保存出处/作者/日期/许可/确认人。
@@ -35,7 +51,7 @@
 - World Vegetable Center, beneficial and harmful insects: https://www.gov.uk/research-for-development-outputs/a-farmer-s-guide-to-harmful-and-helpful-insects-in-eggplant-fields
 - Jabatan Pertanian Malaysia registered pesticides and label: https://www.doa.gov.my/
 
-## 4. Claude / Owner 合并前必须跑的真云端验收
+## 5. Claude / Owner 合并前必须跑的真云端验收
 1. 在 Azura 正式登录账号下打开「发现问题」，核对角色和权限。
 2. 确认图鉴卡 23 张，原有 21 例能读取原图。若尚未上传，不得显示“全部已上传”。
 3. 选择 AD1，一条测试发现填写区块、照片、疑似问题、状态，保存。新版本必须复核服务器上 ID 可读取。
@@ -45,7 +61,9 @@
 7. 检查与 StoreGo/spray mixes/history 等已有功能的回归。
 8. 对 23 个图鉴原图逐一验收真实生物学形态、出处、授权；没有通过的仍显示“示意／待验证”。
 
-## 5. 不能宣称已完成
+## 6. 不能宣称已完成
 - 本次不是农艺师签字确认，不是病原实验室检测。
 - 当前插件无法访问 Azura Supabase 项目，故无法替用户完成真实在线数据库核验，也无法为其代上传 21 张私有原图。
 - 当地喷药推荐必须查马来西亚正式登记、具体产品标签、抗药性组和 PHI；不能照 AI 海报的药名直接喷。
+
+- 2026-11-23 实际尝试用当前 Supabase 连接查询 Azura 项目：返回“**You do not have permission to perform this action**”。这确认了权限不足，不只是没看见项目列表。
