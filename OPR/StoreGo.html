@@ -159,6 +159,10 @@ function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;retu
 function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);return Number.isFinite(n)&&n>0?n:3}
 
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
+/* ordered-not-received POs, in base units of the slot they were bought for (it.for = original pid when a substitute was ordered) */
+function onOrder(S){const o={};const ratio=(orig,alt)=>{for(const r of S.recipe||[])for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[]){const ch=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];const a=ch.find(c=>c.pid===orig),b=ch.find(c=>c.pid===alt);if(a&&b&&a.dose&&b.dose)return b.dose/a.dose}return 1};
+  for(const po of S.po||[]){if(po.status!=='ordered')continue;for(const it of po.items||[]){if(it.cancelled)continue;const p=S.products.find(x=>x.id===it.pid);const pb=packBase(p);if(!pb||!(Number(it.packs)>0))continue;const k=it.for||it.pid;const q=Number(it.packs)*pb/(it.for?ratio(it.for,it.pid):1);o[k]=(o[k]||0)+q}}
+  return o}
 function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
   for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=dayUse(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
@@ -170,16 +174,17 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
       end[g][c.pid]-=give;need-=give*pd/(c.dose||pd);moves.push({pid:c.pid,from:g,to:f,qty:give,forPid:pid})}}
     res[f][pid]=Math.max(0,need)}
   /* pool counts against shortage first */
-  const buys=[];const pids=new Set();for(const f of FARMS)for(const k in res[f])if(res[f][k]>1e-6)pids.add(k);
-  for(const pid of pids){const p=S.products.find(x=>x.id===pid);const pb=packBase(p);let tot=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0);const fromPool=Math.min(tot,Math.max(0,P[pid]||0));tot-=fromPool;
+  const buys=[];const covered=[];const oo=onOrder(S);const pids=new Set();for(const f of FARMS)for(const k in res[f])if(res[f][k]>1e-6)pids.add(k);
+  for(const pid of pids){const p=S.products.find(x=>x.id===pid);const pb=packBase(p);let tot=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0);const fromPool=Math.min(tot,Math.max(0,P[pid]||0));tot-=fromPool;const fromOrder=Math.min(tot,Math.max(0,oo[pid]||0));tot-=fromOrder;
     const packs=pb?Math.ceil(tot/pb-1e-9):null;const alloc={};
     if(packs){const base=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0)||1;const q={};let sum=0;for(const f of FARMS){q[f]=packs*(res[f][pid]||0)/base;alloc[f]=Math.floor(q[f]);sum+=alloc[f]}
       FARMS.slice().sort((a,b)=>(q[b]-alloc[b])-(q[a]-alloc[a])).slice(0,packs-sum).forEach(f=>alloc[f]++)}
     const hm=homeOf(S,pid);if(hm&&packs){for(const f of FARMS)alloc[f]=0;alloc[hm]=packs}
-    buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
+    if(tot<=1e-6&&fromOrder>0){covered.push({pid,fromPool,fromOrder});continue}
+    buys.push({pid,packs,alloc,shortBase:tot,fromPool,fromOrder,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
-  return {H,moves,buys,short:res}}
-if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+  return {H,moves,buys,covered,short:res}}
+if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* StoreGo v16 UI. Needs engine.js loaded first. */
 (()=>{'use strict';
 const APP_VERSION=16;
@@ -315,7 +320,7 @@ async function saveMove(){const m=sheetMove.state;const p=P(m.id);const n=Number
   else await put('ledger',{id:uid('L'),t:'move',date:today(),at:nowIso(),by:ME.name,pid:m.id,from:m.from,to:m.to,qty,packs:n,forPid:m.forPid||null});closeSheet();toast(`已记：${m.from} → ${m.to} ${fmt(n)} ${p.sub?(p.sub.word||'小桶'):packWord(p)}`);render()}
 
 /* ---------------- BUY ---------------- */
-function poTotal(po){return (po.items||[]).reduce((a,it)=>a+(Number(it.price)||0)*(Number(it.recvPacks??it.packs)||0),0)}
+function poTotal(po){return (po.items||[]).filter(it=>!it.cancelled).reduce((a,it)=>a+(Number(it.price)||0)*(Number(it.recvPacks??it.packs)||0),0)}
 function orderText(sup,lines){return `老板你好，Azura Delta 要订：\n${lines.map((l,i)=>`${i+1}. ${l.name}（${l.pack}）× ${l.packs} ${l.word}`).join('\n')}\n请回覆几时可以送到，谢谢。`}
 function poolMoves(r,pr){const P0=pool(S);const out=[];for(const pid in P0){let left=P0[pid];if(!(left>0))continue;const p=P(pid);const pb=packBase(p)||1;
     const fs=FARMS.map(f=>({f,need:(r.short[f]||{})[pid]||0,d:pr[f].slotShort[pid]??999})).filter(x=>x.need>0).sort((x,y)=>x.d-y.d);
@@ -360,12 +365,13 @@ function buyPlanView(){const r=buyPlan(S);const {pr}=plan();const c=cfg(S);
 
   const groups={};for(const b of r.buys){const sid=effSup(b);(groups[sid]=groups[sid]||[]).push(b)}
   const gh=Object.entries(groups).map(([sid,L])=>{const sup=SUP(sid);return `<div class="card"><div class="row"><h2 class="grow">${h(sup?.name||'未指定供应商')}</h2><span class="tiny">${sup?(Number(sup.leadDays)||3)+' 天到':''}</span></div><div class="list" style="margin-top:6px">${L.map(b=>{const p=P(effPid(b));const orig=P(b.pid);const sw=effPid(b)!==b.pid;const d=draft.lines[b.pid];
-    return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''} <button class="btn sm neededit" style="padding:2px 10px;min-height:0" data-act="swap" data-id="${h(b.pid)}">换</button>${sw?`<div class="tiny" style="color:var(--amber);font-weight:750">顶替 ${h(orig?.name)}</div>`:''}${OVR[b.pid]?.sup?`<div class="tiny" style="color:var(--amber);font-weight:750">这次改跟 ${h(SUP(OVR[b.pid].sup)?.name||'未指定')} 买</div>`:''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${(sw?!packBase(p):b.noPack)?' · 包装待补，算不出瓶数':''}</div>
+    return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''} <button class="btn sm neededit" style="padding:2px 10px;min-height:0" data-act="swap" data-id="${h(b.pid)}">换</button>${sw?`<div class="tiny" style="color:var(--amber);font-weight:750">顶替 ${h(orig?.name)}</div>`:''}${OVR[b.pid]?.sup?`<div class="tiny" style="color:var(--amber);font-weight:750">这次改跟 ${h(SUP(OVR[b.pid].sup)?.name||'未指定')} 买</div>`:''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${b.fromOrder>0?' · 已订 '+ordTxt(b.pid)+'（等收货）':''}${(sw?!packBase(p):b.noPack)?' · 包装待补，算不出瓶数':''}</div>
     <div class="tiny">分园：${FARMS.map(f=>`${f} <b>${d.alloc[f]||0}</b>`).join(' · ')}</div></div><div class="stepper neededit"><button data-act="qty" data-id="${h(b.pid)}" data-d="-1">−</button><b style="min-width:26px;text-align:center">${d.packs}</b><button data-act="qty" data-id="${h(b.pid)}" data-d="1">＋</button></div></div>`}).join('')}</div>
     <button class="btn p full neededit" style="margin-top:8px" data-act="make-po" data-sup="${h(sid)}">下单给 ${h(sup?.name||'这家')} →</button></div>`}).join('');
   return `<p class="tiny">买 ${r.H} 天份（${c.cycle||14} 天用＋${c.safety||7} 天安全）− 现在库存 · 下次采购 ${dd(c.nextBuy)}</p>
   ${movesCard(r,pr,false)}
-  ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}`}
+  ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}
+  ${r.covered&&r.covered.length?`<div class="card"><b>已订、等收货就够</b><div class="tiny">${r.covered.map(c=>h(P(c.pid)?.name)).join(' · ')}</div></div>`:''}`}
 async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>effSup(b)===sid);const items=L.map(b=>({pid:effPid(b),...(effPid(b)!==b.pid?{for:b.pid}:{}),packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
   if(!items.length){toast('⚠ 没有要买的');return}const sup=SUP(sid);
   const lines=items.map(x=>{const p=P(x.pid);return {name:p.name,pack:packLabel(p),packs:x.packs,word:packWord(p)}});
@@ -375,12 +381,23 @@ async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>effSup(b)
 async function poOrdered(sid){const no=S.po.length+1;const po={id:uid('PO'),no,sup:sid==='_'?null:sid,status:'ordered',created:nowIso(),orderedAt:nowIso(),by:ME.name,items:makePO.items,text:$('#otext').value};
   await put('po',po);for(const it of makePO.items){delete OVR[it.for||it.pid]}saveOvr();closeSheet();toast('已记下单');draft=null;sub.buy='ordered';render()}
 function poCard(po){const sup=SUP(po.sup);return `<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(sup?.name||'未指定供应商')}</h3><span class="tiny">${dd(po.orderedAt?.slice(0,10))}</span></div>
-  <div class="tiny">${(po.items||[]).map(it=>`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div>
-  ${po.status==='ordered'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="recv" data-id="${h(po.id)}">收货</button>`:po.status==='received'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="dist" data-id="${h(po.id)}">分货</button>`:''}</div>`}
+  <div class="tiny">${(po.items||[]).map(it=>it.cancelled?`<s>${h(P(it.pid)?.name||it.pid)} × ${fmt(it.packs)}</s>`:`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div>
+  ${po.status==='ordered'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="recv" data-id="${h(po.id)}">收货</button> <button class="btn sm neededit" style="margin-top:8px" data-act="po-cancel" data-id="${h(po.id)}">取消 / 拿掉几样</button>`:po.status==='received'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="dist" data-id="${h(po.id)}">分货</button>`:''}</div>`}
+function ordTxt(pid){return S.po.filter(x=>x.status==='ordered').flatMap(x=>(x.items||[]).filter(it=>!it.cancelled&&(it.for||it.pid)===pid)).map(it=>`${it.for?h(P(it.pid)?.name)+' ':''}${fmt(it.packs)} ${h(packWord(P(it.pid)))}`).join(' + ')}
+function sheetCancel(id){const po=S.po.find(x=>x.id===id);const L=(po.items||[]).map((it,i)=>({it,i})).filter(x=>!x.it.cancelled);
+  sheet(`<h2>取消 · #${po.no} ${h(SUP(po.sup)?.name||'未指定供应商')}</h2><p class="tiny">勾要取消的药。取消的药会回到「采购单」，之后可以改跟别家买。记得也通知卖家。</p>
+  <div class="list">${L.map(({it,i})=>`<label class="row" style="gap:10px;padding:8px 0"><input type="checkbox" data-cx="${i}" style="width:22px;height:22px"><div class="grow"><b>${h(P(it.pid)?.name||it.pid)}</b> × ${fmt(it.packs)} ${h(packWord(P(it.pid)))}${it.for?`<div class="tiny">顶替 ${h(P(it.for)?.name)}</div>`:''}</div></label>`).join('')}</div>
+  <label class="l">原因（可不填）</label><input class="in" id="cxwhy" placeholder="例如：卖家没货 / 改跟别家买">
+  <div class="row wrapf" style="margin-top:12px;gap:8px"><button class="btn p grow" data-act="cx-some" data-id="${h(id)}">取消勾选的</button><button class="btn w" data-act="cx-all" data-id="${h(id)}">整张取消</button><button class="btn" data-act="close">不改</button></div>`)}
+async function cancelSave(id,all){const po=S.po.find(x=>x.id===id);const pick=all?null:[...document.querySelectorAll('[data-cx]')].filter(x=>x.checked).map(x=>Number(x.dataset.cx));
+  if(!all&&!pick.length){toast('⚠ 先勾要取消的药');return}if(all&&!confirm(`整张 #${po.no} 取消？`))return;const why=$('#cxwhy').value.trim();const at=nowIso();
+  const items=po.items.map((it,i)=>(all||pick.includes(i))&&!it.cancelled?{...it,cancelled:true,cxAt:at,cxBy:ME.name,...(why?{cxWhy:why}:{})}:it);
+  const left=items.filter(it=>!it.cancelled).length;await put('po',{...po,items,...(left?{}:{status:'cancelled',cancelledAt:at,cancelledBy:ME.name,...(why?{cancelWhy:why}:{})})});
+  closeSheet();draft=null;toast(left?'已拿掉，回到采购单':`#${po.no} 已整张取消`);render()}
 function poList(st){const L=S.po.filter(x=>x.status===st).sort((a,b)=>b.no-a.no);return L.length?L.map(poCard).join(''):`<div class="empty">没有${st==='ordered'?'等收货':'等分货'}的单</div>`}
 function sheetRecv(id){const po=S.po.find(x=>x.id===id);
   sheet(`<h2>收货 · #${po.no} ${h(SUP(po.sup)?.name||'')}</h2><p class="tiny">填实际到了几${'瓶 / 包'}和单价。一定要拍单据。</p>
-  <table class="t"><tr><th>药</th><th class="n">到了</th><th class="n">单价 RM</th></tr>${po.items.map((it,i)=>{const p=P(it.pid);const last=lastPrice(it.pid);return `<tr><td>${h(p?.name)}<div class="tiny">订 ${fmt(it.packs)} · ${h(packLabel(p))}${last?' · 上次 '+money(last):''}</div></td><td class="n"><input class="num" inputmode="decimal" id="rq${i}" value="${fmt(it.packs)}"></td><td class="n"><input class="num" inputmode="decimal" id="rp${i}" value="${it.price??''}"></td></tr>`}).join('')}</table>
+  <table class="t"><tr><th>药</th><th class="n">到了</th><th class="n">单价 RM</th></tr>${po.items.map((it,i)=>{const p=P(it.pid);const last=lastPrice(it.pid);if(it.cancelled)return `<tr style="display:none"><td><input id="rq${i}" value="0"><input id="rp${i}" value=""></td></tr>`;return `<tr><td>${h(p?.name)}<div class="tiny">订 ${fmt(it.packs)} · ${h(packLabel(p))}${last?' · 上次 '+money(last):''}</div></td><td class="n"><input class="num" inputmode="decimal" id="rq${i}" value="${fmt(it.packs)}"></td><td class="n"><input class="num" inputmode="decimal" id="rp${i}" value="${it.price??''}"></td></tr>`}).join('')}</table>
   <label class="l">单据照片（必拍）</label><input type="file" accept="image/*" capture="environment" id="rphoto">
   <div class="row" style="margin-top:14px"><button class="btn p grow" data-act="recv-save" data-id="${h(id)}">收货，进待分货</button><button class="btn" data-act="close">取消</button></div>`)}
 function lastPrice(pid){const L=S.po.flatMap(po=>(po.items||[]).filter(it=>it.pid===pid&&Number(it.price)>0).map(it=>({p:Number(it.price),at:po.recvAt||''}))).sort((a,b)=>a.at<b.at?1:-1);return L[0]?.p||null}
@@ -404,7 +421,7 @@ async function distSave(id){const po=S.po.find(x=>x.id===id);const ins=[...docum
   for(const it of po.items.filter(x=>x.recvPacks>0)){const tot=ins.filter(x=>x.dataset.dist===it.pid).reduce((a,x)=>a+(Number(x.value)||0),0);if(Math.abs(tot-it.recvPacks)>0.001){toast(`⚠ ${P(it.pid)?.name}：分出去 ${fmt(tot)}，到了 ${fmt(it.recvPacks)}，要一样`);return}}
   for(const x of ins){const n=Number(x.value)||0;if(!(n>0))continue;const p=P(x.dataset.dist);const pb=packBase(p);await put('ledger',{id:uid('L'),t:'dist',date,at,by:ME.name,pid:x.dataset.dist,farm:x.dataset.f,qty:pb?n*pb:null,packs:n,po:po.id})}
   await put('po',{...po,status:'done',distAt:at,distBy:ME.name});closeSheet();toast('已分货');render()}
-function payView(){const L=S.po.filter(x=>x.status!=='ordered').sort((a,b)=>b.no-a.no);const by={};for(const po of L)if(!po.paid){by[po.sup||'_']=(by[po.sup||'_']||0)+poTotal(po)}
+function payView(){const L=S.po.filter(x=>x.status!=='ordered'&&x.status!=='cancelled').sort((a,b)=>b.no-a.no);const by={};for(const po of L)if(!po.paid){by[po.sup||'_']=(by[po.sup||'_']||0)+poTotal(po)}
   return `<div class="card"><h2>每家欠多少</h2><div class="list" style="margin-top:6px">${Object.keys(by).length?Object.entries(by).map(([s,v])=>`<div><div class="grow">${h(supName(s))}</div><b>${money(v)}</b></div>`).join(''):'<div class="empty">都付清了</div>'}</div></div>
   ${L.map(po=>`<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(supName(po.sup))}</h3><b>${money(poTotal(po))}</b></div><div class="row" style="margin-top:6px">${po.paid?`<span class="badge green">已付 ${dd(po.paidAt?.slice(0,10))}</span>`:`<span class="badge amber">未付</span><button class="btn s sm neededit" data-act="paid" data-id="${h(po.id)}">标已付款</button>`}${(po.photos||[]).length?`<button class="btn sm" data-act="photo" data-id="${h(po.id)}">看单据</button>`:''}</div></div>`).join('')}`}
 
@@ -433,14 +450,14 @@ async function countSave(){const f=sub.farm||'AD1';const ins=[...document.queryS
 const TL={count:'点算',recv:'收货',dist:'分货',move:'调货',spray:'喷好了',skip:'没喷'};
 function vArchive(){const s=sub.arc||'log';const seg=[['log','纪录'],['po','订单'],['old','旧资料']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="arc" data-v="${k}">${l}</button>`).join('');let body='';
   if(s==='log'){const L=S.ledger.slice().sort((a,b)=>(b.at||'')<(a.at||'')?-1:1).slice(0,300);body=`<div class="card"><div class="list">${L.map(x=>{const p=P(x.pid);return `<div><span class="badge ${x.t==='count'?'blue':x.t==='move'?'amber':'green'}">${TL[x.t]||x.t}</span><div class="grow"><b>${h(p?.name||x.pid)}</b><div class="tiny">${dd(x.date)} · ${x.t==='move'?x.from+' → '+x.to:h(x.farm||'待分货')} · ${h(x.by||'')}</div></div><b>${fmt(x.packs)}</b></div>`}).join('')||'<div class="empty">还没有</div>'}</div></div>`}
-  else if(s==='po'){body=S.po.slice().sort((a,b)=>b.no-a.no).map(po=>`<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(supName(po.sup))}</h3><span class="badge ${po.status==='done'?'green':'amber'}">${{ordered:'等收货',received:'等分货',done:'已分货'}[po.status]||po.status}</span></div><div class="tiny">${(po.items||[]).map(it=>`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div><div class="tiny">下单 ${dd(po.orderedAt?.slice(0,10))}${po.recvAt?' · 收货 '+dd(po.recvAt.slice(0,10)):''} · ${money(poTotal(po))} ${po.paid?'· 已付':''}</div></div>`).join('')||'<div class="empty">还没有</div>'}
+  else if(s==='po'){body=S.po.slice().sort((a,b)=>b.no-a.no).map(po=>`<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(supName(po.sup))}</h3><span class="badge ${po.status==='done'?'green':'amber'}">${{ordered:'等收货',received:'等分货',done:'已分货',cancelled:'已取消'}[po.status]||po.status}</span></div><div class="tiny">${(po.items||[]).map(it=>it.cancelled?`<s>${h(P(it.pid)?.name||it.pid)} × ${fmt(it.packs)}</s>`:`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div><div class="tiny">下单 ${dd(po.orderedAt?.slice(0,10))}${po.recvAt?' · 收货 '+dd(po.recvAt.slice(0,10)):''} · ${money(poTotal(po))} ${po.paid?'· 已付':''}</div></div>`).join('')||'<div class="empty">还没有</div>'}
   else body=`<div class="card amber"><b>v15 的旧纪录，只供查看，不算进库存。</b><p class="tiny">点算 ${S.old_counts.length} 笔 · 采购 ${S.old_purchases.length} 笔</p></div><div class="card"><div class="list">${S.old_counts.slice().sort((a,b)=>String(b.date||b.at||'')<String(a.date||a.at||'')?-1:1).slice(0,200).map(x=>`<div><div class="grow"><b>${h(x.name||x.pid||x.product||x.id)}</b><div class="tiny">${h(x.farm||'')} · ${h(String(x.date||x.at||'').slice(0,10))}</div></div><span class="tiny">${h(x.qty??x.amount??'')}</span></div>`).join('')}</div></div>`;
   return `<div class="eyebrow">ARCHIVE</div><h1>档案</h1><div class="seg">${seg}</div>${body}`}
 
 /* ---------------- SETTINGS ---------------- */
 function vSet(){const s=sub.set||'sup';const seg=[['sup','供应商'],['cfg','采购周期'],['rec','配方'],['drug','药品'],['log','修改纪录']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="set" data-v="${k}">${l}</button>`).join('');
   let b='';const c=cfg(S);
-  if(s==='sup')b=S.suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const owe=S.po.filter(po=>po.sup===x.id&&!po.paid&&po.status!=='ordered').reduce((a,po)=>a+poTotal(po),0);const sells=S.products.filter(p=>p.shops?.[0]===x.id).map(p=>p.name);
+  if(s==='sup')b=S.suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const owe=S.po.filter(po=>po.sup===x.id&&!po.paid&&po.status!=='ordered'&&po.status!=='cancelled').reduce((a,po)=>a+poTotal(po),0);const sells=S.products.filter(p=>p.shops?.[0]===x.id).map(p=>p.name);
     return `<div class="card"><div class="row"><h3 class="grow">${h(x.name)}</h3><span class="badge grey">${Number(x.leadDays)||'?'} 天到</span></div><div class="tiny">${h(x.phone||'电话待补')} · ${h(x.terms||'付款方式待补')}${owe?' · 欠 '+money(owe):''}</div>${x.bank?`<div class="tiny">银行：${h(x.bank)}</div>`:''}<div class="tiny">卖：${h(sells.join('、')||'—')}</div>
     <div class="row wrapf" style="margin-top:8px">${x.phone?`<a class="btn sm" href="tel:${h(String(x.phone).split(/[,/]/)[0].replace(/[^0-9+]/g,''))}">拨电话</a>`:''}${waLink(x.phone,'')?`<a class="btn sm s" target="_blank" href="${h(waLink(x.phone,''))}">WhatsApp</a>`:''}<button class="btn sm neededit" data-act="edit-sup" data-id="${h(x.id)}">编辑</button></div></div>`}).join('')+`<button class="btn full neededit" data-act="edit-sup" data-id="">＋ 新供应商</button>`;
   else if(s==='cfg')b=`<div class="card"><h2>采购周期</h2><p class="tiny">每园每天几桶在 SprayGo「配方」改：${FARMS.map(f=>f+' '+fmt(c.tanks?.[f])+' 桶').join(' · ')}</p>
@@ -513,7 +530,7 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'move-save':await saveMove();break;
     case 'move-done':{const r0=buyPlan(S);const pr0=project(S,60);r0.moves=[...poolMoves(r0,pr0),...r0.moves];const m=r0.moves[Number(a.dataset.i)];const p=P(m.pid);sheetMove(m.pid,{from:m.from,to:m.to,packs:p.sub?m.qty/subBase(p):packs(p,m.qty),forPid:m.forPid});break}
     case 'qty':{const d=draft.lines[id];d.packs=Math.max(0,d.packs+Number(a.dataset.d));const sum=FARMS.reduce((x,f)=>x+(d.alloc[f]||0),0);if(sum!==d.packs){const f=Number(a.dataset.d)>0?FARMS.slice().sort((x,y)=>(d.alloc[x]||0)-(d.alloc[y]||0))[0]:FARMS.slice().sort((x,y)=>(d.alloc[y]||0)-(d.alloc[x]||0))[0];d.alloc[f]=Math.max(0,(d.alloc[f]||0)+Number(a.dataset.d))}render();break}
-    case 'make-po':await makePO(a.dataset.sup);break;case 'swap':sheetSwap(id);break;case 'sw-save':a.disabled=true;await swapSave(id);break;case 'sw-reset':delete OVR[id];saveOvr();draft=null;closeSheet();render();break;
+    case 'make-po':await makePO(a.dataset.sup);break;case 'po-cancel':sheetCancel(id);break;case 'cx-some':a.disabled=true;await cancelSave(id,false);a.disabled=false;break;case 'cx-all':await cancelSave(id,true);break;case 'swap':sheetSwap(id);break;case 'sw-save':a.disabled=true;await swapSave(id);break;case 'sw-reset':delete OVR[id];saveOvr();draft=null;closeSheet();render();break;
     case 'copy':await navigator.clipboard.writeText($('#otext').value);toast('已复制');break;
     case 'wa':{const s=SUP(a.dataset.sup);window.open(waLink(s.phone,$('#otext').value),'_blank');break}
     case 'po-ordered':await poOrdered(a.dataset.sup);break;

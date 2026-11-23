@@ -159,6 +159,10 @@ function supplierOf(S,p){const id=p&&Array.isArray(p.shops)?p.shops[0]:null;retu
 function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);return Number.isFinite(n)&&n>0?n:3}
 
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
+/* ordered-not-received POs, in base units of the slot they were bought for (it.for = original pid when a substitute was ordered) */
+function onOrder(S){const o={};const ratio=(orig,alt)=>{for(const r of S.recipe||[])for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[]){const ch=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];const a=ch.find(c=>c.pid===orig),b=ch.find(c=>c.pid===alt);if(a&&b&&a.dose&&b.dose)return b.dose/a.dose}return 1};
+  for(const po of S.po||[]){if(po.status!=='ordered')continue;for(const it of po.items||[]){if(it.cancelled)continue;const p=S.products.find(x=>x.id===it.pid);const pb=packBase(p);if(!pb||!(Number(it.packs)>0))continue;const k=it.for||it.pid;const q=Number(it.packs)*pb/(it.for?ratio(it.for,it.pid):1);o[k]=(o[k]||0)+q}}
+  return o}
 function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
   for(const f of FARMS){const s={...st[f]};const sh={};for(let i=0;i<H;i++){const d0=addDays(t,i);if(i===0&&recOn(S,f,d0))continue;const r=dayUse(S,f,d0,s);for(const x of r.short)sh[x.pid]=(sh[x.pid]||0)+x.amt}res[f]=sh;end[f]=s}
@@ -170,16 +174,17 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
       end[g][c.pid]-=give;need-=give*pd/(c.dose||pd);moves.push({pid:c.pid,from:g,to:f,qty:give,forPid:pid})}}
     res[f][pid]=Math.max(0,need)}
   /* pool counts against shortage first */
-  const buys=[];const pids=new Set();for(const f of FARMS)for(const k in res[f])if(res[f][k]>1e-6)pids.add(k);
-  for(const pid of pids){const p=S.products.find(x=>x.id===pid);const pb=packBase(p);let tot=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0);const fromPool=Math.min(tot,Math.max(0,P[pid]||0));tot-=fromPool;
+  const buys=[];const covered=[];const oo=onOrder(S);const pids=new Set();for(const f of FARMS)for(const k in res[f])if(res[f][k]>1e-6)pids.add(k);
+  for(const pid of pids){const p=S.products.find(x=>x.id===pid);const pb=packBase(p);let tot=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0);const fromPool=Math.min(tot,Math.max(0,P[pid]||0));tot-=fromPool;const fromOrder=Math.min(tot,Math.max(0,oo[pid]||0));tot-=fromOrder;
     const packs=pb?Math.ceil(tot/pb-1e-9):null;const alloc={};
     if(packs){const base=FARMS.reduce((a,f)=>a+(res[f][pid]||0),0)||1;const q={};let sum=0;for(const f of FARMS){q[f]=packs*(res[f][pid]||0)/base;alloc[f]=Math.floor(q[f]);sum+=alloc[f]}
       FARMS.slice().sort((a,b)=>(q[b]-alloc[b])-(q[a]-alloc[a])).slice(0,packs-sum).forEach(f=>alloc[f]++)}
     const hm=homeOf(S,pid);if(hm&&packs){for(const f of FARMS)alloc[f]=0;alloc[hm]=packs}
-    buys.push({pid,packs,alloc,shortBase:tot,fromPool,noPack:!pb})}
+    if(tot<=1e-6&&fromOrder>0){covered.push({pid,fromPool,fromOrder});continue}
+    buys.push({pid,packs,alloc,shortBase:tot,fromPool,fromOrder,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
-  return {H,moves,buys,short:res}}
-if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+  return {H,moves,buys,covered,short:res}}
+if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* DripGo v1 UI. Needs engine.js. Shares data with StoreGo v16 / SprayGo v13 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=1;
