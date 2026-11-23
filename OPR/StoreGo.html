@@ -271,7 +271,7 @@ function vShelf(){const {pr}=plan();const t=today();const q=(sub.q||'').toLowerC
     if(F.st==='none')return ds.some(x=>x.st!=null&&!(x.st>1e-9));if(F.st==='low')return ds.some(x=>x.d.cls==='red'||x.d.cls==='amber');if(F.st==='nocount')return ds.some(x=>x.st==null);if(F.st==='ok')return ds.every(x=>x.st>1e-9);return true};
   const nAct=['farm','mix','st','sup','alt'].filter(x=>F[x]!=='all').length;
   const L=S.products.filter(p=>p.active!==false&&(k==='all'||p.kind===k)&&(!q||p.name.toLowerCase().includes(q))
-    &&(!onlyUsed||WH||used.has(p.id)||FF.some(f=>pr[f].stock[p.id]>0))
+    &&(!onlyUsed||q||WH||used.has(p.id)||FF.some(f=>pr[f].stock[p.id]>0))
     &&(!WH||PL[p.id]>0)&&(F.mix==='all'||inMix(p.id))&&stOK(p)&&(F.sup==='all'||(p.shops?.[0]||'_')===F.sup)&&(F.alt==='all'||subsFor(p.id).length>0)).sort((a,b)=>a.name.localeCompare(b.name));
   const cards=L.map(p=>`<div data-act="drug" data-id="${h(p.id)}">${pic(p)}<div class="grow"><div class="row"><b class="grow">${h(p.name)}</b>${kindBadge(p.kind)}</div>
     ${p.target?`<div class="tiny" style="color:${p.kind==='杀虫剂'?'#a63638':p.kind==='杀菌剂'?'#365f91':'var(--green)'};font-weight:700">${h(p.target)}</div>`:''}<div class="tiny">${h(packLabel(p))}${p.track==='No'?' · 不追踪':''}</div><div class="farms">${PL[p.id]>0&&(F.farm==='all'||WH)?`<span class="f" style="background:var(--sky);color:var(--blue)">仓库 ${qtyText(p,PL[p.id])} · 待分货</span>`:''}${WH?'':FF.map(f=>{const st=pr[f].stock[p.id];const d=farmDays(pr,f,p.id);return `<span class="f ${d.cls}">${f} ${st==null?'—':qtyText(p,st)} · ${d.txt}</span>`}).join('')}</div></div></div>`).join('');
