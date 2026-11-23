@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- worker_harvest_form_11 · content v27 · 2026-11-19: language switch (Burmese default / English / 中文) · v26: no dashed lines on blank Bakul numbers (v25: A group gold · v24: orange · v23: grade colours by family — AA purple) (main dark, Kulit lighter, Putih lightest) · v22: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
+<!-- worker_harvest_form_11 · content v28 · 2026-11-23: same look as the Farm Leader app (gold header, cards, + / − like FoodOrder) — wording, data and WhatsApp text unchanged · v27 2026-11-19: language switch (Burmese default / English / 中文) · v26: no dashed lines on blank Bakul numbers (v25: A group gold · v24: orange · v23: grade colours by family — AA purple) (main dark, Kulit lighter, Putih lightest) · v22: buttons swapped (WhatsApp left, note right), grade labels in DM Sans bold, square boxes · v21: date picked from a calendar, shown DD/MM/YYYY, default today · v20: Preview note button; Bakul sum digits right-aligned, sum lines on the row lines · v19: two steps (harvest at night, Bakul after the lorry) + Owner-only TOTAL for Mah Sing (v18: full Bakul format · v17: grade list · v16: note view · v15: Bakul) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Harvest WhatsApp Report</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Myanmar:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -267,6 +267,88 @@ body{font-family:'DM Sans','Noto Sans Myanmar','Myanmar Text','Padauk',sans-seri
   background:#1a1e17;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;
   font-weight:600;opacity:0;transition:all .2s;z-index:999;pointer-events:none;white-space:nowrap;}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ══ UNIFIED LOOK (2026-11-23): same shell as the Farm Leader app / FoodOrder ══
+   Only colours, sizes and shapes change. Wording, grade colours and the Mah Sing note stay as they were. */
+:root{
+  --g:#1c7457;--g2:#155c45;--g3:#cfe6da;--g4:#f3f9f3;
+  --txt:#263024;--txt2:#4b5a4d;--mut:#728074;
+  --sur:#fff;--sur2:#f6f7f2;--bdr:#e3e7dd;--red:#b53c31;
+  --gold:#8b6a32;--warn:#a76712;
+}
+body{font-family:system-ui,-apple-system,'Segoe UI',Arial,'Noto Sans Myanmar','Myanmar Text','Padauk',sans-serif;background:var(--sur2);color:var(--txt);}
+/* header: gold like the Leader app */
+.form-hdr,.prev-hdr{background:var(--gold);padding:13px 16px;position:sticky;top:0;z-index:40;}
+.hdr-icon{background:rgba(255,255,255,.2);border-radius:11px;width:40px;height:40px;font-size:22px;}
+.hdr-text h1{font-size:18px;font-weight:800;letter-spacing:-.2px;}
+.hdr-text p{font-size:12px;color:rgba(255,255,255,.8);}
+.lang{background:#ffffff24;border-radius:11px;padding:4px;gap:4px;}
+.lang button{color:#fff;font-size:14px;padding:6px 10px;border-radius:8px;}
+.lang button.on{background:#fff;color:var(--gold);}
+.home-back{display:none;background:rgba(255,255,255,.2);border:none;border-radius:10px;width:38px;height:38px;color:#fff;font-size:24px;cursor:pointer;flex-shrink:0;}
+.home-back.on{display:flex;align-items:center;justify-content:center;}
+.back-btn{background:rgba(255,255,255,.2);border-radius:10px;width:38px;height:38px;}
+/* body */
+.form-body{padding:16px 14px 120px;}
+.frow>label{font-size:14px;font-weight:750;color:var(--mut);margin-bottom:7px;}
+.date-box{border-radius:12px;min-height:50px;}
+.date-show{font-family:inherit;font-weight:750;font-size:17px;font-variant-numeric:tabular-nums;}
+/* farm buttons: like the Leader app pills */
+.farm-btn{border-radius:14px;min-height:62px;font-family:inherit;font-weight:800;color:var(--txt);box-shadow:0 2px 9px #1c302008;}
+.farm-btn.on{background:var(--g);border-color:var(--g);color:#fff;}
+.farm-btn.on small{color:#e7f5ee;}
+.err-msg{font-size:13px;font-weight:700;}
+/* section heads: same as the Leader app */
+.sec-div{font-size:14px;color:var(--mut);font-weight:750;letter-spacing:.5px;border-bottom:none;padding:20px 0 8px;margin-bottom:0;}
+/* grade list card */
+.g-list,.bk-card,.hv-sum,.tot-card,.msg-card{border-radius:17px;box-shadow:0 2px 9px #1c302008;border-color:var(--bdr);}
+.g-grp.has-val{background:#f3f9f3;}
+.g-row{padding:8px 10px;}
+.g-row .grade-pill{height:44px;}
+.u-chip{height:44px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:800;background:#fff;}
+/* + / − : same as FoodOrder (white minus, green plus) */
+.bk-row{border:none;background:transparent;gap:5px;align-items:center;}
+.bk-minus,.bk-plus{width:40px;height:40px;border:1px solid var(--bdr);border-radius:11px;background:#fff;font-size:21px;color:var(--txt);}
+.bk-plus{background:var(--g);border-color:var(--g);color:#fff;}
+.bk-minus:active{background:var(--bdr);}.bk-plus:active{background:var(--g2);}
+.g-row .bk-minus,.g-row .bk-plus{width:40px;height:40px;}
+.bk-num,.g-row .bk-num{height:40px;font-family:inherit;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;}
+.bk-line .bk-row{flex:0 0 150px;}
+.bk-line.err .bk-row .bk-num{color:var(--red);}
+.bk-line.err .bk-minus{border-color:var(--red);}
+.bk-lbl b{font-size:15px;}
+.bk-lbl small{font-size:12px;}
+.bk-val{font-family:inherit;font-weight:800;font-variant-numeric:tabular-nums;}
+.bk-line.total{background:#eaf6ee;border-radius:0 0 17px 17px;}
+.bk-warn{font-size:12px;color:var(--warn);}
+/* step 2 reminder / mode bar: orange = to do (same as the Leader app) */
+.pend,.mode-bar{background:#fff4e6;border:2px solid #e9b46a;border-radius:17px;}
+.pend b,.mode-bar{color:var(--warn);}
+.pend button{border-color:#e9b46a;border-radius:12px;min-height:48px;color:var(--warn);font-family:inherit;}
+/* bottom bar: white rounded bar like the Leader app */
+.gen-bar,.send-bar{left:10px;right:10px;bottom:10px;border:1px solid var(--bdr);border-radius:16px;box-shadow:0 -5px 20px #15291415;padding:10px;}
+.gen-btn,.wa-btn,.gen-bar .gen-btn{background:var(--gold);border-radius:12px;min-height:52px;font-family:inherit;font-size:16px;}
+.gen-btn:active,.wa-btn:active,.gen-bar .gen-btn:active{background:#6f5428;}
+.note-btn{background:#fff;background-image:none;color:var(--txt);border:1px solid var(--bdr);border-radius:12px;font-family:inherit;font-size:15px;}
+.note-btn:active{background:var(--sur2);}
+.copy-btn{border-radius:12px;background:#fff;}
+.add-row-btn{border-color:var(--g);color:var(--g);font-family:inherit;}
+.save-st{font-size:13px;font-weight:700;}
+#toast{background:#263529;border-radius:11px;bottom:100px;}
+/* number box: no spinner arrows, number never cut off */
+.bk-num::-webkit-outer-spin-button,.bk-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bk-num{-moz-appearance:textfield;}
+.g-row{gap:6px;}
+.g-row .bk-row{gap:3px;}
+.g-row .bk-num{font-size:18px;min-width:34px;}
+.g-row .grade-pill{width:88px;}.g-row.sub .g-sp{width:88px;}
+.u-chip{width:54px;}
+/* step 2 bar (after the lorry): orange = to do */
+#mode-bar:not(:empty){display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff4e6;border:2px solid #e9b46a;border-radius:17px;padding:12px 14px;margin-bottom:14px;font-size:15px;font-weight:800;color:var(--warn);}
+#mode-bar button{border:1px solid #e9b46a;background:#fff;border-radius:10px;min-height:40px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;color:var(--warn);cursor:pointer;flex-shrink:0;}
+@media(max-width:360px){.g-row{gap:4px;padding:7px 6px}.g-row .grade-pill{width:70px;font-size:13px}.g-row.sub .g-sp{width:70px}.u-chip{width:46px;font-size:11px}.g-row .bk-minus,.g-row .bk-plus{width:34px;height:38px}.g-row .bk-num{font-size:16px;min-width:28px}.g-add{width:22px;height:22px}.bk-line .bk-row{flex:0 0 128px}.lang button{padding:6px 7px;font-size:13px}.hdr-icon{display:none}}
+/* the WhatsApp text box keeps a fixed-width font so it reads like the message */
+.msg-card{line-height:1.9;}
 </style>
 </head>
 <body>
@@ -274,12 +356,13 @@ body{font-family:'DM Sans','Noto Sans Myanmar','Myanmar Text','Padauk',sans-seri
 <!-- ══ FORM ══ -->
 <div class="scr on" id="scr-form">
   <div class="form-hdr">
-    <div class="hdr-icon">🌿</div>
+    <button class="home-back" id="home-back" onclick="history.back()" aria-label="back">‹</button>
+    <div class="hdr-icon">🍆</div>
     <div class="hdr-text">
       <h1 data-i18n="title">Harvest WhatsApp Report</h1>
       <p id="hdr-farms">Azura Delta Farm — AD1, AD2 &amp; AD3</p>
     </div>
-    <div class="lang"><button data-l="my" onclick="setLang('my')">မြန်မာ</button><button data-l="en" onclick="setLang('en')">EN</button><button data-l="zh" onclick="setLang('zh')">中文</button></div>
+    <div class="lang"><button data-l="my" onclick="setLang('my')">မြန်မာ</button><button data-l="zh" onclick="setLang('zh')">中文</button><button data-l="en" onclick="setLang('en')">EN</button></div>
   </div>
 
   <div class="form-body" id="form-body">
@@ -409,6 +492,8 @@ body{font-family:'DM Sans','Noto Sans Myanmar','Myanmar Text','Padauk',sans-seri
 </div>
 
 <div id="toast"></div>
+<script>const APP_VERSION = 28;   // content v28 · 2026-11-23 · unified look
+try{if(document.referrer&&history.length>1)document.getElementById('home-back').classList.add('on')}catch(e){}</script>
 
 <script>
 // ══ CONFIG ══════════════════════════════════
