@@ -234,6 +234,7 @@ body{font-family:'DM Sans','Noto Sans Myanmar','Myanmar Text','Padauk',sans-seri
 .hv-sum{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.9;}
 /* ── TOTAL (Owner only) ── */
 .farm-pick.four{grid-template-columns:repeat(4,1fr);}
+.farm-pick.one{grid-template-columns:1fr;}
 .farm-btn.tot{border-style:dashed;}
 .farm-btn.tot.on{border-style:solid;border-color:#1a3fa8;background:#eef1fa;color:#1a3fa8;}
 .tot-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:6px 8px;overflow-x:auto;}
@@ -492,7 +493,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',Arial,'Noto Sans Myanmar','M
 </div>
 
 <div id="toast"></div>
-<script>const APP_VERSION = 28;   // content v28 · 2026-11-23 · unified look
+<script>const APP_VERSION = 29;   // content v29 · 2026-11-23 · ?farm=AD1&lock=1 from the Leader home
 try{if(document.referrer&&history.length>1)document.getElementById('home-back').classList.add('on')}catch(e){}</script>
 
 <script>
@@ -522,6 +523,8 @@ const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QKEY = 'harvest_outbox_v1', FKEY = 'harvest_farms_v1', BKEY = 'bakul_last_v1';
 const short = code => code.replace(/\s+/g, '');
+// Opened from the Leader home (Kedai Runcit): ?farm=AD1&lock=1 → that farm only, cannot change
+const LOCK = (() => { try { const q = new URLSearchParams(location.search), f = (q.get('farm') || '').replace(/\s+/g, '').toUpperCase(); return q.get('lock') === '1' && /^AD[123]$/.test(f) ? f : ''; } catch(e) { return ''; } })();
 
 // ══ STATE ════════════════════════════════════
 // Each grade = array of rows: [{ weight:30, baskets:0 }, ...]
@@ -534,7 +537,7 @@ GRADES.forEach(g => { S.grades[g.key] = [{ wLabel:'34/30', baskets:0 }]; });
 
 // ══ LANGUAGE (screen only — WhatsApp text, the Mah Sing note, grades and numbers stay as they are) ══
 const LKEY = 'form_lang_v1';
-let LANG = (() => { try { return localStorage.getItem(LKEY) || 'my'; } catch(e) { return 'my'; } })();
+let LANG = (() => { try { const q = new URLSearchParams(location.search).get('lang'); if (['my','zh','en'].includes(q)) return q; return localStorage.getItem(LKEY) || 'my'; } catch(e) { return 'my'; } })();
 const L = {
   my: {
     title:'ခူးဆွတ်မှု အစီရင်ခံစာ', date:'ရက်စွဲ', farm:'ခြံ', errDate:'ရက်စွဲ ရွေးပါ', errFarm:'ခြံ ရွေးပါ',
@@ -613,6 +616,7 @@ function init() {
   buildFarms();
   buildAllCards();
   renderBakul();
+  if (LOCK) pickFarm(LOCK);
   loadFarms();
   flushOutbox();
   renderPending();
@@ -628,13 +632,15 @@ function init() {
 // ══ FARMS (from the farm list) ════════════════
 function buildFarms() {
   const fp = document.getElementById('farm-pick');
-  fp.classList.toggle('four', S.isOwner && FARMS.length === 3);
-  fp.innerHTML = FARMS.map(code => `
+  const shown = LOCK ? (FARMS.some(c => short(c) === LOCK) ? FARMS.filter(c => short(c) === LOCK) : [LOCK.replace(/^AD/, 'AD ')]) : FARMS;
+  fp.classList.toggle('four', !LOCK && S.isOwner && FARMS.length === 3);
+  fp.classList.toggle('one', !!LOCK);
+  fp.innerHTML = shown.map(code => `
     <button class="farm-btn${S.farm===short(code)?' on':''}" data-farm="${short(code)}" onclick="pickFarm('${short(code)}')">
       ${short(code)}<small>${T('farmN', code.split(' ').pop())}</small>
     </button>`).join('')
-    + (S.isOwner ? `<button class="farm-btn tot${S.farm==='TOTAL'?' on':''}" data-farm="TOTAL" onclick="pickFarm('TOTAL')">TOTAL<small>${T('allFarms')}</small></button>` : '');
-  document.getElementById('hdr-farms').textContent = 'Azura Delta Farm — ' + FARMS.map(short).join(', ');
+    + (S.isOwner && !LOCK ? `<button class="farm-btn tot${S.farm==='TOTAL'?' on':''}" data-farm="TOTAL" onclick="pickFarm('TOTAL')">TOTAL<small>${T('allFarms')}</small></button>` : '');
+  document.getElementById('hdr-farms').textContent = 'Azura Delta Farm — ' + shown.map(short).join(', ');
 }
 async function loadFarms() {
   try {
@@ -809,6 +815,7 @@ function autoSlash(el) {
 
 // ══ FARM ═════════════════════════════════════
 function pickFarm(farm) {
+  if (LOCK && farm !== LOCK) return;
   if (S.mode === 'BAKUL') exitBakul(false);
   S.farm = farm;
   S.mode = farm === 'TOTAL' ? 'TOTAL' : 'HARVEST';
@@ -1002,7 +1009,7 @@ function addDaysIso(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d
 function todayIso() { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0'); }
 function renderPending() {
   const h = readH(), from = addDaysIso(todayIso(), -2);
-  const list = Object.entries(h).filter(([, v]) => !v.bakulDone && v.date >= from).sort((a, b) => a[1].date < b[1].date ? 1 : -1);
+  const list = Object.entries(h).filter(([, v]) => !v.bakulDone && v.date >= from && (!LOCK || v.farm === LOCK)).sort((a, b) => a[1].date < b[1].date ? 1 : -1);
   document.getElementById('bk-pending').innerHTML = list.length ? `<div class="pend"><b>${T('pendTitle')}</b>${
     list.map(([k, v]) => `<button onclick="startBakul('${k}')"><span>${v.farm} · ${v.ddmm}</span><span>${T('pendBtn')}</span></button>`).join('')}</div>` : '';
 }
@@ -1026,7 +1033,7 @@ function exitBakul(reset) {
   S.bk.turun = null; S.bk.besi = null; S.bk.typed = null;
   ['bk-turun','bk-besi','bk-typed'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
   buildAllCards();
-  if (reset) { S.farm = ''; buildFarms(); showMode(); renderBakul(); renderPending(); }
+  if (reset) { S.farm = LOCK || ''; if (LOCK) S.mode = 'HARVEST'; buildFarms(); showMode(); renderBakul(); renderPending(); }
 }
 
 // ══ TOTAL (Owner only): uses the Owner's sign-in from the Home page on this phone ══

@@ -1,622 +1,758 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1c1b19">
-<meta name="robots" content="noindex">
-<title>Kedai Runcit</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#f2f0eb;--white:#fff;--border:#d8d5ce;--border2:#c4c0b8;--text:#1c1b19;--muted:#8a857c;
-  --acc:#1A56A0;--accl:#ddeaff;--accd:#0f3d78;--ok:#2f6b3f;--okl:#e3f1e6;--bad:#a33a2c;--badl:#fbe9e6;--warn:#8a6418;--warnl:#fbf1dc;
-  --bar:#1c1b19;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;-webkit-tap-highlight-color:transparent}
-button,input{font-family:inherit;font-size:inherit;color:inherit}
-.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top))}
-.top b{font-size:17px}
-.top .farm{margin-left:auto;background:#fff2;border-radius:6px;padding:4px 10px;font-weight:600;font-size:14px}
-.tabs{display:flex;gap:4px;margin-left:16px}
-.tab{border:0;background:none;color:#aaa;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px}
-.tab.on{background:var(--acc);color:#fff}
-.wrap{max-width:560px;margin:0 auto;padding:14px 16px 120px}
-.wide{max-width:980px}
-.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
-.lbl{font-size:13px;color:var(--muted);margin:2px 0 8px;display:flex;justify-content:space-between;align-items:center}
-.lbl b{color:var(--text);font-weight:600}
-.lnk{color:var(--acc);font-weight:600;cursor:pointer;background:none;border:0;font-size:13px}
-.g{display:grid;gap:8px}
-.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
-.opt{border:1.5px solid var(--border);background:var(--white);border-radius:10px;min-height:48px;padding:8px 6px;font-weight:600;cursor:pointer;text-align:center;line-height:1.2;user-select:none}
-.opt.on{border-color:var(--acc);background:var(--accl);color:var(--accd)}
-.opt small{display:block;font-weight:500;color:var(--muted);font-size:12px}
-.opt.name{text-align:left;padding-left:12px;font-weight:500}
-.opt.name.on{font-weight:700}
-.qty{display:flex;align-items:center;gap:10px}
-.qty button{width:48px;height:48px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:22px;font-weight:600;cursor:pointer}
-.qty span{min-width:40px;text-align:center;font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace}
-.in{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;background:#fff;font-size:16px}
-.in:focus{outline:none;border-color:var(--acc)}
-.chg{margin-top:6px;font-size:13px;color:var(--warn)}
-.sumbar{position:fixed;left:0;right:0;bottom:0;background:var(--white);border-top:1px solid var(--border);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));z-index:6}
-.sumbar .inner{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.sumbar .txt{flex:1;font-size:14px;line-height:1.3}
-.sumbar .txt b{font-size:18px;font-family:'IBM Plex Mono',monospace}
-.save{border:0;background:var(--ok);color:#fff;font-weight:700;border-radius:10px;padding:14px 22px;font-size:16px;cursor:pointer;min-width:120px}
-.save:disabled{background:var(--border2);cursor:default}
-.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #eee}
-.row:first-child{border-top:0}
-.row .m{flex:1;min-width:0}
-.row .m div{font-weight:600}
-.row .m small{color:var(--muted)}
-.row .amt{font-family:'IBM Plex Mono',monospace;font-weight:500}
-.undo{border:1px solid var(--bad);color:var(--bad);background:#fff;border-radius:8px;padding:6px 10px;font-weight:600;cursor:pointer}
-.gate{max-width:420px;margin:60px auto;text-align:center;padding:0 16px}
-.gate .code{font-family:'IBM Plex Mono',monospace;font-size:34px;letter-spacing:.12em;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin:18px 0}
-.gate p{color:var(--muted);line-height:1.5}
-.toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:var(--bar);color:#fff;padding:10px 18px;border-radius:8px;z-index:20;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
-.toast.on{opacity:1}
-.err{color:var(--bad);font-weight:600;margin-top:8px;font-size:14px}
-.sheet{position:fixed;inset:0;background:#0006;z-index:30;display:flex;align-items:flex-end;justify-content:center}
-.sheet .box{background:#fff;width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:16px;max-height:85vh;overflow:auto;padding-bottom:max(16px,env(safe-area-inset-bottom))}
-.sheet h3{margin-bottom:12px}
-.btn{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
-.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
-.btn.red{color:var(--bad);border-color:var(--bad)}
-/* owner */
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:8px 6px;border-bottom:1px solid #eee;vertical-align:top}
-td.n{text-align:right;font-family:'IBM Plex Mono',monospace}
-tr.void td{color:#bbb;text-decoration:line-through}
-.pill{display:inline-block;border-radius:5px;padding:2px 7px;font-size:12px;font-weight:600}
-.pill.w{background:var(--warnl);color:var(--warn)}.pill.ok{background:var(--okl);color:var(--ok)}.pill.bad{background:var(--badl);color:var(--bad)}.pill.gr{background:#eee;color:#777}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-.kpi small{color:var(--muted);font-size:12px}.kpi b{display:block;font-size:20px;font-family:'IBM Plex Mono',monospace;margin-top:2px}
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.chip{border:1px solid var(--border);background:#fff;border-radius:16px;padding:5px 12px;cursor:pointer;font-size:13px}
-.chip.on{background:var(--bar);color:#fff;border-color:var(--bar)}
-.pchips{display:flex;gap:6px;flex-wrap:wrap}
-.pchip{border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px}
-.pchip.def{border-color:var(--ok);background:var(--okl)}
-.demo{background:var(--warnl);color:var(--warn);text-align:center;font-size:12px;padding:4px;font-weight:600}
-@media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.tabs{margin-left:6px}.tab{padding:6px 8px}.hide-m{display:none}}
-
-/* Shared Farm Worker UX · FoodFlow visual language */
-:root{--acc:#1c7457;--accl:#e7f5ee;--accd:#14543f;--ok:#1c7457;--okl:#e7f5ee;--bar:#8b6a32}
-html,body{font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;background:#f6f7f2}
-.top{padding:12px 16px;min-height:62px}.top b{font-size:20px}.top .farm{font-size:15px;padding:7px 12px}
-.wrap{max-width:620px;padding:15px 13px 130px}.card{border:1px solid #e3e7dd;border-radius:17px;padding:16px;margin-bottom:13px;box-shadow:0 2px 9px #1c302008}
-.lbl{margin:0 0 12px;align-items:center;gap:6px}.lbl b{font-size:19px;color:#263024}.lbl .hint{font-size:12px}
-.step-badge{display:inline-grid;place-items:center;width:30px;height:30px;background:#e7f5ee;color:#14543f;border-radius:50%;font-weight:800;font-size:15px;margin-right:7px}
-.opt{border-radius:12px;min-height:57px;transition:background .12s,border-color .12s;position:relative}.opt.on{border:2px solid #1c7457;background:#e7f5ee;color:#124b37;box-shadow:inset 0 0 0 1px #a3ccb5}.opt.on:after{content:'✓';position:absolute;top:3px;right:5px;color:#1c7457;font-weight:900;font-size:13px}
-.opt.name{min-height:58px;display:flex;align-items:center;gap:9px;padding:10px 10px;font-size:14px}.opt.name .personicon{font-size:22px;opacity:.75;flex:none}.opt.name.on .personicon{opacity:1}.opt.name span:last-child{overflow-wrap:anywhere}
-.opt.product{min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:14px}.opt.product .producticon{font-size:36px;line-height:1.1;background:#f3f5ef;border-radius:13px;width:60px;height:53px;display:grid;place-items:center}.opt.product.on .producticon{background:#d1ebda}.opt.product .productname{line-height:1.15;overflow-wrap:anywhere}
-.opt.price{min-height:65px;font-size:18px}.opt.price small{font-size:11px}.opt.date{min-height:69px;font-size:15px}.opt.date .dateicon{font-size:20px;display:block;margin-bottom:3px}
-.qty{justify-content:center;gap:20px;padding:8px 0}.qty button{width:58px;height:58px;border-radius:13px;font-size:29px;touch-action:manipulation}.qty button:last-child{background:#1c7457;color:white;border-color:#1c7457}.qty span{min-width:64px;font-size:30px}
-.save{min-height:53px;background:#1c7457;border-radius:12px;font-size:17px;white-space:nowrap}.sumbar{box-shadow:0 -4px 18px #15291416}.sumbar .txt{font-size:13px}.sumbar .txt b{font-size:23px}.recentrow{padding:12px 0}.recentrow .itemico{font-size:25px;width:36px;text-align:center;flex:none}.recentrow .m div{font-size:14px}.recentrow .amt{font-size:15px;font-weight:750}
-.step-info{color:#728074;font-size:12px}.helper{padding:10px 13px;background:#f0f5f5;border-radius:11px;color:#365665;font-size:13px;margin:8px 0}.flow-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:13px}.flow-chip{border:1px solid #e3e7dd;background:white;border-radius:12px;padding:9px 4px;text-align:center;font-size:12px;font-weight:750}.flow-chip span{font-size:22px;display:block}.flow-chip.current{background:#e7f5ee;border-color:#8dc09f;color:#14543f}
-.ownerheading{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:750;margin-bottom:12px}.tinyicon{font-size:19px;vertical-align:middle}.g.g3.items{grid-template-columns:repeat(3,minmax(0,1fr))}
-@media(max-width:420px){.g.g3.items{grid-template-columns:repeat(2,minmax(0,1fr))}.g.g4{grid-template-columns:repeat(3,minmax(0,1fr))}.wrap{padding-left:11px;padding-right:11px}.sumbar .inner{gap:8px}.save{min-width:112px;padding:12px}.opt.name{font-size:13px}}
-
-/* Worker UX v1.2: consistent with FoodFlow */
-.custom-panel{background:#f6f8f4;border:1px solid var(--border);border-radius:13px;padding:12px;margin-top:12px}
-.custom-panel label{display:block;font-size:15px;font-weight:700;margin-bottom:7px}
-.custom-panel small{display:block;font-size:12px;color:var(--warn);margin-top:7px;font-weight:600}
-.submit-actions{display:flex;gap:8px;align-items:center}.submit-actions>button{min-height:52px}
-.share-wa{border:1px solid #168446;background:#e4f5e9;color:#12652e;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:750;cursor:pointer}
-.share-wa:disabled{opacity:.4;cursor:not-allowed}
-@media(max-width:440px){.submit-actions{flex-direction:column}.submit-actions>button{width:100%;min-width:0}.sumbar .inner{align-items:stretch}.sumbar .txt{min-width:85px}}
-.purchase-confirm{display:flex;align-items:center;gap:12px;border:2px solid var(--border);border-radius:12px;padding:14px;font-weight:700;background:var(--okl);cursor:pointer}.purchase-confirm input{width:24px;height:24px;accent-color:var(--ok);flex-shrink:0}.submit-actions .save{width:100%;font-size:14px;white-space:normal}.submit-actions{width:100%}
-
-/* v2 · Request → Boss confirms */
-.stat{display:inline-block;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:750;white-space:nowrap}
-.stat.wait{background:var(--warnl);color:var(--warn)}.stat.ok{background:var(--okl);color:var(--ok)}.stat.no{background:#eee;color:#777}.stat.bad{background:var(--badl);color:var(--bad)}
-.req{padding:12px 0;border-top:1px solid #eee}.req:first-child{border-top:0}
-.req .head{display:flex;align-items:flex-start;gap:10px}.req .head .ico{font-size:26px;width:38px;text-align:center;flex:none}
-.req .head .m{flex:1;min-width:0}.req .head .m b{font-size:15px}.req .head .m small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
-.req .who{font-size:13px;color:#4c584d;margin:6px 0 0 48px;line-height:1.5}
-.req .acts{margin:8px 0 0 48px;display:flex;gap:8px;flex-wrap:wrap}
-.btn.sm{padding:7px 12px;font-size:13px}
-.done-sheet{text-align:center;padding:8px 4px 4px}.done-sheet .big{font-size:52px;line-height:1}.done-sheet h3{margin:10px 0 6px;font-size:21px}.done-sheet p{color:var(--muted);margin-bottom:16px;line-height:1.45}
-.wa-big{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;border:0;border-radius:12px;background:#1f9d55;color:#fff;font-size:17px;font-weight:800;cursor:pointer;margin-bottom:8px}
-.ocard{background:#fff;border:1px solid #e3e7dd;border-radius:17px;padding:16px;margin-bottom:13px;box-shadow:0 2px 9px #1c302008}
-.ocard.open{border:2px solid #e9cf95}
-.ocard .top2{display:flex;gap:12px;align-items:flex-start}.ocard .top2 .ico{font-size:34px;width:52px;height:52px;display:grid;place-items:center;background:#f3f5ef;border-radius:13px;flex:none}
-.ocard .top2 .m{flex:1;min-width:0}.ocard .top2 .m b{font-size:17px}.ocard .top2 .m small{display:block;color:var(--muted);margin-top:3px}
-.wk{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:11px;margin-top:8px;cursor:pointer;font-weight:600}
-.wk input{width:22px;height:22px;accent-color:var(--ok);flex:none}.wk.off{opacity:.5}
-.f-lbl{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
-.total{display:flex;justify-content:space-between;align-items:center;background:#f6f8f4;border-radius:11px;padding:12px 14px;margin-top:14px;font-weight:700}
-.total b{font-size:22px;font-family:'IBM Plex Mono',monospace}
-.obtns{display:flex;gap:8px;margin-top:12px}.obtns .btn{min-height:50px}.obtns .btn.pri{flex:1;font-size:16px}
-.newtag{display:inline-block;background:var(--warnl);color:var(--warn);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;vertical-align:middle}
-.tabbadge{display:inline-block;background:#e9a23b;color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px}
-.empty{color:var(--muted);text-align:center;padding:26px 10px}
-@media(max-width:640px){.top{flex-wrap:wrap;row-gap:8px}.top .tabs{width:100%;margin-left:0;overflow-x:auto}.tab{white-space:nowrap;padding:7px 8px;font-size:12px}}
-.tab{color:#f1e6cf}
-</style>
-</head>
-<body>
-<div id="app"></div>
-<div class="toast" id="toast"></div>
-
+<html lang="my"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kedai Runcit</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>:root{--gold:#8b6a32;--ink:#263024;--mut:#728074;--paper:#f6f7f2;--line:#e3e7dd;--green:#1c7457;--warn:#a76712;--red:#b53c31;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',Arial,'Noto Sans Myanmar','Myanmar Text','Padauk',sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.35;cursor:not-allowed}input,select,textarea{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:10px;background:white;color:var(--ink)}button:focus-visible,input:focus-visible{outline:3px solid #8eb5e8;outline-offset:2px}.top{background:var(--gold);color:#fff;position:sticky;top:0;z-index:20}.topin{max-width:1180px;margin:auto;display:flex;align-items:center;gap:14px;padding:13px 18px;flex-wrap:wrap}.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.ver{background:#ffffff33;border-radius:30px;padding:3px 9px;font-size:12px}.mode{margin-left:auto;background:#ffffff24;padding:5px;border-radius:13px;display:flex;gap:5px}.mode button{background:transparent;border:0;color:#fff;padding:9px 16px;border-radius:9px;font-weight:650}.mode button.on{background:white;color:var(--gold)}.shell{max-width:1180px;margin:0 auto;padding:22px 18px 100px}.hero{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:17px}.hero h1{font-size:27px;margin:0;letter-spacing:-.6px}.sub{color:var(--mut);font-size:14px}.card{background:white;border:1px solid var(--line);border-radius:17px;padding:19px;margin-bottom:14px;box-shadow:0 2px 9px #1c302008}.btn{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-weight:700}.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}.btn.gold{background:var(--gold);color:#fff;border-color:var(--gold)}.btn.danger{color:var(--red)}.btn.light{background:#f3f5ef}.btn.small{min-height:36px;padding:7px 11px;font-size:13px}.btn.block{width:100%}.btnrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.btnrow .grow{flex:1}.mut{color:var(--mut)}.pills{display:flex;gap:8px;overflow:auto;padding:2px 0 11px}.pill{white-space:nowrap;border:1px solid var(--line);border-radius:30px;background:#fff;padding:9px 14px;min-height:40px}.pill.on{background:var(--green);color:#fff;border-color:var(--green)}.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}.stat{background:#fff;border:1px solid var(--line);border-radius:14px;text-align:center;padding:14px}.stat strong{display:block;font-size:27px}.stat span{font-size:12px;color:var(--mut)}.farmgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.farmcard{border:1px solid var(--line);border-radius:16px;padding:19px;background:#fff;text-align:left;min-height:130px;display:flex;flex-direction:column;gap:8px}.farmcard b{font-size:25px}.tag{font-size:12px;font-weight:750;background:#edf1eb;color:#506252;border-radius:30px;padding:5px 10px;display:inline-block}.tag.ok{background:#e7f5ee;color:var(--green)}.tag.warn{background:#fff2dc;color:#945d0c}.tag.bad{background:#ffedea;color:var(--red)}.tag.blue{background:#eaf1ff;color:#35629b}.titleline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px}.titleline h2{font-size:22px;margin:0}.itemsgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.food{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px;min-width:0}.food.chosen{background:#f3f9f3;border-color:#87b69a}.ico{width:53px;min-width:53px;height:55px;border-radius:12px;background:#f4f3ec;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:25px;line-height:1.05}.ico.photo{width:64px;min-width:64px;height:72px;background:#fff;border:1px solid var(--line);overflow:hidden;justify-content:flex-start;padding:0}.ico.photo img{width:64px;height:56px;object-fit:cover;display:block}.ico.photo img:only-child{height:72px}.ico.photo small{display:block;width:100%;text-align:center;line-height:16px;background:#f4f3ec}.ico small{font-size:9px;font-weight:800;color:#665b43;letter-spacing:.2px}.foodname{flex:1;min-width:0}.foodname b{display:block;font-size:15px;overflow-wrap:anywhere}.foodname small{color:var(--mut);display:block}.foodname small.loc{color:var(--ink);font-size:14px}.lang{display:flex;gap:4px;background:#ffffff24;padding:4px;border-radius:11px;margin-left:auto}.lang button{background:transparent;border:0;color:#fff;padding:6px 10px;border-radius:8px;font-weight:700;font-size:14px}.lang button.on{background:#fff;color:var(--gold)}.step{display:flex;align-items:center;gap:5px}.step button{height:38px;width:38px;border:1px solid var(--line);border-radius:11px;background:white;font-size:21px}.step button.plus{background:var(--green);border-color:var(--green);color:white}.count{width:39px;min-height:38px;background:none;border:0!important;text-align:center;padding:0;font-weight:750!important;font-size:18px!important}.bottom{position:sticky;bottom:0;background:#fff;box-shadow:0 -5px 20px #15291415;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:10px;align-items:center;margin-top:15px;z-index:12}.bottom .btn{flex:1}.note{border-radius:12px;background:#f0f5f5;padding:13px;margin:12px 0;color:#365665}.note.warn{background:#fff4e6;color:#8b580c}.note.bad{background:#fff0ee;color:#982f24}.line{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}.line strong{text-align:right}.totrow{background:#edf3eb;font-weight:800}.sectionhead{font-size:14px;color:var(--mut);font-weight:750;text-transform:uppercase;letter-spacing:.5px;margin:20px 0 8px}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}th{background:#f0f3eb;color:#4b6553;font-size:12px}td.num,th.num{text-align:right}tr:last-child td{border:0}.nav{display:flex;gap:8px;overflow:auto;margin-bottom:16px}.nav button{border:1px solid var(--line);background:white;min-height:45px;border-radius:11px;padding:10px 14px;white-space:nowrap;font-weight:700}.nav button.on{background:var(--gold);color:#fff;border-color:var(--gold)}.over{position:fixed;inset:0;background:#15231988;display:none;align-items:center;justify-content:center;padding:15px;z-index:50}.over.on{display:flex}.modal{background:white;width:100%;max-width:570px;max-height:91vh;overflow:auto;border-radius:18px;padding:22px}.modal h2{margin:0 0 14px}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}.field label{font-size:13px;font-weight:700;color:var(--mut)}.field input,.field select,.field textarea{width:100%}.modalfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}.empty{text-align:center;padding:35px 20px;color:var(--mut)}.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.tools select{max-width:240px}.hidden{display:none!important}.toast{position:fixed;bottom:20px;right:20px;z-index:100;background:#263529;color:white;padding:12px 17px;border-radius:11px;display:none}.toast.on{display:block}.donebox{background:#eaf6ee;text-align:center;padding:24px;border-radius:16px}.donebox .tick{font-size:38px}.checkrow{display:flex;gap:10px;align-items:center}.checkrow input{width:22px;height:22px;min-height:22px}.search{width:100%;margin-bottom:10px}.hint{font-size:12px;color:var(--mut)}.sep{border:0;border-top:1px solid var(--line);margin:14px 0}.farmcard .house{font-size:42px;line-height:1}.howgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.howcard{border:2px solid #9cc5ad;background:#f1f7f2;border-radius:16px;padding:16px 18px}.howcard.gold{border-color:#e6c98a;background:#fff8ea}.howcard .num{font-size:32px;line-height:1}.howcard b{display:block;font-size:20px;margin:8px 0 4px}.legend{display:flex;gap:8px;flex-wrap:wrap}.legend span{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:30px;padding:8px 14px;background:#f6f7f2;font-weight:700}.legend i{width:14px;height:14px;border-radius:50%;display:inline-block}
+@media(max-width:700px){.howgrid{grid-template-columns:1fr}.shell{padding:16px 12px 90px}.hero h1{font-size:23px}.itemsgrid{grid-template-columns:1fr}.farmgrid{grid-template-columns:1fr}.farmcard{min-height:88px}.mode{margin-left:0;width:100%}.mode button{flex:1}.topin{gap:7px}.stat strong{font-size:23px}.card{padding:15px}}@media print{.top,.nav,.tools,.bottom,.btn,.noprint,.over{display:none!important}.shell{max-width:none;padding:0}.card{box-shadow:none}.tablewrap{overflow:visible}}
+
+button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
+/* 首页四格：2×2 等宽同高，图示 → 大标题 → 小标题 */
+.tiles4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;margin-bottom:16px}
+.tile4{font:inherit;color:var(--ink);cursor:pointer;background:#fff;border:1.5px solid var(--line);border-radius:18px;min-height:190px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;box-shadow:0 3px 8px #1627190a;min-width:0}
+.tile4:active{background:#edf7f0}.tile4:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.nw{white-space:nowrap}
+.t4ico{font-size:40px;line-height:1.2}
+.t4title{font-size:21px;font-weight:800;line-height:1.3;overflow-wrap:anywhere}
+.t4date{font-size:13px;font-weight:750;color:var(--warn);line-height:1.4}
+.t4sub{font-size:13px;color:var(--mut);line-height:1.4;margin-top:auto}
+html:lang(my) .t4title{font-size:19px;line-height:1.6}
+/* 点名卡：没点 = 橙色，点好 = 绿色 */
+.attcard{font:inherit;color:var(--ink);cursor:pointer;width:100%;display:flex;align-items:center;gap:14px;text-align:left;border-radius:18px;padding:16px;margin-bottom:12px;border:2px solid}
+.attcard.todo{background:#fff4e6;border-color:#e9b46a}.attcard.done{background:#eaf6ee;border-color:#87b69a}
+.aico{font-size:38px;line-height:1}.atxt{flex:1;min-width:0}.atxt b{display:block;font-size:19px}.atxt small{display:block;font-size:13px;color:var(--mut)}
+.attcard.todo .atxt small{color:var(--warn);font-weight:700}.attcard.done .atxt small{color:var(--green);font-weight:700}.aarr{font-size:28px;color:var(--mut)}
+.attrow{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}.attrow.empty{border-color:#e9b46a}
+.attrow b{display:block;font-size:16px;margin-bottom:8px}
+.abtns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.abtns.why{margin-top:6px}
+.ab{font:inherit;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.2;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:700;cursor:pointer;padding:6px 4px}
+.ab.on.g{background:var(--green);color:#fff;border-color:var(--green)}.ab.on.o{background:#f0a23a;color:#fff;border-color:#f0a23a}.ab.on.r{background:var(--red);color:#fff;border-color:var(--red)}
+.abtns.why .ab{min-height:54px;font-size:14px}
+.abi{font-size:24px;line-height:1}.abtns.why .abi{font-size:20px}
+.ab.on .abi{filter:drop-shadow(0 0 2px #fff)}
+@media(max-width:360px){.t4title{font-size:18px}.t4sub,.t4date{font-size:12px}.tile4{padding:14px 7px}}
+
+button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
+.attcard.plain{background:#fff;border-color:var(--line)}
+.attcard.plain .atxt small{color:var(--mut);font-weight:600}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.wd{background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px 5px;min-height:92px;font-size:11px;display:flex;flex-direction:column;gap:3px}
+.wd b{font-size:12px;color:var(--mut)}.wd span{background:#f3f5ef;border-radius:6px;padding:2px 4px;line-height:1.3}
+.wd.today{border:2px solid var(--green)}.wd.off{opacity:.55}
+.seg{display:flex;gap:4px;flex-wrap:wrap}.seg button{border:1px solid var(--line);background:#fff;border-radius:9px;min-height:36px;padding:4px 10px;font-weight:700}.seg button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.checkrow.line{gap:8px}
+.bottom .btn{min-height:50px}
+@media(max-width:700px){.week{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+.gate{text-align:center;padding:40px 14px}.gate h2{font-size:22px;margin:0 0 14px}.gate p{color:var(--mut);font-size:16px}
+.gate .code{font:900 44px/1.2 ui-monospace,Menlo,monospace;letter-spacing:6px;background:#fff;border:2px dashed var(--gold);border-radius:16px;padding:14px;display:inline-block;color:var(--gold)}
+.pdots{display:flex;justify-content:center;gap:16px;margin:18px 0 6px}.pd{width:20px;height:20px;border-radius:50%;border:2px solid var(--gold)}.pd.on{background:var(--gold)}
+.pinmsg{color:var(--red)!important;min-height:24px;font-weight:700}
+.pkeys{display:grid;grid-template-columns:repeat(3,84px);gap:12px;justify-content:center;margin-top:8px}
+.pk{font:800 28px system-ui;height:72px;border-radius:18px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}.pk:active{background:#edf7f0}
+.farmswitch{display:flex;gap:6px;margin:-4px 0 12px}.farmswitch button{flex:1;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:800 17px system-ui;color:var(--ink)}
+.farmswitch button.on{background:var(--green);border-color:var(--green);color:#fff}
+.lang button{border:0;background:transparent;color:#fff;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer}.lang button.on{background:#fff;color:var(--gold)}
+body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
+.printonly{display:none}
+@media print{.printonly{display:block}.hero,.pills,.sectionhead,.card:not(#printarea .card),.hint,#hdr{display:none!important}#printarea .hint{display:block!important}body{background:#fff}}
+</style></head><body>
+<header class="top"><div class="topin" id="hdr"><span class="brand">🛍️ Kedai Runcit</span></div></header>
+<main class="shell"><div id="app"></div></main>
+<div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 2;
+const APP_VERSION = 5;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
-const DEMO = /*DEMO*/QS.get('demo');   // ?demo=leader | owner | pending
-const FORCE_LEADER = QS.has('leader');
 const KEY_NAME = 'runcit_device_key';
+const HARVEST_FORM = '../worker_harvest_form_11.html';
 
-const SHOP_ICONS = {ROKOK:'🚬',CIGARETTES:'🚬',WHISKEY:'🍾','TOP UP':'📱',BAJU:'👕',SABUN:'🧼',SHAMPOO:'🧴',BERAS:'🍚',TELUR:'🥚',MINYAK:'🫗',MEE:'🍜',KOPI:'☕',SELUAR:'👖',KASUT:'👟',CHARGER:'🔌',EARPHONE:'🎧'};
-function productIcon(label){ const k = String(label||'').trim().toUpperCase(); if(SHOP_ICONS[k]) return SHOP_ICONS[k];
-  for(const w in SHOP_ICONS) if(k.includes(w)) return SHOP_ICONS[w]; return '📦'; }
-
+/* ================= shared ================= */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const rm = n => 'RM ' + (Math.round(Number(n)*100)/100).toLocaleString('en-MY', {minimumFractionDigits: Number(n)%1 ? 2 : 0, maximumFractionDigits: 2});
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }));
-function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2000); }
-function klDate(offset){ const d = new Date(Date.now() + 8*3600e3 - offset*864e5); return d.toISOString().slice(0,10); }
-function dmy(iso){ const [y,m,d] = String(iso).slice(0,10).split('-'); return d + '/' + m; }
-function hm(ts){ return new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kuala_Lumpur'}); }
-function klDay(ts){ return new Date(new Date(ts).getTime() + 8*3600e3).toISOString().slice(0,10); }
-function when(ts){ const d = klDay(ts); return (d === klDate(0) ? 'Today' : d === klDate(1) ? 'Yesterday' : dmy(d)) + ' ' + hm(ts); }
-function sheet(html){ const s = document.createElement('div'); s.className = 'sheet'; s.innerHTML = '<div class="box">' + html + '</div>'; s.onclick = e => { if(e.target === s) s.remove(); }; document.body.appendChild(s); return s; }
-const STAT = {REQUESTED:['wait','⏳ Waiting'], CONFIRMED:['ok','✅ Bought'], REJECTED:['no','✖ Not bought'], CANCELLED:['no','Cancelled']};
-const statPill = s => '<span class="stat ' + STAT[s][0] + '">' + STAT[s][1] + '</span>';
-
-function deviceKey(){
-  let k = null;
-  try { k = localStorage.getItem(KEY_NAME); } catch(e){}
-  if(!k){ k = uuid(); try { localStorage.setItem(KEY_NAME, k); } catch(e){} }
-  return k;
-}
-
-// ================= 资料层：真的走 Supabase；DEMO 走假资料（同一组函数）=================
-const sb = (!DEMO && window.supabase) ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const RM = n => 'RM ' + (Math.round(Number(n)*100)/100).toFixed(2);
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function klToday(){ const q = QS.get('today'); if(/^\d{4}-\d{2}-\d{2}$/.test(q||'')) return q; return new Date(Date.now() + 8*3600e3).toISOString().slice(0,10); }
+const addD = (s,n) => { const d = new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return iso(d); };
+const dm = s => { const d = new Date(String(s).slice(0,10)+'T00:00:00'); return `${d.getDate()}/${d.getMonth()+1}`; };
+function toast(m){ const e = $('#toast'); e.textContent = m; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); }
+function closeModal(){ $('#modalOverlay').classList.remove('on'); }
+function openModal(h){ $('#modalBox').innerHTML = h; $('#modalOverlay').classList.add('on'); }
+function deviceKey(){ let k = null; try { k = localStorage.getItem(KEY_NAME); } catch(e){} if(!k){ k = uuid(); try { localStorage.setItem(KEY_NAME, k); } catch(e){} } return k; }
+function lsGet(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+const sb = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 async function rpc(name, p){
-  if(DEMO) return MOCK.call(name, p);
-  const {data, error} = await sb.rpc(name, {p});
-  if(error) throw new Error(error.message.replace(/^.*?:\s*/, '') || 'Error');
+  if(!sb) throw new Error('No connection');
+  const {data, error} = await sb.rpc(name, {p: p || {}});
+  if(error) throw new Error(String(error.message || 'Error').replace(/^.*?ERROR:\s*/, ''));
   return data;
 }
+function busy(on){ document.body.classList.toggle('busy', !!on); }
+function gate(msg){ $('#app').innerHTML = `<div class="gate"><p>${esc(msg)}</p></div>`; }
 
-const MOCK = (() => {
-  const names = ['AUNG KO','AYE KO','HAN NAING THU','KYAW MIN','MAUNG MAUNG','MIN THU','NAY LIN','PHO THAE','SAN WIN','THET NAING','WIN NAING','ZAW ZAW'];
-  const W = names.map((n,i) => ({id:'w'+i, name:n}));
-  const items = [
-    {id:'i1', label:'ROKOK', prices:[36,50,54,56,90], default:54},
-    {id:'i2', label:'WHISKEY', prices:[17,20,25,50,56], default:25},
-    {id:'i3', label:'TOP UP', prices:[30,35,50], default:35},
-    {id:'i4', label:'CIGARETTES', prices:[50,100], default:100},
-    {id:'i5', label:'BAJU', prices:[36,40,42], default:36},
-  ];
-  const all = items.concat([{id:'i6', label:'PINJAM', prices:null},{id:'i7', label:'XXXXX', prices:null}]);
-  const now = Date.now(), ago = m => new Date(now - m*60e3).toISOString();
-  let R = [ // requests: one row per worker
-    {id:'r1', client_id:'c1', farm:'AD 1', worker:'w5', item_id:'i1', custom:null, qty:1, est:54, status:'REQUESTED', at:ago(12)},
-    {id:'r2', client_id:'c1', farm:'AD 1', worker:'w9', item_id:'i1', custom:null, qty:1, est:54, status:'REQUESTED', at:ago(12)},
-    {id:'r3', client_id:'c2', farm:'AD 1', worker:'w2', item_id:null, custom:'SABUN MANDI', qty:2, est:null, status:'REQUESTED', at:ago(40)},
-    {id:'r4', client_id:'c3', farm:'AD 1', worker:'w0', item_id:'i3', custom:null, qty:1, est:35, status:'CONFIRMED', at:ago(300), price:35, amount:35},
-    {id:'r5', client_id:'c4', farm:'AD 1', worker:'w7', item_id:'i2', custom:null, qty:2, est:25, status:'REJECTED', at:ago(1500), note:'No stock'},
-  ];
-  const entries = [
-    {id:'e1', farm:'AD 1', worker:'AUNG KO', item:'TOP UP', qty:1, price:35, default:35, amount:35, date:klDate(0), at:ago(200), device:'AD 1 Leader', void:false},
-    {id:'e2', farm:'AD 1', worker:'PHO THAE', item:'ROKOK', qty:1, price:60, default:54, amount:60, date:klDate(0), at:ago(500), device:'AD 1 Leader', void:false},
-  ];
-  const devices = [
-    {id:'d1', code:'7F3A9C', label:'AD 1 Leader', farm_code:'AD 1', status:'ACTIVE', requested_at:'2026-11-01T02:00:00Z', last_seen:ago(1)},
-    {id:'d2', code:'B41E07', label:null, farm_code:null, status:'PENDING', requested_at:ago(10), last_seen:null},
-  ];
-  const wname = id => (W.find(w => w.id === id)||{}).name;
-  const ilabel = r => r.item_id ? items.concat(all).find(i => i.id === r.item_id).label : r.custom;
-  function group(rows){
-    const g = {};
-    rows.forEach(r => { (g[r.client_id] ??= []).push(r); });
-    return Object.values(g).map(rs => { const r0 = rs[0], st = rs.map(r => r.status);
-      return {client_id:r0.client_id, at:r0.at, farm:r0.farm, device:'AD 1 Leader', item_id:r0.item_id, item:ilabel(r0), custom:!r0.item_id, qty:r0.qty, est:r0.est,
-        default: r0.item_id ? (items.find(i => i.id === r0.item_id)||{}).default : null,
-        open: st.includes('REQUESTED'),
-        status: st.every(s => s==='REQUESTED') ? 'REQUESTED' : st.every(s => s==='CANCELLED') ? 'CANCELLED' : st.includes('CONFIRMED') ? 'CONFIRMED' : 'REJECTED',
-        note: rs.map(r => r.note).find(Boolean) || null,
-        workers: rs.map(r => ({request_id:r.id, worker_id:r.worker, name:wname(r.worker), status:r.status, price:r.price||null, amount:r.amount||null})).sort((a,b) => a.name < b.name ? -1 : 1)};
-    }).sort((a,b) => (b.open - a.open) || (a.at < b.at ? 1 : -1));
-  }
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  async function call(name, p){
-    await wait(180);
-    if(name === 'shop_hello'){
-      if(DEMO === 'pending') return {status:'PENDING', code:'B41E07'};
-      return {status:'ACTIVE', farm:'AD 1', today:klDate(0), workers:W, items, requests: group(R)};
-    }
-    if(name === 'shop_request'){
-      if(R.some(r => r.client_id === p.client_id)) return {ok:true, repeat:true};
-      p.workers.forEach(w => R.push({id:'r'+Math.random(), client_id:p.client_id, farm:'AD 1', worker:w, item_id:p.item_id||null, custom:p.item_id?null:String(p.custom_name).trim().toUpperCase(), qty:p.qty, est:p.price||null, status:'REQUESTED', at:new Date().toISOString()}));
-      return {ok:true, count:p.workers.length};
-    }
-    if(name === 'shop_request_cancel'){ const rs = R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED'); if(!rs.length) throw new Error('Already handled by the boss'); rs.forEach(r => { r.status = 'CANCELLED'; r.note = 'Cancelled by Leader'; }); return {ok:true}; }
-    if(name === 'shop_owner_requests') return group(R);
-    if(name === 'shop_owner_confirm'){
-      const rs = R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED'); if(!rs.length) throw new Error('Already handled');
-      let label = p.item_id ? all.find(i => i.id === p.item_id).label : String(p.new_item).trim().toUpperCase();
-      if(!p.item_id && !all.some(i => i.label === label)) all.push({id:'i'+Math.random(), label, prices:null});
-      rs.forEach(r => { if(p.request_ids.includes(r.id)){ r.status = 'CONFIRMED'; r.price = p.price; r.amount = p.price*p.qty;
-          entries.unshift({id:'e'+Math.random(), farm:r.farm, worker:wname(r.worker), item:label, qty:p.qty, price:p.price, default:(items.find(i=>i.label===label)||{}).default ?? null, amount:p.price*p.qty, date:p.date, at:new Date().toISOString(), device:'AD 1 Leader', void:false}); }
-        else { r.status = 'REJECTED'; r.note = 'Not bought'; } });
-      return {ok:true, count:p.request_ids.length};
-    }
-    if(name === 'shop_owner_reject'){ R.filter(r => r.client_id === p.client_id && r.status === 'REQUESTED').forEach(r => { r.status = 'REJECTED'; r.note = p.note || null; }); return null; }
-    if(name === 'shop_owner_void'){ const e = entries.find(x => x.id === p.id); e.void = true; e.void_by = 'OWNER'; return null; }
-    if(name === 'shop_owner_data') return {devices, items: all.map(i => ({id:i.id, label:i.label, prices: i.prices ? i.prices.map(x => ({price:x, default:x===i.default})) : null})), entries: entries.filter(e => e.date.slice(0,7) === p.month).map(e => ({...e, in_salary:!e.void}))};
-    if(name === 'shop_owner_device_set'){ const d = devices.find(x => x.id === p.id); Object.assign(d, {status:p.status, farm_code:p.status==='ACTIVE'?p.farm:d.farm_code, label:p.label||d.label}); return null; }
-    if(name === 'shop_owner_prices_set'){ const it = all.find(x => x.id === p.item_id); it.prices = p.prices.length ? p.prices.map(Number).sort((a,b)=>a-b) : null; it.default = p.default!=null ? Number(p.default) : null;
-      const k = items.findIndex(x => x.id === it.id); if(it.prices && k < 0) items.push(it); if(!it.prices && k >= 0) items.splice(k,1); return null; }
-    if(name === 'shop_owner_item_add'){ const id = 'i'+Math.random(); all.push({id, label:p.label.toUpperCase(), prices:null}); return id; }
-    throw new Error('Unknown');
-  }
-  return {call};
-})();
+/* item icons (the four lists have no photos except groceries) */
+const ICONS = {ROKOK:'🚬',CIGARETTES:'🚬',WHISKEY:'🥃',BEER:'🍺','TOP UP':'📱',BAJU:'👕',SELUAR:'👖',KASUT:'👟',SABUN:'🧼','SABUN BASUH':'🧼',SHAMPOO:'🧴',GAS:'🔥',
+  GLOVES:'🧤','CABLE TIE':'🔗',ROPE:'🪢',PLASTIC:'🛍',PAIL:'🪣',HOSE:'🚿',CHARGER:'🔌',EARPHONE:'🎧',MEE:'🍜',KOPI:'☕',BERAS:'🍚'};
+function icon(label, given){ if(given) return given; const k = String(label||'').toUpperCase(); if(ICONS[k]) return ICONS[k]; for(const w in ICONS) if(k.includes(w)) return ICONS[w]; return '📦'; }
+const isAlcohol = label => /WHISK|BEER|ARAK|TODDY|WINE|BRANDY|\bRUM\b|VODKA|ALCOHOL|TIGER|GUINNESS|ANCHOR/i.test(String(label||''));
 
-// ================= 入口 =================
+/* grocery round: the 15th and the last day of the month; order by 4 days before (same rule as the database) */
+function foodRound(ref){ const t0 = new Date((ref||klToday())+'T00:00:00');
+  for(let m = 0; m < 3; m++){ const y = t0.getFullYear(), mo = t0.getMonth()+m;
+    for(const day of [15, new Date(y, mo+1, 0).getDate()]){ const del = new Date(y, mo, day), cut = new Date(y, mo, day-4); if(cut >= t0) return {deliver: iso(del), order: iso(cut)}; } } }
+
+/* ================= entry ================= */
 async function boot(){
-  $('#app').innerHTML = '<div class="gate"><p>Loading…</p></div>';
-  if(DEMO === 'owner') return Owner.start();
-  if(!DEMO && !FORCE_LEADER && sb){
-    try{
-      const {data:{session}} = await sb.auth.getSession();
-      if(session){
-        const {data:me} = await sb.from('hub_app_user').select('role,status').eq('id', session.user.id).maybeSingle();
-        if(me && me.role === 'OWNER' && me.status === 'ACTIVE') return Owner.start();
-      }
-    }catch(e){}
+  gate('Loading…');
+  if(!QS.has('leader') && sb){
+    let session = null;
+    try { session = (await sb.auth.getSession()).data.session; } catch(e){}
+    if(session){
+      try { const B = await rpc('shop_owner_board', {}); return Owner.start(B); }
+      catch(e){ if(/Not allowed/.test(e.message)) return gate('This page is not available.'); return gate(e.message); }
+    }
   }
   Leader.start();
 }
 
-// ================= Leader（手机）：只送申请 =================
+const FO_CT={my:{'Rice & Oil':'ဆန်နှင့်ဆီ','Fresh':'အသား ငါး ဥ','Vegetables':'ဟင်းသီးဟင်းရွက်','Canned':'စည်သွတ်ဘူး','Dry Food':'အခြောက်','Powder':'အမှုန့်','Seasoning':'ဟင်းခတ်','Household':'အိမ်သုံး'},zh:{'Rice & Oil':'米和油','Fresh':'鲜货','Vegetables':'蔬菜','Canned':'罐头','Dry Food':'干粮','Powder':'粉类','Seasoning':'调味料','Household':'日用品'}};
+const FO_IN={my:{beras:'ဆန်',minyak:'စားသုံးဆီ',ayam:'ကြက်',ikan_keli:'ငါးခူ',telur:'ကြက်ဥ',bawang_merah:'ကြက်သွန်နီ',bawang_putih:'ကြက်သွန်ဖြူ',halia:'ချင်း',cili:'ငရုတ်သီး',tomato:'ခရမ်းချဉ်သီး',kentang:'အာလူး',kobis:'ဂေါ်ဖီထုပ်',kobis_bunga:'ပန်းဂေါ်ဖီ',rebung:'မျှစ်',sardin:'ငါးသေတ္တာ',susu:'နို့ဆီ',ikan_bilis:'ငါးခြောက်',kacang_tanah:'မြေပဲ',kacang_kuning:'ပဲဝါ',mee_sedap:'ခေါက်ဆွဲ',mee_hoon:'မုန့်တီ',tepung:'ဂျုံမှုန့်',kunyit:'နနွင်းမှုန့်',kopi_3in1:'ကော်ဖီမစ်',garam:'ဆား',gula:'သကြား',ajinomoto:'အချိုမှုန့်',vesedap:'အချိုမှုန့်',kicap_pekat:'ပဲငံပြာရည်',fish_sauce:'ငံပြာရည်',asam_jawa:'မန်ကျည်း',shampoo:'ခေါင်းလျှော်ရည်',sabun_baju:'ဆပ်ပြာမှုန့်',sabun_mandi:'ရေချိုးဆပ်ပြာ',ubat_gigi:'သွားတိုက်ဆေး'},
+zh:{beras:'米',minyak:'食油',ayam:'鸡',ikan_keli:'塘虱鱼',telur:'鸡蛋',bawang_merah:'红葱头',bawang_putih:'蒜头',halia:'姜',cili:'辣椒',tomato:'番茄',kentang:'马铃薯',kobis:'包菜',kobis_bunga:'花菜',rebung:'竹笋',sardin:'沙丁鱼罐头',susu:'炼奶',ikan_bilis:'江鱼仔',kacang_tanah:'花生',kacang_kuning:'黄豆',mee_sedap:'快熟面',mee_hoon:'米粉',tepung:'面粉',kunyit:'黄姜粉',kopi_3in1:'三合一咖啡',garam:'盐',gula:'糖',ajinomoto:'味精',vesedap:'味精',kicap_pekat:'黑酱油',fish_sauce:'鱼露',asam_jawa:'亚参',shampoo:'洗发水',sabun_baju:'洗衣粉',sabun_mandi:'沐浴香皂',ubat_gigi:'牙膏'}};
+const FO_SEED=[
+ ['beras','Beras','Rice & Oil','bag 10kg','Grocery','🍚',0],
+ ['minyak','Minyak Masak','Rice & Oil','bottle 5L','Grocery','🫗',0],
+ ['ayam','Ayam','Fresh','bird','Wet Market','🐔',0],
+ ['ikan_keli','Ikan Keli','Fresh','kg','Wet Market','🐟',1],
+ ['telur','Telur','Fresh','pcs','Grocery','🥚',1],
+ ['bawang_merah','Bawang Merah','Vegetables','kg','Huat Tiong','🧅',1],
+ ['bawang_putih','Bawang Putih','Vegetables','kg','Huat Tiong','🧄',1],
+ ['halia','Halia','Vegetables','kg','Huat Tiong','🫚',1],
+ ['cili','Cili','Vegetables','kg','Huat Tiong','🌶️',1],
+ ['tomato','Tomato','Vegetables','kg','Huat Tiong','🍅',1],
+ ['kentang','Kentang','Vegetables','kg','Huat Tiong','🥔',1],
+ ['kobis','Kobis','Vegetables','pcs','Huat Tiong','🥬',0],
+ ['kobis_bunga','Kobis Bunga','Vegetables','pcs','Huat Tiong','🥦',0],
+ ['rebung','Rebung (Bamboo)','Vegetables','kg','Huat Tiong','🎋',1],
+ ['sardin','Ikan Sardin (can)','Canned','can','Grocery','🥫',1],
+ ['susu','Susu Pekat','Canned','can','Grocery','🥛',0],
+ ['ikan_bilis','Ikan Bilis','Dry Food','kg','Grocery','🐟',1],
+ ['kacang_tanah','Kacang Tanah','Dry Food','kg','Huat Tiong','🥜',0],
+ ['kacang_kuning','Kacang Kuning','Dry Food','kg','Grocery','🫘',0],
+ ['mee_sedap','Mee Sedap','Dry Food','pack 5','Grocery','🍜',0],
+ ['mee_hoon','Mee Hoon','Dry Food','pack 350g','Grocery','🍜',0],
+ ['tepung','Tepung','Powder','kg','Grocery','🌾',0],
+ ['kunyit','Kunyit','Powder','pack','Huat Tiong','🟡',0],
+ ['kopi_3in1','Coffee Mix 3in1','Powder','pack 25','Grocery','☕',0],
+ ['garam','Garam','Seasoning','pack 350g','Grocery','🧂',0],
+ ['gula','Gula','Seasoning','pack 1kg','Grocery','🍬',1],
+ ['ajinomoto','Ajinomoto','Seasoning','pack 1kg','Grocery','✨',0],
+ ['vesedap','VeSedap','Seasoning','pack 1kg','Grocery','✨',1],
+ ['kicap_pekat','Kicap Pekat','Seasoning','bottle','Grocery','🍶',0],
+ ['fish_sauce','Thai Fish Sauce','Seasoning','bottle 700ml','Grocery','🍶',0],
+ ['asam_jawa','Asam Jawa','Seasoning','pack','Grocery','🟤',0],
+ ['shampoo','Shampoo','Household','bottle','Grocery','🧴',0],
+ ['sabun_baju','Sabun Cuci Baju','Household','pack 2.1kg','Grocery','🧺',0],
+ ['sabun_mandi','Sabun Mandi','Household','pack 3','Grocery','🧼',0],
+ ['ubat_gigi','Ubat Gigi','Household','batang','Grocery','🪥',0]
+];
+const FO_PHOTOS=new Set(['ajinomoto','asam_jawa','ayam','bawang_merah','bawang_putih','beras','cili','fish_sauce','garam','halia','ikan_bilis','ikan_keli','kacang_kuning','kacang_tanah','kentang','kicap_pekat','kobis','kobis_bunga','kopi_3in1','kunyit','mee_hoon','mee_sedap','minyak','rebung','sabun_baju','sabun_mandi','ubat_gigi','gula','vesedap','sardin','shampoo','susu','telur','tepung','tomato']);
+
+/* ================= Leader phone: one straight line ================= */
 const Leader = (() => {
-  let D = null, F = null, busy = false;
-  const fresh = () => ({workers:[], item:null, customName:'', price:null, other:'', qty:1, client:uuid()});
+  const T={
+my:{title:'ဝယ်စာရင်း',sub:'မရောက်သေးတာ စာရင်းထဲ ကျန်နေမယ်',next:'နောက်တစ်ခေါက်',closes:'ပိတ်ချိန်',night:'ည',add:'ပစ္စည်း ထည့်မယ်',addHow:'ကိုယ်ပိုင် · အားလုံး · ခြံသုံး',wa:'📤 WhatsApp ပို့မယ်',sent:'ပို့ပြီး',resend:'အသစ် ထည့်ထားတယ် · ပြန်ပို့ပါ',carry:'⏰ မရောက်သေး',cur:'🆕 အသစ် ထည့်ထား',listCard:'ဝယ်စာရင်း',sub:'မရောက်သေးတာ စာရင်းထဲ ကျန်နေမယ်',bought:'🛍 ဝယ်ပြီး · ပို့ရန်စောင့်',nobuy:'✗ သူဌေး မဝယ်ပါ',empty:'စာရင်း မရှိသေးပါ',items:'ခု',
+ sameLast:'↺ အရင်တစ်ခါလို',addFood:n=>`${n} မျိုး · စာရင်းထဲ ထည့်မယ် →`,foodAdded:'စားစရာ စာရင်းထဲ ထည့်ပြီး ✓',
+ s1:'ဘယ်သူ့အတွက်လဲ?',s2:'ဘယ်သူလဲ? (အများကြီး ရွေးလို့ရ)',s3:'ဘာလိုလဲ?',other:'စာရင်းထဲ မရှိရင် ဒီမှာ ရေးပါ',back:'← နောက်သို့',change:'ပြောင်းမယ်',
+ addN:n=>`${n} ခု · စာရင်းထဲ ထည့်မယ် →`,dup:(w,i)=>`${w} မှာ ${i} စာရင်းထဲ ရှိပြီးသား`,alcohol:'အရက်: ဘယ်ခေါက် ဝယ်မလဲ သူဌေး ဆုံးဖြတ်မယ်',
+ cancelQ:'ဒါ မလိုတော့ဘူးလား?',harv:'ခူးဆွတ်မှု အစီရင်ခံစာ',harvTodo:'မပို့ရသေးဘူး · ဒီမှာ နှိပ်ပါ',harvSent:n=>`ပို့ပြီး · ခြင်း ${n} · ခြင်းအရေအတွက် မပို့ရသေး`,harvDone:n=>`ပို့ပြီး · ခြင်း ${n}`,harvOpen:'ခူးဆွတ်မှု ဖောင် ဖွင့်မယ်',harvNote:'ဒါက အခု သုံးနေတဲ့ ဖောင်အစစ်ပါ။ စမ်းကြည့်ရုံဆိုရင် မပို့ပါနဲ့။',att:'ဒီနေ့ နာမည်ခေါ်မယ်',attTodo:'မခေါ်ရသေးဘူး · ဒီမှာ နှိပ်ပါ',attDone:'ခေါ်ပြီးပြီ',work:'ဆင်း',half:'တစ်ဝက်',off:'မဆင်း',sick:'နေမကောင်း',busy:'ကိစ္စရှိ',other:'အခြား',allWork:'✓ အားလုံး ဆင်း',attSave:'✓ ပြီးပြီ',attLeft:n=>`${n} ယောက် မရွေးရသေး`,pickWhy:'မဆင်းတဲ့ အကြောင်း ရွေးပါ',attSaved:'နာမည်ခေါ်ပြီး ✓',attEdit:'ပြင်မယ်',home:'🏠 ပင်မ စာမျက်နှာ',added:'ထည့်ပြီး ✓',tripN:n=>`${n-1} ပတ် စောင့်ပြီး`,pickW:'အလုပ်သမား အရင် ရွေးပါ',card:'ဝယ်စာရင်း ကတ်',share:'ပုံ သိမ်း / WhatsApp ပို့',close:'ပိတ်မယ်',foodNote:'ဒီနေရာက အခု FoodOrder မှာစာ စာမျက်နှာ အတိုင်းပါ'},
+zh:{title:'我的清单',sub:'没交到的会一直留在清单上',next:'下一趟',closes:'截止',night:'晚上',add:'加东西',addHow:'工人自己的 · 大家平分 · 园里用',wa:'📤 传 WhatsApp',sent:'已传',resend:'有新东西，记得再传',carry:'⏰ 还没到',cur:'🆕 新加的',listCard:'清单',bought:'🛍 已买，等交货',nobuy:'✗ 老板不买',empty:'清单是空的',items:'样',
+ sameLast:'↺ 跟上次一样',addFood:n=>`${n} 样 · 加进这次买菜 →`,foodAdded:'已加进这次买菜 ✓',
+ s1:'是谁的？',s2:'哪个工人？（可以选几个）',s3:'要什么？',other:'清单没有的写这里',back:'← 返回',change:'换',
+ addN:n=>`${n} 样 · 加进清单 →`,dup:(w,i)=>`${w} 已经有 ${i} 在清单上`,alcohol:'酒：哪一趟买由老板决定',
+ cancelQ:'这样东西不要了吗？',harv:'罗里收菜',harvTodo:'还没报 · 按这里',harvSent:n=>`已报 ${n} 篮 · 篮子还没报`,harvDone:n=>`已报 ${n} 篮`,harvOpen:'打开收成表单',harvNote:'这是现在正在用的真表单。只是看看的话，不要按送出。',att:'今天点名',attTodo:'还没点 · 按这里',attDone:'已点名',work:'上班',half:'半天',off:'没上班',sick:'生病',busy:'有事',other:'其他',allWork:'✓ 全部上班',attSave:'✓ 点好了',attLeft:n=>`还有 ${n} 人没点`,pickWhy:'没上班的要选原因',attSaved:'已点名 ✓',attEdit:'修改',home:'🏠 回首页',added:'已加进清单 ✓',tripN:n=>`已等 ${n-1} 个礼拜`,pickW:'先选工人',card:'清单卡',share:'存图 / 发 WhatsApp',close:'关闭',foodNote:'这里就是现在 FoodOrder 的订菜画面，照搬不改'},
+en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next trip',closes:'Closes',night:'night',add:'Add',addHow:'Worker · Shared · Farm use',wa:'📤 Send to WhatsApp',sent:'Sent',resend:'New items added · send again',carry:'⏰ Not arrived yet',cur:'🆕 Newly added',listCard:'List',bought:'🛍 Bought · waiting delivery',nobuy:'✗ Boss not buying',empty:'List is empty',items:'items',
+ sameLast:'↺ Same as Last Order',addFood:n=>`${n} items · Add to groceries →`,foodAdded:'Added to groceries ✓',
+ s1:'Who is it for?',s2:'Which worker? (pick one or more)',s3:'What is needed?',other:'Not on the list? Type here',back:'← Back',change:'Change',
+ addN:n=>`${n} items · Add to list →`,dup:(w,i)=>`${w} already has ${i} on the list`,alcohol:'Alcohol: boss decides which trip',
+ cancelQ:'Remove this item?',harv:'Lorry harvest',harvTodo:'Not sent · tap here',harvSent:n=>`Sent ${n} baskets · baskets not counted yet`,harvDone:n=>`Sent ${n} baskets`,harvOpen:'Open harvest form',harvNote:'This is the real form in use now. If you are only looking, do not send.',att:'Roll call today',attTodo:'Not done · tap here',attDone:'Done',work:'Work',half:'Half day',off:'Off',sick:'Sick',busy:'Personal',other:'Other',allWork:'✓ All working',attSave:'✓ Done',attLeft:n=>`${n} not marked`,pickWhy:'Pick a reason for Off',attSaved:'Roll call saved ✓',attEdit:'Edit',home:'🏠 Back to home',added:'Added ✓',tripN:n=>`Waited ${n-1} wk`,pickW:'Pick a worker first',card:'List card',share:'Save / Send WhatsApp',close:'Close',foodNote:'This is the current FoodOrder order screen, unchanged'}};
+  const T2 = {
+    my:{waitTitle:'📱 သူဌေး အတည်ပြုရန် စောင့်ပါ', waitText:'ဒီကုဒ်ကို သူဌေးကို ပြပါ', again:'ပြန်စစ်မယ်', locked:'🔒 ဒီဖုန်း သုံးလို့ မရတော့ပါ', lockedText:'သူဌေးကို ပြောပါ',
+        pinTitle:n=>`${n} · PIN ရိုက်ပါ`, pinWrong:n=>`PIN မှားတယ် · ${n} ကြိမ် ကျန်သေး`, pinNone:'သူဌေးကို PIN တောင်းပါ', farm:'ခြံ', err:'မရဘူး · ပြန်ကြိုးစားပါ', noWorkers:'ဒီခြံမှာ အလုပ်သမား မရှိသေးပါ'},
+    zh:{waitTitle:'📱 等老板批准', waitText:'把这组码给老板看', again:'再检查一次', locked:'🔒 这支手机已经不能用', lockedText:'请找老板',
+        pinTitle:n=>`${n} · 输入 PIN`, pinWrong:n=>`PIN 不对 · 还剩 ${n} 次`, pinNone:'请老板给你设 PIN', farm:'园', err:'没成功 · 再试一次', noWorkers:'这个园还没有工人'},
+    en:{waitTitle:'📱 Waiting for the boss', waitText:'Show this code to the boss', again:'Check again', locked:'🔒 This phone can no longer be used', lockedText:'Please ask the boss',
+        pinTitle:n=>`${n} · Type your PIN`, pinWrong:n=>`Wrong PIN · ${n} tries left`, pinNone:'Ask the boss to set your PIN', farm:'Farm', err:'Did not work · try again', noWorkers:'No workers on this farm yet'}};
+  const TILES=[{"id": "farm_supplies", "order": 1, "icon": "🧤", "zh": {"title": "园里用品", "subtitle": "园里付款 · 不扣薪"}, "my": {"title": "ခြံသုံးပစ္စည်း", "subtitle": "ခြံက ပေးမယ် · လစာမဖြတ်ဘူး"}, "en": {"title": "Farm Supplies", "subtitle": "Farm pays · No salary deduction"}, "payment": "FARM", "salary_deduction": false}, {"id": "groceries", "order": 2, "icon": "🥬", "zh": {"title": "这次买菜", "dateLine": "26/11 前订好 · 30/11 送到", "subtitle": "全场平分 · 从薪水扣"}, "my": {"title": "စားစရာမှာမယ်", "dateLine": "26/11 အမီ မှာပါ · 30/11 ပို့မယ်", "subtitle": "အားလုံး မျှပေးမယ် · လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Groceries", "dateLine": "Order by 26/11 · Delivery 30/11", "subtitle": "Shared equally · Salary deduction"}, "payment": "ALL_WORKERS_EQUAL_SHARE", "salary_deduction": true}, {"id": "personal_items", "order": 3, "icon": "🛍️", "zh": {"title": "个人想买", "subtitle": "本人承担 · 从薪水扣"}, "my": {"title": "ကိုယ့်အတွက်", "subtitle": "ကိုယ့်လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Personal Items", "subtitle": "Own cost · Salary deduction"}, "payment": "NAMED_WORKER", "salary_deduction": true}, {"id": "shared_items", "order": 4, "icon": "🧺", "zh": {"title": "大家共用", "subtitle": "全场平分 · 从薪水扣"}, "my": {"title": "အတူသုံးဖို့", "subtitle": "အားလုံး မျှပေးမယ် · လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Shared Items", "subtitle": "Shared equally · Salary deduction"}, "payment": "ALL_WORKERS_EQUAL_SHARE", "salary_deduction": true}];
 
-  async function start(){
-    try{ D = await rpc('shop_hello', {device_key: deviceKey(), ua: navigator.userAgent}); }
-    catch(e){ return gate(e.message === 'Too many phones waiting' ? 'Please try again later.' : 'This page is not available.'); }
-    if(D.status !== 'ACTIVE'){
-      $('#app').innerHTML = demoBar() + '<div class="gate"><h2>📱 Waiting for approval</h2><div class="code">' + esc(D.code) + '</div><p>Show this code to the boss.<br>After approval, open this page again.</p><button class="btn" style="margin-top:16px" onclick="location.reload()">Check again</button></div>';
-      return;
-    }
-    F = fresh(); render();
-  }
-  function gate(msg){ $('#app').innerHTML = '<div class="gate"><p>' + esc(msg) + '</p></div>'; }
-  const demoBar = () => DEMO ? '<div class="demo">PREVIEW · sample data · nothing is saved</div>' : '';
+  const DAY = {my:['တနင်္ဂနွေ','တနင်္လာ','အင်္ဂါ','ဗုဒ္ဓဟူး','ကြာသပတေး','သောကြာ','စနေ'],zh:['礼拜日','礼拜一','礼拜二','礼拜三','礼拜四','礼拜五','礼拜六'],en:['Sun','Mon','Tue','Wed','Thu','Fri','Sat']};
+  const KICO = {FARM:'🧤',FOOD:'🥬',PERSONAL:'🛍️',SHARED:'🧺'};
+  const KIND_TILE = {FARM:'farm_supplies',FOOD:'groceries',PERSONAL:'personal_items',SHARED:'shared_items'};
+  const TILE_KIND = {farm_supplies:'FARM',groceries:'FOOD',personal_items:'PERSONAL',shared_items:'SHARED'};
+  const AICO = {work:'👷',half:'🌓',off:'🏠',sick:'🤒',busy:'📅',other:'❓'};
+  const CODE_ST = {ad:'work', ad_half:'half', off:'off'};
+  let LANG = (['my','zh','en'].includes(QS.get('lang')) ? QS.get('lang') : null) || lsGet('runcit_lang', 'my');
+  const t = k => (T2[LANG] && T2[LANG][k] !== undefined) ? T2[LANG][k] : (T[LANG][k] ?? T.en[k] ?? T2.en[k] ?? k);
+  const tileOf = k => TILES.find(x => x.id === KIND_TILE[k]);
+  const ct = (k, f) => tileOf(k)[LANG][f];
+  const keep = x => String(x).split(' · ').map(p => `<span class="nw">${esc(p)}</span>`).join(' · ');
 
-  const custom = () => F.item === '__custom';
-  const item = () => custom() ? {id:'__custom', label:F.customName.trim().toUpperCase() || 'OTHER ITEM', prices:[], default:null} : D.items.find(i => i.id === F.item);
-  const price = () => F.price === 'other' ? Number(F.other) || 0 : F.price === 'unknown' ? 0 : Number(F.price) || 0;
-  const ready = () => !!(F.workers.length && F.item && (!custom() || F.customName.trim()) && (F.price === 'unknown' || F.price === 'other' ? true : price() > 0) && price() <= 2000);
+  let D = null, ui = {view:'home'}, FARM = lsGet('runcit_farm', null), attDraft = {}, sentSig = lsGet('runcit_sent', null);
+  const items = k => (D.items || []).filter(i => i.kind === k);
+  const itemById = id => (D.items || []).find(i => i.id === id) || {};
+  const lines = () => D.lines || [];
+  const foodLine = () => { const F = foodRound(); const o = dm(F.order), d = dm(F.deliver);
+    return ({zh:`${o} 前订好 · ${d} 送到`, my:`${o} အမီ မှာပါ · ${d} ပို့မယ်`, en:`Order by ${o} · Delivery ${d}`})[LANG]; };
+  const sig = () => JSON.stringify(lines().filter(l => l.status === 'REQUESTED' || l.status === 'BOUGHT').map(l => [l.id, l.qty]));
 
-  function render(){
-    const it = item(), n = F.workers.length;
-    let h = demoBar() + '<div class="top"><b>🛍️ Kedai Runcit</b><span class="farm">🏡 ' + esc(D.farm) + '</span></div><div class="wrap">';
-    h += '<div class="flow-strip"><div class="flow-chip' + (!n?' current':'') + '"><span>👤</span>1. Worker</div><div class="flow-chip' + (n && !F.item?' current':'') + '"><span>🛍️</span>2. Item</div><div class="flow-chip' + (n && F.item?' current':'') + '"><span>📨</span>3. Send</div></div>';
+  function langBar(){ return `<div class="lang">${[['my','မြန်မာ'],['zh','中文'],['en','EN']].map(([k,v]) => `<button class="${LANG===k?'on':''}" onclick="Leader.setLang('${k}')">${v}</button>`).join('')}</div>`; }
+  function header(){ $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit</span>${langBar()}`; }
+  function setLang(l){ LANG = l; lsSet('runcit_lang', l); document.documentElement.lang = l; render(); }
 
-    // 1 Worker
-    h += '<div class="card"><div class="lbl"><b><span class="step-badge">1</span>Worker</b>' + (n ? '<span>' + n + ' selected · <button class="lnk" data-act="clearw">Clear</button></span>' : '<span class="step-info">Tap name</span>') + '</div>'
-      + '<div class="g g2">' + D.workers.map(w => '<button type="button" class="opt name' + (F.workers.includes(w.id)?' on':'') + '" data-w="' + esc(w.id) + '"><span class="personicon">👤</span><span>' + esc(w.name) + '</span></button>').join('') + '</div>'
-      + (D.workers.length ? '' : '<p style="color:var(--muted)">No workers on ' + esc(D.farm) + '.</p>') + '</div>';
-
-    // 2 Item
-    h += '<div class="card"><div class="lbl"><b><span class="step-badge">2</span>Item</b><span class="step-info">Tap picture</span></div><div class="g g3 items">'
-      + D.items.map(i => '<button type="button" class="opt product' + (F.item===i.id?' on':'') + '" data-i="' + esc(i.id) + '"><span class="producticon">' + productIcon(i.label) + '</span><span class="productname">' + esc(i.label) + '</span></button>').join('')
-      + '<button type="button" class="opt product' + (custom()?' on':'') + '" data-i="__custom"><span class="producticon">✏️</span><span class="productname">OTHER ITEM</span></button></div>'
-      + (custom() ? '<div class="custom-panel"><label for="customItem">✏️ Item name</label><input id="customItem" class="in" maxlength="40" placeholder="e.g. SABUN" value="' + esc(F.customName) + '"></div>' : '')
-      + '</div>';
-
-    // 3 Price + qty
-    if(F.item){
-      const ps = it.prices || [];
-      h += '<div class="card"><div class="lbl"><b><span class="step-badge">3</span>Price · How many</b><span class="step-info">each</span></div><div class="g g4">'
-        + ps.map(x => '<button type="button" class="opt price' + (String(F.price)===String(x)?' on':'') + '" data-p="' + x + '">' + x + (x===it.default?'<small>usual</small>':'') + '</button>').join('')
-        + '<button type="button" class="opt price' + (F.price==='other'?' on':'') + '" data-p="other">✏️<small>Other</small></button>'
-        + '<button type="button" class="opt price' + (F.price==='unknown'?' on':'') + '" data-p="unknown">❓<small>Don\'t know</small></button></div>'
-        + (F.price==='other' ? '<input class="in" id="other" inputmode="decimal" placeholder="RM" value="' + esc(F.other) + '" style="margin-top:8px">' : '')
-        + '<div class="qty" style="margin-top:12px"><button type="button" data-q="-1" aria-label="Less">−</button><span>' + F.qty + '</span><button type="button" data-q="1" aria-label="More">+</button></div></div>';
-    }
-
-    // My requests
-    const rq = D.requests || [];
-    h += '<div class="card"><div class="lbl"><b>📨 My requests</b><span class="step-info">last 7 days</span></div>'
-      + (rq.length ? rq.map(r => {
-          const names = r.workers.map(w => esc(w.name) + (r.status==='CONFIRMED' && w.status!=='CONFIRMED' ? ' ✖' : '')).join(', ');
-          const paid = r.workers.filter(w => w.status==='CONFIRMED');
-          return '<div class="req"><div class="head"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + '</b><small>' + when(r.at) + (r.est ? ' · est. ' + rm(r.est) : '') + '</small></div>' + statPill(r.status) + '</div>'
-            + '<div class="who">👤 ' + names + (paid.length ? '<br>✅ ' + rm(paid[0].price) + ' each' : '') + (r.note && r.status!=='CANCELLED' && r.status!=='CONFIRMED' ? '<br>💬 ' + esc(r.note) : '') + '</div>'
-            + (r.status==='REQUESTED' ? '<div class="acts"><button class="btn sm red" data-cancel="' + esc(r.client_id) + '">Cancel</button></div>' : '') + '</div>';
-        }).join('') : '<p class="empty">No requests yet.</p>')
-      + '</div>';
-    h += '<div id="err" class="err"></div></div>';
-
-    // bottom
-    h += '<div class="sumbar"><div class="inner"><div class="txt">' + barText() + '</div><button class="save" data-act="send"' + (ready() && !busy ? '' : ' disabled') + '>' + (busy ? 'Sending…' : '📨 Send request') + '</button></div></div>';
-
-    const y = window.scrollY; $('#app').innerHTML = h; window.scrollTo(0, y);
-    const c = $('#customItem'); if(c){ c.oninput = () => { F.customName = c.value; renderBar(); }; if(F.focusCustom){ c.focus(); F.focusCustom = false; } }
-    const o = $('#other'); if(o){ o.oninput = () => { F.other = o.value.replace(/[^0-9.]/g,''); renderBar(); }; if(F.focusOther){ o.focus(); F.focusOther = false; } }
-  }
-  function barText(){
-    const n = F.workers.length;
-    if(!n) return '<span style="color:var(--muted)">👤 Choose worker</span>';
-    if(!F.item) return '<span style="color:var(--muted)">🛍️ Choose item</span>';
-    const it = item(), p = price();
-    return productIcon(it.label) + ' ' + esc(it.label) + (F.qty>1?' × '+F.qty:'') + ' · ' + n + ' worker' + (n>1?'s':'') + '<br><b>' + (p ? '≈ ' + rm(p*F.qty*n) : 'Price ?') + '</b>';
-  }
-  function renderBar(){ $('.sumbar .txt').innerHTML = barText(); $('.save').disabled = !ready() || busy; }
-
-  document.addEventListener('click', ev => {
-    if(!F) return;
-    const t = ev.target.closest('[data-w],[data-i],[data-p],[data-q],[data-act],[data-cancel]'); if(!t || t.closest('.sheet')) return;
-    if(t.dataset.w){ const id = t.dataset.w; F.workers = F.workers.includes(id) ? F.workers.filter(x => x !== id) : F.workers.concat(id); }
-    else if(t.dataset.i){ F.item = t.dataset.i; const it = item(); F.qty = 1; F.other = '';
-      F.price = custom() ? 'unknown' : it.default != null ? String(it.default) : (it.prices && it.prices.length ? String(it.prices[0]) : 'unknown');
-      if(custom()) F.focusCustom = true; }
-    else if(t.dataset.p){ F.price = t.dataset.p; if(F.price === 'other') F.focusOther = true; }
-    else if(t.dataset.q){ F.qty = Math.min(20, Math.max(1, F.qty + Number(t.dataset.q))); }
-    else if(t.dataset.act === 'clearw'){ F.workers = []; }
-    else if(t.dataset.cancel){ return cancel(t.dataset.cancel); }
-    else if(t.dataset.act === 'send'){ return send(); }
-    render();
-  });
-
-  async function send(){
-    if(!ready() || busy) return;
-    busy = true; renderBar(); $('.save').textContent = 'Sending…';
-    const it = item(), names = F.workers.map(id => (D.workers.find(w => w.id === id)||{}).name || '');
-    const body = {device_key: deviceKey(), client_id: F.client, qty: F.qty, price: price() || null, workers: F.workers};
-    if(custom()) body.custom_name = F.customName; else body.item_id = F.item;
-    try{ await rpc('shop_request', body); }
-    catch(e){ busy = false; render(); $('#err').textContent = e.message === 'Failed to fetch' ? 'No internet. Try again — it will not send twice.' : e.message; return; }
-    const p = price(), msg = ['🛍️ KEDAI RUNCIT · REQUEST', '🏡 ' + D.farm, '👤 ' + names.join(', '), '📦 ' + it.label + ' × ' + F.qty, p ? '💰 est. ' + rm(p) + ' each' : '💰 price ?', '', 'Please buy and confirm in Kedai Runcit.'].join('\n');
-    try{ D = await rpc('shop_hello', {device_key: deviceKey()}); }catch(e){}
-    busy = false; F = fresh(); render(); window.scrollTo(0,0);
-    const s = sheet('<div class="done-sheet"><div class="big">📨</div><h3>Request sent</h3><p>Not deducted yet.<br>The boss confirms after buying.</p>'
-      + '<button class="wa-big" data-wa>💬 Tell boss on WhatsApp</button><button class="btn" style="width:100%" data-x>Close</button></div>');
-    s.querySelector('[data-wa]').onclick = () => { window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener'); s.remove(); };
-    s.querySelector('[data-x]').onclick = () => s.remove();
-  }
-  async function cancel(cid){
-    const r = (D.requests||[]).find(x => x.client_id === cid); if(!r) return;
-    if(!confirm('Cancel request: ' + r.item + ' for ' + r.workers.map(w => w.name).join(', ') + '?')) return;
-    try{ await rpc('shop_request_cancel', {device_key: deviceKey(), client_id: cid}); toast('Cancelled'); D = await rpc('shop_hello', {device_key: deviceKey()}); render(); }
-    catch(err){ $('#err').textContent = err.message; try{ D = await rpc('shop_hello', {device_key: deviceKey()}); render(); }catch(e){} }
-  }
-  return {start};
-})();
-
-// ================= Owner =================
-const Owner = (() => {
-  let D = null, REQ = [], TAB = 'requests', MONTH = klDate(0).slice(0,7), FARM = 'ALL', ONLYCHG = false;
-  const C = {}; // confirm form per request: {ids:Set, item_id, new_item, price, qty, date}
-
-  async function start(){ await load(); }
   async function load(){
-    try{ [D, REQ] = await Promise.all([rpc('shop_owner_data', {month: MONTH}), rpc('shop_owner_requests', {})]); }
-    catch(e){ $('#app').innerHTML = '<div class="gate"><p>This page is not available.</p></div>'; return; }
+    D = await rpc('shop_hello', {device_key: deviceKey(), ua: navigator.userAgent.slice(0,200), farm: FARM || undefined});
+    if(D.farm){ FARM = D.farm; lsSet('runcit_farm', FARM); }
+  }
+  async function start(){
+    document.documentElement.lang = LANG;
+    try { await load(); } catch(e){ header(); return gate(/Too many/.test(e.message) ? 'Please try again later.' : 'This page is not available.'); }
     render();
   }
-  function months(){ const out = []; const d = new Date(klDate(0)); for(let i=0;i<4;i++){ const x = new Date(d.getFullYear(), d.getMonth()-i, 15); out.push(x.toISOString().slice(0,7)); } return out; }
-  const mLabel = m => new Date(m + '-15').toLocaleDateString('en-GB', {month:'short', year:'numeric'});
 
+  /* ---------- screens before the home ---------- */
+  function codeScreen(locked){
+    return `<div class="gate"><h2>${locked ? t('locked') : t('waitTitle')}</h2><div class="code">${esc(D.code)}</div><p>${locked ? t('lockedText') : t('waitText')}</p>
+      <button class="btn" style="margin-top:16px" onclick="location.reload()">${t('again')}</button></div>`;
+  }
+  let PIN = '', pinMsg = '';
+  function pinScreen(){
+    const dots = [0,1,2,3].map(i => `<span class="pd ${i < PIN.length ? 'on' : ''}"></span>`).join('');
+    const keys = [1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k => k === '' ? '<span></span>' : `<button class="pk" onclick="Leader.pinKey('${k}')">${k}</button>`).join('');
+    return `<div class="gate"><h2>🔐 ${esc(t('pinTitle')(D.name || ''))}</h2><div class="pdots">${dots}</div><p class="pinmsg">${esc(pinMsg)}</p><div class="pkeys">${keys}</div></div>`;
+  }
+  async function pinKey(k){
+    if(k === '⌫'){ PIN = PIN.slice(0,-1); return render(); }
+    if(PIN.length >= 4) return;
+    PIN += k; render();
+    if(PIN.length === 4){
+      busy(1);
+      try {
+        const r = await rpc('shop_unlock', {device_key: deviceKey(), pin: PIN});
+        PIN = '';
+        if(r.ok){ pinMsg = ''; await load(); } else { pinMsg = t('pinWrong')(r.left); if(r.left <= 0) await load(); }
+      } catch(e){ PIN = ''; pinMsg = /PIN/.test(e.message) ? t('pinNone') : t('err'); try { await load(); } catch(x){} }
+      busy(0); render();
+    }
+  }
+
+  /* ---------- home ---------- */
+  function harvestToday(){
+    const key = String(FARM||'').replace(/\s+/g,'') + '|' + klToday();
+    try { const h = JSON.parse(localStorage.getItem('harvest_last_v1') || '{}')[key]; if(!h) return null;
+      let n = 0; for(const rows of Object.values(h.grades||{})) for(const r of rows||[]) if(r.wLabel !== 'kg') n += Number(r.baskets)||0;
+      return {n, bakulDone: !!h.bakulDone}; } catch(e){ return null; }
+  }
+  function attStats(){ const a = D.att || {}; const m = Object.values(a).map(x => CODE_ST[x.code]).filter(Boolean);
+    return {done: (D.workers||[]).length > 0 && (D.workers||[]).every(w => a[w.id] && CODE_ST[a[w.id].code]), work: m.filter(x=>x==='work').length, half: m.filter(x=>x==='half').length, off: m.filter(x=>x==='off').length}; }
+  function cardBtn(ico, title, sub, on, cls){ return `<button class="attcard ${cls}" onclick="${on}"><span class="aico">${ico}</span><span class="atxt"><b>${title}</b><small>${sub}</small></span><span class="aarr">›</span></button>`; }
+  function row(l){
+    const name = l.item, it = itemById(l.item_id), ico = l.kind === 'FOOD' ? foodArt(it) : `<div class="ico">${icon(name)}<small>${KICO[l.kind]}</small></div>`;
+    const who = l.kind === 'PERSONAL' ? l.worker : ct(l.kind, 'title');
+    const tag = l.status === 'BOUGHT' ? `<span class="tag ok">${esc(t('bought').replace('🛍 ',''))}</span>` : l.status === 'REJECTED' ? `<span class="tag bad">${esc(t('nobuy').replace('✗ ',''))}</span>`
+      : l.trip > 1 ? `<span class="tag ${l.trip > 2 ? 'bad' : 'warn'}">${esc(t('tripN')(l.trip))}</span>` : '';
+    const canCancel = l.status === 'REQUESTED' && l.trip === 1 && l.kind !== 'FOOD' && l.from_phone;
+    return `<div class="food" style="margin-bottom:8px">${ico}<div class="foodname"><b>${esc(name)} <span class="mut" style="font-weight:600">× ${l.qty}</span></b><small class="loc">${esc(who)}</small>${l.note ? `<small style="color:var(--red)">${esc(l.note)}</small>` : ''}</div>${tag}${canCancel ? `<button class="btn small light" style="min-width:40px" onclick="Leader.cancel('${l.id}')" aria-label="remove">✕</button>` : ''}</div>`;
+  }
+  function home(){
+    const L = lines(), F = foodRound();
+    const carry = L.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD' && l.trip > 1), cur = L.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD' && l.trip === 1);
+    const food = L.filter(l => l.kind === 'FOOD' && l.status === 'REQUESTED'), bought = L.filter(l => l.status === 'BOUGHT'), nob = L.filter(l => l.status === 'REJECTED');
+    const sec = (h, a) => a.length ? `<div class="sectionhead">${h} · ${a.length}</div>${a.map(row).join('')}` : '';
+    const A = attStats(), H = harvestToday();
+    const farms = D.farms || [FARM];
+    const tile = c => `<button class="tile4" data-tile="${c.id}" onclick="Leader.openTile('${c.id}')"><span class="t4ico">${c.icon}</span><span class="t4title">${esc(c[LANG].title)}</span>${c.id==='groceries' ? `<span class="t4date">${keep(foodLine())}</span>` : ''}<span class="t4sub">${keep(c[LANG].subtitle)}</span></button>`;
+    return `<div class="hero"><div><h1>${t('title')}</h1><div class="sub">${t('sub')}</div></div><span class="tag" style="font-size:15px">${esc(FARM)}</span></div>
+      ${farms.length > 1 ? `<div class="farmswitch">${farms.map(f => `<button class="${f===FARM?'on':''}" onclick="Leader.pickFarm('${f}')">${esc(f)}</button>`).join('')}</div>` : ''}
+      ${cardBtn('👷', `${t('att')} · ${dm(klToday())}`, A.done ? `✓ ${t('attDone')} · ${AICO.work} ${A.work} · ${AICO.half} ${A.half} · ${AICO.off} ${A.off}` : t('attTodo'), 'Leader.startAtt()', A.done ? 'done' : 'todo')}
+      ${cardBtn('🍆', `${t('harv')} · ${dm(klToday())}`, !H ? t('harvTodo') : H.bakulDone ? '✓ ' + t('harvDone')(H.n) : t('harvSent')(H.n), 'Leader.openHarvest()', H && H.bakulDone ? 'done' : 'todo')}
+      <div class="tiles4">${[...TILES].sort((a,b) => a.order - b.order).map(tile).join('')}</div>
+      ${L.length ? '' : `<div class="empty">${t('empty')}</div>`}
+      ${sec(t('carry'), carry)}${sec(t('cur'), cur)}${food.length ? `<div class="sectionhead">🥬 ${esc(ct('FOOD','title'))} · ${esc(foodLine())}</div>${food.map(row).join('')}` : ''}${sec(t('bought'), bought)}${sec(t('nobuy'), nob)}`;
+  }
+  async function pickFarm(f){ FARM = f; lsSet('runcit_farm', f); busy(1); try { await load(); } catch(e){ toast(t('err')); } busy(0); render(); }
+  async function cancel(id){ if(!confirm(t('cancelQ'))) return; busy(1);
+    try { await rpc('shop_request_cancel', {device_key: deviceKey(), farm: FARM, id}); await load(); } catch(e){ toast(t('err')); } busy(0); render(); }
+  function openTile(id){ const k = TILE_KIND[id]; if(k === 'FOOD') startFood(); else startAdd(k); }
+  function openHarvest(){ location.href = `${HARVEST_FORM}?farm=${encodeURIComponent(String(FARM).replace(/\s+/g,''))}&lock=1&lang=${LANG}`; }
+
+  /* ---------- add: who → which worker → what ---------- */
+  function startAdd(k){ ui = {view:'add', kind:k, picked:[], qty:{}, other:''}; render(); scrollTo(0,0); }
+  function addPage(){
+    const k = ui.kind, list = items(k);
+    let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
+      <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>`;
+    let n = 2;
+    if(k === 'PERSONAL'){
+      h += `<div class="sectionhead">${n++} · ${t('s2')}</div>` + ((D.workers||[]).length ? `<div class="pills" style="flex-wrap:wrap">${D.workers.map(w => `<button class="pill ${ui.picked.includes(w.id)?'on':''}" onclick="Leader.toggleW('${w.id}')">${esc(w.name)}</button>`).join('')}</div>` : `<div class="note warn">${t('noWorkers')}</div>`);
+    }
+    const dups = [];
+    for(const i of list) if(ui.qty[i.id] > 0){
+      if(k === 'PERSONAL') for(const w of ui.picked){ if(lines().some(l => l.status !== 'REJECTED' && l.worker_id === w && l.item_id === i.id)) dups.push(t('dup')((D.workers.find(x=>x.id===w)||{}).name, i.label)); }
+      else if(lines().some(l => l.status !== 'REJECTED' && l.kind === k && l.item_id === i.id)) dups.push(t('dup')(ct(k,'title'), i.label));
+    }
+    h += `<div class="sectionhead">${n} · ${t('s3')}</div><div class="itemsgrid">${list.map(i => `<div class="food ${ui.qty[i.id]?'chosen':''}"><div class="ico">${icon(i.label, i.icon)}</div><div class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}</div><div class="step"><button onclick="Leader.step('${i.id}',-1)">−</button><input class="count" readonly value="${ui.qty[i.id]||0}"><button class="plus" onclick="Leader.step('${i.id}',1)">+</button></div></div>`).join('')}</div>
+      <div class="field" style="margin-top:12px"><input placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"></div>
+      ${dups.length ? `<div class="note warn">⚠ ${dups.map(esc).join('<br>⚠ ')}</div>` : ''}<div class="bottom" id="bottombar"></div>`;
+    return h;
+  }
+  function toggleW(w){ ui.picked = ui.picked.includes(w) ? ui.picked.filter(x => x !== w) : [...ui.picked, w]; render(); }
+  function step(id, d){ ui.qty[id] = Math.max(0, Math.min(ui.kind === 'PERSONAL' ? 20 : 999, (ui.qty[id]||0) + d)); render(); }
+  function setOther(v){ ui.other = v; drawBottom(); }
+  function addCount(){ const per = ui.kind === 'PERSONAL' ? ui.picked.length : 1; return (Object.values(ui.qty).filter(q => q > 0).length + (ui.other.trim() ? 1 : 0)) * per; }
+  async function commitAdd(){
+    const reqs = Object.entries(ui.qty).filter(([,q]) => q > 0).map(([id,q]) => ({item_id:id, qty:q}));
+    if(ui.other.trim()) reqs.push({custom_name: ui.other.trim(), qty:1});
+    busy(1);
+    try {
+      for(const r of reqs) await rpc('shop_request', {device_key: deviceKey(), farm: FARM, client_id: uuid(), kind: ui.kind, ...r, workers: ui.kind === 'PERSONAL' ? ui.picked : undefined});
+      await load(); ui = {view:'done', what:'add'};
+    } catch(e){ toast(t('err') + ' · ' + e.message); try { await load(); } catch(x){} }
+    busy(0); render(); scrollTo(0,0);
+  }
+
+  /* ---------- groceries (FoodOrder items, real photos) ---------- */
+  function foodArt(it){ const code = it.code || ''; const ic = it.icon || '🥬';
+    return `<span class="ico photo"><img src="foodflow_img/${esc(code)}.jpg" alt="" loading="lazy" onerror="this.parentNode.classList.remove('photo');this.parentNode.textContent='${ic}'"></span>`; }
+  const foodLoc = it => { const v = FO_IN[LANG] && FO_IN[LANG][it.code]; return v ? `<small class="loc">${esc(v)}</small>` : ''; };
+  function startFood(){
+    const q = {}; for(const l of lines()) if(l.kind === 'FOOD' && l.status === 'REQUESTED') q[l.item_id] = (q[l.item_id]||0) + l.qty;
+    ui = {view:'food', qty:q}; render(); scrollTo(0,0);
+  }
+  function foodPage(){
+    const c = tileOf('FOOD'), list = items('FOOD'); let h = `<div class="hero"><div><h1>${c.icon} ${esc(c[LANG].title)}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
+      <div class="food chosen" style="margin-bottom:12px"><div class="foodname"><b style="color:var(--warn)">${esc(foodLine())}</b><small>${esc(c[LANG].subtitle)}</small></div>${lsGet('runcit_last_food_'+FARM, null) ? `<button class="btn small" onclick="Leader.sameLast()">${t('sameLast')}</button>` : ''}</div>`;
+    let cat = '';
+    const catOf = code => (FO_SEED.find(a => a[0] === code) || [])[2] || '';
+    for(const it of [...list].sort((a,b) => (FO_SEED.findIndex(x=>x[0]===a.code)) - (FO_SEED.findIndex(x=>x[0]===b.code)))){
+      const ca = catOf(it.code); if(ca !== cat){ if(cat) h += '</div>'; cat = ca; h += `<div class="sectionhead">${esc((FO_CT[LANG] && FO_CT[LANG][ca]) || ca)}</div><div class="itemsgrid">`; }
+      h += `<div class="food ${ui.qty[it.id]?'chosen':''}">${foodArt(it)}<div class="foodname"><b>${esc(it.label)}</b>${foodLoc(it)}<small>${esc(it.unit||'')}</small></div><div class="step"><button onclick="Leader.fstep('${it.id}',-1)">−</button><input class="count" readonly value="${ui.qty[it.id]||0}"><button class="plus" onclick="Leader.fstep('${it.id}',1)">+</button></div></div>`;
+    }
+    return h + (cat ? '</div>' : '') + '<div class="bottom" id="bottombar"></div>';
+  }
+  function fstep(id, d){ ui.qty[id] = Math.max(0, Math.min(999, (ui.qty[id]||0) + d)); render(); }
+  function sameLast(){ ui.qty = {...lsGet('runcit_last_food_'+FARM, {})}; render(); }
+  async function commitFood(){
+    const its = {}; for(const [id,q] of Object.entries(ui.qty)) if(q > 0) its[id] = q;
+    busy(1);
+    try { await rpc('shop_food_set', {device_key: deviceKey(), farm: FARM, items: its}); lsSet('runcit_last_food_'+FARM, its); await load(); ui = {view:'done', what:'food'}; }
+    catch(e){ toast(t('err') + ' · ' + e.message); }
+    busy(0); render(); scrollTo(0,0);
+  }
+
+  /* ---------- roll call ---------- */
+  function startAtt(){ attDraft = {}; const a = D.att || {}; for(const w of D.workers||[]) if(a[w.id] && CODE_ST[a[w.id].code]) attDraft[w.id] = {st: CODE_ST[a[w.id].code], why: a[w.id].why || undefined};
+    ui = {view:'att'}; render(); scrollTo(0,0); }
+  function attPage(){
+    let h = `<div class="hero"><div><h1>👷 ${t('att')}</h1><div class="sub">${esc(FARM)} · ${dm(klToday())}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
+      <button class="btn primary block" style="margin-bottom:12px" onclick="Leader.markAll()">${t('allWork')}</button>`;
+    if(!(D.workers||[]).length) h += `<div class="note warn">${t('noWorkers')}</div>`;
+    for(const w of D.workers||[]){ const m = attDraft[w.id] || {};
+      const b = (k, cls) => `<button class="ab ${m.st===k?'on '+cls:''}" onclick="Leader.mark('${w.id}','${k}')"><span class="abi">${AICO[k]}</span>${t(k)}</button>`;
+      h += `<div class="attrow ${m.st?'':'empty'}"><b>${esc(w.name)}</b><div class="abtns">${b('work','g')}${b('half','o')}${b('off','r')}</div>
+        ${m.st === 'off' ? `<div class="abtns why">${['sick','busy','other'].map(r => `<button class="ab ${m.why===r?'on r':''}" onclick="Leader.why('${w.id}','${r}')"><span class="abi">${AICO[r]}</span>${t(r)}</button>`).join('')}</div>` : ''}</div>`;
+    }
+    return h + '<div class="bottom" id="bottombar"></div>';
+  }
+  function markAll(){ for(const w of D.workers||[]) if(!attDraft[w.id]) attDraft[w.id] = {st:'work'}; render(); }
+  function mark(w, st){ attDraft[w] = {st}; render(); }
+  function why(w, r){ attDraft[w] = {st:'off', why:r}; render(); }
+  function attIssue(){ const left = (D.workers||[]).filter(w => !attDraft[w.id]).length; if(left) return t('attLeft')(left);
+    if((D.workers||[]).some(w => attDraft[w.id].st === 'off' && !attDraft[w.id].why)) return t('pickWhy'); return ''; }
+  async function saveAtt(){
+    if(attIssue()) return; busy(1);
+    try { await rpc('shop_att_save', {device_key: deviceKey(), farm: FARM, marks: (D.workers||[]).map(w => ({worker_id: w.id, st: attDraft[w.id].st, why: attDraft[w.id].why}))});
+      await load(); ui = {view:'home'}; toast(t('attSaved')); }
+    catch(e){ toast(t('err') + ' · ' + e.message); }
+    busy(0); render(); scrollTo(0,0);
+  }
+
+  /* ---------- after adding: send WhatsApp ---------- */
+  function donePage(){
+    const n = lines().filter(l => l.status === 'REQUESTED').length;
+    return `<div class="donebox" style="margin-top:8px"><div class="tick">✅</div><h2 style="margin:6px 0">${esc((ui.what === 'food' ? t('foodAdded') : t('added')).replace(' ✓',''))}</h2><div class="sub">${esc(FARM)} · ${n} ${t('items')}</div></div>
+      <button class="btn gold block" style="min-height:58px;font-size:18px;margin-top:16px" onclick="Leader.showCard()">${t('wa')}</button>
+      <button class="btn block" style="margin-top:10px" onclick="Leader.home()">${t('home')}</button>`;
+  }
+
+  /* WhatsApp card: same family as SprayGo (Burmese first, small Chinese) */
+  const CF = "'Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans SC','Noto Sans CJK SC',sans-serif";
+  function cardRows(){ const L = lines();
+    return [...L.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD' && l.trip > 1).map(l => ({l, pill:['#fee2e2','#b91c1c',`${l.trip-1} ပတ် စောင့်ပြီး`,`已等 ${l.trip-1} 个礼拜`]})),
+      ...L.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD' && l.trip === 1).map(l => ({l, pill:['#dcfce7','#166534','အသစ်','新']})),
+      ...L.filter(l => l.status === 'REQUESTED' && l.kind === 'FOOD').map(l => ({l, pill:['#fff2dc','#945d0c', dm(foodRound().order)+' အမီ', dm(foodRound().order)+' 前订']})),
+      ...L.filter(l => l.status === 'BOUGHT').map(l => ({l, pill:['#dcfce7','#166534','ဝယ်ပြီး','已买']}))]; }
+  function drawCard(){
+    const rows = cardRows(), W = 1028, K = 1.4, C = '#8b6a32', RH = 118, H = 24 + 186 + 20 + rows.length*RH + 20 + 40*2 + 30;
+    const c = document.createElement('canvas'); c.width = W*K; c.height = H*K; const g = c.getContext('2d'); g.scale(K,K); g.fillStyle = '#fff'; g.fillRect(0,0,W,H);
+    const F = (w,s) => `${w} ${s}px ${CF}`, rr = (x,y,w,h,r) => { g.beginPath(); g.roundRect ? g.roundRect(x,y,w,h,r) : g.rect(x,y,w,h); };
+    g.fillStyle = C; rr(24,24,980,186,22); g.fill(); g.fillStyle = '#fff'; g.font = F(900,58); g.fillText('ဝယ်စာရင်း',52,100); const tw = g.measureText('ဝယ်စာရင်း').width; g.font = F(700,30); g.fillText('采购清单',62+tw,98);
+    g.font = F(400,22); g.fillText('မရောက်သေးတာ စာရင်းထဲ ကျန်နေမယ် ｜ 没到的会一直留在清单上',52,160);
+    g.font = F(900,54); const fw = g.measureText(FARM).width + 44; g.fillStyle = '#fff'; rr(980-fw,70,fw,90,16); g.fill(); g.fillStyle = C; g.textAlign = 'center'; g.fillText(FARM,980-fw/2,135); g.textAlign = 'left';
+    let y = 230;
+    for(const {l, pill} of rows){
+      if(pill[1] === '#b91c1c'){ g.fillStyle = '#fef2f2'; g.fillRect(24,y,980,RH); } g.fillStyle = '#e5e7eb'; g.fillRect(24,y+RH-2,980,2);
+      const it = itemById(l.item_id);
+      g.fillStyle = '#f4f3ec'; rr(36,y+14,88,88,14); g.fill(); g.font = `48px 'Noto Color Emoji',sans-serif`; g.textAlign = 'center'; g.fillText(l.kind === 'FOOD' ? (it.icon||'🥬') : icon(l.item), 80, y+76); g.textAlign = 'left';
+      g.fillStyle = '#1f2937'; g.font = F(800,34); g.fillText(l.item, 146, y+52);
+      const w1 = l.kind === 'PERSONAL' ? l.worker : l.kind === 'FOOD' ? ((FO_IN.my||{})[it.code] || tileOf('FOOD').my.title) : tileOf(l.kind).my.title;
+      const z1 = l.kind === 'PERSONAL' ? '' : l.kind === 'FOOD' ? ((FO_IN.zh||{})[it.code] || '') : tileOf(l.kind).zh.title;
+      g.font = F(700,24); g.fillStyle = '#4b5563'; g.fillText(w1, 146, y+90); if(z1){ const ww = g.measureText(w1).width; g.font = F(400,19); g.fillStyle = '#9ca3af'; g.fillText(z1, 156+ww, y+90); }
+      g.fillStyle = C; g.font = F(900,46); g.textAlign = 'right'; g.fillText(`× ${l.qty}`, 826, y+76);
+      g.fillStyle = pill[0]; rr(846,y+15,150,88,12); g.fill(); g.fillStyle = pill[1]; g.textAlign = 'center'; g.font = F(900, pill[2].length > 8 ? 18 : 22); g.fillText(pill[2],921,y+54); g.font = F(700,17); g.fillText(pill[3],921,y+84); g.textAlign = 'left';
+      y += RH;
+    }
+    y += 24; g.fillStyle = '#374151'; g.font = F(700,22); g.fillText('ထပ်လိုတာ ရှိရင် စာရင်းထဲ ထည့်ပြီး ပြန်ပို့ပါ။', 24, y+24); y += 40;
+    g.font = F(400,19); g.fillStyle = '#6b7280'; g.fillText('还要什么就加进清单，再传一次。', 24, y+22);
+    return c;
+  }
+  function showCard(){ const c = drawCard(); showCard.c = c;
+    openModal(`<h2>${esc(FARM)} · ${t('card')}</h2><img src="${c.toDataURL('image/png')}" style="width:100%;border-radius:12px;border:1px solid var(--line)"><div class="btnrow" style="margin-top:12px"><button class="btn gold grow" onclick="Leader.shareCard()">${t('share')}</button><button class="btn" onclick="closeModal()">${t('close')}</button></div>`); }
+  async function shareCard(){
+    const name = `${String(FARM).replace(' ','')}_List_${klToday()}.png`, blob = await new Promise(ok => showCard.c.toBlob(ok, 'image/png')), file = new File([blob], name, {type:'image/png'});
+    let done = false;
+    if(navigator.canShare && navigator.canShare({files:[file]})){ try { await navigator.share({files:[file], title:name}); done = true; } catch(x){ if(x.name === 'AbortError') return; } }
+    if(!done){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
+    sentSig = sig(); lsSet('runcit_sent', sentSig); closeModal(); ui = {view:'home'}; render(); scrollTo(0,0); toast(t('sent') + ' ✓');
+  }
+
+  /* ---------- bottom bar + render ---------- */
+  function drawBottom(){
+    const b = document.getElementById('bottombar'); if(!b) return;
+    if(ui.view === 'att'){ const is = attIssue(); b.innerHTML = `<button class="btn primary" ${is?'disabled':''} onclick="Leader.saveAtt()">${esc(is || t('attSave'))}</button>`; return; }
+    if(ui.view === 'food'){ const n = Object.values(ui.qty).filter(q => q > 0).length; const had = lines().some(l => l.kind === 'FOOD' && l.status === 'REQUESTED');
+      b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n || had ? '' : 'disabled'} onclick="Leader.commitFood()">${esc(t('addFood')(n))}</button>`; return; }
+    if(ui.view === 'add'){ const n = addCount(), needW = ui.kind === 'PERSONAL' && !ui.picked.length;
+      b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n && !needW ? '' : 'disabled'} onclick="Leader.commitAdd()">${esc(needW ? t('pickW') : t('addN')(n))}</button>`; }
+  }
   function render(){
-    const pend = D.devices.filter(d => d.status === 'PENDING').length, open = REQ.filter(r => r.open).length;
-    let h = (DEMO?'<div class="demo">PREVIEW · sample data · nothing is saved</div>':'')
-      + '<div class="top"><a href="../index.html" style="color:#fff;text-decoration:none"><b>🛍️ Kedai Runcit</b></a><div class="tabs">'
-      + [['requests','📨 Requests', open],['log','🧾 Deducted'],['prices','🏷️ Prices'],['phones','📱 Phones', pend]].map(t => '<button class="tab' + (TAB===t[0]?' on':'') + '" data-tab="' + t[0] + '">' + t[1] + (t[2] ? '<span class="tabbadge">' + t[2] + '</span>' : '') + '</button>').join('')
-      + '</div></div><div class="wrap' + (TAB==='log'?' wide':'') + '">';
-    h += TAB === 'requests' ? requestView() : TAB === 'log' ? logView() : TAB === 'prices' ? priceView() : phoneView();
-    h += '</div>';
-    const y = window.scrollY; $('#app').innerHTML = h; window.scrollTo(0, y);
-    document.querySelectorAll('[data-fprice]').forEach(el => el.oninput = () => { const f = C[el.dataset.fprice]; f.price = el.value.replace(/[^0-9.]/g,''); updTotal(el.dataset.fprice); });
-    document.querySelectorAll('[data-fnew]').forEach(el => el.oninput = () => { C[el.dataset.fnew].new_item = el.value; });
-    document.querySelectorAll('[data-fdate]').forEach(el => el.onchange = () => { C[el.dataset.fdate].date = el.value; render(); });
-  }
-
-  // ---- Requests ----
-  function form(r){
-    if(!C[r.client_id]){
-      C[r.client_id] = {ids: new Set(r.workers.filter(w => w.status==='REQUESTED').map(w => w.request_id)), item_id: r.custom ? null : r.item_id, new_item: r.custom ? r.item : '',
-        price: r.est ? String(Number(r.est)) : r.default ? String(Number(r.default)) : '', qty: r.qty, date: klDate(0)};
-    }
-    return C[r.client_id];
-  }
-  function updTotal(cid){ const f = C[cid], el = document.getElementById('tot_' + cid); if(!el) return; const p = Number(f.price)||0; el.textContent = p ? rm(p * f.qty * f.ids.size) : '—'; }
-  function requestView(){
-    const open = REQ.filter(r => r.open), done = REQ.filter(r => !r.open);
-    let h = '<div class="ownerheading">📨 To buy <span class="step-info">' + open.length + '</span></div>';
-    h += open.length ? open.map(openCard).join('') : '<div class="ocard"><p class="empty">Nothing waiting. 👍</p></div>';
-    if(done.length) h += '<div class="ownerheading" style="margin-top:20px">🕘 Done · last 30 days</div><div class="ocard">' + done.map(doneRow).join('') + '</div>';
-    return h;
-  }
-  function openCard(r){
-    const f = form(r), cid = esc(r.client_id), live = r.workers.filter(w => w.status==='REQUESTED');
-    const catalog = D.items.filter(i => i.prices && i.prices.length);
-    const chosen = f.item_id ? (D.items.find(i => i.id === f.item_id)||{}) : null;
-    const prices = chosen && chosen.prices ? chosen.prices.map(p => Number(p.price)) : [];
-    const p = Number(f.price)||0;
-    let h = '<div class="ocard open"><div class="top2"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + (r.custom?'<span class="newtag">NEW</span>':'') + '</b><small>🏡 ' + esc(r.farm) + ' · ' + when(r.at) + (r.est ? ' · est. ' + rm(r.est) : ' · price ?') + '</small></div>' + statPill('REQUESTED') + '</div>';
-    h += '<div class="f-lbl">Bought for</div>' + live.map(w => '<label class="wk' + (f.ids.has(w.request_id)?'':' off') + '"><input type="checkbox" data-fw="' + cid + '|' + esc(w.request_id) + '"' + (f.ids.has(w.request_id)?' checked':'') + '>👤 ' + esc(w.name) + '</label>').join('');
-    if(r.custom){
-      h += '<div class="f-lbl">Item in Salary</div><div class="g g3">' + catalog.map(i => '<button type="button" class="opt' + (f.item_id===i.id?' on':'') + '" style="min-height:46px" data-fitem="' + cid + '|' + esc(i.id) + '">' + productIcon(i.label) + ' ' + esc(i.label) + '</button>').join('')
-        + '<button type="button" class="opt' + (!f.item_id?' on':'') + '" style="min-height:46px" data-fitem="' + cid + '|">➕ New</button></div>'
-        + (!f.item_id ? '<input class="in" style="margin-top:8px" maxlength="30" data-fnew="' + cid + '" value="' + esc(f.new_item) + '" placeholder="New item name">' : '');
-    }
-    h += '<div class="f-lbl">Actual price each (RM)</div>'
-      + (prices.length ? '<div class="g g4" style="margin-bottom:8px">' + prices.map(x => '<button type="button" class="opt price' + (p===x?' on':'') + '" style="min-height:50px" data-fp="' + cid + '|' + x + '">' + x + '</button>').join('') + '</div>' : '')
-      + '<input class="in" inputmode="decimal" data-fprice="' + cid + '" value="' + esc(f.price) + '" placeholder="RM">';
-    h += '<div class="f-lbl">How many · Date given</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="qty" style="padding:0;gap:12px"><button type="button" data-fq="' + cid + '|-1">−</button><span>' + f.qty + '</span><button type="button" data-fq="' + cid + '|1">+</button></div>'
-      + '<input class="in" type="date" style="flex:1;min-width:150px" data-fdate="' + cid + '" value="' + f.date + '" max="' + klDate(0) + '"></div>';
-    h += '<div class="total"><span>Deduct · ' + f.ids.size + ' worker' + (f.ids.size===1?'':'s') + '</span><b id="tot_' + cid + '">' + (p ? rm(p * f.qty * f.ids.size) : '—') + '</b></div>';
-    h += '<div class="err" id="err_' + cid + '"></div><div class="obtns"><button class="btn red" data-rej="' + cid + '">✖ Not bought</button><button class="btn pri" data-ok="' + cid + '">✅ Bought · Deduct</button></div></div>';
-    return h;
-  }
-  function doneRow(r){
-    const paid = r.workers.filter(w => w.status==='CONFIRMED');
-    return '<div class="req"><div class="head"><span class="ico">' + productIcon(r.item) + '</span><div class="m"><b>' + esc(r.item) + (r.qty>1?' × '+r.qty:'') + '</b><small>🏡 ' + esc(r.farm) + ' · ' + when(r.at) + '</small></div>' + statPill(r.status) + '</div>'
-      + '<div class="who">👤 ' + r.workers.map(w => esc(w.name) + (w.status==='CONFIRMED' ? ' · ' + rm(w.amount) : w.status==='REQUESTED' ? '' : ' ✖')).join(', ') + (r.note && !paid.length ? '<br>💬 ' + esc(r.note) : '') + '</div></div>';
-  }
-  async function confirmReq(cid){
-    const r = REQ.find(x => x.client_id === cid), f = C[cid], err = document.getElementById('err_' + cid);
-    const p = Number(f.price);
-    if(!f.ids.size) return err.textContent = 'Tick at least one worker';
-    if(!f.item_id && !String(f.new_item||'').trim()) return err.textContent = 'Choose the item or type a new name';
-    if(!(p > 0 && p <= 2000)) return err.textContent = 'Enter the actual price';
-    if(!f.date || f.date > klDate(0)) return err.textContent = 'Check the date';
-    const names = r.workers.filter(w => f.ids.has(w.request_id)).map(w => w.name);
-    if(!confirm('Deduct ' + rm(p * f.qty) + ' from ' + names.join(', ') + '?')) return;
-    const body = {client_id: cid, request_ids: [...f.ids], price: p, qty: f.qty, date: f.date};
-    if(f.item_id) body.item_id = f.item_id; else body.new_item = f.new_item;
-    try{ await rpc('shop_owner_confirm', body); delete C[cid]; toast('Deducted · in Salary'); load(); }
-    catch(e){ err.textContent = e.message; }
-  }
-  function rejectReq(cid){
-    const s = sheet('<h3>Not bought</h3><div class="g g2">' + ['No stock','Not allowed','Duplicate','Other'].map(x => '<button class="opt" data-why="' + x + '">' + x + '</button>').join('') + '</div><p style="color:var(--muted);font-size:13px;margin-top:10px">The Leader sees this on their phone. Nothing is deducted.</p><div class="err" id="se"></div><button class="btn" style="width:100%;margin-top:12px" data-x>Back</button>');
-    s.addEventListener('click', async e => {
-      if(e.target.closest('[data-x]')) return s.remove();
-      const w = e.target.closest('[data-why]'); if(!w) return;
-      try{ await rpc('shop_owner_reject', {client_id: cid, note: w.dataset.why === 'Other' ? null : w.dataset.why}); s.remove(); delete C[cid]; toast('Marked not bought'); load(); }
-      catch(err){ s.querySelector('#se').textContent = err.message; }
-    });
-  }
-
-  // ---- Deducted ----
-  function logView(){
-    const all = D.entries, live = all.filter(e => !e.void);
-    const rows = all.filter(e => (FARM==='ALL' || e.farm===FARM) && (!ONLYCHG || (e.default!=null && Number(e.price)!==Number(e.default))));
-    const sum = a => a.reduce((s,e) => s + Number(e.amount), 0);
-    const chg = live.filter(e => e.default!=null && Number(e.price)!==Number(e.default));
-    let h = '<div class="filters">' + months().map(m => '<span class="chip' + (MONTH===m?' on':'') + '" data-month="' + m + '">' + mLabel(m) + '</span>').join('') + '</div>';
-    h += '<div class="kpis"><div class="kpi"><small>Total · ' + mLabel(MONTH) + '</small><b>' + rm(sum(live)) + '</b></div>'
-      + ['AD 1','AD 2','AD 3'].map(f => '<div class="kpi' + (f==='AD 3'?' hide-m':'') + '"><small>' + f + '</small><b>' + rm(sum(live.filter(e => e.farm===f))) + '</b></div>').join('') + '</div>';
-    h += '<div class="filters">' + ['ALL','AD 1','AD 2','AD 3'].map(f => '<span class="chip' + (FARM===f?' on':'') + '" data-farm="' + f + '">' + (f==='ALL'?'All farms':f) + '</span>').join('')
-      + '<span class="chip' + (ONLYCHG?' on':'') + '" data-chg="1">Price changed · ' + chg.length + '</span></div>';
-    h += '<div class="card" style="padding:6px 10px;overflow-x:auto"><table><thead><tr><th>Date</th><th>Farm</th><th>Worker</th><th>Item</th><th class="n">Price</th><th class="n">Amount</th><th></th></tr></thead><tbody>'
-      + (rows.length ? rows.map(e => {
-          const changed = e.default!=null && Number(e.price)!==Number(e.default);
-          return '<tr class="' + (e.void?'void':'') + '"><td>' + dmy(e.date) + '</td><td>' + esc(e.farm) + '</td><td>' + esc(e.worker) + '</td><td>' + productIcon(e.item) + ' ' + esc(e.item) + (e.qty>1?' × '+e.qty:'') + '</td>'
-            + '<td class="n">' + Number(e.price) + (changed ? ' <span class="pill w">usual ' + Number(e.default) + '</span>' : '') + '</td><td class="n">' + rm(e.amount) + '</td>'
-            + '<td>' + (e.void ? '<span class="pill gr">Removed</span>' : (!e.in_salary ? '<span class="pill bad">Removed in Salary</span>' : '<button class="lnk" data-void="' + e.id + '">Remove</button>')) + '</td></tr>';
-        }).join('') : '<tr><td colspan="7" style="color:var(--muted);padding:20px 6px">Nothing deducted.</td></tr>')
-      + '</tbody></table></div>';
-    return h;
-  }
-
-  // ---- Prices ----
-  function priceView(){
-    const on = D.items.filter(i => i.prices && i.prices.length), off = D.items.filter(i => !(i.prices && i.prices.length));
-    let h = '<div class="card"><div class="lbl"><b>🛍️ Leaders see these</b></div>'
-      + on.map(i => '<div class="row"><span class="tinyicon">' + productIcon(i.label) + '</span><div class="m"><div>' + esc(i.label) + '</div><div class="pchips" style="margin-top:6px">' + i.prices.map(p => '<span class="pchip' + (p.default?' def':'') + '">' + Number(p.price) + '</span>').join('') + '</div></div><button class="btn" data-edit="' + i.id + '">Edit</button></div>').join('')
-      + '</div>';
-    h += '<div class="card"><div class="lbl"><b>Salary list only</b><span>Leaders don\'t see</span></div>'
-      + off.map(i => '<div class="row"><span class="tinyicon">' + productIcon(i.label) + '</span><div class="m"><div style="color:var(--muted)">' + esc(i.label) + '</div></div><button class="btn" data-edit="' + i.id + '">Add prices</button></div>').join('')
-      + '<div class="row"><div class="m"></div><button class="btn pri" data-act="newitem">+ New item</button></div></div>';
-    return h;
-  }
-  function editPrices(id){
-    const it = D.items.find(x => x.id === id);
-    let ps = (it.prices||[]).map(p => Number(p.price)), def = ((it.prices||[]).find(p => p.default)||{}).price; def = def!=null ? Number(def) : null;
-    const s = sheet('<h3>' + productIcon(it.label) + ' ' + esc(it.label) + '</h3><div id="pp"></div><div style="display:flex;gap:8px;margin-top:10px"><input class="in" id="np" inputmode="decimal" placeholder="Add a price (RM)"><button class="btn" data-add>Add</button></div>'
-      + '<p style="color:var(--muted);font-size:13px;margin-top:10px">Tap a price to make it the usual one.</p>'
-      + '<div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button>' + (ps.length ? '<button class="btn red" data-off>Hide from Leaders</button>' : '') + '<button class="btn pri" style="flex:1" data-ok>Save</button></div>');
-    const draw = () => s.querySelector('#pp').innerHTML = ps.length ? '<div class="g g4">' + ps.sort((a,b)=>a-b).map(p => '<div class="opt' + (p===def?' on':'') + '" data-pick="' + p + '">' + p + (p===def?'<small>usual</small>':'') + '<small data-rm="' + p + '" style="color:var(--bad)">remove</small></div>').join('') + '</div>' : '<p style="color:var(--muted)">No prices yet.</p>';
-    draw();
-    s.addEventListener('click', async e => {
-      const rmv = e.target.closest('[data-rm]'); if(rmv){ const v = Number(rmv.dataset.rm); ps = ps.filter(x => x!==v); if(def===v) def = ps[0] ?? null; return draw(); }
-      const pk = e.target.closest('[data-pick]'); if(pk){ def = Number(pk.dataset.pick); return draw(); }
-      if(e.target.closest('[data-add]')){ const v = Math.round(Number(s.querySelector('#np').value)*100)/100; if(!(v>0 && v<=2000)) return s.querySelector('#se').textContent = 'Price 0.01 to 2000'; if(!ps.includes(v)) ps.push(v); if(def==null) def = v; s.querySelector('#np').value=''; s.querySelector('#se').textContent=''; return draw(); }
-      if(e.target.closest('[data-x]')) return s.remove();
-      const off = e.target.closest('[data-off]');
-      if(off || e.target.closest('[data-ok]')){
-        if(!off && !ps.length) return s.querySelector('#se').textContent = 'Add at least one price';
-        try{ await rpc('shop_owner_prices_set', {item_id:id, prices: off ? [] : ps, default: off ? null : def}); s.remove(); toast(off ? 'Hidden' : 'Saved'); load(); }
-        catch(err){ s.querySelector('#se').textContent = err.message; }
-      }
-    });
-  }
-  function newItem(){
-    const s = sheet('<h3>New item</h3><input class="in" id="ni" placeholder="e.g. SABUN" maxlength="30"><p style="color:var(--muted);font-size:13px;margin-top:8px">Also added to the Salary item list.</p><div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button><button class="btn pri" style="flex:1" data-ok>Next · prices</button></div>');
-    s.addEventListener('click', async e => {
-      if(e.target.closest('[data-x]')) return s.remove();
-      if(e.target.closest('[data-ok]')){
-        const v = s.querySelector('#ni').value.trim(); if(!v) return s.querySelector('#se').textContent = 'Enter a name';
-        try{ const id = await rpc('shop_owner_item_add', {label:v}); s.remove(); await load(); editPrices(id); }
-        catch(err){ s.querySelector('#se').textContent = err.message; }
-      }
-    });
-  }
-
-  // ---- Phones ----
-  function phoneView(){
-    const ord = {PENDING:0, ACTIVE:1, REVOKED:2};
-    const ds = D.devices.slice().sort((a,b) => ord[a.status]-ord[b.status]);
-    return '<div class="card"><div class="lbl"><b>📱 Phones</b><span>Leader opens the link → code shows</span></div>'
-      + (ds.length ? ds.map(d => '<div class="row"><div class="m"><div><span style="font-family:IBM Plex Mono,monospace">' + esc(d.code) + '</span> ' + (d.label ? '· ' + esc(d.label) : '') + '</div><small>'
-          + (d.status==='ACTIVE' ? '<span class="pill ok">' + esc(d.farm_code) + '</span> ' : d.status==='PENDING' ? '<span class="pill w">Waiting</span> ' : '<span class="pill gr">Blocked</span> ')
-          + (d.last_seen ? 'last used ' + when(d.last_seen) : 'asked ' + when(d.requested_at)) + '</small></div>'
-          + (d.status!=='ACTIVE' ? '<button class="btn pri" data-approve="' + d.id + '">Approve</button>' : '<button class="btn red" data-block="' + d.id + '">Block</button>') + '</div>').join('')
-        : '<p style="color:var(--muted)">No phones yet.</p>')
-      + '</div>';
-  }
-  function approve(id){
-    const d = D.devices.find(x => x.id === id); let farm = d.farm_code || null;
-    const s = sheet('<h3>Approve phone ' + esc(d.code) + '</h3><div class="lbl"><b>Farm</b></div><div class="g g3">' + ['AD 1','AD 2','AD 3'].map(f => '<div class="opt' + (farm===f?' on':'') + '" data-f="' + f + '">' + f + '</div>').join('') + '</div>'
-      + '<div class="lbl" style="margin-top:12px"><b>Name</b><span>optional</span></div><input class="in" id="dl" placeholder="e.g. AD 1 Leader" value="' + esc(d.label||'') + '">'
-      + '<div class="err" id="se"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" data-x>Cancel</button><button class="btn pri" style="flex:1" data-ok>Approve</button></div>');
-    s.addEventListener('click', async e => {
-      const f = e.target.closest('[data-f]'); if(f){ farm = f.dataset.f; s.querySelectorAll('[data-f]').forEach(x => x.classList.toggle('on', x===f)); }
-      if(e.target.closest('[data-x]')) s.remove();
-      if(e.target.closest('[data-ok]')){
-        if(!farm) return s.querySelector('#se').textContent = 'Pick a farm';
-        try{ await rpc('shop_owner_device_set', {id, status:'ACTIVE', farm, label: s.querySelector('#dl').value}); s.remove(); toast('Approved'); load(); }
-        catch(err){ s.querySelector('#se').textContent = err.message; }
-      }
-    });
-  }
-
-  document.addEventListener('click', async ev => {
+    header(); document.documentElement.lang = LANG;
     if(!D) return;
-    const t = ev.target.closest('[data-tab],[data-month],[data-farm],[data-chg],[data-void],[data-edit],[data-act],[data-approve],[data-block],[data-fw],[data-fitem],[data-fp],[data-fq],[data-ok],[data-rej]'); if(!t || t.closest('.sheet')) return;
-    const split = v => v.split('|');
-    if(t.dataset.fw){ const [c, rid] = split(t.dataset.fw); const f = C[c]; t.checked ? f.ids.add(rid) : f.ids.delete(rid); t.closest('.wk').classList.toggle('off', !t.checked); render(); return; }
-    if(t.dataset.fitem !== undefined){ const [c, id] = split(t.dataset.fitem); const f = C[c]; f.item_id = id || null;
-      const it = D.items.find(i => i.id === id); const d = it && it.prices ? (it.prices.find(p => p.default)||{}).price : null; if(d!=null && !f.price) f.price = String(Number(d)); return render(); }
-    if(t.dataset.fp){ const [c, v] = split(t.dataset.fp); C[c].price = v; return render(); }
-    if(t.dataset.fq){ const [c, v] = split(t.dataset.fq); C[c].qty = Math.min(20, Math.max(1, C[c].qty + Number(v))); return render(); }
-    if(t.dataset.ok) return confirmReq(t.dataset.ok);
-    if(t.dataset.rej) return rejectReq(t.dataset.rej);
-    if(t.dataset.tab){ TAB = t.dataset.tab; window.scrollTo(0,0); return render(); }
-    if(t.dataset.month){ MONTH = t.dataset.month; return load(); }
-    if(t.dataset.farm){ FARM = t.dataset.farm; return render(); }
-    if(t.dataset.chg){ ONLYCHG = !ONLYCHG; return render(); }
-    if(t.dataset.edit) return editPrices(t.dataset.edit);
-    if(t.dataset.act === 'newitem') return newItem();
-    if(t.dataset.approve) return approve(t.dataset.approve);
-    if(t.dataset.block){ if(!confirm('Block this phone? It can no longer send requests.')) return; await rpc('shop_owner_device_set', {id:t.dataset.block, status:'REVOKED'}); toast('Blocked'); return load(); }
-    if(t.dataset.void){ const e = D.entries.find(x => x.id === t.dataset.void); if(!confirm('Remove ' + e.item + ' ' + rm(e.amount) + ' for ' + e.worker + '? It is also removed from Salary.')) return;
-      try{ await rpc('shop_owner_void', {id:e.id}); toast('Removed'); load(); }catch(err){ alert(err.message); } }
-  });
-
-  return {start};
+    if(D.status === 'PENDING') return $('#app').innerHTML = codeScreen(false);
+    if(D.status === 'REVOKED') return $('#app').innerHTML = codeScreen(true);
+    if(D.status === 'PIN') return $('#app').innerHTML = pinScreen();
+    $('#app').innerHTML = ui.view === 'add' ? addPage() : ui.view === 'food' ? foodPage() : ui.view === 'att' ? attPage() : ui.view === 'done' ? donePage() : home();
+    drawBottom();
+  }
+  function goHome(){ ui = {view:'home'}; render(); scrollTo(0,0); }
+  return {start, setLang, pinKey, pickFarm, cancel, openTile, openHarvest, toggleW, step, setOther, commitAdd, fstep, sameLast, commitFood,
+          startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft})};
 })();
 
-boot();
+
+/* ================= Management (Teo, EX, Mr. Low) ================= */
+const Owner = (() => {
+  const FARMS = ['AD 1','AD 2','AD 3'];
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const KINDS = {FARM:{ico:'🧤',name:'Farm Supplies',sub:'Farm pays · No salary deduction'},PERSONAL:{ico:'🛍️',name:'Personal Items',sub:'Own cost · Salary deduction'},
+                 SHARED:{ico:'🧺',name:'Shared Items',sub:'Shared equally · Salary deduction'},FOOD:{ico:'🥬',name:'Groceries',sub:'Shared equally · Salary deduction'}};
+  const SUPPLIERS = ['Huat Tiong','Grocery','Wet Market'];
+  const BUYERS = ['Teo','EX','Mr. Low'];
+  let B = null, ui = {view:'home'}, ALC = lsGet('runcit_alcohol', false), HO = {}, BS = null, SP = null;
+  const ME = () => ({OWNER:'Teo'})[B.me && B.me.role] || lsGet('runcit_me', 'EX');
+  const ddm = s => { const d = new Date(String(s).slice(0,10)+'T00:00:00'); return `${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`; };
+  const IT = id => B.items.find(i => i.id === id) || {};
+  const lname = l => l.item;
+  const lkey = l => l.item_id || 'c:' + l.item;
+  const ico = l => l.kind === 'FOOD' ? (IT(l.item_id).icon || '🥬') : icon(l.item, IT(l.item_id).icon);
+  const who = l => l.kind === 'PERSONAL' ? l.worker : KINDS[l.kind].name;
+  const open = () => B.lines.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD');
+  const toBuy = () => open().filter(l => ALC || !isAlcohol(l.item));
+  const alcWait = () => open().filter(l => isAlcohol(l.item));
+  const bought = () => B.lines.filter(l => l.status === 'BOUGHT');
+  const food = () => B.lines.filter(l => l.kind === 'FOOD' && (l.status === 'REQUESTED' || l.status === 'BOUGHT'));
+  const sumQty = ls => ls.reduce((s,l) => s + l.qty, 0);
+  const byFarm = ls => FARMS.map(f => [f, sumQty(ls.filter(l => l.farm === f))]).filter(x => x[1]).map(x => `${x[0]} ${x[1]}`).join(' · ');
+  const waitTag = l => l.trip > 1 ? `<span class="tag ${l.trip > 2 ? 'bad' : 'warn'}">waited ${l.trip-1} wk</span>` : '';
+  const workers = f => (B.workers && B.workers[f]) || [];
+  const wname = id => (B.all_workers.find(w => w.id === id) || {}).name || '?';
+  function nextTrip(){ const t = B.today; for(let i = 0; i < 8; i++){ const x = addD(t, i); if(new Date(x+'T00:00:00').getDay() === B.trip_day) return x; } return t; }
+  function groups(lines){ const m = new Map(); for(const l of lines){ const k = lkey(l); if(!m.has(k)) m.set(k, {key:k, kind:l.kind, name:lname(l), ico:ico(l), item_id:l.item_id, lines:[]}); m.get(k).lines.push(l); }
+    const o = {FARM:0, PERSONAL:1, SHARED:2, FOOD:3}; return [...m.values()].sort((a,b) => o[a.kind]-o[b.kind] || a.name.localeCompare(b.name)); }
+  const back = () => `<button class="btn small" onclick="Owner.go('home')">← Back</button>`;
+
+  async function reload(){ B = await rpc('shop_owner_board', {}); }
+  async function act(name, p, ok){
+    busy(1);
+    try { const r = await rpc(name, p); await reload(); render(); if(ok) toast(typeof ok === 'function' ? ok(r) : ok); return r; }
+    catch(e){ toast(e.message); try { await reload(); render(); } catch(x){} return null; }
+    finally { busy(0); }
+  }
+  function start(board){ B = board; $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit</span><span class="ver">Management · v${APP_VERSION}</span>`; document.documentElement.lang = 'en'; render(); }
+  function go(v, extra){ ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
+
+  /* ---------- Today ---------- */
+  function home(){
+    const trip = nextTrip(), F = foodRound(B.today), b = bought().length, tb = toBuy().length, al = alcWait().length, fd = food().filter(l => l.status === 'REQUESTED');
+    const pend = B.phones.filter(p => p.status === 'PENDING').length;
+    const card = (i,t,s,on,c) => `<button class="attcard ${c}" onclick="${on}"><span class="aico">${i}</span><span class="atxt"><b>${t}</b><small>${s}</small></span><span class="aarr">›</span></button>`;
+    const t = new Date(B.today+'T00:00:00'), toLock = new Date(t.getFullYear(), t.getMonth()+1, 0).getDate() - t.getDate();
+    const att = f => { const a = (B.att||{})[f] || {}; const n = workers(f).length, d = (a.work||0)+(a.half||0)+(a.off||0);
+      return d ? `👷 ${d >= n ? '✓' : d+'/'+n} · 👷 ${a.work||0} · 🌓 ${a.half||0} · 🏠 ${a.off||0}` : '👷 not done'; };
+    return `<div class="hero"><div><h1>Today · ${ddm(B.today)}</h1><div class="sub">Signed in as ${esc(ME())}</div></div></div>
+      ${b && toLock <= 7 ? `<div class="note warn">⚠ ${b} item${b>1?'s':''} bought but not handed over. Hand them over before this month's salary is locked.</div>` : ''}
+      ${pend ? card('📱', `${pend} phone${pend>1?'s':''} waiting`, 'Approve or lock in Leaders & phones', "Owner.go('people')", 'todo') : ''}
+      ${card('🛒','Buying list',`${tb} to buy · next trip ${ddm(trip)} (list closes ${ddm(addD(trip,-1))} night)${al && !ALC ? ` · 🥃 ${al} alcohol waiting` : ''}`,"Owner.go('buy')",tb?'todo':'done')}
+      ${card('🥬','Groceries',`${fd.length} lines · Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`,"Owner.go('food')",fd.length?'todo':'done')}
+      ${card('🚚','Hand over',b ? `${b} bought · not handed over yet` : 'Nothing to hand over',`Owner.go('hand',{farm:'${FARMS.find(f => bought().some(l => l.farm === f)) || 'AD 1'}'})`,b?'todo':'done')}
+      ${card('✍️','At the farm','Worker says "I took…" or "I want…" — record it now',"Owner.go('spot')",'plain')}
+      <div class="sectionhead">This week</div>${weekStrip()}
+      <div class="sectionhead">Farms today</div>
+      <div class="card" style="padding:12px">${FARMS.map(f => `<div class="line"><b>${f}</b><span>${att(f)}</span></div>`).join('')}</div>
+      <div class="sectionhead">More</div>
+      <div class="btnrow"><button class="btn" onclick="Owner.go('people')">👷 Leaders & phones</button><button class="btn" onclick="Owner.go('prices')">🏷 Items & prices</button><button class="btn" onclick="Owner.go('records')">📒 Records</button></div>
+      <div class="sectionhead">Settings</div>
+      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>Buying day</span><span class="seg">${[1,2,3,4,5].map(d => `<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div>
+        <div class="hint">Never Saturday or Sunday. The Leaders' list closes the night before.</div>
+        ${B.me && B.me.role !== 'OWNER' ? `<div class="line" style="border:0"><span>This phone is</span><span class="seg">${['EX','Mr. Low'].map(n => `<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${n}</button>`).join('')}</span></div>` : ''}</div>`;
+  }
+  function weekStrip(){ const t = B.today, d0 = new Date(t+'T00:00:00'), mon = addD(t, -((d0.getDay()+6)%7)), trip = nextTrip(), F = foodRound(t);
+    return `<div class="week">${[0,1,2,3,4,5,6].map(i => { const d = addD(mon,i), wd = new Date(d+'T00:00:00').getDay(), ev = [];
+      if(d === addD(trip,-1)) ev.push('🔒 list closes'); if(d === trip) ev.push('🛒 buy · hand over'); if(d === F.order) ev.push('🥬 order food'); if(d === F.deliver) ev.push('🥬 delivery'); if(wd === 0 || wd === 6) ev.push('no buying');
+      return `<div class="wd ${d===t?'today':''} ${wd===0||wd===6?'off':''}"><b>${DAYS[wd]} ${dm(d)}</b>${ev.map(e => `<span>${e}</span>`).join('')}</div>`; }).join('')}</div>`; }
+  function setDay(d){ act('shop_owner_setting', {trip_day:d}, 'Buying day saved'); }
+  function setMe(n){ lsSet('runcit_me', n); render(); }
+
+  /* ---------- Buying list ---------- */
+  function buyPage(){
+    const g = groups(toBuy()), al = alcWait();
+    let h = `<div class="hero"><div><h1>🛒 Buying list</h1><div class="sub">Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms</div></div>${back()}</div>
+      <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>Buy alcohol this trip?</b><div class="hint">${al.length} alcohol line${al.length===1?'':'s'} waiting</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?'✓ Yes':'Not this trip'}</button></div>
+      <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 Copy shopping list</button></div>`;
+    let kind = '';
+    for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
+      const old = Math.max(...x.lines.map(l => l.trip));
+      h += `<div class="food" style="margin-bottom:8px"><div class="ico">${x.ico}</div><div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b><small class="loc">${byFarm(x.lines)}</small>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">oldest waited ${old-1} wk</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">Bought…</button></div>`; }
+    if(!g.length) h += `<div class="empty">Nothing to buy. 👍</div>`;
+    const left = toBuy().length;
+    return h + `<div class="bottom" id="bottombar"><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>Finish trip · ${left} not bought move to next trip</button></div>`;
+  }
+  function alc(){ ALC = !ALC; lsSet('runcit_alcohol', ALC); render(); }
+  function copyList(){ const txt = '🛒 Kedai Runcit · ' + ddm(nextTrip()) + '\n' + groups(toBuy()).map(x => `${x.name} × ${sumQty(x.lines)}  (${byFarm(x.lines)})`).join('\n');
+    try { navigator.clipboard.writeText(txt); } catch(e){} toast('Copied'); }
+  function buySheet(key, pool){ const src = pool === 'food' ? food().filter(l => l.status === 'REQUESTED') : toBuy(); const lines = src.filter(l => lkey(l) === key); if(!lines.length) return;
+    BS = {key, pool, ticks:Object.fromEntries(lines.map(l => [l.id, true])), price: IT(lines[0].item_id).default ?? null, by: ME()}; drawBuy(); }
+  function bsLines(){ const src = BS.pool === 'food' ? food().filter(l => l.status === 'REQUESTED') : toBuy(); return src.filter(l => lkey(l) === BS.key); }
+  function drawBuy(){
+    const lines = bsLines(); if(!lines.length){ closeModal(); return; } const x = lines[0], it = IT(x.item_id), n = lines.filter(l => BS.ticks[l.id]), q = sumQty(n);
+    openModal(`<h2>${ico(x)} ${esc(lname(x))}${it.unit ? ` <span class="mut" style="font-size:14px">${esc(it.unit)}</span>` : ''}</h2>
+      <div class="field"><label>Actual price per unit (RM)</label><div class="pills" style="flex-wrap:wrap">${(it.prices||[]).map(p => `<button class="pill ${BS.price==p?'on':''}" onclick="Owner.bsSet('price',${p})">${p}</button>`).join('')}</div>
+        <input id="bsprice" type="number" inputmode="decimal" step="0.01" value="${BS.price ?? ''}" placeholder="Price" oninput="Owner.bsPrice(this.value)"></div>
+      <div class="field"><label>Bought for (untick = not this trip, stays on the list)</label>${lines.map(l => `<label class="checkrow line"><span style="display:flex;gap:10px;align-items:center"><input type="checkbox" ${BS.ticks[l.id]?'checked':''} onchange="Owner.bsTick('${l.id}',this.checked)"> <span><b>${l.farm}</b> · ${esc(who(l))} × ${l.qty} ${waitTag(l)}</span></span>${l.kind==='FOOD'?'':`<button class="btn small light" onclick="event.preventDefault();Owner.nobuy('${l.id}')">Won't buy</button>`}</label>`).join('')}</div>
+      <div class="field"><label>Paid by</label><div class="pills">${BUYERS.map(b => `<button class="pill ${BS.by===b?'on':''}" onclick="Owner.bsSet('by','${b}')">${b}</button>`).join('')}</div></div>
+      <div class="line totrow" style="padding:10px;border-radius:10px"><span>${q} × price</span><strong id="bstot">${BS.price ? RM(BS.price*q) : '—'}</strong></div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" id="bsok" ${n.length && BS.price > 0 ? '' : 'disabled'} onclick="Owner.confirmBuy()">✓ Bought (${n.length})</button></div>`);
+  }
+  function bsSet(k, v){ BS[k] = v; drawBuy(); }
+  function bsTick(id, on){ BS.ticks[id] = on; drawBuy(); }
+  function bsPrice(v){ BS.price = parseFloat(v) || null; const q = sumQty(bsLines().filter(l => BS.ticks[l.id]));
+    $('#bstot').textContent = BS.price ? RM(BS.price*q) : '—'; $('#bsok').disabled = !(BS.price > 0 && q > 0); }
+  async function confirmBuy(){ const ids = bsLines().filter(l => BS.ticks[l.id]).map(l => l.id); closeModal();
+    await act('shop_owner_buy', {ids, price: BS.price, paid_by: BS.by}, r => `${r.count} bought · hand over to finish`); }
+  async function nobuy(id){ const l = B.lines.find(x => x.id === id); const r = prompt(`Why not buy ${lname(l)} for ${who(l)}? (the Leader will see this)`); if(!r || !r.trim()) return;
+    closeModal(); await act('shop_owner_nobuy', {id, reason: r.trim()}, 'Marked: won’t buy'); }
+  async function finishTrip(){ const left = toBuy(); if(!confirm(`${left.length} line(s) were not bought. Move them to the next trip?`)) return;
+    await act('shop_owner_finish_trip', {ids: left.map(l => l.id)}, 'Moved to next trip'); }
+
+  /* ---------- Groceries: by supplier (FoodOrder style) ---------- */
+  function fItems(sup){ const ls = food(); const m = new Map();
+    for(const l of ls){ const it = IT(l.item_id); if((it.supplier || 'Grocery') !== sup) continue; if(!m.has(l.item_id)) m.set(l.item_id, {it, lines:[]}); m.get(l.item_id).lines.push(l); }
+    const order = (FO_SEED||[]).map(a => a[0]); return [...m.values()].sort((a,b) => order.indexOf(a.it.code) - order.indexOf(b.it.code)); }
+  const qf = (ls, f) => sumQty(ls.filter(l => l.farm === f));
+  function foodPage(){
+    const F = foodRound(B.today), sup = ui.sup || 'Huat Tiong', rows = fItems(sup), all = food();
+    const sent = f => all.some(l => l.farm === f);
+    let h = `<div class="hero"><div><h1>🥬 Groceries</h1><div class="sub">Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}</div></div>${back()}</div>
+      <div class="card" style="padding:10px 14px">${FARMS.map(f => `<div class="line"><b>${f}</b>${sent(f) ? '<span class="tag ok">Sent</span>' : '<span class="tag warn">Not sent yet</span>'}</div>`).join('')}</div>
+      <div class="pills noprint">${SUPPLIERS.map(s => `<button class="pill ${s===sup?'on':''}" onclick="Owner.go('food',{sup:'${s}'})">${esc(s)} · ${fItems(s).length}</button>`).join('')}</div>
+      <div id="printarea"><h2 class="printonly">${esc(sup === 'Huat Tiong' ? 'Huat Thiong' : sup)} x Azura Delta ${pdfDate(F.deliver)}</h2>`;
+    if(!rows.length) h += `<div class="card empty">No items for ${esc(sup)}</div>`;
+    else h += `<div class="tablewrap"><table><thead><tr><th>Food</th>${FARMS.map(f => `<th class="num">${f}</th>`).join('')}<th class="num">TOTAL</th><th class="noprint"></th></tr></thead><tbody>${rows.map(r => {
+      const tot = sumQty(r.lines), done = r.lines.every(l => l.status === 'BOUGHT');
+      return `<tr><td><b>${esc(r.it.label)}</b><div class="hint">${esc(r.it.unit||'')}</div></td>${FARMS.map(f => `<td class="num">${qf(r.lines,f) || '–'}</td>`).join('')}<td class="num"><b>${tot}</b></td>
+        <td class="noprint">${done ? '<span class="tag ok">Bought</span>' : `<button class="btn small primary" onclick="Owner.buySheet('${r.it.id}','food')">Bought…</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
+    h += `</div><div class="btnrow noprint" style="margin-top:14px"><button class="btn gold" ${rows.length?'':'disabled'} onclick="Owner.copySup('${sup}')">📋 Copy WhatsApp Order</button><button class="btn" ${rows.length?'':'disabled'} onclick="Owner.printSup()">🖨 Print / PDF</button></div>
+      <div class="hint noprint" style="margin-top:9px">Tick "Bought" with the real price after the supplier bills you. Then hand over each farm — groceries become one Salary Food entry per farm.</div>`;
+    return h;
+  }
+  function pdfDate(s){ const d = new Date(s+'T00:00:00'); return `${d.getDate()}${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}${d.getFullYear()}`; }
+  function supText(sup){ const F = foodRound(B.today), rows = fItems(sup);
+    let t = `AZURA DELTA · FOOD ORDER\nDate: ${dm(F.deliver)}/${F.deliver.slice(0,4)}\nSupplier: ${sup}\n\n`;
+    for(const f of FARMS){ t += `====== ${f} ======\n`; for(const r of rows){ const v = qf(r.lines, f); if(v) t += `${r.it.label}: ${v} ${r.it.unit||''}\n`; } t += '\n'; }
+    t += `====== TOTAL ======\n`; for(const r of rows) t += `${r.it.label}: ${sumQty(r.lines)} ${r.it.unit||''}\n`; return t; }
+  function copySup(sup){ openModal(`<h2>📋 ${esc(sup)} · WhatsApp</h2><div class="field"><label>Farm-by-farm order (editable before copying)</label><textarea id="waText" rows="17">${esc(supText(sup))}</textarea></div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">Close</button><button class="btn primary" onclick="Owner.copyWa()">Copy to clipboard</button></div>`); }
+  async function copyWa(){ const s = $('#waText').value; try { await navigator.clipboard.writeText(s); toast('Copied · paste into WhatsApp'); } catch(e){ $('#waText').select(); toast('Select and copy text manually'); } }
+  function printSup(){ const F = foodRound(B.today), old = document.title; document.title = `${(ui.sup||'Huat Tiong') === 'Huat Tiong' ? 'Huat Thiong' : ui.sup} x Azura Delta ${pdfDate(F.deliver)}`; window.print(); setTimeout(() => document.title = old, 1000); }
+
+  /* ---------- Hand over: per farm; the only step that writes money ---------- */
+  function handPage(){
+    const farm = ui.farm || 'AD 1', ls = bought().filter(l => l.farm === farm), ws = workers(farm);
+    for(const l of ls) if(!HO[l.id]) HO[l.id] = {on:true, ws: l.kind === 'SHARED' || l.kind === 'FOOD' ? ws.filter(w => l.kind !== 'FOOD' || w.shares_food).map(w => w.id) : null};
+    let h = `<div class="hero"><div><h1>🚚 Hand over</h1><div class="sub">Tick what you gave to the Leader. Only this step deducts salary.</div></div>${back()}</div>
+      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
+      <div class="field" style="max-width:240px"><label>Hand-over date</label><input type="date" id="hodate" value="${ui.date || B.today}" max="${B.today}" onchange="Owner.hoDate(this.value)"></div>`;
+    if(!ls.length) h += `<div class="empty">Nothing bought for ${farm}.</div>`;
+    const foodTot = ls.filter(l => l.kind === 'FOOD').reduce((s,l) => s + l.qty * l.buy.price, 0);
+    for(const l of ls){ const s = HO[l.id], tot = l.qty * l.buy.price;
+      const money = l.kind === 'PERSONAL' ? `Deduct from salary: ${RM(tot)}` : l.kind === 'FARM' ? `Farm cost ${RM(tot)} · no deduction`
+        : l.kind === 'FOOD' ? `${RM(tot)} · part of Groceries ${RM(foodTot)}` : `${RM(tot)} ÷ ${s.ws.length} = ${s.ws.length ? RM(tot/s.ws.length) : '—'} each`;
+      h += `<div class="food ${s.on?'chosen':''}" style="margin-bottom:8px;flex-wrap:wrap"><input type="checkbox" style="width:24px;height:24px;min-height:24px" ${s.on?'checked':''} onchange="Owner.hoTick('${l.id}',this.checked)"><div class="ico">${ico(l)}</div>
+        <div class="foodname"><b>${esc(lname(l))} × ${l.qty}</b><small class="loc">${esc(who(l))}</small><small>${money} · bought ${dm(l.bought_at)}${l.buy.paid_by ? ' by ' + esc(l.buy.paid_by) : ''}</small></div><button class="btn small light" onclick="Owner.unbuy('${l.id}')">Undo</button>
+        ${l.kind === 'SHARED' ? shareBox(l.id, ws) : ''}</div>`; }
+    const fl = ls.filter(l => l.kind === 'FOOD');
+    if(fl.length){ const s = HO[fl[0].id]; h += `<div class="card" style="padding:12px"><b>🥬 Groceries ${RM(foodTot)} ÷ ${s.ws.length} = ${s.ws.length ? RM(foodTot/s.ws.length) : '—'} each</b><div class="hint">Untick anyone who does not share food.</div>${shareBox(fl[0].id, ws, true)}</div>`; }
+    const n = ls.filter(l => HO[l.id] && HO[l.id].on && hoWs(l).length !== 0).length;
+    return h + `<div class="bottom" id="bottombar"><button class="btn primary" ${n?'':'disabled'} onclick="Owner.handOver('${farm}')">✓ Handed over (${n}) · write to Salary</button></div>`;
+  }
+  function shareBox(id, ws, food){ const s = HO[id]; return `<div style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${ws.map(w => `<button class="pill ${s.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.toggleShare('${id}','${w.id}',${!!food})">${esc(w.name)}</button>`).join('')}</div>`; }
+  function hoWs(l){ if(l.kind === 'PERSONAL' || l.kind === 'FARM') return [1]; if(l.kind === 'FOOD'){ const f = bought().find(x => x.kind === 'FOOD' && x.farm === l.farm); return HO[f.id] ? HO[f.id].ws : []; } return HO[l.id].ws; }
+  function toggleShare(id, w){ const s = HO[id]; s.ws = s.ws.includes(w) ? s.ws.filter(x => x !== w) : [...s.ws, w]; render(); }
+  function hoTick(id, on){ HO[id].on = on; render(); }
+  function hoDate(v){ ui.date = v; }
+  async function unbuy(id){ const l = B.lines.find(x => x.id === id); if(!confirm(`Undo "bought" for ${lname(l)} (${who(l)})? It goes back to the list.`)) return; delete HO[id]; await act('shop_owner_unbuy', {id}, 'Back on the list'); }
+  async function handOver(farm){
+    const ls = bought().filter(l => l.farm === farm && HO[l.id] && HO[l.id].on && hoWs(l).length);
+    const lines = ls.map(l => ({id:l.id, share_ids: l.kind === 'SHARED' || l.kind === 'FOOD' ? hoWs(l) : undefined}));
+    const tot = ls.reduce((s,l) => s + l.qty * l.buy.price, 0);
+    if(!confirm(`Hand over ${ls.length} line(s) for ${farm}, total ${RM(tot)}? This writes to Salary.`)) return;
+    const r = await act('shop_owner_hand', {lines, date: ui.date || B.today}, r => `${r.count} handed over · written to ${r.month}`);
+    if(r) for(const l of ls) delete HO[l.id];
+  }
+
+  /* ---------- At the farm ---------- */
+  function spotPage(){
+    if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
+    let h = `<div class="hero"><div><h1>✍️ At the farm</h1><div class="sub">"I just took…" → deduct now · "I want…" → next trip</div></div>${back()}</div>
+      <div class="sectionhead">1 · Farm</div><div class="pills">${FARMS.map(f => `<button class="pill ${SP.farm===f?'on':''}" onclick="Owner.sp({farm:'${f}',kind:null,worker:null,item:null,ws:null})">${f}</button>`).join('')}</div>`;
+    if(!SP.farm) return h;
+    const K = ['FARM','PERSONAL','SHARED'];
+    h += SP.kind ? `<div class="sectionhead">2 · What kind</div><div class="food chosen"><div class="ico">${KINDS[SP.kind].ico}</div><div class="foodname"><b>${KINDS[SP.kind].name}</b><small>${KINDS[SP.kind].sub}</small></div><button class="btn small" onclick="Owner.sp({kind:null,item:null,worker:null})">Change</button></div>`
+      : `<div class="sectionhead">2 · What kind</div><div class="farmgrid">${K.map(k => `<button class="farmcard" style="min-height:90px" onclick="Owner.sp({kind:'${k}',item:null,worker:null,ws:${k==='SHARED'?'null':'null'}})"><span style="font-size:30px">${KINDS[k].ico}</span><b style="font-size:17px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>`;
+    if(!SP.kind) return h;
+    let n = 3;
+    if(SP.kind === 'PERSONAL'){ h += `<div class="sectionhead">3 · Who</div><div class="pills" style="flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.worker===w.id?'on':''}" onclick="Owner.sp({worker:'${w.id}'})">${esc(w.name)}</button>`).join('')}</div>`; n = 4; }
+    if(SP.kind === 'SHARED'){ if(!SP.ws) SP.ws = workers(SP.farm).map(w => w.id); }
+    h += `<div class="sectionhead">${n} · Item</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
+      <div class="field" style="margin-top:8px"><input placeholder="Other item (type it)" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>
+      <div class="titleline" style="margin-top:6px"><span>Quantity</span><div class="step"><button onclick="Owner.sp({qty:Math.max(1,${SP.qty}-1)})">−</button><input class="count" readonly value="${SP.qty}"><button class="plus" onclick="Owner.sp({qty:${SP.qty}+1})">+</button></div></div>
+      <div class="field"><label>Price per unit (RM) — needed for "took it now"</label><input type="number" inputmode="decimal" step="0.01" value="${SP.price ?? ''}" oninput="Owner.spPrice(this.value)"></div>
+      ${SP.kind === 'SHARED' ? `<div class="field"><label>Shared by (for "took it now")</label>${shareSp()}</div>` : ''}
+      <div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"></div>`;
+    return h;
+  }
+  function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
+  function sp(o){ SP = {...SP, ...o}; render(); }
+  function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
+  function spCustom(v){ SP.custom = v.toUpperCase(); SP.item = null; spotBar(); }
+  function spPrice(v){ SP.price = parseFloat(v) || null; spotBar(); }
+  function spotReady(){ return SP && SP.farm && SP.kind && (SP.item || SP.custom.trim()) && (SP.kind !== 'PERSONAL' || SP.worker); }
+  function spotBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'spot') return; const ok = spotReady(), okT = ok && SP.price > 0 && (SP.kind !== 'SHARED' || SP.ws.length);
+    b.innerHTML = `<button class="btn primary" ${okT?'':'disabled'} onclick="Owner.spot('TAKEN')">✓ Took it now · ${SP.kind==='FARM'?'farm cost now':'deduct now'}${SP.price ? ' · ' + RM(SP.price*SP.qty) : ''}</button><button class="btn" ${ok?'':'disabled'} onclick="Owner.spot('WANT')">➕ Wants it · add to next trip</button>`; }
+  async function spot(mode){
+    const p = {farm:SP.farm, kind:SP.kind, worker_id: SP.kind === 'PERSONAL' ? SP.worker : undefined, qty:SP.qty, mode};
+    if(SP.item) p.item_id = SP.item; else p.custom_name = SP.custom.trim();
+    if(mode === 'TAKEN'){ p.price = SP.price; p.paid_by = ME(); if(SP.kind === 'SHARED') p.share_ids = SP.ws;
+      if(!confirm(`Write ${RM(SP.price*SP.qty)} now?`)) return; }
+    const r = await act('shop_owner_spot', p, mode === 'TAKEN' ? 'Written now' : 'Added to the next trip — the Leader sees it too');
+    if(r){ SP = {farm:SP.farm, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null}; render(); }
+  }
+
+  /* ---------- Leaders & phones ---------- */
+  function peoplePage(){
+    const L = B.leaders, chief = L.filter(l => l.role === 'CHIEF');
+    const lead = f => L.find(l => l.role === 'LEADER' && l.farm === f);
+    const pinTag = l => l.pin_set ? '<span class="tag ok">PIN set</span>' : '<span class="tag bad">No PIN</span>';
+    let h = `<div class="hero"><div><h1>👷 Leaders & phones</h1><div class="sub">One Leader per farm · Chief Leader can enter for every farm</div></div>${back()}</div>
+      <div class="sectionhead">Master list</div><div class="card" style="padding:10px 14px">`;
+    for(const f of FARMS){ const l = lead(f);
+      h += `<div class="line"><span><b>${f}</b> · ${l ? esc(l.name) : '<span class="mut">not set</span>'} ${l ? pinTag(l) : ''}</span><span class="btnrow">${l ? `<button class="btn small light" onclick="Owner.pinFor('${l.worker_id}')">PIN</button><button class="btn small light" onclick="Owner.unlead('${l.worker_id}')">Remove</button>` : ''}<button class="btn small" onclick="Owner.pickLeader('LEADER','${f}')">${l ? 'Change' : 'Set'}</button></span></div>`; }
+    h += `<div class="line"><span><b>Chief</b> · ${chief.length ? chief.map(c => `${esc(c.name)} ${pinTag(c)}`).join(', ') : '<span class="mut">not set</span>'}</span><span class="btnrow">${chief.map(c => `<button class="btn small light" onclick="Owner.pinFor('${c.worker_id}')">PIN ${esc(c.name.split(' ')[0])}</button><button class="btn small light" onclick="Owner.unlead('${c.worker_id}')">Remove</button>`).join('')}<button class="btn small" onclick="Owner.pickLeader('CHIEF','')">Add</button></span></div></div>
+      <div class="hint">Changing a Leader locks the old Leader's phone at once. A worker who stops in FarmHub is cut off at once.</div>
+      <div class="sectionhead">Phones</div>`;
+    if(!B.phones.length) h += `<div class="empty">No phones yet. The Leader opens the link once, then shows you the 6-letter code.</div>`;
+    for(const p of B.phones){
+      const st = p.status === 'ACTIVE' && p.farms.length ? '<span class="tag ok">Working</span>' : p.status === 'ACTIVE' ? '<span class="tag bad">Not on master list</span>' : p.status === 'PENDING' ? '<span class="tag warn">Waiting</span>' : '<span class="tag bad">Locked</span>';
+      h += `<div class="food" style="margin-bottom:8px;flex-wrap:wrap"><div class="ico">📱</div><div class="foodname"><b>${esc(p.code)} ${st}</b><small class="loc">${p.person ? esc(p.person) + (p.farms.length ? ' · ' + p.farms.join(', ') : '') : 'Not given to anyone yet'}</small><small>${p.last_seen ? 'Last used ' + dm(p.last_seen) : 'Asked ' + dm(p.requested_at)}</small></div>
+        <span class="btnrow">${p.status !== 'ACTIVE' || !p.farms.length ? `<button class="btn small primary" onclick="Owner.approve('${p.id}')">Approve…</button>` : ''}${p.status !== 'REVOKED' ? `<button class="btn small light" onclick="Owner.lockPhone('${p.id}')">Lock</button>` : ''}</span></div>`; }
+    return h;
+  }
+  function pickLeader(role, farm){
+    const pool = B.all_workers.filter(w => role === 'CHIEF' || w.farm === farm);
+    openModal(`<h2>${role === 'CHIEF' ? 'Chief Leader' : farm + ' Leader'}</h2><div class="field"><label>Who</label><select id="plw">${pool.map(w => `<option value="${w.id}">${esc(w.name)} · ${w.farm}</option>`).join('')}</select></div>
+      <div class="field"><label>4-digit PIN (tell only this person)</label><input id="plpin" inputmode="numeric" maxlength="4" pattern="\\d{4}" placeholder="e.g. 4821"></div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="Owner.saveLeader('${role}','${farm}')">Save</button></div>`);
+  }
+  async function saveLeader(role, farm){ const w = $('#plw').value, pin = $('#plpin').value.trim();
+    if(pin && !/^\d{4}$/.test(pin)) return toast('PIN must be 4 digits'); closeModal();
+    await act('shop_owner_leader_set', {worker_id:w, role, farm, pin: pin || undefined}, 'Master list saved'); }
+  function pinFor(wid){ openModal(`<h2>New PIN · ${esc(wname(wid))}</h2><div class="field"><input id="plpin" inputmode="numeric" maxlength="4" placeholder="4 digits"></div><div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="Owner.savePin('${wid}')">Save PIN</button></div>`); }
+  async function savePin(wid){ const pin = $('#plpin').value.trim(); if(!/^\d{4}$/.test(pin)) return toast('PIN must be 4 digits');
+    const l = B.leaders.find(x => x.worker_id === wid); closeModal(); await act('shop_owner_leader_set', {worker_id:wid, role:l.role, farm:l.farm, pin}, 'PIN saved'); }
+  async function unlead(wid){ if(!confirm(`Take ${wname(wid)} off the master list? Their phone stops working at once.`)) return; await act('shop_owner_leader_set', {worker_id:wid, role:'NONE'}, 'Removed'); }
+  function approve(id){ const p = B.phones.find(x => x.id === id);
+    if(!B.leaders.length) return toast('Set the Leaders on the master list first');
+    openModal(`<h2>Approve phone ${esc(p.code)}</h2><div class="hint">Check the code on the Leader's phone matches.</div><div class="field"><label>Whose phone is this?</label><select id="apw">${B.leaders.map(l => `<option value="${l.worker_id}">${esc(l.name)} · ${l.role === 'CHIEF' ? 'Chief' : l.farm}</option>`).join('')}</select></div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="Owner.saveApprove('${id}')">✓ Approve</button></div>`); }
+  async function saveApprove(id){ const w = $('#apw').value; closeModal(); await act('shop_owner_phone_set', {id, worker_id:w, status:'ACTIVE'}, 'Phone approved · the Leader types the PIN'); }
+  async function lockPhone(id){ const p = B.phones.find(x => x.id === id); if(!confirm(`Lock phone ${p.code}${p.person ? ' (' + p.person + ')' : ''}? It will show nothing.`)) return;
+    await act('shop_owner_phone_set', {id, status:'REVOKED'}, 'Phone locked'); }
+
+  /* ---------- Items & prices ---------- */
+  function pricesPage(){
+    let h = `<div class="hero"><div><h1>🏷 Items & prices</h1><div class="sub">Usual prices show as buttons when you tick "Bought"</div></div>${back()}</div>`;
+    for(const k of ['PERSONAL','SHARED','FARM','FOOD']){
+      h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">+ Add item</button>`}</div><div class="card" style="padding:8px 14px">`;
+      for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line"><span>${icon(i.label, i.icon)} ${esc(i.label)}${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}</span><span>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || '<span class="mut">no price</span>'} <button class="btn small light" onclick="Owner.editPrice('${i.id}')">Edit</button></span></div>`;
+      h += '</div>'; }
+    return h;
+  }
+  function editPrice(id){ const i = IT(id); openModal(`<h2>${esc(i.label)}</h2><div class="field"><label>Usual prices (RM), separated by commas</label><input id="pp" value="${(i.prices||[]).join(', ')}"></div>
+      <div class="field"><label>Most common price</label><input id="pd" type="number" step="0.01" value="${i.default ?? ''}"></div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="Owner.savePrice('${id}')">Save</button></div>`); }
+  async function savePrice(id){ const ps = $('#pp').value.split(/[,\s]+/).map(Number).filter(x => x > 0), d = Number($('#pd').value) || null;
+    if(d && !ps.includes(d)) ps.push(d); closeModal(); await act('shop_owner_prices_set', {item_id:id, prices:ps, default:d}, 'Prices saved'); }
+  async function addItem(kind){ const n = prompt(`New ${KINDS[kind].name} item name`); if(!n || !n.trim()) return; await act('shop_owner_item_add', {label:n.trim(), kind}, 'Item added'); }
+
+  /* ---------- Records (last 35 days) with void ---------- */
+  function recordsPage(){
+    const W = B.written, f = ui.f || 'ALL', ok = x => f === 'ALL' || x.farm === f;
+    const row = (x, txt, to, fn) => `<div class="line" style="${x.void ? 'opacity:.45;text-decoration:line-through' : ''}"><span><b>${dm(x.date)}</b> · ${x.farm} · ${txt} <span class="mut">${to}</span></span><span><strong>${RM(x.amount)}</strong> ${x.void ? '' : `<button class="btn small light" onclick="Owner.voidRec('${fn}','${x.id}')">Void</button>`}</span></div>`;
+    const all = [...W.personal.filter(ok).map(x => ({x, h: row(x, `${esc(x.worker)} · ${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, 'Salary Personal', 'shop_owner_void')})),
+                 ...W.shared.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)} ÷ ${x.n}`, 'Salary Food', 'shop_owner_share_void')})),
+                 ...W.farm.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, 'Farm cost', 'shop_owner_cost_void')}))]
+                 .sort((a,b) => String(b.x.date).localeCompare(String(a.x.date)));
+    return `<div class="hero"><div><h1>📒 Records</h1><div class="sub">What hand-over wrote · last 35 days</div></div>${back()}</div>
+      <div class="pills">${['ALL', ...FARMS].map(x => `<button class="pill ${f===x?'on':''}" onclick="Owner.go('records',{f:'${x}'})">${x === 'ALL' ? 'All' : x}</button>`).join('')}</div>
+      <div class="card" style="padding:8px 14px">${all.length ? all.map(a => a.h).join('') : '<div class="empty">Nothing written yet.</div>'}</div>
+      <div class="hint">Void takes the line out of Salary too. It cannot be undone — enter it again if needed.</div>`;
+  }
+  async function voidRec(fn, id){ if(!confirm('Void this record? It is taken out of Salary.')) return; await act(fn, {id}, 'Voided'); }
+
+  function render(){
+    $('#app').innerHTML = ({buy:buyPage, food:foodPage, hand:handPage, spot:spotPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
+    spotBar();
+  }
+  return {start, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
+          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, voidRec, _state: () => ({B, ui, HO, SP})};
+})();
+
+
+window.addEventListener('load', boot);
+
 </script>
-</body>
-</html>
+</body></html>
