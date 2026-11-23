@@ -326,26 +326,54 @@ function movesCard(r,pr,today){r.moves=[...poolMoves(r,pr),...r.moves.filter(m=>
 function vBuy(){const s=sub.buy||'plan';const seg=[['plan','采购单'],['ordered','等收货'],['recv','等分货'],['pay','付款']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="buy" data-v="${k}">${l}${k==='ordered'?' '+S.po.filter(x=>x.status==='ordered').length:k==='recv'?' '+S.po.filter(x=>x.status==='received').length:''}</button>`).join('');
   return `<div class="eyebrow">BUY</div><h1>采购</h1><div class="seg">${seg}</div>${s==='plan'?buyPlanView():s==='ordered'?poList('ordered'):s==='recv'?poList('received'):payView()}`}
 let draft=null;
+let OVR={};try{OVR=JSON.parse(localStorage.getItem('sg_buy_ovr')||'{}')}catch(x){}
+const saveOvr=()=>{try{localStorage.setItem('sg_buy_ovr',JSON.stringify(OVR))}catch(x){}};
+function altsOf(pid){const out=[];const add=(q,r)=>{if(q!==pid&&!out.some(x=>x.pid===q))out.push({pid:q,ratio:r})};
+  for(const R of S.recipe)for(const m of MIXES)for(const it of (R.mixes&&R.mixes[m])||[]){const ch=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];const me=ch.find(c=>c.pid===pid);if(!me)continue;for(const c of ch)add(c.pid,(c.dose||1)/(me.dose||1))}
+  return out}
+const effPid=b=>OVR[b.pid]?.to||b.pid;
+const effSup=b=>OVR[b.pid]?.sup||P(effPid(b))?.shops?.[0]||'_';
+function swapPacks(b,to){const r=to===b.pid?1:(altsOf(b.pid).find(x=>x.pid===to)?.ratio||1);const pb=packBase(P(to));if(!pb||!(b.shortBase>0))return b.packs||1;return Math.max(1,Math.ceil(b.shortBase*r/pb-1e-9))}
+function sheetSwap(pid){const r=buyPlan(S);const b=r.buys.find(x=>x.pid===pid);if(!b)return;const o=OVR[pid]||{};const cur=effPid(b);const cs=effSup(b);
+  const alts=altsOf(pid);const others=S.products.filter(p=>p.active!==false&&p.id!==pid&&!alts.some(a=>a.pid===p.id)).sort((x,y)=>(x.name||'').localeCompare(y.name||''));
+  const supBtns=[...S.suppliers.map(x=>[x.id,x.name]),['_','未指定']].map(([id,n])=>`<button class="${cs===id?'on':''}" data-swsup="${h(id)}">${h(n)}</button>`).join('');
+  const pBtn=(q,lab,note)=>`<button class="btn sm ${cur===q?'p':''}" data-swto="${h(q)}" style="margin:3px">${h(lab)}${note?` <span class="tiny">${h(note)}</span>`:''}</button>`;
+  sheet(`<h2>换 · ${h(P(pid)?.name)}</h2>
+  <label class="l">换卖家</label><div class="seg wrapf" style="flex-wrap:wrap">${supBtns}</div>
+  <label class="row" style="gap:6px;margin-top:6px"><input type="checkbox" id="swdef"> <span class="tiny">以后这样药都跟这家买（改成默认卖家）</span></label>
+  <label class="l" style="margin-top:12px">换成别的药</label>
+  <div>${pBtn(pid,P(pid)?.name+'（原本）')}${alts.map(a=>pBtn(a.pid,P(a.pid)?.name,'配方顶替 · 每桶 ×'+fmt(a.ratio))).join('')}</div>
+  <div class="tiny" style="margin-top:6px">配方没写的药也可以：</div><select id="swother" class="in" style="width:100%;margin-top:4px"><option value="">— 选别的药 —</option>${others.map(p=>`<option value="${h(p.id)}"${cur===p.id?' selected':''}>${h(p.name)}</option>`).join('')}</select>
+  <p class="tiny" style="margin-top:8px">换药后瓶数会照用量重算，可以再按 ＋ − 改。只改这一次采购单；配方要长期改，到 SprayGo「配方」加顶替。</p>
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="sw-save" data-id="${h(pid)}">好</button>${o.sup||o.to?`<button class="btn" data-act="sw-reset" data-id="${h(pid)}">还原</button>`:''}<button class="btn" data-act="close">取消</button></div>`);
+  sheetSwap.st={pid,sup:o.sup||null,to:o.to||null}}
+async function swapSave(pid){const st=sheetSwap.st;const sel=$('#swother')?.value;if(sel)st.to=sel;const r=buyPlan(S);const b=r.buys.find(x=>x.pid===pid);
+  const to=st.to&&st.to!==pid?st.to:null;const prevTo=OVR[pid]?.to||null;OVR[pid]={...(st.sup?{sup:st.sup}:{}),...(to?{to}:{})};if(!OVR[pid].sup&&!OVR[pid].to)delete OVR[pid];saveOvr();
+  if(b&&draft&&draft.lines[pid]&&(to||null)!==prevTo){const d=draft.lines[pid];const n=swapPacks(b,to||pid);const old=d.packs||1;const al={};let sum=0;for(const f of FARMS){al[f]=Math.floor(n*(d.alloc[f]||0)/old);sum+=al[f]}
+    FARMS.slice().sort((x,y)=>(d.alloc[y]||0)-(d.alloc[x]||0)).slice(0,n-sum).forEach(f=>al[f]++);d.packs=n;d.alloc=al}
+  const def=$('#swdef')?.checked;if(def&&st.sup&&st.sup!=='_'){const p=P(to||pid);if(p){await put('products',{...p,shops:[st.sup,...(p.shops||[]).filter(x=>x!==st.sup)]});toast(`${p.name} 默认卖家改成 ${SUP(st.sup)?.name}`)}}
+  closeSheet();render()}
+
 function buyPlanView(){const r=buyPlan(S);const {pr}=plan();const c=cfg(S);
-  if(!draft||draft.key!==JSON.stringify(r.buys.map(b=>[b.pid,b.packs]))){draft={key:JSON.stringify(r.buys.map(b=>[b.pid,b.packs])),lines:{}};for(const b of r.buys)draft.lines[b.pid]={packs:b.packs||0,alloc:{...b.alloc}}}
+  if(!draft||draft.key!==JSON.stringify(r.buys.map(b=>[b.pid,b.packs]))){draft={key:JSON.stringify(r.buys.map(b=>[b.pid,b.packs])),lines:{}};for(const b of r.buys){const to=OVR[b.pid]?.to;let n=b.packs||0,al={...b.alloc};if(to&&to!==b.pid&&n){const m=swapPacks(b,to);const a2={};let sum=0;for(const f of FARMS){a2[f]=Math.floor(m*(al[f]||0)/n);sum+=a2[f]}FARMS.slice().sort((x,y)=>(al[y]||0)-(al[x]||0)).slice(0,m-sum).forEach(f=>a2[f]++);n=m;al=a2}draft.lines[b.pid]={packs:n,alloc:al}}}
   const urgent=pid=>FARMS.some(f=>{const d=pr[f].slotShort[pid];return d!=null&&d<=leadOf(S,P(pid))});
 
-  const groups={};for(const b of r.buys){const p=P(b.pid);const sid=p?.shops?.[0]||'_';(groups[sid]=groups[sid]||[]).push(b)}
-  const gh=Object.entries(groups).map(([sid,L])=>{const sup=SUP(sid);return `<div class="card"><div class="row"><h2 class="grow">${h(sup?.name||'未指定供应商')}</h2><span class="tiny">${sup?(Number(sup.leadDays)||3)+' 天到':''}</span></div><div class="list" style="margin-top:6px">${L.map(b=>{const p=P(b.pid);const d=draft.lines[b.pid];
-    return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${b.noPack?' · 包装待补，算不出瓶数':''}</div>
+  const groups={};for(const b of r.buys){const sid=effSup(b);(groups[sid]=groups[sid]||[]).push(b)}
+  const gh=Object.entries(groups).map(([sid,L])=>{const sup=SUP(sid);return `<div class="card"><div class="row"><h2 class="grow">${h(sup?.name||'未指定供应商')}</h2><span class="tiny">${sup?(Number(sup.leadDays)||3)+' 天到':''}</span></div><div class="list" style="margin-top:6px">${L.map(b=>{const p=P(effPid(b));const orig=P(b.pid);const sw=effPid(b)!==b.pid;const d=draft.lines[b.pid];
+    return `<div><div class="grow"><b>${h(p.name)}</b> ${urgent(b.pid)?'<span class="badge red">急</span>':''} <button class="btn sm neededit" style="padding:2px 10px;min-height:0" data-act="swap" data-id="${h(b.pid)}">换</button>${sw?`<div class="tiny" style="color:var(--amber);font-weight:750">顶替 ${h(orig?.name)}</div>`:''}${OVR[b.pid]?.sup?`<div class="tiny" style="color:var(--amber);font-weight:750">这次改跟 ${h(SUP(OVR[b.pid].sup)?.name||'未指定')} 买</div>`:''}<div class="tiny">${h(packLabel(p))}${b.fromPool>0?' · 先用待分货 '+qtyText(p,b.fromPool):''}${(sw?!packBase(p):b.noPack)?' · 包装待补，算不出瓶数':''}</div>
     <div class="tiny">分园：${FARMS.map(f=>`${f} <b>${d.alloc[f]||0}</b>`).join(' · ')}</div></div><div class="stepper neededit"><button data-act="qty" data-id="${h(b.pid)}" data-d="-1">−</button><b style="min-width:26px;text-align:center">${d.packs}</b><button data-act="qty" data-id="${h(b.pid)}" data-d="1">＋</button></div></div>`}).join('')}</div>
     <button class="btn p full neededit" style="margin-top:8px" data-act="make-po" data-sup="${h(sid)}">下单给 ${h(sup?.name||'这家')} →</button></div>`}).join('');
   return `<p class="tiny">买 ${r.H} 天份（${c.cycle||14} 天用＋${c.safety||7} 天安全）− 现在库存 · 下次采购 ${dd(c.nextBuy)}</p>
   ${movesCard(r,pr,false)}
   ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}`}
-async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>(P(b.pid)?.shops?.[0]||'_')===sid);const items=L.map(b=>({pid:b.pid,packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
+async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>effSup(b)===sid);const items=L.map(b=>({pid:effPid(b),...(effPid(b)!==b.pid?{for:b.pid}:{}),packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
   if(!items.length){toast('⚠ 没有要买的');return}const sup=SUP(sid);
   const lines=items.map(x=>{const p=P(x.pid);return {name:p.name,pack:packLabel(p),packs:x.packs,word:packWord(p)}});
   sheet(`<h2>订单 · ${h(sup?.name||'未指定供应商')}</h2><p class="tiny">先改好再复制。复制或打开 WhatsApp 不等于已下单，按「已下单」才记。</p><textarea id="otext">${h(orderText(sup,lines))}</textarea>
   <div class="row wrapf" style="margin-top:10px"><button class="btn" data-act="copy">复制</button>${sup&&waLink(sup.phone,'x')?`<button class="btn s" data-act="wa" data-sup="${h(sid)}">打开 WhatsApp</button>`:'<span class="tiny">这家没有手机号，请复制后自己发</span>'}</div>
   <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="po-ordered" data-sup="${h(sid)}">已下单</button><button class="btn" data-act="close">取消</button></div>`);makePO.items=items}
 async function poOrdered(sid){const no=S.po.length+1;const po={id:uid('PO'),no,sup:sid==='_'?null:sid,status:'ordered',created:nowIso(),orderedAt:nowIso(),by:ME.name,items:makePO.items,text:$('#otext').value};
-  await put('po',po);closeSheet();toast('已记下单');draft=null;sub.buy='ordered';render()}
+  await put('po',po);for(const it of makePO.items){delete OVR[it.for||it.pid]}saveOvr();closeSheet();toast('已记下单');draft=null;sub.buy='ordered';render()}
 function poCard(po){const sup=SUP(po.sup);return `<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(sup?.name||'未指定供应商')}</h3><span class="tiny">${dd(po.orderedAt?.slice(0,10))}</span></div>
   <div class="tiny">${(po.items||[]).map(it=>`${h(P(it.pid)?.name||it.pid)} × ${fmt(it.recvPacks??it.packs)}`).join(' · ')}</div>
   ${po.status==='ordered'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="recv" data-id="${h(po.id)}">收货</button>`:po.status==='received'?`<button class="btn p sm neededit" style="margin-top:8px" data-act="dist" data-id="${h(po.id)}">分货</button>`:''}</div>`}
@@ -468,6 +496,8 @@ document.addEventListener('change',e=>{const t=e.target;if(t.dataset.sfsel){sub.
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.input==='q'){sub.q=t.value;const pos=t.selectionStart;render();const n=document.querySelector('[data-input="q"]');n.focus();n.setSelectionRange(pos,pos)}
   if(t.dataset.cnt){sub.cv=sub.cv||{f:sub.farm||'AD1',vals:{}};sub.cv.vals[t.dataset.cnt]=t.value}});
 document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const z=document.getElementById('zoom');z.hidden=true;z.innerHTML='';return}const g=e.target.closest('[data-go]');if(g){tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
+  const swb=e.target.closest('[data-swsup]');if(swb){sheetSwap.st.sup=swb.dataset.swsup;swb.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===swb));return}
+  const swt=e.target.closest('[data-swto]');if(swt){sheetSwap.st.to=swt.dataset.swto;const so=$('#swother');if(so)so.value='';swt.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('p',b===swt));return}
   const sfb=e.target.closest('[data-sf]');if(sfb){sub.sf[sfb.dataset.sf]=sfb.dataset.v;render();return}
   const sbt=e.target.closest('[data-sub]');if(sbt){const k=sbt.dataset.sub,v=sbt.dataset.v;sub[k]=k==='used'?v==='1':v;render();return}
   const mv=e.target.closest('[data-mv]');if(mv){sheetMove.state[mv.dataset.mv]=mv.dataset.v;const n=$('#mvq').value;sheetMove(sheetMove.state.id,{...sheetMove.state,packs:Number(n)||1});return}
@@ -483,7 +513,7 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'move-save':await saveMove();break;
     case 'move-done':{const r0=buyPlan(S);const pr0=project(S,60);r0.moves=[...poolMoves(r0,pr0),...r0.moves];const m=r0.moves[Number(a.dataset.i)];const p=P(m.pid);sheetMove(m.pid,{from:m.from,to:m.to,packs:p.sub?m.qty/subBase(p):packs(p,m.qty),forPid:m.forPid});break}
     case 'qty':{const d=draft.lines[id];d.packs=Math.max(0,d.packs+Number(a.dataset.d));const sum=FARMS.reduce((x,f)=>x+(d.alloc[f]||0),0);if(sum!==d.packs){const f=Number(a.dataset.d)>0?FARMS.slice().sort((x,y)=>(d.alloc[x]||0)-(d.alloc[y]||0))[0]:FARMS.slice().sort((x,y)=>(d.alloc[y]||0)-(d.alloc[x]||0))[0];d.alloc[f]=Math.max(0,(d.alloc[f]||0)+Number(a.dataset.d))}render();break}
-    case 'make-po':await makePO(a.dataset.sup);break;
+    case 'make-po':await makePO(a.dataset.sup);break;case 'swap':sheetSwap(id);break;case 'sw-save':a.disabled=true;await swapSave(id);break;case 'sw-reset':delete OVR[id];saveOvr();draft=null;closeSheet();render();break;
     case 'copy':await navigator.clipboard.writeText($('#otext').value);toast('已复制');break;
     case 'wa':{const s=SUP(a.dataset.sup);window.open(waLink(s.phone,$('#otext').value),'_blank');break}
     case 'po-ordered':await poOrdered(a.dataset.sup);break;
