@@ -1,5 +1,5 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SprayGo v13</title><style>:root{--bg:#f4f7f3;--paper:#fff;--ink:#1a3328;--muted:#687b70;--line:#dfe8df;--green:#176448;--mint:#e6f4ec;--red:#a63638;--rose:#fff0ec;--amber:#926212;--cream:#fff5df;--blue:#365f91;--sky:#e8f1ff}
+<title>SprayGo v14</title><style>:root{--bg:#f4f7f3;--paper:#fff;--ink:#1a3328;--muted:#687b70;--line:#dfe8df;--green:#176448;--mint:#e6f4ec;--red:#a63638;--rose:#fff0ec;--amber:#926212;--cream:#fff5df;--blue:#365f91;--sky:#e8f1ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI','Noto Sans SC',sans-serif;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
 .top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
@@ -53,7 +53,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 .btn:active,.seg button:active,[data-act]:active{filter:brightness(.94)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
-<body><div id="root"><div class="top"><div class="in"><div class="logo">🧴</div><div class="brand">SprayGo<small>AZURA DELTA · v13</small></div><div class="who" id="who"></div></div></div>
+<body><div id="root"><div class="top"><div class="in"><div class="logo">🧴</div><div class="brand">SprayGo<small>AZURA DELTA · v14</small></div><div class="who" id="who"></div></div></div>
 <div class="wrap" id="view"><div class="empty">载入中…</div></div><nav class="bar" id="bar"></nav></div><div id="modal"></div><div class="toast" id="toast" hidden></div>
 <script>/* StoreGo v16 engine: stock / usage / days-left / purchase plan. Pure functions over S (loaded docs). */
 const FARMS=['AD1','AD2','AD3'];const MIXES=['A','B','C'];
@@ -77,7 +77,7 @@ function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'�
 function recIdx(S){const k=S.ledger.length+':'+(S.ledger.at(-1)?.id||'');if(S._ri&&S._ri.k===k)return S._ri.m;const m={};
   for(const x of S.ledger)if((x.t==='spray'||x.t==='skip')&&!x.void){const key=x.farm+'|'+x.date;if(!m[key]||(x.at||'')>(m[key].at||''))m[key]=x}S._ri={k,m};return m}
 function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
-function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
+function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&!x.makeup&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
 function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
   const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
   const ms=mixSetOf(S,f,h.from,day);const base=ms?ms.date:h.from,m0=ms?ms.mix:h.mix0;
@@ -105,7 +105,7 @@ function pidsUsed(S,f,ver){const r=recipeOf(S,ver);const set=new Set();if(!r)ret
 
 /* one farm-day of spraying: mutates st (pid->base qty|undefined). returns shortages [{pid,amt(base of primary),slot}] */
 function sprayDay(S,f,day,st){const rec=recOn(S,f,day);
-  if(rec&&rec.t==='skip')return {short:[],used:{},skip:true};
+  if(rec&&rec.t==='skip'&&!rec.makeup)return {short:[],used:{},skip:true};
   if(rec&&rec.t==='spray'){const used={};for(const it of rec.items||[]){const q=Number(it.qty);if(!(q>0))continue;if(st[it.pid]!=null||q){st[it.pid]=(st[it.pid]||0)-q;used[it.pid]=(used[it.pid]||0)+q}}return {short:[],used,rec:true}}
   const items=itemsOn(S,f,day);const t=tanksOf(S,f);const short=[];const used={};
   for(const it of items){if(it.cond)continue;const P0=S.products.find(x=>x.id===it.pid);if(!P0||P0.track==='No'||!packBase(P0))continue;const dose=Number(it.dose)||0;if(!dose||!t)continue;let need=dose*t;
@@ -180,7 +180,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,short:res}}
 if(typeof module!=='undefined')module.exports={resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
-</script><script>/* SprayGo v13 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
+</script><script>/* SprayGo v14 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=13;
 const SB_URL='https://dittqalvrjiamzdzrskd.supabase.co',SB_KEY='sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -218,10 +218,10 @@ function plan(f,d,opts={}){const st={...before(d)[f]};const ex=opts.ex??extrasOf
 /* ---------------- TODAY ---------------- */
 function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天']].map(([k,l])=>`<button class="${dayOff===k?'on':''}" data-day="${k}">${l} ${dd(addDays(todayStr(),k))}</button>`).join('');
   if(!FARMS.includes(farmSel))farmSel=FARMS[0];
-  const ftab=FARMS.map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);const bad=r&&r.lines.some(l=>l.none&&!l.off);const mk=rec?.t==='spray'?'<span style="color:var(--green)"> ✓</span>':rec?.t==='skip'?' <span class="tiny">没喷</span>':bad?'<span style="color:var(--red)"> ⚠</span>':'';return `<button class="${farmSel===f?'on':''}" data-farm="${f}">${f}${r?' · '+r.mix:''}${mk}</button>`}).join('');
+  const ftab=FARMS.map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);const bad=r&&r.lines.some(l=>l.none&&!l.off);const mk=rec?.t==='spray'?'<span style="color:var(--green)"> ✓</span>':rec?.t==='skip'?' <span class="tiny">'+(rec.makeup?'补喷':'没喷')+'</span>':bad?'<span style="color:var(--red)"> ⚠</span>':'';return `<button class="${farmSel===f?'on':''}" data-farm="${f}">${f}${r?' · '+r.mix:''}${mk}</button>`}).join('');
   const cards=[farmSel].map(f=>{const r=plan(f,d);const rec=recOn(S,f,d);if(!r)return `<div class="card"><b>${f}</b> <span class="tiny">还没设定配方（到 StoreGo 设定 → 换版本）</span></div>`;
     const ver=S.recipe.find(x=>x.id===r.ver);const bad=r.lines.filter(l=>l.none&&!l.off);
-    const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`:cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
+    const st=rec?.t==='spray'?`<span class="badge green">喷好了 · ${fmt(rec.tanks)} 桶 · ${h(rec.by)}</span>`:rec?.t==='skip'?(rec.makeup?`<span class="badge amber">没喷 · ${h(rec.reason||'')} · ${rec.made?'隔天早上补好了':'隔天早上补喷'}</span>`:`<span class="badge grey">没喷 · ${h(rec.reason||'')} · 配方顺延</span>`):cardSeen[f+d]?'<span class="badge blue">已出卡</span>':'<span class="badge amber">还没记</span>';
     const L=rec?.t==='spray'?rec.items.map(it=>({use:it.pid,dose:it.dose,sub:it.for&&it.for!==it.pid,slot:it.for,rec:true})):r.lines.filter(l=>!l.off);
     const C=MIXC[r.mix]||'#176448';
     const rows=cardRows(f,d,r,L,false).map(({l,p,cls,sub,st})=>{const [zh]=cls==='ok'?['✓ 有']:cls==='no'?['✗ 没有']:['? 要确认'];
@@ -230,11 +230,12 @@ function vToday(){const d=day();const seg=[[-1,'昨天'],[0,'今天'],[1,'明天
     const rd=relDay(d);
     return `<div class="fc">
       <div class="fh" style="background:${C}"><div class="big">${r.mix}</div><div class="grow"><div class="t1">配方 ${r.mix} · ${h(ver?.name||r.ver)}</div><div class="t2">${dd(d)}${rd?' '+rd:''} · ${fmt(rec?.t==='spray'?rec.tanks:r.tanks)} 桶${r.set?` · 改过（原本 ${h(r.auto||'')}）`:''}</div></div><div class="farm" style="color:${C}">${f}</div></div>
+      ${mkBanner(f,d)}
       <div class="fbar">${st}${rec?'':`<button class="btn neededit" data-act="mix" data-f="${f}">换 Mix</button>`}<span class="cap" style="background:${C}">每桶</span></div>
       ${rows}${off&&!rec?`<p class="tiny">有病害才加：${off}</p>`:''}
       <div class="row wrapf acts">${rec?`<button class="btn sm neededit" data-act="undo" data-f="${f}">撤回</button>`:`<button class="btn s" data-act="card" data-f="${f}">出喷药卡</button><button class="btn p neededit" data-act="done" data-f="${f}">喷好了</button><button class="btn neededit" data-act="skip" data-f="${f}">没喷</button><button class="btn w sm neededit" data-act="extra" data-f="${f}">＋ 加病害药${extrasOf(f,d).length?' ('+extrasOf(f,d).length+')':''}</button>`}</div></div>`}).join('');
   return `<div class="eyebrow">SPRAY · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}喷什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>${cards}
-  <p class="tiny">工人回报后按「喷好了」，库存照实际扣。下雨没喷按「没喷」，配方顺延一天。两样都没按，系统照设定桶数估。</p>`}
+  <p class="tiny">工人回报后按「喷好了」，库存照实际扣。没喷按「没喷」，可选隔天早上补喷（顺序不变）或顺延一天。两样都没按，系统照设定桶数估。</p>`}
 
 /* ---------------- CARD (canvas) ---------------- */
 const MY="'Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans','Noto Sans SC',sans-serif";
@@ -283,7 +284,7 @@ async function drawCard(f,d){const r=plan(f,d);const L=r.lines.filter(l=>!l.off)
     y+=R.h}
   g.fillStyle='#374151';g.font=F(400,20);y+=16;for(const t of['放之前对一下：每样药都在、分量照这张卡。缺的、不确定的，先拍照问老板。','ဆေးတွေ ရှိမရှိ စစ်ပါ။ မရှိတာ၊ မသေချာတာ ရှိရင် ဓာတ်ပုံ ရိုက်ပြီး သူဌေးကို မေးပါ။','Semak semua ubat ada. Kalau tiada atau tak pasti, ambil gambar dan tanya bos.']){g.fillText(t,24,y+24);y+=32}
   return c}
-async function showCard(f){const d=day();const c=await drawCard(f,d);const url=c.toDataURL('image/png');cardSeen[f+d]=1;const bad=plan(f,d).lines.filter(l=>l.none&&!l.off);
+async function showCard(f,dd0){const d=dd0||day();const c=await drawCard(f,d);const url=c.toDataURL('image/png');cardSeen[f+d]=1;const bad=plan(f,d).lines.filter(l=>l.none&&!l.off);
   sheet(`<h2>${f} 喷药卡</h2>${bad.length?`<div class="card red" style="margin:8px 0"><b>⚠ ${bad.map(l=>h(P(l.slot)?.name)).join('、')} 没货</b><p class="tiny">卡上写了「没货，这样不放」。要先补药，还是照这样喷，你决定。</p></div>`:''}
   <img src="${url}" style="width:100%;border-radius:12px;border:1px solid var(--line)"><div class="row wrapf" style="margin-top:10px"><button class="btn p grow" data-act="share" data-f="${f}">存图 / 发 WhatsApp</button><button class="btn" data-act="close">关闭</button></div>`);
   showCard.c=c;showCard.f=f;render(true)}
@@ -328,8 +329,14 @@ function drawExtra(){const {f,ex}=sheetExtra.st;const d=day();const pl=planOn(S,
   <div class="row" style="margin-top:6px"><input class="num" id="ex-d" inputmode="decimal" placeholder="每桶"><span class="tiny">ml 或 g</span><span class="grow"></span><button class="btn s sm" data-act="ex-add-other">加</button></div>
   <div class="row" style="margin-top:14px"><button class="btn p grow" data-act="ex-save">存</button><button class="btn" data-act="close">取消</button></div>`)}
 async function exSave(){const {f,ex}=sheetExtra.st;await put('ledger',{id:uid('L'),t:'plan',date:day(),at:nowIso(),by:ME.name,farm:f,extras:ex});closeSheet();toast(ex.length?`${f} 今天加了：${ex.map(x=>P(x.pid)?.name).join('、')}`:`${f} 今天没有加病害药`);render()}
-function sheetSkip(f){sheet(`<h2>${f} 没喷</h2><p class="tiny">记了之后，${f} 的配方顺延一天（今天的 Mix 明天喷），库存不扣。</p><label class="l">原因</label><div class="seg">${['下雨','叶子湿','缺药','其他'].map((x,i)=>`<button class="${i===0?'on':''}" data-reason="${x}">${x}</button>`).join('')}</div>
-  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="skip-save" data-f="${f}">记下来</button><button class="btn" data-act="close">取消</button></div>`);sheetSkip.reason='下雨'}
+function mkPending(f,d){const y=addDays(d,-1);const r=recOn(S,f,y);return r&&r.t==='skip'&&r.makeup&&!r.made?r:null}
+function mkBanner(f,d){const r=mkPending(f,d);if(!r)return '';const y=r.date;const p=plan(f,y);if(!p)return '';const C=MIXC[p.mix]||'#176448';
+  return `<div style="border:2px solid ${C};border-radius:10px;padding:8px 10px;margin:6px 0;background:#fffbeb"><b style="color:${C}">☀ 早上补喷：昨天 ${dd(y)} 的 Mix ${p.mix} · ${fmt(p.tanks)} 桶</b><div class="tiny">昨天${h(r.reason||'')}没喷。早上补完，傍晚照常喷下面这个 Mix。</div>
+  <div class="row wrapf acts"><button class="btn s" data-act="mkcard" data-f="${f}">出补喷卡</button><button class="btn p neededit" data-act="mkdone" data-f="${f}">补好了</button><button class="btn neededit" data-act="mkfail" data-f="${f}">没补成（顺延）</button></div></div>`}
+async function mkSet(f,patch,msg){const r=mkPending(f,day());if(!r)return;await put('ledger',{...r,...patch,mkAt:nowIso(),mkBy:ME.name});toast(msg);render()}
+function sheetSkip(f){sheet(`<h2>${f} 没喷</h2><label class="l">之后怎样</label><div class="seg" id="mkseg"><button class="on" data-mk="1">隔天早上补喷</button><button data-mk="0">不补了（顺延）</button></div><p class="tiny" id="mktip">${MKTIP[1]}</p><label class="l">原因</label><div class="seg">${['下雨','叶子湿','缺药','其他'].map((x,i)=>`<button class="${i===0?'on':''}" data-reason="${x}">${x}</button>`).join('')}</div>
+  <div class="row" style="margin-top:12px"><button class="btn p grow" data-act="skip-save" data-f="${f}">记下来</button><button class="btn" data-act="close">取消</button></div>`);sheetSkip.reason='下雨';sheetSkip.mk=true}
+const MKTIP={1:'明天早上补喷今天这个 Mix，傍晚照常喷下一个，顺序不变，库存照配方扣。明天早上补不成，再按「没补成」改成顺延。',0:'今天这个 Mix 改到明天傍晚喷，后面全部顺延一天，今天库存不扣。'};
 function sheetMix(f){const d=day();const cur=plan(f,d);const auto=autoMix(f,d);
   sheet(`<h2>${f} · ${dd(d)} 换 Mix</h2><p class="tiny">原本排的是 Mix ${auto}。换了之后，接下去照这个往下排（例：今天 B → 明天 C → 后天 A）。</p>
   <div class="seg" style="margin:12px 0">${MIXES.map(m=>`<button class="${cur.mix===m?'on':''}" data-act="mix-set" data-f="${f}" data-mix="${m}">Mix ${m}</button>`).join('')}</div>
@@ -338,12 +345,12 @@ function autoMix(f,d){const L=S.ledger.filter(x=>x.t==='mixset'&&x.farm===f&&x.d
 async function mixSave(f,mix){const d=day();const auto=autoMix(f,d);for(const x of S.ledger.filter(x=>x.t==='mixset'&&x.farm===f&&x.date===d&&!x.void))await put('ledger',{...x,void:true,voidAt:nowIso(),voidBy:ME.name});
   if(mix&&mix!==auto)await put('ledger',{id:uid('L'),t:'mixset',date:d,at:nowIso(),by:ME.name,farm:f,mix,auto});
   closeSheet();toast(mix&&mix!==auto?`${f} ${dd(d)} 改成 Mix ${mix}，之后照这个往下排`:`${f} ${dd(d)} 照原本排 Mix ${auto}`);render()}
-async function skipSave(f){await put('ledger',{id:uid('L'),t:'skip',date:day(),at:nowIso(),by:ME.name,farm:f,reason:sheetSkip.reason});closeSheet();toast(`${f} 已记：没喷，配方顺延`);render()}
+async function skipSave(f){await put('ledger',{id:uid('L'),t:'skip',date:day(),at:nowIso(),by:ME.name,farm:f,reason:sheetSkip.reason,makeup:!!sheetSkip.mk});closeSheet();toast(sheetSkip.mk?`${f} 已记：没喷，明早补喷`:`${f} 已记：没喷，配方顺延`);render()}
 async function undo(f){const rec=recOn(S,f,day());if(!rec||!confirm(`撤回 ${f} ${dd(day())} 的「${rec.t==='spray'?'喷好了':'没喷'}」？`))return;await put('ledger',{...rec,void:true,voidBy:ME.name,voidAt:nowIso()});toast('已撤回');render()}
 
 /* ---------------- HISTORY ---------------- */
 function vHist(){const L=S.ledger.filter(x=>(x.t==='spray'||x.t==='skip')).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:(b.at||'')<(a.at||'')?-1:1).slice(0,300);
-  const rows=L.map(x=>`<div style="${x.void?'opacity:.45':''}"><span class="mixtag">${h(x.mix||'—')}</span><div class="grow"><b>${dd(x.date)} · ${x.farm}</b> ${x.t==='spray'?`<span class="badge green">喷好了 ${fmt(x.tanks)} 桶</span>`:`<span class="badge grey">没喷 · ${h(x.reason||'')}</span>`}${x.void?' <span class="badge red">已撤回</span>':''}
+  const rows=L.map(x=>`<div style="${x.void?'opacity:.45':''}"><span class="mixtag">${h(x.mix||'—')}</span><div class="grow"><b>${dd(x.date)} · ${x.farm}</b> ${x.t==='spray'?`<span class="badge green">喷好了 ${fmt(x.tanks)} 桶</span>`:`<span class="badge grey">没喷 · ${h(x.reason||'')}${x.makeup?(x.made?' · 隔天补好了':' · 隔天补喷'):' · 顺延'}</span>`}${x.void?' <span class="badge red">已撤回</span>':''}
     <div class="tiny">${x.t==='spray'?(x.items||[]).map(it=>`${h(P(it.pid)?.name||it.pid)} ${fmt(it.qty)}`).join(' · '):''}</div><div class="tiny">${h(x.by||'')}</div></div></div>`).join('');
   return `<div class="eyebrow">HISTORY</div><h1>纪录</h1><div class="card"><div class="list">${rows||'<div class="empty">还没有</div>'}</div></div>
   <div class="card amber"><b>旧 SprayGo（v12）纪录 ${S.old_sprays.length} 笔</b><p class="tiny">只供查看，不算进库存。</p><div class="list">${S.old_sprays.slice().sort((a,b)=>String(b.date||b.createdAt||'')<String(a.date||a.createdAt||'')?-1:1).slice(0,60).map(x=>`<div><div class="grow"><b>${h(String(x.date||x.createdAt||'').slice(0,10))} · ${h(x.farm||x.farmName||'')}</b><div class="tiny">${h(x.mix||x.mixName||x.status||'')}</div></div></div>`).join('')}</div></div>`}
@@ -420,12 +427,13 @@ document.addEventListener('click',async e=>{const g=e.target.closest('[data-go]'
   const sbn=e.target.closest('[data-sub]');if(sbn){sub[sbn.dataset.sub]=sbn.dataset.v;render();return}
   const vs=e.target.closest('[data-vs]');if(vs){sheetVer.st[vs.dataset.vs]=vs.dataset.v;sheetVer.st.from=$('#vs-from').value;drawVer();return}
   const fm=e.target.closest('[data-farm]');if(fm){farmSel=fm.dataset.farm;try{localStorage.setItem('sg_farm',farmSel)}catch(_){}render();return}
+  const mk=e.target.closest('[data-mk]');if(mk){sheetSkip.mk=mk.dataset.mk==='1';mk.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===mk));const t=document.getElementById('mktip');if(t)t.textContent=MKTIP[mk.dataset.mk];return}
   const rs=e.target.closest('[data-reason]');if(rs){sheetSkip.reason=rs.dataset.reason;rs.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===rs));return}
   const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,f=a.dataset.f;if(act==='close-bg'&&e.target!==a)return;
   try{if(await setAct(act,a))return;switch(act){case 'close':case 'close-bg':closeSheet();break;
     case 'card':a.disabled=true;await showCard(f);a.disabled=false;break;case 'share':await shareCard();break;
     case 'done':sheetDone(f);break;case 'tk':{const n=$('#dtk');n.value=fmt(Math.max(0,(Number(n.value)||0)+Number(a.dataset.d)));donePrev();break}
-    case 'done-save':a.disabled=true;await doneSave(f);break;case 'skip':sheetSkip(f);break;case 'skip-save':a.disabled=true;await skipSave(f);break;case 'undo':await undo(f);break;
+    case 'done-save':a.disabled=true;await doneSave(f);break;case 'skip':sheetSkip(f);break;case 'mkcard':a.disabled=true;await showCard(f,addDays(day(),-1));a.disabled=false;break;case 'mkdone':a.disabled=true;await mkSet(f,{made:true},`${f} 已记：早上补好了`);break;case 'mkfail':if(confirm(`${f} 早上没补成？会改成顺延：昨天的 Mix 改到今天傍晚喷，后面全部顺延一天。`)){a.disabled=true;await mkSet(f,{makeup:false},`${f} 已改成顺延`)}break;case 'skip-save':a.disabled=true;await skipSave(f);break;case 'undo':await undo(f);break;
     case 'extra':sheetExtra(f);break;
     case 'mix':sheetMix(f);break;case 'mix-set':a.disabled=true;await mixSave(f,a.dataset.mix);break;case 'mix-reset':a.disabled=true;await mixSave(f,null);break;
     case 'ex-prob':sheetExtra.st.prob=sheetExtra.st.prob===a.dataset.v?null:a.dataset.v;drawExtra();break;

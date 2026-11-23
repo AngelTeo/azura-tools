@@ -77,7 +77,7 @@ function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'å°
 function recIdx(S){const k=S.ledger.length+':'+(S.ledger.at(-1)?.id||'');if(S._ri&&S._ri.k===k)return S._ri.m;const m={};
   for(const x of S.ledger)if((x.t==='spray'||x.t==='skip')&&!x.void){const key=x.farm+'|'+x.date;if(!m[key]||(x.at||'')>(m[key].at||''))m[key]=x}S._ri={k,m};return m}
 function recOn(S,f,day){return recIdx(S)[f+'|'+day]||null}
-function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
+function skipsBetween(S,f,from,day){let n=0;const m=recIdx(S);for(const key in m){const x=m[key];if(x.t==='skip'&&!x.makeup&&x.farm===f&&x.date>=from&&x.date<day)n++}return n}
 function planOn(S,f,day){const fp=S.farmplan.find(x=>x.id===f);if(!fp||!Array.isArray(fp.hist))return null;
   const h=fp.hist.filter(x=>x.from<=day).sort((a,b)=>a.from<b.from?-1:1).at(-1);if(!h)return null;
   const ms=mixSetOf(S,f,h.from,day);const base=ms?ms.date:h.from,m0=ms?ms.mix:h.mix0;
@@ -105,7 +105,7 @@ function pidsUsed(S,f,ver){const r=recipeOf(S,ver);const set=new Set();if(!r)ret
 
 /* one farm-day of spraying: mutates st (pid->base qty|undefined). returns shortages [{pid,amt(base of primary),slot}] */
 function sprayDay(S,f,day,st){const rec=recOn(S,f,day);
-  if(rec&&rec.t==='skip')return {short:[],used:{},skip:true};
+  if(rec&&rec.t==='skip'&&!rec.makeup)return {short:[],used:{},skip:true};
   if(rec&&rec.t==='spray'){const used={};for(const it of rec.items||[]){const q=Number(it.qty);if(!(q>0))continue;if(st[it.pid]!=null||q){st[it.pid]=(st[it.pid]||0)-q;used[it.pid]=(used[it.pid]||0)+q}}return {short:[],used,rec:true}}
   const items=itemsOn(S,f,day);const t=tanksOf(S,f);const short=[];const used={};
   for(const it of items){if(it.cond)continue;const P0=S.products.find(x=>x.id===it.pid);if(!P0||P0.track==='No'||!packBase(P0))continue;const dose=Number(it.dose)||0;if(!dose||!t)continue;let need=dose*t;
