@@ -83,6 +83,8 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .homehead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.homehead h1{font-size:23px;margin:0}.homehead .sub{font-size:13px}
 .homeentry{display:block;width:100%;text-align:left;font:inherit;color:inherit;border:1px solid var(--line);border-radius:17px;background:#fff;padding:16px;margin-bottom:12px;box-shadow:0 2px 9px #1c302008;cursor:pointer}
 .homeentry:active,.homequick:active{background:#eef5ef}.homelead{display:flex;align-items:center;gap:12px}.homelead .aico{font-size:34px}.homelead .atxt b{font-size:25px;line-height:1.25}.homelead .atxt small{font-size:14px;margin-top:3px}.homestats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.homestat{background:#f4f6f1;border-radius:10px;padding:8px 3px;text-align:center;display:flex;flex-direction:column;gap:2px}.homestat strong{font-size:25px;line-height:1.2}.homestat small{font-size:12px;font-weight:700;color:var(--mut)}.homestat.pending strong{color:var(--warn)}.homestat.deliver strong{color:var(--green)}.homestat.unavailable strong{color:var(--mut)}.homefoot{display:block;font-size:12px;color:var(--mut);margin-top:8px}.homedates{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;text-align:center}.homedates strong{display:block;font-size:23px}.homedates small{display:block;color:var(--mut);font-size:13px}.homedates>span+span{border-left:1px solid var(--line)}.homequickgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.homequick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px 6px;font:inherit;color:inherit;min-height:110px}.homequick .aico{font-size:29px}.homequick b{font-size:17px}.homequick small{color:var(--mut);font-size:13px}.homerecord{min-height:64px;margin-bottom:12px}.homefold{padding:12px 14px;font-size:14px;color:var(--mut)}.homefold summary{cursor:pointer;font-weight:650;min-height:32px;line-height:32px}.homefold .week{margin-top:12px}.homefold .line:last-child{border:0}
+/* Compact product detail controls */
+.detail-farm{background:#f0f3eb;border-radius:8px;font-weight:800;padding:7px 9px;margin-top:12px}.detail-matrix td,.detail-matrix th{padding:6px 3px;vertical-align:middle}.detail-matrix td:first-child{white-space:normal;overflow-wrap:anywhere;font-weight:700}.detail-matrix td:nth-last-child(-n+2),.detail-matrix th:nth-last-child(-n+2){text-align:center;white-space:nowrap;width:54px}.detail-tick{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-height:34px;border:1.5px solid #a9b3a9;border-radius:7px;background:white;color:var(--green);font-size:20px;font-weight:900;vertical-align:middle;cursor:pointer}.detail-tick.done{background:var(--green);border-color:var(--green);color:white}.detail-price td,.detail-price th{padding:5px 3px;white-space:normal;vertical-align:middle}.detail-price td:first-child{width:28px}.detail-price .btnrow{gap:4px;margin-top:2px}.detail-price .btn.small{min-height:30px;padding:4px 6px;font-size:12px}
 </style></head><body>
 <header class="top"><div class="topin" id="hdr"><span class="brand">🛍️ Kedai Runcit</span></div></header>
 <nav id="modetabs" class="modetabs" hidden></nav>
@@ -90,7 +92,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.2;
+const APP_VERSION = 10.3;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -610,7 +612,7 @@ const Owner = (() => {
   function start(board){ B = board;
     $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit</span><span class="ver">${Z('Management','管理')} · v${APP_VERSION}</span><div class="lang">${[['zh','中文'],['en','EN']].map(([k,v]) => `<button class="${OL===k?'on':''}" onclick="Owner.setLang('${k}')">${v}</button>`).join('')}</div>`;
     document.documentElement.lang = OL; render(); }
-  function go(v, extra){ ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
+  function go(v, extra){ if(v!=='item'||ui.key!==extra?.key)DetailDone.clear(); ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
 
   /* ---------- Management homepage UX ---------- */
   function handLink(kind){
@@ -689,15 +691,15 @@ const Owner = (() => {
   function waBatchSend(){const t=$('#waBatchMsg').value.trim();if(!t)return;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener');}
   async function waBatchCopy(){const el=$('#waBatchMsg');try{await navigator.clipboard.writeText(el.value);toast(Z('Copied','已复制'));}catch(e){el.focus();el.select();toast(Z('Select and copy manually','请手动复制已选文字'));}}
   function buyPage(){
-    const g = groups(toBuy()), al = alcWait();
-    for(const k of WASelected) if(!g.some(x=>x.key===k)) WASelected.delete(k);
+    const g = groups(detailActive()), al = alcWait();
+    for(const k of WASelected) if(!g.some(x=>x.key===k&&x.lines.some(l=>l.status==='REQUESTED'))) WASelected.delete(k);
     let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','要买的')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${handLink('DAILY')}
       <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>${Z('Buy alcohol this trip?','这一趟买酒吗？')}</b><div class="hint">${Z(`${al.length} alcohol line${al.length===1?'':'s'} waiting`, `${al.length} 样酒在等`)}</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?Z('✓ Yes','✓ 买'):Z('Not this trip','这趟不买')}</button></div>
       <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 ${Z('Copy shopping list','复制购物清单')}</button></div>`;
     let kind = '';
     for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
       const old = Math.max(...x.lines.map(l => l.trip));
-      h += `<div class="card bi"><div class="bitop"><input type="checkbox" class="wa-product-check" style="width:24px;height:24px;min-height:24px;flex:none;accent-color:var(--green);margin:0" data-key="${esc(x.key)}" ${WASelected.has(x.key)?'checked':''} aria-label="${esc(Z('Select ','勾选 ')+x.name)}" onchange="Owner.waToggle(this.dataset.key,this.checked)">${zoomBox(x)}<button class="biname" onclick="Owner.go('item',{key:'${esc(x.key)}'})"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}<span class="biarr">›</span></button></div>${matrix(x.lines)}</div>`; }
+      h += `<div class="card bi"><div class="bitop"><input type="checkbox" class="wa-product-check" style="width:24px;height:24px;min-height:24px;flex:none;accent-color:var(--green);margin:0" data-key="${esc(x.key)}" ${x.lines.some(l=>l.status==='REQUESTED')?'':'disabled'} ${WASelected.has(x.key)?'checked':''} aria-label="${esc(Z('Select ','勾选 ')+x.name)}" onchange="Owner.waToggle(this.dataset.key,this.checked)">${zoomBox(x)}<button class="biname" data-key="${esc(x.key)}" onclick="Owner.go('item',{key:this.dataset.key})"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}${x.lines.some(l=>l.status==='BOUGHT')?`<small style="color:var(--green)">${x.lines.filter(l=>l.status==='BOUGHT').length} ${Z('awaiting hand over','待交货')}</small>`:''}<span class="biarr">›</span></button></div>${matrix(x.lines)}</div>`; }
     if(!g.length) h += `<div class="empty">${Z('Nothing to buy. 👍','没有要买的。👍')}</div>`;
     const left = toBuy().length;
     return h + `<div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"><div class="btnrow"><button class="btn primary grow" id="wa-batch-button" ${WASelected.size?'':'disabled'} onclick="Owner.waBatch()">📲 WhatsApp (${WASelected.size})</button><button class="btn small" id="wa-batch-clear" ${WASelected.size?'':'disabled'} onclick="Owner.waClear()">${Z('Clear','清除勾选')}</button></div><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
@@ -713,15 +715,72 @@ const Owner = (() => {
       `<tr><td>${l.farm}</td><td>${l.kind === 'PERSONAL' ? esc(l.worker) : '<span class="mut">—</span>'}</td><td>${l.detail ? esc(l.detail) : '<span class="mut">—</span>'}${tags ? ' ' + waitTag(l) : ''}</td><td class="num">${l.qty}</td></tr>`).join('')}</tbody></table>`; }
   function zoomBox(x, big){ const it = IT(x.item_id), u = itemPhoto(it);
     return u ? `<button class="zb${big ? ' big' : ''}" onclick="zoomImg('${esc(u)}')">${icoBox(it, x.name)}</button>` : (big ? `<div class="zb big">${icoBox(it, x.name)}</div>` : icoBox(it, x.name)); }
-  /* item page: big photo, the grid, and the Bought… button */
-  function itemPage(){ const lines = toBuy().filter(l => lkey(l) === ui.key);
-    if(!lines.length){ ui = {view:'buy'}; return buyPage(); }
-    const x = groups(lines)[0], it = IT(x.item_id);
-    return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit ? ' · ' + esc(it.unit) : ''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Buying list','要买的')}</button></div>
-      <div class="card" style="padding:12px">${zoomBox(x, true)}${matrix(lines, true)}</div>
-      ${waBlock(x, it, lines)}
-      <div class="hint">${Z('Edit a line or mark “won’t buy” inside Bought…','改单、不买：按「买了…」里面每一笔旁边的按钮')}</div>
-      <div class="bottom" id="bottombar"><button class="btn primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
+  /* v10.3 product detail — existing financial RPCs; confirmed session-only hand-over snapshot */
+  const DetailDone=new Map(); let DBuy=null,DHand=null,DetailBusy=false;
+  function detailActive(){return [...toBuy(),...bought().filter(l=>l.kind!=='FOOD')];}
+  function detailLines(){return [...detailActive().filter(l=>lkey(l)===ui.key&&!DetailDone.has(l.id)),...Array.from(DetailDone.values()).filter(l=>lkey(l)===ui.key)];}
+  function detailSig(l){return JSON.stringify([l.id,l.status,l.farm,l.kind,l.worker_id,l.worker,l.item_id,l.item,l.qty,l.detail,l.buy?.price,l.buy?.paid_by,l.bought_at]);}
+  function detailPriceOk(v){return Number.isFinite(Number(v))&&Number(v)>0&&Number(v)<=999999&&Math.abs(Number(v)*100-Math.round(Number(v)*100))<0.000001;}
+  function detailBatches(ls,getPrice){const m=new Map();for(const l of ls){const p=Number(getPrice(l));if(!detailPriceOk(p))throw Error('Invalid price');if(!m.has(p))m.set(p,[]);m.get(p).push(l.id);}return m;}
+  function itemPage(){
+  const lines=detailLines();if(!lines.length){ui={view:'buy'};return buyPage();}
+  const x=groups(lines)[0],it=IT(x.item_id),n=lines.filter(l=>l.status==='REQUESTED').length;
+  const tick=(l,hand)=>{const done=hand?l.status==='DONE_DETAIL':l.status!=='REQUESTED';return `<button class="detail-tick ${done?'done':''}" ${hand&&l.status!=='BOUGHT'?'disabled':''} data-id="${esc(l.id)}" aria-label="${esc(hand?Z('Hand over','交货'):Z('Purchase / record','购买／记录'))}" onclick="Owner.${hand?'detailHand':'detailBuy'}(this.dataset.id)">${done?'✓':''}</button>`;};
+  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Buying list','要买的')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}</td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
+}
+  function detailBuy(id){
+  const ls=detailLines(),l=ls.find(x=>x.id===id);if(l&&l.status!=='REQUESTED')return detailRecord(l);
+  const pending=ls.filter(x=>x.status==='REQUESTED');if(!pending.length)return;
+  const def=IT(pending[0].item_id).default;
+  DBuy={key:ui.key,ticks:Object.fromEntries(pending.map(x=>[x.id,id?x.id===id:true])),same:true,common:def??'',prices:Object.fromEntries(pending.map(x=>[x.id,def??''])),by:ME(),snap:Object.fromEntries(pending.map(x=>[x.id,detailSig(x)]))};drawDetailBuy();
+}
+  function detailBuyRows(){return detailLines().filter(l=>l.status==='REQUESTED'&&Object.prototype.hasOwnProperty.call(DBuy.ticks,l.id));}
+  function detailSelected(){return detailBuyRows().filter(l=>DBuy.ticks[l.id]);}
+  function detailPrice(l){return DBuy.same?DBuy.common:DBuy.prices[l.id];}
+  function detailBuyTotal(){const ls=detailSelected(),tot=ls.reduce((n,l)=>n+Math.round((Number(detailPrice(l))||0)*100)*Number(l.qty),0)/100;const el=$('#detail-buy-total'),ok=$('#detail-buy-ok');if(el)el.textContent=RM(tot);if(ok)ok.disabled=!ls.length||ls.some(l=>!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(DBuy.by);}
+  function drawDetailBuy(){
+  const ls=detailBuyRows(),n=detailSelected().length,it=IT(ls[0]?.item_id);if(!ls.length){closeModal();return;}
+  const input=l=>`<input type="number" min="0.01" max="999999" step="0.01" inputmode="decimal" style="width:85px;min-height:36px;padding:5px" data-id="${esc(l.id)}" value="${esc(DBuy.prices[l.id])}" ${DBuy.ticks[l.id]?'':'disabled'} oninput="Owner.detailSetPrice(this.dataset.id,this.value)">`;
+  openModal(`<h2>${esc(ls[0].item)} · ${Z('Purchase record','购买记录')}</h2><table class="mx detail-price"><thead><tr><th></th><th>${Z('Farm / Detail','园 / 细节')}</th><th class="num">${Z('Qty','数量')}</th>${DBuy.same?'':`<th>${Z('RM / unit','单价 RM')}</th>`}</tr></thead><tbody>${ls.map(l=>`<tr><td><input type="checkbox" style="width:22px;height:22px;min-height:22px;accent-color:var(--green)" data-id="${esc(l.id)}" ${DBuy.ticks[l.id]?'checked':''} onchange="Owner.detailBuyTick(this.dataset.id,this.checked)"></td><td>${esc(l.farm)} · ${esc(l.detail||'—')}${l.kind==='PERSONAL'?`<div class="hint">${esc(l.worker)}</div>`:''}<div class="btnrow"><button class="btn small light" data-id="${esc(l.id)}" onclick="Owner.editLine(this.dataset.id)">✎ ${Z('Edit','改')}</button><button class="btn small light" data-id="${esc(l.id)}" onclick="Owner.nobuy(this.dataset.id)">${Z("Won't buy",'不买')}</button></div></td><td class="num">${l.qty}</td>${DBuy.same?'':`<td>${input(l)}</td>`}</tr>`).join('')}</tbody></table>
+  ${ls.length>1?`<label class="checkrow" style="margin:12px 0"><input type="checkbox" ${DBuy.same?'checked':''} onchange="Owner.detailSame(this.checked)"> <b>${Z('Same price','全部同价')}</b></label>`:''}
+  ${DBuy.same?`<div class="field"><label>${Z('Actual price per unit (RM)','实际单价 (RM)')}</label><div class="pills" style="flex-wrap:wrap">${(it.prices||[]).filter(detailPriceOk).map(p=>`<button class="pill ${Number(DBuy.common)===Number(p)?'on':''}" onclick="Owner.detailSetPrice('', '${Number(p)}',true)">${p}</button>`).join('')}</div><input type="number" min="0.01" max="999999" step="0.01" inputmode="decimal" value="${esc(DBuy.common)}" oninput="Owner.detailSetPrice('',this.value)"></div>`:''}
+  <div class="field"><label>${Z('Paid by','谁付钱')}</label><div class="pills" style="flex-wrap:wrap">${['Teo','EX','Mr. Low','Petty Cash'].map(p=>`<button class="pill ${DBuy.by===p?'on':''}" onclick="Owner.detailPayer('${p}')">${p}</button>`).join('')}</div></div><div class="line totrow" style="padding:10px;border-radius:10px"><span>${Z('Actual total','实际付款总额')}</span><strong id="detail-buy-total">—</strong></div><div class="hint">${Z('Only checked rows are purchased. Unchecked rows stay on the list. Date is recorded by the server.','只记录勾选的项目；没买的保留。购买日期由系统记录。')}</div><div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" id="detail-buy-ok" onclick="Owner.detailSaveBuy()">✓ ${Z('Confirm purchase','确认买了')} (${n})</button></div>`);detailBuyTotal();
+}
+  function detailBuyTick(id,on){DBuy.ticks[id]=on;drawDetailBuy();}
+  function detailSame(on){if(!on)for(const id of Object.keys(DBuy.prices))DBuy.prices[id]=DBuy.common;DBuy.same=on;drawDetailBuy();}
+  function detailSetPrice(id,v,redraw){if(id)DBuy.prices[id]=v;else DBuy.common=v;if(redraw)drawDetailBuy();else detailBuyTotal();}
+  function detailPayer(p){DBuy.by=p;drawDetailBuy();}
+  async function detailSaveBuy(){
+  if(DetailBusy||!DBuy||ui.key!==DBuy.key)return;
+  const ls=detailSelected(),by=DBuy.by;if(!ls.length||ls.some(l=>!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(by))return;
+  const gs=detailBatches(ls,detailPrice),snap=ls.map(l=>[l.id,DBuy.snap[l.id]]);DetailBusy=true;busy(1);closeModal();let saved=0,err=null;
+  try{await reload();if(snap.some(([id,s])=>{const l=toBuy().find(x=>x.id===id);return !l||detailSig(l)!==s;}))throw Error(Z('List changed. Please review again.','清单已更新，请重新确认。'));
+  for(const [price,ids] of gs){const r=await rpc('shop_owner_buy',{ids,price,paid_by:by});if(Number(r?.count)!==ids.length)throw Error(Z('Unexpected saved count. Check latest list before retrying.','保存数量不符，请先核对最新清单。'));saved+=ids.length;}}
+  catch(e){err=e;}
+  try{await reload();render();}catch(e){err=err||e;}finally{busy(0);DetailBusy=false;}
+  if(err){openModal(`<h2>${Z('Please check purchase result','请核对购买结果')}</h2><p>${esc(Z('Confirmed saved rows: ','已确认保存笔数：')+saved+' / '+ls.length)}</p><div class="note bad">${esc(errZ(err.message))}</div><p>${Z('Refresh and check before retrying. No automatic retry.','请刷新并核对最新状态后再操作，系统不会自动重试。')}</p><button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button></div>`);}
+  else toast(Z('Purchase recorded','购买记录已保存'));
+}
+  function detailRecord(l){
+  const b=l.buy||{},price=Number(b.price);
+  openModal(`<h2>${Z('Purchase record','购买记录')} · ${esc(l.item)}</h2><div class="line"><span>${Z('Farm / Detail','园 / 细节')}</span><strong>${esc(l.farm)} · ${esc(l.detail||'—')}</strong></div><div class="line"><span>${Z('Quantity','数量')}</span><strong>${l.qty}</strong></div><div class="line"><span>${Z('Actual unit price','实际单价')}</span><strong>${Number.isFinite(price)?RM(price):'—'}</strong></div><div class="line"><span>${Z('Paid by','谁付钱')}</span><strong>${esc(b.paid_by||'—')}</strong></div><div class="line"><span>${Z('Bought on','购买日期')}</span><strong>${esc(String(l.bought_at||'—').slice(0,10))}</strong></div><div class="line totrow"><span>${Z('Total','实际付款总额')}</span><strong>${Number.isFinite(price)?RM(price*l.qty):'—'}</strong></div>${l.status==='DONE_DETAIL'?`<div class="note">${Z('Handed over','已交货')} · ${esc(l.detailHandDate||'')}</div>`:''}<div class="modalfoot">${l.status==='BOUGHT'?`<button class="btn danger" data-id="${esc(l.id)}" onclick="closeModal();Owner.unbuy(this.dataset.id)">${Z('Undo purchase','撤回购买')}</button>`:''}<button class="btn" onclick="closeModal()">${Z('Close','关闭')}</button></div>`);
+}
+  function detailHand(id){const l=detailLines().find(x=>x.id===id&&x.status==='BOUGHT');if(!l)return;const ws=workers(l.farm).map(w=>w.id);DHand={id,key:ui.key,date:B.today,shares:ws,snap:detailSig(l),eligible:JSON.stringify(ws.slice().sort())};drawDetailHand();}
+  function drawDetailHand(){
+  const l=detailLines().find(x=>x.id===DHand.id&&x.status==='BOUGHT');if(!l){closeModal();return;}const tot=Number(l.buy?.price)*l.qty,shared=l.kind==='SHARED',ws=workers(l.farm);
+  openModal(`<h2>${Z('Confirm hand over','确认交货')}</h2><div class="line"><span>${esc(l.item)} · ${esc(l.farm)}</span><strong>${esc(l.detail||'—')} × ${l.qty}</strong></div><div class="line"><span>${Z('Recipient','交给谁')}</span><strong>${esc(who(l))}</strong></div><div class="line"><span>${Z('Paid by','付款人')}</span><strong>${esc(l.buy?.paid_by||'—')}</strong></div><div class="field" style="margin-top:12px"><label>${Z('Hand-over date','交货日期')}</label><input type="date" value="${esc(DHand.date)}" max="${esc(B.today)}" onchange="Owner.detailHandDate(this.value)"></div>${shared?`<div class="field"><label>${Z('Share among','分摊给谁')}</label><div class="pills" style="flex-wrap:wrap">${ws.map(w=>`<button class="pill ${DHand.shares.includes(w.id)?'on':''}" data-id="${esc(w.id)}" onclick="Owner.detailHandShare(this.dataset.id)">${esc(w.name)}</button>`).join('')}</div><div class="hint">${DHand.shares.length?RM(tot/DHand.shares.length)+' / '+Z('person','人'):Z('Select workers','请选择分摊工人')}</div></div>`:''}<div class="line totrow"><span>${l.kind==='FARM'?Z('Farm cost · no deduction','公司费用 · 不扣薪'):Z('Salary deduction total','扣薪合计')}</span><strong>${RM(tot)}</strong></div><div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button id="detail-hand-ok" class="btn primary" ${(!detailPriceOk(l.buy?.price)||!DHand.date||DHand.date>B.today||shared&&!DHand.shares.length)?'disabled':''} onclick="Owner.detailSaveHand()">✓ ${Z('Confirm hand over','确认已交货')}</button></div>`);
+}
+  function detailHandDate(v){DHand.date=v;drawDetailHand();}
+  function detailHandShare(id){DHand.shares=DHand.shares.includes(id)?DHand.shares.filter(w=>w!==id):[...DHand.shares,id];drawDetailHand();}
+  async function detailSaveHand(){
+  if(DetailBusy||!DHand||ui.key!==DHand.key)return;
+  const d={...DHand,shares:[...DHand.shares]},l=detailLines().find(x=>x.id===d.id&&x.status==='BOUGHT');if(!l||!detailPriceOk(l.buy?.price)||!d.date||d.date>B.today||l.kind==='SHARED'&&!d.shares.length)return;
+  DetailBusy=true;busy(1);closeModal();let err=null;
+  try{await reload();const fresh=bought().find(x=>x.id===d.id);if(!fresh||detailSig(fresh)!==d.snap||(fresh.kind==='SHARED'&&JSON.stringify(workers(fresh.farm).map(w=>w.id).sort())!==d.eligible))throw Error(Z('List or workers changed. Review again.','需求或工人名单已更新，请重新确认。'));
+  const r=await rpc('shop_owner_hand',{lines:[{id:d.id,share_ids:fresh.kind==='SHARED'?d.shares:undefined}],date:d.date});if(Number(r?.count)!==1)throw Error(Z('Unexpected result. Refresh and check.','返回结果异常，请刷新核对。'));DetailDone.set(d.id,{...fresh,status:'DONE_DETAIL',detailHandDate:d.date});delete HO[d.id];}
+  catch(e){err=e;}try{await reload();render();}catch(e){err=err||e;}finally{busy(0);DetailBusy=false;}
+  if(err)openModal(`<h2>${Z('Check hand-over result','请核对交货结果')}</h2><div class="note bad">${esc(errZ(err.message))}</div><p>${Z('Refresh before retrying; do not submit again without checking.','请先刷新核对，避免重复操作。')}</p><button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button>`);else toast(Z('Handed over · recorded','已交货 · 已入账'));
+}
   /* v10: send to the service provider through WhatsApp (you pick the chat in WhatsApp).
      TOP UP: phone number + amount only — no worker names. Other items: added one by one later. */
   const isTopIt = it => it && (it.code === 'TOP UP' || it.label === 'TOP UP');
@@ -999,7 +1058,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
