@@ -92,7 +92,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.3;
+const APP_VERSION = 10.4;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -597,7 +597,7 @@ const Owner = (() => {
   function nextTrip(){ const t = B.today; for(let i = 0; i < 8; i++){ const x = addD(t, i); if(new Date(x+'T00:00:00').getDay() === B.trip_day) return x; } return t; }
   function groups(lines){ const m = new Map(); for(const l of lines){ const k = lkey(l); if(!m.has(k)) m.set(k, {key:k, kind:l.kind, name:lname(l), ico:ico(l), item_id:l.item_id, lines:[]}); m.get(k).lines.push(l); }
     const o = {FARM:0, PERSONAL:1, SHARED:2, FOOD:3}; return [...m.values()].sort((a,b) => o[a.kind]-o[b.kind] || a.name.localeCompare(b.name)); }
-  const back = () => `<button class="btn small" onclick="Owner.go('home')">${Z('← Back','← 返回')}</button>`;
+  const back = () => `<button class="btn small" onclick="Owner.go('home')">${ui.view==='buy'||ui.view==='food'?Z('← Home','← 回首页'):Z('← Back','← 返回')}</button>`;
 
   async function reload(){ B = await rpc('shop_owner_board', {}); }
   const ERR_ZH = [[/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
@@ -726,7 +726,7 @@ const Owner = (() => {
   const lines=detailLines();if(!lines.length){ui={view:'buy'};return buyPage();}
   const x=groups(lines)[0],it=IT(x.item_id),n=lines.filter(l=>l.status==='REQUESTED').length;
   const tick=(l,hand)=>{const done=hand?l.status==='DONE_DETAIL':l.status!=='REQUESTED';return `<button class="detail-tick ${done?'done':''}" ${hand&&l.status!=='BOUGHT'?'disabled':''} data-id="${esc(l.id)}" aria-label="${esc(hand?Z('Hand over','交货'):Z('Purchase / record','购买／记录'))}" onclick="Owner.${hand?'detailHand':'detailBuy'}(this.dataset.id)">${done?'✓':''}</button>`;};
-  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Buying list','要买的')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}</td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
+  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Back to List','返回清单')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}</td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
 }
   function detailBuy(id){
   const ls=detailLines(),l=ls.find(x=>x.id===id);if(l&&l.status!=='REQUESTED')return detailRecord(l);
