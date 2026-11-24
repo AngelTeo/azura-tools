@@ -85,7 +85,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -671,8 +671,20 @@ const Owner = (() => {
     const x = groups(lines)[0], it = IT(x.item_id);
     return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit ? ' · ' + esc(it.unit) : ''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Buying list','要买的')}</button></div>
       <div class="card" style="padding:12px">${zoomBox(x, true)}${matrix(lines, true)}</div>
+      ${waBlock(x, it, lines)}
       <div class="hint">${Z('Edit a line or mark “won’t buy” inside Bought…','改单、不买：按「买了…」里面每一笔旁边的按钮')}</div>
       <div class="bottom" id="bottombar"><button class="btn primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
+  /* v10: send to the service provider through WhatsApp (you pick the chat in WhatsApp).
+     TOP UP: phone number + amount only — no worker names. Other items: added one by one later. */
+  const isTopIt = it => it && (it.code === 'TOP UP' || it.label === 'TOP UP');
+  function waLines(it, lines){ return isTopIt(it) ? lines.filter(l => l.detail).map(l => l.detail.replace(/\s*·\s*/g, '  ')) : null; }
+  function waText(it, lines){ const r = waLines(it, lines); return r && r.length ? 'TOP UP\n' + r.join('\n') : ''; }
+  function waBlock(x, it, lines){ const r = waLines(it, lines); if(!r) return '';
+    const miss = lines.length - r.length;
+    return `<div class="card" style="padding:12px"><button class="btn gold block" id="wabtn" ${r.length ? '' : 'disabled'} onclick="Owner.sendWa('${esc(x.key)}')">📲 ${Z('Send by WhatsApp','传 WhatsApp')}${r.length ? ` (${r.length})` : ''}</button>
+      <div class="hint" style="margin-top:6px">${Z('Only the phone number and the amount are sent.','只传电话号码和金额，不传工人名字。')}${miss ? `<br><b style="color:var(--warn)">${Z(`${miss} line${miss>1?'s':''} have no phone / amount yet — fill them with ✎ Edit inside Bought…`, `${miss} 笔还没有电话和金额，不会传。先在「买了…」里按 ✎ 改 填好。`)}</b>` : ''}</div></div>`; }
+  function sendWa(key){ const lines = toBuy().filter(l => lkey(l) === key); if(!lines.length) return; const t = waText(IT(lines[0].item_id), lines); if(!t) return;
+    window.__waLast = t; window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); }
   function copyList(){ const txt = '🛒 Kedai Runcit · ' + ddm(nextTrip()) + '\n' + groups(toBuy()).map(x => needRows(x.lines) ? `${x.name} × ${sumQty(x.lines)}\n` + x.lines.map(l => '   - ' + lineTxt(l)).join('\n') : `${x.name} × ${sumQty(x.lines)}  (${byFarm(x.lines)})`).join('\n');
     try { navigator.clipboard.writeText(txt); } catch(e){} toast(Z('Copied','已复制')); }
   function buySheet(key, pool){ const src = pool === 'food' ? food().filter(l => l.status === 'REQUESTED') : toBuy(); const lines = src.filter(l => lkey(l) === key); if(!lines.length) return;
@@ -941,7 +953,7 @@ const Owner = (() => {
   }
   return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
-          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
+          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
 
 
