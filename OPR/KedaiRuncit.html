@@ -92,7 +92,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.4;
+const APP_VERSION = 10.5;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -402,8 +402,8 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
         return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
           ${r ? `<div class="shdet">${top ? `<input inputmode="tel" placeholder="${esc(t('phone'))}" value="${esc(r.phone||'')}" oninput="Leader.shSet('${w.id}','phone',this.value)">
-              <span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,50].map(a => `<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span>
-              <input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,50].map(String).includes(String(r.amt)) ? '' : esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`
+              <span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,40,50].map(a => `<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span>
+              <input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,40,50].map(String).includes(String(r.amt)) ? '' : esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`
             : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
         : `<div class="note warn">${t('noWorkers')}</div>`;
     } else {
