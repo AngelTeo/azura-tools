@@ -270,16 +270,16 @@ function vToday(){const {pr,t}=plan();const c=cfg(S);let red=[],amber=[];
 
 /* ---------------- SHELF ---------------- */
 function vShelf(){const {pr}=plan();const t=today();const q=(sub.q||'').toLowerCase();const k=sub.kind||'all';const onlyUsed=sub.used!==false;
-  const F=sub.sf=sub.sf||{farm:'all',mix:'all',st:'all',sup:'all',alt:'all'};const WH=F.farm==='仓库';const FF=F.farm==='all'||WH?FARMS:[F.farm];const PL=pool(S);
+  const F=sub.sf=sub.sf||{farm:'all',mix:'all',st:'all',sup:'all',alt:'all',grp:'all'};if(!F.grp)F.grp='all';const GC=p=>{const m=String(p.group||'').match(/^(IRAC|FRAC)\s*(.+)$/);return m?m[2].split('+').map(x=>m[1]+' '+x.trim()):[]};const WH=F.farm==='仓库';const FF=F.farm==='all'||WH?FARMS:[F.farm];const PL=pool(S);
   const used=new Set();for(const f of FF){const pl=planOn(S,f,t);if(pl)pidsUsed(S,f,pl.ver).forEach(x=>used.add(x))}
   const inMix=(pid)=>FF.some(f=>{const pl=planOn(S,f,t);const r=pl&&S.recipe.find(x=>x.id===pl.ver);return r&&(r.mixes[F.mix]||[]).some(it=>it.pid===pid||(it.alts||[]).some(x=>x.pid===pid))});
   const stOK=p=>{if(F.st==='all')return true;const ds=FF.map(f=>({st:pr[f].stock[p.id],d:farmDays(pr,f,p.id)}));
     if(F.st==='none')return ds.some(x=>x.st!=null&&!(x.st>1e-9));if(F.st==='low')return ds.some(x=>x.d.cls==='red'||x.d.cls==='amber');if(F.st==='nocount')return ds.some(x=>x.st==null);if(F.st==='ok')return ds.every(x=>x.st>1e-9);return true};
-  const nAct=['farm','mix','st','sup','alt'].filter(x=>F[x]!=='all').length;
+  const nAct=['farm','mix','st','sup','alt','grp'].filter(x=>F[x]!=='all').length;
   const L=S.products.filter(p=>p.active!==false&&(k==='all'||p.kind===k)&&(!q||p.name.toLowerCase().includes(q))
     &&(!onlyUsed||q||WH||used.has(p.id)||FF.some(f=>pr[f].stock[p.id]>0))
-    &&(!WH||PL[p.id]>0)&&(F.mix==='all'||inMix(p.id))&&stOK(p)&&(F.sup==='all'||(p.shops?.[0]||'_')===F.sup)&&(F.alt==='all'||subsFor(p.id).length>0)).sort((a,b)=>a.name.localeCompare(b.name));
-  const cards=L.map(p=>`<div data-act="drug" data-id="${h(p.id)}">${pic(p)}<div class="grow"><div class="row"><b class="grow">${h(p.name)}</b>${kindBadge(p.kind)}</div>
+    &&(!WH||PL[p.id]>0)&&(F.mix==='all'||inMix(p.id))&&stOK(p)&&(F.sup==='all'||(p.shops?.[0]||'_')===F.sup)&&(F.alt==='all'||subsFor(p.id).length>0)&&(F.grp==='all'||(F.grp==='none'?!GC(p).length:GC(p).includes(F.grp)))).sort((a,b)=>a.name.localeCompare(b.name));
+  const cards=L.map(p=>`<div data-act="drug" data-id="${h(p.id)}">${pic(p)}<div class="grow"><div class="row"><b class="grow">${h(p.name)}</b>${p.group?`<span class="badge grey" style="margin-right:4px">${h(p.group.replace(/^(IRAC|FRAC)\s*/,''))}</span>`:''}${kindBadge(p.kind)}</div>
     ${p.target?`<div class="tiny" style="color:${p.kind==='杀虫剂'?'#a63638':p.kind==='杀菌剂'?'#365f91':'var(--green)'};font-weight:700">${h(p.target)}</div>`:''}<div class="tiny">${h(packLabel(p))}${p.track==='No'?' · 不追踪':''}</div><div class="farms">${PL[p.id]>0&&(F.farm==='all'||WH)?`<span class="f" style="background:var(--sky);color:var(--blue)">仓库 ${qtyText(p,PL[p.id])} · 待分货</span>`:''}${WH?'':FF.map(f=>{const st=pr[f].stock[p.id];const d=farmDays(pr,f,p.id);return `<span class="f ${d.cls}">${f} ${st==null?(d.raw?`${dd(d.raw.date)} 点 ${fmt(d.raw.packs)} ${packWordAt(p,f)}`:'—'):qtyText(p,st)} · ${d.txt}</span>`}).join('')}</div></div></div>`).join('');
   const segK=['all',...KINDS].map(x=>`<button class="${k===x?'on':''}" data-sub="kind" data-v="${h(x)}">${x==='all'?'全部':h(x.replace(' / 叶面肥',''))}</button>`).join('');
   const sg=(key,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${F[key]===v?'on':''}" data-sf="${key}" data-v="${h(v)}">${h(l)}</button>`).join('')}</div>`;
@@ -288,6 +288,7 @@ function vShelf(){const {pr}=plan();const t=today();const q=(sub.q||'').toLowerC
     <label class="l">Mix（各园现在的配方）</label>${sg('mix',[['all','全部'],['A','Mix A'],['B','Mix B'],['C','Mix C']])}
     <label class="l">库存</label>${sg('st',[['all','全部'],['none','没有'],['low','快没'],['nocount','没点'],['ok','有货']])}
     <label class="l">供应商</label><select data-sfsel="sup">${sups.map(([v,l])=>`<option value="${h(v)}" ${F.sup===v?'selected':''}>${h(l)}</option>`).join('')}</select>
+    <label class="l">组别编号（同一组的药不要连着用）</label>${(()=>{const all=[...new Set(S.products.filter(p=>p.active!==false).flatMap(GC))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));const cnt=c=>S.products.filter(p=>p.active!==false&&GC(p).includes(c)).length;return `<div class="row wrapf" style="gap:6px">${[['all','全部'],...all.map(c=>[c,c.replace('IRAC ','杀虫 ').replace('FRAC ','杀菌 ')+' · '+cnt(c)]),['none','没编号']].map(([v,l])=>`<button class="btn sm ${F.grp===v?'p':''}" data-sf="grp" data-v="${h(v)}">${h(l)}</button>`).join('')}</div>`})()}
     <label class="l">替换</label>${sg('alt',[['all','全部'],['yes','有替换的']])}
     <div class="row" style="margin-top:10px"><button class="btn sm" data-act="sf-clear">清除筛选</button><span class="grow"></span><button class="btn p sm" data-act="sf-toggle">好（${L.length} 种）</button></div></div>`:'';
   return `<div class="eyebrow">SHELF</div><h1>货架</h1><div class="row"><input class="txt grow" placeholder="搜药名" value="${h(sub.q||'')}" data-input="q"><button class="btn ${nAct?'p':''}" data-act="sf-toggle" style="white-space:nowrap">筛选${nAct?' '+nAct:''}</button></div>
