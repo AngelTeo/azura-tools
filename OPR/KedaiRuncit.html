@@ -58,6 +58,15 @@ button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
 .modetabs button.on{background:var(--gold);border-color:var(--gold);color:#fff}
 .ico.photo img.fit{object-fit:contain;background:#fff;height:72px}
 .detin{flex-basis:100%;min-height:40px;margin-top:4px;font-size:15px}.food:has(.detin){flex-wrap:wrap}
+.bi{padding:12px;margin-bottom:10px}.bitop{display:flex;gap:12px;align-items:center}
+.biname{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:none;border:0;padding:6px 26px 6px 0;font:inherit;color:inherit;text-align:left;cursor:pointer;position:relative;font-size:18px}
+.biarr{position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:28px;color:var(--green)}
+.zb{background:none;border:0;padding:0;cursor:zoom-in;flex:none}.zb.big{display:block;width:100%;margin-bottom:10px}
+.zb.big .ico{width:100%;height:220px;font-size:80px}.zb.big .ico.photo img,.zb.big .ico.photo img.fit{width:100%;height:220px;object-fit:contain}
+table.mx{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}table.mx th{font-size:12px;color:var(--mut,#777);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid #e5e5e5}
+table.mx td{padding:6px;border-bottom:1px solid #f0f0f0;vertical-align:top}table.mx .num{text-align:right;white-space:nowrap}table.mx td:first-child{white-space:nowrap;font-weight:600}
+#zoomOv{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:9999}#zoomOv.on{display:flex}
+#zoomOv img{max-width:96vw;max-height:88vh;object-fit:contain;background:#fff;border-radius:8px}#zoomOv span{position:absolute;top:14px;right:18px;color:#fff;font-size:30px}
 .food.pick{width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit}.food.pick .loc{line-height:1.45}
 .plusbig{min-width:44px;height:44px;border-radius:12px;background:var(--green);color:#fff;font:800 22px system-ui;display:flex;align-items:center;justify-content:center}
 .food.pick.chosen .plusbig{background:#fff;color:var(--green);border:1.5px solid var(--green)}
@@ -76,7 +85,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -123,6 +132,9 @@ function icoBox(it, label, small){
   const u = itemPhoto(it), em = icon(label, it && it.icon), sm = small ? `<small>${small}</small>` : '';
   if(!u) return `<div class="ico">${em}${sm}</div>`;
   return `<span class="ico photo"><img class="${it.photo ? 'fit' : ''}" src="${esc(u)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('photo');this.parentNode.innerHTML='${em}'">${sm}</span>`; }
+/* tap a photo → full screen; tap anywhere to close */
+function zoomImg(u){ let o = document.getElementById('zoomOv'); if(!o){ o = document.createElement('div'); o.id = 'zoomOv'; o.onclick = () => o.classList.remove('on'); document.body.appendChild(o); }
+  o.innerHTML = `<img src="${esc(u)}" alt=""><span>✕</span>`; o.classList.add('on'); }
 async function shrinkPhoto(file, max = 640){
   const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('Not a photo')); i.src = URL.createObjectURL(file); });
   const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
@@ -637,7 +649,7 @@ const Owner = (() => {
     let kind = '';
     for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
       const old = Math.max(...x.lines.map(l => l.trip));
-      h += `<div class="food" style="margin-bottom:8px">${icoBox(IT(x.item_id), x.name)}<div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${lineList(x.lines)}${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
+      h += `<div class="card bi"><div class="bitop">${zoomBox(x)}<button class="biname" onclick="Owner.go('item',{key:'${esc(x.key)}'})"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}<span class="biarr">›</span></button></div>${matrix(x.lines)}</div>`; }
     if(!g.length) h += `<div class="empty">${Z('Nothing to buy. 👍','没有要买的。👍')}</div>`;
     const left = toBuy().length;
     return h + `<div class="bottom" id="bottombar"><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
@@ -647,6 +659,20 @@ const Owner = (() => {
   const lineTxt = l => `${l.farm}${l.kind === 'PERSONAL' ? ' · ' + l.worker : ''}${l.detail ? ' · ' + l.detail : ''} × ${l.qty}`;
   const needRows = ls => ls.some(l => l.detail || l.kind === 'PERSONAL');
   function lineList(ls){ return needRows(ls) ? ls.map(l => `<small class="loc">${l.detail ? '📝 ' : ''}${esc(lineTxt(l))}</small>`).join('') : `<small class="loc">${byFarm(ls)}</small>`; }
+  /* v9: every item shows a grid — farm · who · detail · qty — one row per line */
+  const sortL = ls => ls.slice().sort((a,b) => a.farm.localeCompare(b.farm) || String(a.worker||'').localeCompare(String(b.worker||'')));
+  function matrix(ls, tags){ return `<table class="mx"><thead><tr><th>${Z('Farm','园')}</th><th>${Z('Who','谁')}</th><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th></tr></thead><tbody>${sortL(ls).map(l =>
+      `<tr><td>${l.farm}</td><td>${l.kind === 'PERSONAL' ? esc(l.worker) : '<span class="mut">—</span>'}</td><td>${l.detail ? esc(l.detail) : '<span class="mut">—</span>'}${tags ? ' ' + waitTag(l) : ''}</td><td class="num">${l.qty}</td></tr>`).join('')}</tbody></table>`; }
+  function zoomBox(x, big){ const it = IT(x.item_id), u = itemPhoto(it);
+    return u ? `<button class="zb${big ? ' big' : ''}" onclick="zoomImg('${esc(u)}')">${icoBox(it, x.name)}</button>` : (big ? `<div class="zb big">${icoBox(it, x.name)}</div>` : icoBox(it, x.name)); }
+  /* item page: big photo, the grid, and the Bought… button */
+  function itemPage(){ const lines = toBuy().filter(l => lkey(l) === ui.key);
+    if(!lines.length){ ui = {view:'buy'}; return buyPage(); }
+    const x = groups(lines)[0], it = IT(x.item_id);
+    return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit ? ' · ' + esc(it.unit) : ''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Buying list','要买的')}</button></div>
+      <div class="card" style="padding:12px">${zoomBox(x, true)}${matrix(lines, true)}</div>
+      <div class="hint">${Z('Edit a line or mark “won’t buy” inside Bought…','改单、不买：按「买了…」里面每一笔旁边的按钮')}</div>
+      <div class="bottom" id="bottombar"><button class="btn primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
   function copyList(){ const txt = '🛒 Kedai Runcit · ' + ddm(nextTrip()) + '\n' + groups(toBuy()).map(x => needRows(x.lines) ? `${x.name} × ${sumQty(x.lines)}\n` + x.lines.map(l => '   - ' + lineTxt(l)).join('\n') : `${x.name} × ${sumQty(x.lines)}  (${byFarm(x.lines)})`).join('\n');
     try { navigator.clipboard.writeText(txt); } catch(e){} toast(Z('Copied','已复制')); }
   function buySheet(key, pool){ const src = pool === 'food' ? food().filter(l => l.status === 'REQUESTED') : toBuy(); const lines = src.filter(l => lkey(l) === key); if(!lines.length) return;
@@ -910,7 +936,7 @@ const Owner = (() => {
   async function voidRec(fn, id){ if(!confirm(Z('Void this record? It is taken out of Salary.','作废这笔？Salary 那笔也会作废。'))) return; await act(fn, {id}, Z('Voided','已作废')); }
 
   function render(){
-    $('#app').innerHTML = ({buy:buyPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
+    $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
   return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
