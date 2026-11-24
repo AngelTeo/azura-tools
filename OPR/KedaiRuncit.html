@@ -92,7 +92,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.7;
+const APP_VERSION = 10.8;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -372,7 +372,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   const cartItem = key => key.startsWith('c:') ? {id:null, label:key.slice(2), custom:true} : itemById(key);
   let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
   function cartSummary(key){ const c = ui.cart[key]; if(!c) return '';
-    if(ui.kind === 'PERSONAL') return Object.entries(c.rows).map(([w, r]) => `${(D.workers.find(x => x.id === w)||{}).name} ×${r.qty}${r.phone ? ' · ' + r.phone + ' · RM ' + r.amt : r.det ? ' · ' + r.det : ''}`).join('<br>');
+    if(ui.kind === 'PERSONAL') return Object.entries(c.rows).map(([w, r]) => `${(D.workers.find(x => x.id === w)||{}).name} ×${r.qty}${r.phone ? ' · ' + r.phone + (r.telco ? ' · ' + r.telco : '') + ' · RM ' + r.amt : r.det ? ' · ' + r.det : ''}`).join('<br>');
     return `×${c.qty}${c.det ? ' · ' + esc(c.det) : ''}`; }
   function addPage(){
     const k = ui.kind, list = items(k);
@@ -401,7 +401,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       h += `<div class="sectionhead" style="margin-top:0">${t('whoWants')}</div>`;
       h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
         return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
-          ${r ? `<div class="shdet">${top ? `<input inputmode="tel" placeholder="${esc(t('phone'))}" value="${esc(r.phone||'')}" oninput="Leader.shSet('${w.id}','phone',this.value)">
+          ${r ? `<div class="shdet">${top ? `<input inputmode="tel" placeholder="${esc(t('phone'))}" value="${esc(r.phone||'')}" oninput="Leader.shSet('${w.id}','phone',this.value)">${r.telco ? `<span class="pill on" style="pointer-events:none">📶 ${esc(r.telco)}</span>` : ''}
               <span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,40,50].map(a => `<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span>
               <input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,40,50].map(String).includes(String(r.amt)) ? '' : esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`
             : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
@@ -411,14 +411,14 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     }
     h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
     openModal(h); sheetBtn(); }
-  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else { SH.rows[w] = {qty:1}; if(isTop(cartItem(SH.key))){ const ph = ((D.workers||[]).find(x => x.id === w)||{}).phone; if(ph) SH.rows[w].phone = ph; } } drawSheet(); }
+  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else { SH.rows[w] = {qty:1}; if(isTop(cartItem(SH.key))){ const wk = (D.workers||[]).find(x => x.id === w)||{}; if(wk.phone) SH.rows[w].phone = wk.phone; if(wk.telco) SH.rows[w].telco = wk.telco; } } drawSheet(); }
   function shQty(w, d){ if(w === '_') SH.qty = Math.max(1, Math.min(999, SH.qty + d)); else SH.rows[w].qty = Math.max(1, Math.min(20, SH.rows[w].qty + d)); drawSheet(); }
   function shSet(w, k, v, redraw){ if(w === '_') SH[k] = v; else SH.rows[w][k] = v; if(redraw) drawSheet(); else sheetBtn(); }
   function shOk(){ if(!sheetOk()) return; const {key, ...c} = SH; ui.cart[key] = c; SH = null; closeModal(); render(); }
   function shDel(){ delete ui.cart[SH.key]; SH = null; closeModal(); render(); }
   function cartReqs(){ const reqs = [];
     for(const [key, c] of Object.entries(ui.cart)){ const it = cartItem(key), base = it.custom ? {custom_name: it.label} : {item_id: it.id};
-      if(ui.kind === 'PERSONAL') for(const [w, r] of Object.entries(c.rows)) reqs.push({...base, workers:[w], qty: isTop(it) ? 1 : r.qty, detail: isTop(it) ? `${String(r.phone).trim()} · RM ${parseFloat(r.amt)}` : ((r.det||'').trim() || undefined)});
+      if(ui.kind === 'PERSONAL') for(const [w, r] of Object.entries(c.rows)) reqs.push({...base, workers:[w], qty: isTop(it) ? 1 : r.qty, detail: isTop(it) ? `${String(r.phone).trim()}${r.telco ? ' · ' + r.telco : ''} · RM ${parseFloat(r.amt)}` : ((r.det||'').trim() || undefined)});
       else reqs.push({...base, qty:c.qty, detail:(c.det||'').trim() || undefined}); }
     return reqs; }
   function addCount(){ return cartReqs().length; }
@@ -664,7 +664,7 @@ const Owner = (() => {
     const it=IT(x.item_id),top=isTopIt(it)||String(x.name).trim().toUpperCase()==='TOP UP';
     if(top){
       const details=x.lines.map(l=>String(l.detail||'').trim());
-      if(details.some(d=>!/^(\+?[\d\s()-]{6,})\s*·\s*RM\s*\d+(?:\.\d{1,2})?$/i.test(d)||d.split('·')[0].replace(/\D/g,'').length<6||Number(d.split(/RM/i)[1])<=0))throw new Error(Z('TOP UP: please complete the phone number and amount before ordering.','TOP UP：请先补齐正确的电话号码和充值金额，再订购。'));
+      if(details.some(d=>!/^(\+?[\d\s()-]{6,})\s*·\s*(?:[^·\d][^·]{0,19}\s*·\s*)?RM\s*\d+(?:\.\d{1,2})?$/i.test(d)||d.split('·')[0].replace(/\D/g,'').length<6||Number(d.split(/RM/i)[1])<=0))throw new Error(Z('TOP UP: please complete the phone number and amount before ordering.','TOP UP：请先补齐正确的电话号码和充值金额，再订购。'));
       blocks.push(x.name+'\n'+details.map(d=>d.replace(/\s*·\s*/g,'  ')).join('\n'));
       continue;
     }

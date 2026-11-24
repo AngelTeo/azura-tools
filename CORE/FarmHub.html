@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workers v20</title>
+<title>Workers v21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -246,7 +246,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 const SYS = 'Workers';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -303,7 +303,7 @@ async function load(){
   const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
   const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food,cost_co', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,telco,photo_path,shares_food,cost_co', x => x.is('voided_at', null).order('worker_no')),
     q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
     q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
@@ -311,10 +311,12 @@ async function load(){
     q('hub_company', 'id,code'),
     q('hub_farm', 'id,code,company_id', x => x.eq('active', true).order('code')),
     q('hub_worker_farm', 'id,worker_id,farm_id,effective_from', ord),
+    q('hub_option', 'code,label,sort', x => x.eq('list_code', 'TELCO').eq('shown', true).order('sort')),
   ]);
   const bad = res.find(r => r.error); if(bad){ LOADED = false; lastErr = bad.error.message; gate('Could not load data', 'Nothing was changed. Please refresh the page.'); throw bad.error; }
   LOADED = true; setSync('ok', 'Cloud');
-  const [w, r, c, p, pp, co, fm, wf] = res.map(x => x.data);
+  const [w, r, c, p, pp, co, fm, wf, tc] = res.map(x => x.data);
+  D.telcos = tc || []; D.telco = {}; D.telcos.forEach(x => D.telco[x.code] = x.label);
   const grp = rows => { const m = {}; rows.forEach(x => (m[x.worker_id] ??= []).push(x)); return m; };
   D.workers = w; D.rates = grp(r); D.comps = grp(c); D.pay1 = grp(p.filter(x => (x.slot || 1) === 1)); D.pay2 = grp(p.filter(x => x.slot === 2)); D.pass = grp(pp);
   D.co = {}; D.coId = {}; co.forEach(x => { D.co[x.id] = x.code; D.coId[x.code] = x.id; });
@@ -411,6 +413,7 @@ async function openWorker(id){
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
     + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--mut);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
     + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
+    + it('Telco', w.telco ? esc(D.telco[w.telco] || w.telco) : 'Not set', '', 'sheetTelco()')
     + it('Passport', pas ? last4(pas.passport_no) : 'Not set', '', 'sheetPassport()')
     + (w.stop_note ? it('Stop note', esc(w.stop_note), '', '') : '')
     + '<div class="it tap" onclick="sheetHistory()"><div class="k">Change log</div><div class="v" style="color:var(--mut);font-weight:400">All changes</div><span class="chg">Open →</span></div>';
@@ -586,6 +589,15 @@ function sheetCostCo(){
   }, 'Saved');
 }
 function sheetPhone(){ const w = cur(); sheetText('Phone', w.phone, 'tel', v => db(sb.from('hub_worker').update({phone:v || null}).eq('id', w.id))); }
+function sheetTelco(){
+  const w = cur();
+  sheet('<h3>Telco</h3><p class="h">Shown with the phone number when a Leader asks for TOP UP.</p>'
+    + opts('tel', D.telcos.map(x => [x.code, esc(x.label)]).concat([['', 'Not set']]), w.telco || '', '', 'g2') + '<button class="save" id="s-save">Save</button>');
+  $('s-save').onclick = () => saveWith($('s-save'), async () => {
+    const v = pick('tel') || null; if(v === (w.telco || null)) return 'No change';
+    await db(sb.from('hub_worker').update({telco:v}).eq('id', w.id));
+  }, 'Saved');
+}
 function sheetPassport(){
   const w = cur(), p = (D.pass[w.id] || []).slice(-1)[0];
   sheet('<h3>Passport</h3><input class="inp" id="s-txt" placeholder="' + (p ? 'Now ' + last4(p.passport_no) + ' — type the new number' : 'Passport no.') + '" autocapitalize="characters"><button class="save" id="s-save">Save</button>');
@@ -663,7 +675,7 @@ async function sheetHistory(){
     sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at').eq('worker_id', w.id).order('effective_from'),
     sb.from('hub_worker_farm').select('effective_from,farm_id,voided_at').eq('worker_id', w.id).order('effective_from'),
   ]);
-  const F = {name:'Name', title:'Position', phone:'Phone', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
+  const F = {name:'Name', title:'Position', phone:'Phone', telco:'Telco', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
   const rows = [];
   (lg.data || []).forEach(x => { const b = x.before_data || {}, a = x.after_data || {};
     const ch = Object.keys(F).filter(k => (b[k] ?? null) !== (a[k] ?? null)).map(k => F[k] + ': ' + esc(b[k] ?? '—') + ' → ' + esc(a[k] ?? '—'));
@@ -751,7 +763,7 @@ function renderManage(){
 // ══════ Export / Import ══════
 const EXP = ['hub_worker', 'hub_worker_rate', 'hub_worker_company', 'hub_worker_farm', 'hub_worker_payee', 'hub_worker_passport'];
 const EXP_COLS = {
-  hub_worker: 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,photo_path,shares_food,cost_co',
+  hub_worker: 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,telco,photo_path,shares_food,cost_co',
   hub_worker_rate: 'id,worker_id,rate_type,rate,effective_from',
   hub_worker_company: 'id,worker_id,company_id,effective_from',
   hub_worker_farm: 'id,worker_id,farm_id,effective_from',
