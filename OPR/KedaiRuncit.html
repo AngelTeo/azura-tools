@@ -78,6 +78,11 @@ table.mx td{padding:6px;border-bottom:1px solid #f0f0f0;vertical-align:top}table
 body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .printonly{display:none}
 @media print{.printonly{display:block}.modetabs,.hero,.pills,.sectionhead,.card:not(#printarea .card),.hint,#hdr{display:none!important}#printarea .hint{display:block!important}body{background:#fff}}
+
+/* Management homepage UX — isolated styles */
+.homehead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.homehead h1{font-size:23px;margin:0}.homehead .sub{font-size:13px}
+.homeentry{display:block;width:100%;text-align:left;font:inherit;color:inherit;border:1px solid var(--line);border-radius:17px;background:#fff;padding:16px;margin-bottom:12px;box-shadow:0 2px 9px #1c302008;cursor:pointer}
+.homeentry:active,.homequick:active{background:#eef5ef}.homelead{display:flex;align-items:center;gap:12px}.homelead .aico{font-size:34px}.homelead .atxt b{font-size:25px;line-height:1.25}.homelead .atxt small{font-size:14px;margin-top:3px}.homestats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.homestat{background:#f4f6f1;border-radius:10px;padding:8px 3px;text-align:center;display:flex;flex-direction:column;gap:2px}.homestat strong{font-size:25px;line-height:1.2}.homestat small{font-size:12px;font-weight:700;color:var(--mut)}.homestat.pending strong{color:var(--warn)}.homestat.deliver strong{color:var(--green)}.homestat.unavailable strong{color:var(--mut)}.homefoot{display:block;font-size:12px;color:var(--mut);margin-top:8px}.homedates{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;text-align:center}.homedates strong{display:block;font-size:23px}.homedates small{display:block;color:var(--mut);font-size:13px}.homedates>span+span{border-left:1px solid var(--line)}.homequickgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.homequick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px 6px;font:inherit;color:inherit;min-height:110px}.homequick .aico{font-size:29px}.homequick b{font-size:17px}.homequick small{color:var(--mut);font-size:13px}.homerecord{min-height:64px;margin-bottom:12px}.homefold{padding:12px 14px;font-size:14px;color:var(--mut)}.homefold summary{cursor:pointer;font-weight:650;min-height:32px;line-height:32px}.homefold .week{margin-top:12px}.homefold .line:last-child{border:0}
 </style></head><body>
 <header class="top"><div class="topin" id="hdr"><span class="brand">🛍️ Kedai Runcit</span></div></header>
 <nav id="modetabs" class="modetabs" hidden></nav>
@@ -85,7 +90,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10;
+const APP_VERSION = 10.1;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -607,31 +612,34 @@ const Owner = (() => {
     document.documentElement.lang = OL; render(); }
   function go(v, extra){ ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
 
-  /* ---------- Today ---------- */
+  /* ---------- Management homepage UX ---------- */
+  function handLink(kind){
+    const ls = bought().filter(l => kind === 'FOOD' ? l.kind === 'FOOD' : l.kind !== 'FOOD');
+    const f = FARMS.find(f => ls.some(l => l.farm === f)) || 'AD 1';
+    return `<div class="btnrow noprint" style="margin:0 0 12px"><button class="btn ${ls.length?'primary':'light'}" onclick="Owner.go('hand',{farm:'${f}',from:'${kind==='FOOD'?'food':'buy'}'})">📦 ${Z('Hand over','交货')} · ${ls.length} ${Z('pending','待交货')}</button></div>`;
+  }
   function home(){
-    const trip = nextTrip(), F = foodRound(B.today), b = bought().length, tb = toBuy().length, al = alcWait().length, fd = food().filter(l => l.status === 'REQUESTED');
-    const pend = B.phones.filter(p => p.status === 'PENDING').length;
-    const card = (i,t,s,on,c) => `<button class="attcard ${c}" onclick="${on}"><span class="aico">${i}</span><span class="atxt"><b>${t}</b><small>${s}</small></span><span class="aarr">›</span></button>`;
-    const t = new Date(B.today+'T00:00:00'), toLock = new Date(t.getFullYear(), t.getMonth()+1, 0).getDate() - t.getDate();
-    const att = f => { const a = (B.att||{})[f] || {}; const n = workers(f).length, d = (a.work||0)+(a.half||0)+(a.off||0);
-      return d ? `👷 ${d >= n ? '✓' : d+'/'+n} · 👷 ${a.work||0} · 🌓 ${a.half||0} · 🏠 ${a.off||0}` : Z('👷 not done','👷 还没点名'); };
-    return `<div class="hero"><div><h1>${Z('Today','今天')} · ${ddm(B.today)}</h1><div class="sub">${Z('Signed in as','登入：')} ${esc(ME())}</div></div></div>
-      ${b && toLock <= 7 ? `<div class="note warn">⚠ ${Z(`${b} item${b>1?'s':''} bought but not handed over. Hand them over before this month's salary is locked.`, `${b} 样已经买了还没交货。这个月薪水锁定之前要交货。`)}</div>` : ''}
-      ${pend ? card('📱', Z(`${pend} phone${pend>1?'s':''} waiting`, `${pend} 支手机在等批准`), Z('Approve or lock in Leaders & phones','到「工头和手机」批准或锁住'), "Owner.go('people')", 'todo') : ''}
-      ${card('🛒',Z('Buying list','要买的'),Z(`${tb} to buy · next trip ${ddm(trip)} (list closes ${ddm(addD(trip,-1))} night)${al && !ALC ? ` · 🥃 ${al} alcohol waiting` : ''}`, `${tb} 样要买 · 下一趟 ${ddm(trip)}（${ddm(addD(trip,-1))} 晚上截单）${al && !ALC ? ` · 🥃 ${al} 样酒在等` : ''}`),"Owner.go('buy')",tb?'todo':'done')}
-      ${card('🥬',Z('Groceries','买菜'),Z(`${fd.length} lines · Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${fd.length} 样 · ${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`),"Owner.go('food')",fd.length?'todo':'done')}
-      ${card('🚚',Z('Hand over','交货'),b ? Z(`${b} bought · not handed over yet`, `${b} 样已买 · 还没交货`) : Z('Nothing to hand over','没有要交的'),`Owner.go('hand',{farm:'${FARMS.find(f => bought().some(l => l.farm === f)) || 'AD 1'}'})`,b?'todo':'done')}
-      ${card('🩺',Z('Doctor / medicine','看医生 / 买药'),Z('Record the amount, then: deduct from salary or company pays','记下金额，再选：扣他薪水，还是公司出'),"Owner.go('med')",'plain')}
-      ${card('✍️',Z('At the farm','在园里当场记'),Z('Worker says "I took…" or "I want…" — record it now','工人说「我拿了…」或「我要…」— 马上记'),"Owner.go('spot')",'plain')}
-      <div class="sectionhead">${Z('This week','这个礼拜')}</div>${weekStrip()}
-      <div class="sectionhead">${Z('Farms today','今天各园')}</div>
-      <div class="card" style="padding:12px">${FARMS.map(f => `<div class="line"><b>${f}</b><span>${att(f)}</span></div>`).join('')}</div>
-      <div class="sectionhead">${Z('More','其他')}</div>
-      <div class="btnrow"><button class="btn" onclick="Owner.go('people')">👷 ${Z('Leaders & phones','工头和手机')}</button><button class="btn" onclick="Owner.go('prices')">🏷 ${Z('Items & prices','物品和价钱')}</button><button class="btn" onclick="Owner.go('records')">📒 ${Z('Records','记录')}</button></div>
-      <div class="sectionhead">${Z('Settings','设定')}</div>
-      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>${Z('Buying day','买东西的日子')}</span><span class="seg">${[1,2,3,4,5].map(d => `<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div>
-        <div class="hint">${Z("Never Saturday or Sunday. The Leaders' list closes the night before.",'礼拜六、礼拜日不买。工头的清单在前一天晚上截止。')}</div>
-        ${B.me && B.me.role !== 'OWNER' ? `<div class="line" style="border:0"><span>${Z('This phone is','这支手机是')}</span><span class="seg">${['EX','Mr. Low'].map(n => `<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${n}</button>`).join('')}</span></div>` : ''}</div>`;
+    const F=foodRound(B.today), pending=open().length, b=bought().filter(l=>l.kind!=='FOOD').length;
+    const fd=food().filter(l=>l.status==='REQUESTED').length, fb=bought().filter(l=>l.kind==='FOOD').length;
+    const pend=B.phones.filter(p=>p.status==='PENDING').length, al=alcWait().length;
+    const trip=nextTrip(), t=new Date(B.today+'T00:00:00'), toLock=new Date(t.getFullYear(),t.getMonth()+1,0).getDate()-t.getDate();
+    const shortcut=(i,en,zh,desc,view)=>`<button class="homequick" onclick="Owner.go('${view}')"><span class="aico">${i}</span><b>${en}</b><small>${Z(desc,zh)}</small></button>`;
+    const att=f=>{const a=(B.att||{})[f]||{},n=workers(f).length,d=(a.work||0)+(a.half||0)+(a.off||0);return d?`👷 ${d>=n?'✓':d+'/'+n} · 👷 ${a.work||0} · 🌓 ${a.half||0} · 🏠 ${a.off||0}`:Z('👷 not done','👷 还没点名');};
+    return `<div class="homehead"><div><h1>Management</h1><div class="sub">${ddm(B.today)} · ${esc(ME())}</div></div><button class="btn small" onclick="Owner.go('settings')" aria-label="${Z('Settings','设定')}">⚙ ${Z('Settings','设定')}${pend?` · ${pend}`:''}</button></div>
+      <button class="homeentry" onclick="Owner.go('buy')"><span class="homelead"><span class="aico">🛒</span><span class="atxt"><b>Buying List</b><small>${Z('Daily purchases','日常采购')}</small></span><span class="aarr">›</span></span>
+      <span class="homestats"><span class="homestat pending"><strong>${pending}</strong><small>${Z('To buy','待购买')}</small></span><span class="homestat unavailable"><strong>—</strong><small>${Z('Ordered','已订购')}</small></span><span class="homestat deliver"><strong>${b}</strong><small>${Z('To hand over','待交货')}</small></span></span>
+      <span class="homefoot">${Z('Next trip','下一趟')} ${ddm(trip)} · ${Z('Closes','截单')} ${ddm(addD(trip,-1))}${al&&!ALC?` · 🥃 ${al} ${Z('waiting','暂缓')}`:''}</span><span class="homefoot">${Z('Ordered status not yet supported','已订购状态尚未接入')}</span>${b&&toLock<=7?`<span class="homefoot" style="color:var(--warn)">${Z('Hand over before salary lock','请在薪水锁定前完成交货')}</span>`:''}</button>
+      <button class="homeentry" onclick="Owner.go('food')"><span class="homelead"><span class="aico">🥬</span><span class="atxt"><b>Food Order</b><small>${Z('Regular grocery orders','定期伙食采购')}</small></span><span class="aarr">›</span></span><span class="homedates"><span><strong style="color:var(--warn)">${dm(F.order)}</strong><small>${Z('Order deadline','截单日期')}</small></span><span><strong style="color:var(--green)">${dm(F.deliver)}</strong><small>${Z('Delivery date','送货日期')}</small></span></span><span class="homefoot">${fd} ${Z('to buy','待采购')} · ${fb} ${Z('to deliver','待交货')}${fb&&toLock<=7?` · ${Z('Before salary lock','薪水锁定前交货')}`:''}</span></button>
+      <div class="homequickgrid">${shortcut('✍️','At the Farm','园里现场记录','On-site record','spot')}${shortcut('🩺','Medical','看医生／买药','Medical expenses','med')}</div>
+      <button class="attcard plain homerecord" onclick="Owner.go('records')"><span class="aico" style="font-size:28px">📒</span><span class="atxt"><b>Records</b><small>${Z('Expense records','历史采购及费用记录')}</small></span><span class="aarr">›</span></button>
+      <details class="card homefold"><summary>${Z('Farm attendance / weekly schedule','各园点名 / 每周安排')}</summary>${weekStrip()}${FARMS.map(f=>`<div class="line"><b>${f}</b><span>${att(f)}</span></div>`).join('')}</details>`;
+  }
+  function settingsPage(){
+    const pend=B.phones.filter(p=>p.status==='PENDING').length;
+    return `<div class="hero"><h1>⚙ ${Z('Settings','设定')}</h1>${back()}</div>
+      <button class="attcard ${pend?'todo':'plain'}" onclick="Owner.go('people')"><span class="aico">👷</span><span class="atxt"><b>${Z('Leaders & phones','工头和手机')}</b><small>${pend?Z(`${pend} awaiting approval`,`${pend} 支手机等批准`):Z('Manage access','权限管理')}</small></span><span class="aarr">›</span></button>
+      <button class="attcard plain" onclick="Owner.go('prices')"><span class="aico">🏷</span><span class="atxt"><b>${Z('Items & prices','物品和价钱')}</b></span><span class="aarr">›</span></button>
+      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>${Z('Buying day','买东西的日子')}</span><span class="seg">${[1,2,3,4,5].map(d=>`<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div><div class="hint">${Z("Never Saturday or Sunday. The Leaders' list closes the night before.",'礼拜六、礼拜日不买。工头的清单在前一天晚上截止。')}</div>${B.me&&B.me.role!=='OWNER'?`<div class="line" style="border:0"><span>${Z('This phone is','这支手机是')}</span><span class="seg">${['EX','Mr. Low'].map(n=>`<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${n}</button>`).join('')}</span></div>`:''}</div>`;
   }
   function weekStrip(){ const t = B.today, d0 = new Date(t+'T00:00:00'), mon = addD(t, -((d0.getDay()+6)%7)), trip = nextTrip(), F = foodRound(t);
     return `<div class="week">${[0,1,2,3,4,5,6].map(i => { const d = addD(mon,i), wd = new Date(d+'T00:00:00').getDay(), ev = [];
@@ -643,7 +651,7 @@ const Owner = (() => {
   /* ---------- Buying list ---------- */
   function buyPage(){
     const g = groups(toBuy()), al = alcWait();
-    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','要买的')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>
+    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','要买的')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${handLink('DAILY')}
       <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>${Z('Buy alcohol this trip?','这一趟买酒吗？')}</b><div class="hint">${Z(`${al.length} alcohol line${al.length===1?'':'s'} waiting`, `${al.length} 样酒在等`)}</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?Z('✓ Yes','✓ 买'):Z('Not this trip','这趟不买')}</button></div>
       <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 ${Z('Copy shopping list','复制购物清单')}</button></div>`;
     let kind = '';
@@ -719,7 +727,7 @@ const Owner = (() => {
   function foodPage(){
     const F = foodRound(B.today), sup = ui.sup || 'Huat Tiong', rows = fItems(sup), all = food();
     const sent = f => all.some(l => l.farm === f);
-    let h = `<div class="hero"><div><h1>🥬 ${Z('Groceries','买菜')}</h1><div class="sub">${Z(`Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`)}</div></div>${back()}</div>
+    let h = `<div class="hero"><div><h1>🥬 ${Z('Groceries','买菜')}</h1><div class="sub">${Z(`Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`)}</div></div>${back()}</div>${handLink('FOOD')}
       <div class="card" style="padding:10px 14px">${FARMS.map(f => `<div class="line"><b>${f}</b>${sent(f) ? `<span class="tag ok">${Z('Sent','已报')}</span>` : `<span class="tag warn">${Z('Not sent yet','还没报')}</span>`}</div>`).join('')}</div>
       <div class="pills noprint">${SUPPLIERS.map(s => `<button class="pill ${s===sup?'on':''}" onclick="Owner.go('food',{sup:'${s}'})">${esc(s)} · ${fItems(s).length}</button>`).join('')}</div>
       <div id="printarea"><h2 class="printonly">${esc(sup === 'Huat Tiong' ? 'Huat Thiong' : sup)} x Azura Delta ${pdfDate(F.deliver)}</h2>`;
@@ -746,8 +754,8 @@ const Owner = (() => {
   function handPage(){
     const farm = ui.farm || 'AD 1', ls = bought().filter(l => l.farm === farm), ws = workers(farm);
     for(const l of ls) if(!HO[l.id]) HO[l.id] = {on:true, ws: l.kind === 'SHARED' || l.kind === 'FOOD' ? ws.filter(w => l.kind !== 'FOOD' || w.shares_food).map(w => w.id) : null};
-    let h = `<div class="hero"><div><h1>🚚 ${Z('Hand over','交货')}</h1><div class="sub">${Z('Tick what you gave to the Leader. Only this step deducts salary.','勾你交给工头的东西。只有这一步会扣薪水。')}</div></div>${back()}</div>
-      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
+    let h = `<div class="hero"><div><h1>🚚 ${Z('Hand over','交货')}</h1><div class="sub">${Z('Tick what you gave to the Leader. Only this step deducts salary.','勾你交给工头的东西。只有这一步会扣薪水。')}</div></div><button class="btn small" onclick="Owner.go('${ui.from==='food'?'food':'buy'}')">${Z('← Back','← 返回')}</button></div>
+      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}',from:'${ui.from==='food'?'food':'buy'}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
       <div class="field" style="max-width:240px"><label>${Z('Hand-over date','交货日期')}</label><input type="date" id="hodate" value="${ui.date || B.today}" max="${B.today}" onchange="Owner.hoDate(this.value)"></div>`;
     if(!ls.length) h += `<div class="empty">${Z(`Nothing bought for ${farm}.`, `${farm} 没有已买的东西。`)}</div>`;
     const foodTot = ls.filter(l => l.kind === 'FOOD').reduce((s,l) => s + l.qty * l.buy.price, 0);
@@ -948,7 +956,7 @@ const Owner = (() => {
   async function voidRec(fn, id){ if(!confirm(Z('Void this record? It is taken out of Salary.','作废这笔？Salary 那笔也会作废。'))) return; await act(fn, {id}, Z('Voided','已作废')); }
 
   function render(){
-    $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
+    $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
   return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
