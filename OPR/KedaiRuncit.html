@@ -90,7 +90,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.1;
+const APP_VERSION = 10.2;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -649,18 +649,58 @@ const Owner = (() => {
   function setMe(n){ lsSet('runcit_me', n); render(); }
 
   /* ---------- Buying list ---------- */
+  const WASelected = new Set();
+  function waProductGroups(){return groups(toBuy()).filter(x=>WASelected.has(x.key));}
+  function waToggle(key,on){if(on)WASelected.add(key);else WASelected.delete(key);waSelectionBar();}
+  function waClear(){WASelected.clear();document.querySelectorAll('.wa-product-check').forEach(e=>{e.checked=false;});waSelectionBar();}
+  function waSelectionBar(){const n=waProductGroups().length;const b=$('#wa-batch-button'),c=$('#wa-batch-clear');if(b){b.disabled=!n;b.textContent='📲 WhatsApp ('+n+')';}if(c)c.disabled=!n;}
+  function waBatchText(gs){
+  const blocks=[];
+  for(const x of gs){
+    const it=IT(x.item_id),top=isTopIt(it)||String(x.name).trim().toUpperCase()==='TOP UP';
+    if(top){
+      const details=x.lines.map(l=>String(l.detail||'').trim());
+      if(details.some(d=>!/^(\+?[\d\s()-]{6,})\s*·\s*RM\s*\d+(?:\.\d{1,2})?$/i.test(d)||d.split('·')[0].replace(/\D/g,'').length<6||Number(d.split(/RM/i)[1])<=0))throw new Error(Z('TOP UP: please complete the phone number and amount before ordering.','TOP UP：请先补齐正确的电话号码和充值金额，再订购。'));
+      blocks.push(x.name+'\n'+details.map(d=>d.replace(/\s*·\s*/g,'  ')).join('\n'));
+      continue;
+    }
+    const totals=new Map();
+    for(const l of x.lines){const d=String(l.detail||'').trim();totals.set(d,(totals.get(d)||0)+Number(l.qty));}
+    const unit=String(it.unit||'').trim();
+    const lines=Array.from(totals,([d,n])=>(d?d+' × ':'')+n+(unit?' '+unit:''));
+    blocks.push(totals.size===1&&totals.has('')?x.name+' × '+lines[0]:x.name+'\n'+lines.join('\n'));
+  }
+  return 'Hi, please prepare the following items for collection:\n\n'+blocks.join('\n\n')+'\n\nThank you.';
+}
+  async function waBatch(){
+  busy(1);
+  try{
+    const before=JSON.stringify(waProductGroups().map(x=>[x.key,x.lines.map(l=>[l.id,l.qty,l.detail]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))]));
+    await reload();
+    render();
+    const gs=waProductGroups();
+    const after=JSON.stringify(gs.map(x=>[x.key,x.lines.map(l=>[l.id,l.qty,l.detail]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))]));
+    if(before!==after){toast(Z('The list changed. Please check and select again.','清单有更新，请重新确认后勾选。'));waClear();return;}
+    if(!gs.length)return;
+    const msg=waBatchText(gs);
+    openModal(`<h2>📲 WhatsApp · ${gs.length} ${Z('products','种产品')}</h2><div class="field"><label>${Z('Review or edit the order, then select your supplier in WhatsApp.','确认或修改订单，再在 WhatsApp 选择供应商。')}</label><textarea id="waBatchMsg" rows="12">${esc(msg)}</textarea></div><div class="hint">${Z('Opening WhatsApp does not mark items as bought or ordered.','打开 WhatsApp 不会改变购买状态。')}</div><div class="btnrow" style="margin-top:12px"><button class="btn primary grow" onclick="Owner.waBatchSend()">📲 ${Z('Open WhatsApp','传 WhatsApp')}</button><button class="btn" onclick="Owner.waBatchCopy()">${Z('Copy','复制')}</button><button class="btn" onclick="closeModal()">${Z('Close','关闭')}</button></div>`);
+  }catch(e){toast(errZ(e.message));}finally{busy(0);}
+}
+  function waBatchSend(){const t=$('#waBatchMsg').value.trim();if(!t)return;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener');}
+  async function waBatchCopy(){const el=$('#waBatchMsg');try{await navigator.clipboard.writeText(el.value);toast(Z('Copied','已复制'));}catch(e){el.focus();el.select();toast(Z('Select and copy manually','请手动复制已选文字'));}}
   function buyPage(){
     const g = groups(toBuy()), al = alcWait();
+    for(const k of WASelected) if(!g.some(x=>x.key===k)) WASelected.delete(k);
     let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','要买的')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${handLink('DAILY')}
       <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>${Z('Buy alcohol this trip?','这一趟买酒吗？')}</b><div class="hint">${Z(`${al.length} alcohol line${al.length===1?'':'s'} waiting`, `${al.length} 样酒在等`)}</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?Z('✓ Yes','✓ 买'):Z('Not this trip','这趟不买')}</button></div>
       <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 ${Z('Copy shopping list','复制购物清单')}</button></div>`;
     let kind = '';
     for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
       const old = Math.max(...x.lines.map(l => l.trip));
-      h += `<div class="card bi"><div class="bitop">${zoomBox(x)}<button class="biname" onclick="Owner.go('item',{key:'${esc(x.key)}'})"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}<span class="biarr">›</span></button></div>${matrix(x.lines)}</div>`; }
+      h += `<div class="card bi"><div class="bitop"><input type="checkbox" class="wa-product-check" style="width:24px;height:24px;min-height:24px;flex:none;accent-color:var(--green);margin:0" data-key="${esc(x.key)}" ${WASelected.has(x.key)?'checked':''} aria-label="${esc(Z('Select ','勾选 ')+x.name)}" onchange="Owner.waToggle(this.dataset.key,this.checked)">${zoomBox(x)}<button class="biname" onclick="Owner.go('item',{key:'${esc(x.key)}'})"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}<span class="biarr">›</span></button></div>${matrix(x.lines)}</div>`; }
     if(!g.length) h += `<div class="empty">${Z('Nothing to buy. 👍','没有要买的。👍')}</div>`;
     const left = toBuy().length;
-    return h + `<div class="bottom" id="bottombar"><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
+    return h + `<div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"><div class="btnrow"><button class="btn primary grow" id="wa-batch-button" ${WASelected.size?'':'disabled'} onclick="Owner.waBatch()">📲 WhatsApp (${WASelected.size})</button><button class="btn small" id="wa-batch-clear" ${WASelected.size?'':'disabled'} onclick="Owner.waClear()">${Z('Clear','清除勾选')}</button></div><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
   }
   function alc(){ ALC = !ALC; lsSet('runcit_alcohol', ALC); render(); }
   /* one row per line when it matters (who it is for, size, phone + amount); otherwise farm totals */
@@ -959,7 +999,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
