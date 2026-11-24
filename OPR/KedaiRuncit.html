@@ -56,6 +56,7 @@ button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
 .modetabs{display:flex;gap:6px;max-width:1180px;margin:12px auto 0;padding:0 18px}@media(max-width:700px){.modetabs{padding:0 12px}}.modetabs[hidden]{display:none}
 .modetabs button{flex:1;min-height:46px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:800 16px system-ui;color:var(--ink);cursor:pointer}
 .modetabs button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.ico.photo img.fit{object-fit:contain;background:#fff;height:72px}
 body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .printonly{display:none}
 @media print{.printonly{display:block}.modetabs,.hero,.pills,.sectionhead,.card:not(#printarea .card),.hint,#hdr{display:none!important}#printarea .hint{display:block!important}body{background:#fff}}
@@ -66,7 +67,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -101,9 +102,24 @@ function gate(msg){ $('#app').innerHTML = `<div class="gate"><p>${esc(msg)}</p><
 
 /* item icons (the four lists have no photos except groceries) */
 const ICONS = {ROKOK:'🚬',CIGARETTES:'🚬',WHISKEY:'🥃',BEER:'🍺','TOP UP':'📱',BAJU:'👕',SELUAR:'👖',KASUT:'👟',SABUN:'🧼','SABUN BASUH':'🧼',SHAMPOO:'🧴',GAS:'🔥',
-  GLOVES:'🧤','CABLE TIE':'🔗',ROPE:'🪢',PLASTIC:'🛍',PAIL:'🪣',HOSE:'🚿',CHARGER:'🔌',EARPHONE:'🎧',MEE:'🍜',KOPI:'☕',BERAS:'🍚'};
+  GLOVES:'🧤','CABLE TIE':'🔗',ROPE:'🪢',PLASTIC:'🛍',PAIL:'🪣',HOSE:'🚿',CHARGER:'🔌',EARPHONE:'🎧',MEE:'🍜',KOPI:'☕',BERAS:'🍚',UBAT:'💊',DOCTOR:'🩺',LIGHTER:'🔥',CABLE:'🔌',LED:'💡',TRIMMER:'🧵',BRAKE:'🛞',BOOTS:'🥾',HAT:'👒',HEADLAMP:'🔦',BAG:'👜',KAPAK:'🥃'};
 function icon(label, given){ if(given) return given; const k = String(label||'').toUpperCase(); if(ICONS[k]) return ICONS[k]; for(const w in ICONS) if(k.includes(w)) return ICONS[w]; return '📦'; }
-const isAlcohol = label => /WHISK|BEER|ARAK|TODDY|WINE|BRANDY|\bRUM\b|VODKA|ALCOHOL|TIGER|GUINNESS|ANCHOR/i.test(String(label||''));
+const isAlcohol = label => /WHISK|BEER|ARAK|KAPAK|SAMSU|TODDY|WINE|BRANDY|\bRUM\b|VODKA|ALCOHOL|TIGER|GUINNESS|ANCHOR/i.test(String(label||''));
+
+/* item photos: managers upload them (bucket "shop-items", public read); groceries fall back to the FoodOrder photos */
+const PHOTO_BUCKET = 'shop-items';
+const photoUrl = p => p ? `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${p}` : null;
+function itemPhoto(it){ if(!it) return null; if(it.photo) return photoUrl(it.photo); if(it.kind === 'FOOD' && it.code) return `foodflow_img/${it.code}.jpg`; return null; }
+function icoBox(it, label, small){
+  const u = itemPhoto(it), em = icon(label, it && it.icon), sm = small ? `<small>${small}</small>` : '';
+  if(!u) return `<div class="ico">${em}${sm}</div>`;
+  return `<span class="ico photo"><img class="${it.photo ? 'fit' : ''}" src="${esc(u)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('photo');this.parentNode.innerHTML='${em}'">${sm}</span>`; }
+async function shrinkPhoto(file, max = 640){
+  const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('Not a photo')); i.src = URL.createObjectURL(file); });
+  const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.82)); }
 
 /* grocery round: the 15th and the last day of the month; order by 4 days before (same rule as the database) */
 function foodRound(ref){ const t0 = new Date((ref||klToday())+'T00:00:00');
@@ -289,7 +305,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     return {done: (D.workers||[]).length > 0 && (D.workers||[]).every(w => a[w.id] && CODE_ST[a[w.id].code]), work: m.filter(x=>x==='work').length, half: m.filter(x=>x==='half').length, off: m.filter(x=>x==='off').length}; }
   function cardBtn(ico, title, sub, on, cls){ return `<button class="attcard ${cls}" onclick="${on}"><span class="aico">${ico}</span><span class="atxt"><b>${title}</b><small>${sub}</small></span><span class="aarr">›</span></button>`; }
   function row(l){
-    const name = l.item, it = itemById(l.item_id), ico = l.kind === 'FOOD' ? foodArt(it) : `<div class="ico">${icon(name)}<small>${KICO[l.kind]}</small></div>`;
+    const name = l.item, it = itemById(l.item_id), ico = l.kind === 'FOOD' ? foodArt(it) : icoBox(it, name, KICO[l.kind]);
     const who = l.kind === 'PERSONAL' ? l.worker : ct(l.kind, 'title');
     const tag = l.status === 'BOUGHT' ? `<span class="tag ok">${esc(t('bought').replace('🛍 ',''))}</span>` : l.status === 'REJECTED' ? `<span class="tag bad">${esc(t('nobuy').replace('✗ ',''))}</span>`
       : l.trip > 1 ? `<span class="tag ${l.trip > 2 ? 'bad' : 'warn'}">${esc(t('tripN')(l.trip))}</span>` : '';
@@ -333,7 +349,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       if(k === 'PERSONAL') for(const w of ui.picked){ if(lines().some(l => l.status !== 'REJECTED' && l.worker_id === w && l.item_id === i.id)) dups.push(t('dup')((D.workers.find(x=>x.id===w)||{}).name, i.label)); }
       else if(lines().some(l => l.status !== 'REJECTED' && l.kind === k && l.item_id === i.id)) dups.push(t('dup')(ct(k,'title'), i.label));
     }
-    h += `<div class="sectionhead">${n} · ${t('s3')}</div><div class="itemsgrid">${list.map(i => `<div class="food ${ui.qty[i.id]?'chosen':''}"><div class="ico">${icon(i.label, i.icon)}</div><div class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}</div><div class="step"><button onclick="Leader.step('${i.id}',-1)">−</button><input class="count" readonly value="${ui.qty[i.id]||0}"><button class="plus" onclick="Leader.step('${i.id}',1)">+</button></div></div>`).join('')}</div>
+    h += `<div class="sectionhead">${n} · ${t('s3')}</div><div class="itemsgrid">${list.map(i => `<div class="food ${ui.qty[i.id]?'chosen':''}">${icoBox(i, i.label)}<div class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}</div><div class="step"><button onclick="Leader.step('${i.id}',-1)">−</button><input class="count" readonly value="${ui.qty[i.id]||0}"><button class="plus" onclick="Leader.step('${i.id}',1)">+</button></div></div>`).join('')}</div>
       <div class="field" style="margin-top:12px"><input placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"></div>
       ${dups.length ? `<div class="note warn">⚠ ${dups.map(esc).join('<br>⚠ ')}</div>` : ''}<div class="bottom" id="bottombar"></div>`;
     return h;
@@ -354,8 +370,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   }
 
   /* ---------- groceries (FoodOrder items, real photos) ---------- */
-  function foodArt(it){ const code = it.code || ''; const ic = it.icon || '🥬';
-    return `<span class="ico photo"><img src="foodflow_img/${esc(code)}.jpg" alt="" loading="lazy" onerror="this.parentNode.classList.remove('photo');this.parentNode.textContent='${ic}'"></span>`; }
+  function foodArt(it){ return icoBox({...it, kind:'FOOD', icon: it.icon || '🥬'}, it.label); }
   const foodLoc = it => { const v = FO_IN[LANG] && FO_IN[LANG][it.code]; return v ? `<small class="loc">${esc(v)}</small>` : ''; };
   function startFood(){
     const q = {}; for(const l of lines()) if(l.kind === 'FOOD' && l.status === 'REQUESTED') q[l.item_id] = (q[l.item_id]||0) + l.qty;
@@ -523,10 +538,12 @@ const Owner = (() => {
   const back = () => `<button class="btn small" onclick="Owner.go('home')">${Z('← Back','← 返回')}</button>`;
 
   async function reload(){ B = await rpc('shop_owner_board', {}); }
+  const ERR_ZH = [[/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
+  function errZ(m){ if(OL !== 'zh') return m; for(const [re, z] of ERR_ZH) if(re.test(m)) return m.replace(re, z); return m; }
   async function act(name, p, ok){
     busy(1);
     try { const r = await rpc(name, p); await reload(); render(); if(ok) toast(typeof ok === 'function' ? ok(r) : ok); return r; }
-    catch(e){ toast(e.message); try { await reload(); render(); } catch(x){} return null; }
+    catch(e){ toast(errZ(e.message)); try { await reload(); render(); } catch(x){} return null; }
     finally { busy(0); }
   }
   async function refresh(){ busy(1); try { await reload(); } catch(e){ toast(e.message); } busy(0); start(B); }
@@ -549,6 +566,7 @@ const Owner = (() => {
       ${card('🛒',Z('Buying list','要买的'),Z(`${tb} to buy · next trip ${ddm(trip)} (list closes ${ddm(addD(trip,-1))} night)${al && !ALC ? ` · 🥃 ${al} alcohol waiting` : ''}`, `${tb} 样要买 · 下一趟 ${ddm(trip)}（${ddm(addD(trip,-1))} 晚上截单）${al && !ALC ? ` · 🥃 ${al} 样酒在等` : ''}`),"Owner.go('buy')",tb?'todo':'done')}
       ${card('🥬',Z('Groceries','买菜'),Z(`${fd.length} lines · Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${fd.length} 样 · ${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`),"Owner.go('food')",fd.length?'todo':'done')}
       ${card('🚚',Z('Hand over','交货'),b ? Z(`${b} bought · not handed over yet`, `${b} 样已买 · 还没交货`) : Z('Nothing to hand over','没有要交的'),`Owner.go('hand',{farm:'${FARMS.find(f => bought().some(l => l.farm === f)) || 'AD 1'}'})`,b?'todo':'done')}
+      ${card('🩺',Z('Doctor / medicine','看医生 / 买药'),Z('Record the amount, then: deduct from salary or company pays','记下金额，再选：扣他薪水，还是公司出'),"Owner.go('med')",'plain')}
       ${card('✍️',Z('At the farm','在园里当场记'),Z('Worker says "I took…" or "I want…" — record it now','工人说「我拿了…」或「我要…」— 马上记'),"Owner.go('spot')",'plain')}
       <div class="sectionhead">${Z('This week','这个礼拜')}</div>${weekStrip()}
       <div class="sectionhead">${Z('Farms today','今天各园')}</div>
@@ -576,7 +594,7 @@ const Owner = (() => {
     let kind = '';
     for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
       const old = Math.max(...x.lines.map(l => l.trip));
-      h += `<div class="food" style="margin-bottom:8px"><div class="ico">${x.ico}</div><div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b><small class="loc">${byFarm(x.lines)}</small>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
+      h += `<div class="food" style="margin-bottom:8px">${icoBox(IT(x.item_id), x.name)}<div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b><small class="loc">${byFarm(x.lines)}</small>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
     if(!g.length) h += `<div class="empty">${Z('Nothing to buy. 👍','没有要买的。👍')}</div>`;
     const left = toBuy().length;
     return h + `<div class="bottom" id="bottombar"><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
@@ -651,7 +669,7 @@ const Owner = (() => {
     for(const l of ls){ const s = HO[l.id], tot = l.qty * l.buy.price;
       const money = l.kind === 'PERSONAL' ? Z(`Deduct from salary: ${RM(tot)}`, `从薪水扣：${RM(tot)}`) : l.kind === 'FARM' ? Z(`Farm cost ${RM(tot)} · no deduction`, `园里开销 ${RM(tot)} · 不扣薪`)
         : l.kind === 'FOOD' ? Z(`${RM(tot)} · part of Groceries ${RM(foodTot)}`, `${RM(tot)} · 买菜合计 ${RM(foodTot)} 的一部分`) : `${RM(tot)} ÷ ${s.ws.length} = ${s.ws.length ? RM(tot/s.ws.length) : '—'} ${Z('each','每人')}`;
-      h += `<div class="food ${s.on?'chosen':''}" style="margin-bottom:8px;flex-wrap:wrap"><input type="checkbox" style="width:24px;height:24px;min-height:24px" ${s.on?'checked':''} onchange="Owner.hoTick('${l.id}',this.checked)"><div class="ico">${ico(l)}</div>
+      h += `<div class="food ${s.on?'chosen':''}" style="margin-bottom:8px;flex-wrap:wrap"><input type="checkbox" style="width:24px;height:24px;min-height:24px" ${s.on?'checked':''} onchange="Owner.hoTick('${l.id}',this.checked)">${icoBox(IT(l.item_id), lname(l))}
         <div class="foodname"><b>${esc(lname(l))} × ${l.qty}</b><small class="loc">${esc(who(l))}</small><small>${money} · ${Z('bought','买于')} ${dm(l.bought_at)}${l.buy.paid_by ? Z(' by ',' · 付钱：') + esc(l.buy.paid_by) : ''}</small></div><button class="btn small light" onclick="Owner.unbuy('${l.id}')">${Z('Undo','撤回')}</button>
         ${l.kind === 'SHARED' ? shareBox(l.id, ws) : ''}</div>`; }
     const fl = ls.filter(l => l.kind === 'FOOD');
@@ -712,6 +730,34 @@ const Owner = (() => {
     if(r){ SP = {farm:SP.farm, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null}; render(); }
   }
 
+  /* ---------- Doctor / medicine (managers only items: UBAT, DOCTOR …) ---------- */
+  let MD = null;
+  function medPage(){
+    if(!MD) MD = {farm:null, worker:null, item:null, amount:'', date:B.today, by:ME()};
+    const its = B.items.filter(i => i.kind === 'PERSONAL' && i.mgr_only);
+    let h = `<div class="hero"><div><h1>🩺 ${Z('Doctor / medicine','看医生 / 买药')}</h1><div class="sub">${Z('Only managers see this. Leaders cannot pick these items.','只有管理层看得到，工头选不到这些。')}</div></div>${back()}</div>
+      <div class="sectionhead">1 · ${Z('Farm','园')}</div><div class="pills">${FARMS.map(f => `<button class="pill ${MD.farm===f?'on':''}" onclick="Owner.md({farm:'${f}',worker:null})">${f}</button>`).join('')}</div>`;
+    if(!MD.farm) return h;
+    h += `<div class="sectionhead">2 · ${Z('Who','谁')}</div><div class="pills" style="flex-wrap:wrap">${workers(MD.farm).map(w => `<button class="pill ${MD.worker===w.id?'on':''}" onclick="Owner.md({worker:'${w.id}'})">${esc(w.name)}</button>`).join('') || `<span class="mut">${Z('No workers','没有工人')}</span>`}</div>
+      <div class="sectionhead">3 · ${Z('What','什么')}</div><div class="pills" style="flex-wrap:wrap">${its.map(i => `<button class="pill ${MD.item===i.id?'on':''}" onclick="Owner.md({item:'${i.id}'})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('') || `<span class="mut">${Z('Switch an item to "managers only" in Items & prices','先在「物品和价钱」把物品设成「只给管理层」')}</span>`}</div>
+      <div class="field" style="margin-top:12px;max-width:260px"><label>${Z('Amount (RM)','金额 (RM)')}</label><input id="mdamt" type="number" inputmode="decimal" step="0.01" value="${esc(MD.amount)}" oninput="Owner.mdAmt(this.value)"></div>
+      <div class="field" style="max-width:260px"><label>${Z('Date','日期')}</label><input type="date" value="${MD.date}" max="${B.today}" onchange="Owner.md({date:this.value})"></div>
+      <div class="field"><label>${Z('Paid by','谁付钱')}</label><div class="pills">${BUYERS.map(b => `<button class="pill ${MD.by===b?'on':''}" onclick="Owner.md({by:'${b}'})">${b}</button>`).join('')}</div></div>
+      <div style="height:8px"></div><div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch;position:static"></div>`;
+    return h;
+  }
+  function md(o){ MD = {...MD, ...o}; render(); }
+  function mdAmt(v){ MD.amount = v; medBar(); }
+  function medBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'med') return;
+    const ok = MD.farm && MD.worker && MD.item && parseFloat(MD.amount) > 0, amt = ok ? RM(parseFloat(MD.amount)) : '';
+    b.innerHTML = `<button class="btn primary" ${ok?'':'disabled'} onclick="Owner.medSave('DEDUCT')">${Z('Deduct from his salary','扣他薪水')}${amt ? ' · ' + amt : ''}</button><button class="btn gold" ${ok?'':'disabled'} onclick="Owner.medSave('COMPANY')">${Z('Company pays (farm cost)','公司出（园里开销）')}${amt ? ' · ' + amt : ''}</button>`; }
+  async function medSave(mode){ const w = wname(MD.worker), it = IT(MD.item), amt = RM(parseFloat(MD.amount));
+    if(!confirm(mode === 'DEDUCT' ? Z(`Deduct ${amt} (${it.label}) from ${w}'s salary?`, `从 ${w} 的薪水扣 ${amt}（${it.label}）？`) : Z(`Company pays ${amt} (${it.label} · ${w}) as ${MD.farm} cost?`, `公司出 ${amt}（${it.label} · ${w}），记成 ${MD.farm} 的开销？`))) return;
+    const r = await act('shop_owner_medical', {farm:MD.farm, worker_id:MD.worker, item_id:MD.item, amount:parseFloat(MD.amount), date:MD.date, paid_by:MD.by, mode},
+      mode === 'DEDUCT' ? Z('Deducted · see Records','已扣薪水 · 在「记录」看得到') : Z('Recorded as farm cost · see Records','已记成园里开销 · 在「记录」看得到'));
+    if(r){ MD = {farm:MD.farm, worker:null, item:null, amount:'', date:B.today, by:MD.by}; render(); } }
+  async function mgrOnly(id, on){ await act('shop_owner_item_flag', {item_id:id, mgr_only:on}, on ? Z('Managers only · Leaders no longer see it','只给管理层 · 工头看不到了') : Z('Leaders can pick it again','工头又可以选了')); }
+
   /* ---------- Leaders & phones ---------- */
   function peoplePage(){
     const L = B.leaders, chief = L.filter(l => l.role === 'CHIEF');
@@ -757,7 +803,8 @@ const Owner = (() => {
     let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','物品和价钱')}</h1><div class="sub">${Z('Usual prices show as buttons when you tick "Bought"','按「买了」时，常用价钱会变成按钮')}</div></div>${back()}</div>`;
     for(const k of ['PERSONAL','SHARED','FARM','FOOD']){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
-      for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line"><span>${icon(i.label, i.icon)} ${esc(i.label)}${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}</span><span>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`} <button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Edit','改')}</button></span></div>`;
+      for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
+        <span class="btnrow"><button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Price','价钱')}</button><button class="btn small light" onclick="Owner.photo('${i.id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="Owner.photoDel('${i.id}')">✕</button>` : ''}${k === 'FOOD' ? '' : `<button class="btn small light" onclick="Owner.moveItem('${i.id}')">${Z('Move','换类')}</button><button class="btn small ${i.mgr_only?'gold':'light'}" onclick="Owner.mgrOnly('${i.id}',${!i.mgr_only})">${i.mgr_only ? Z('🔒 Managers only','🔒 只给管理层') : Z('Managers only?','只给管理层？')}</button>`}</span></div>`;
       h += '</div>'; }
     return h;
   }
@@ -766,7 +813,23 @@ const Owner = (() => {
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" onclick="Owner.savePrice('${id}')">${Z('Save','存')}</button></div>`); }
   async function savePrice(id){ const ps = $('#pp').value.split(/[,\s]+/).map(Number).filter(x => x > 0), d = Number($('#pd').value) || null;
     if(d && !ps.includes(d)) ps.push(d); closeModal(); await act('shop_owner_prices_set', {item_id:id, prices:ps, default:d}, Z('Prices saved','价钱已存')); }
-  async function addItem(kind){ const n = prompt(Z(`New ${KINDS[kind].name} item name`, `新的「${KINDS[kind].name}」物品名称`)); if(!n || !n.trim()) return; await act('shop_owner_item_add', {label:n.trim(), kind}, Z('Item added','物品已加')); }
+  async function addItem(kind){ const n = prompt(Z(`New ${KINDS[kind].name} item name`, `新的「${KINDS[kind].name}」物品名称`)); if(!n || !n.trim()) return;
+    const id = await act('shop_owner_item_add', {label:n.trim(), kind}, Z('Item added','物品已加'));
+    if(id && confirm(Z('Add a photo for it now?','现在帮它加照片吗？'))) photo(id); }
+  /* photos: pick or take a picture → made small on the phone → uploaded → shown to Leaders at once */
+  function photo(id){ const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none'; document.body.appendChild(inp);
+    inp.onchange = async () => { const f = inp.files[0]; inp.remove(); if(!f) return; busy(1);
+      try { const blob = await shrinkPhoto(f), path = `${id}/${Date.now()}.jpg`;
+        const {error} = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, {contentType:'image/jpeg', upsert:false});
+        if(error) throw new Error(error.message);
+        busy(0); await act('shop_owner_photo_set', {item_id:id, path}, Z('Photo saved','照片已存'));
+      } catch(e){ busy(0); toast(Z('Photo not saved: ','照片没存到：') + e.message); } };
+    inp.click(); }
+  async function photoDel(id){ if(!confirm(Z('Remove this photo?','拿掉这张照片？'))) return; await act('shop_owner_photo_set', {item_id:id, path:null}, Z('Photo removed','照片已拿掉')); }
+  function moveItem(id){ const i = IT(id);
+    openModal(`<h2>${esc(i.label)}</h2><div class="hint" style="margin-bottom:10px">${Z('Move to another list','换到别的类')}</div><div class="farmgrid">${['FARM','PERSONAL','SHARED'].map(k => `<button class="farmcard" style="min-height:80px" ${i.kind===k?'disabled':''} onclick="Owner.saveMove('${id}','${k}')"><span style="font-size:26px">${KINDS[k].ico}</span><b style="font-size:16px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button></div>`); }
+  async function saveMove(id, k){ closeModal(); await act('shop_owner_item_move', {item_id:id, kind:k}, Z('Moved','已换类')); }
 
   /* ---------- Records (last 35 days) with void ---------- */
   function recordsPage(){
@@ -784,12 +847,12 @@ const Owner = (() => {
   async function voidRec(fn, id){ if(!confirm(Z('Void this record? It is taken out of Salary.','作废这笔？Salary 那笔也会作废。'))) return; await act(fn, {id}, Z('Voided','已作废')); }
 
   function render(){
-    $('#app').innerHTML = ({buy:buyPage, food:foodPage, hand:handPage, spot:spotPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
-    spotBar();
+    $('#app').innerHTML = ({buy:buyPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage}[ui.view] || home)();
+    spotBar(); medBar();
   }
   return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
-          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, voidRec, _state: () => ({B, ui, HO, SP})};
+          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, voidRec, _state: () => ({B, ui, HO, SP, MD})};
 })();
 
 
