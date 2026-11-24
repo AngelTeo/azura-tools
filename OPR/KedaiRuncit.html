@@ -92,7 +92,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.6;
+const APP_VERSION = 10.7;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -411,7 +411,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     }
     h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
     openModal(h); sheetBtn(); }
-  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else SH.rows[w] = {qty:1}; drawSheet(); }
+  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else { SH.rows[w] = {qty:1}; if(isTop(cartItem(SH.key))){ const ph = ((D.workers||[]).find(x => x.id === w)||{}).phone; if(ph) SH.rows[w].phone = ph; } } drawSheet(); }
   function shQty(w, d){ if(w === '_') SH.qty = Math.max(1, Math.min(999, SH.qty + d)); else SH.rows[w].qty = Math.max(1, Math.min(20, SH.rows[w].qty + d)); drawSheet(); }
   function shSet(w, k, v, redraw){ if(w === '_') SH[k] = v; else SH.rows[w][k] = v; if(redraw) drawSheet(); else sheetBtn(); }
   function shOk(){ if(!sheetOk()) return; const {key, ...c} = SH; ui.cart[key] = c; SH = null; closeModal(); render(); }
