@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Azura Delta Platform v8</title>
+<title>Azura Delta Platform v9</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
@@ -77,7 +77,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 16px 30px;font-size:11px;color:v
 <footer id="foot"></footer>
 
 <script>
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -152,14 +152,14 @@ async function doLogin(){
   $('b-in').disabled = true;
   const {error} = await sb.auth.signInWithPassword({email, password});
   $('b-in').disabled = false;
-  if(error) return amsg(/confirm/i.test(error.message) ? 'Please confirm your email first (check your inbox).' : /invalid/i.test(error.message) ? 'Wrong email or password.' : 'Sign-in failed: ' + error.message);
+  if(error){ return amsg(/confirm/i.test(error.message) ? 'Please confirm your email first (check your inbox).' : 'Sign-in failed. Please try again.'); }
   showApp();
 }
 async function doSignUp(){
   const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
   if(!email || password.length < 8) return amsg('Enter your email and a password of at least 8 characters.');
   const {data, error} = await sb.auth.signUp({email, password, options:{emailRedirectTo: REDIR()}});
-  if(error) return amsg('Could not set password: ' + error.message);
+  if(error){ return amsg('Sign-in failed. Please try again.'); }
   if(data.session) return showApp();
   amsg('We sent a confirmation email to ' + email + '. Open it, click the link, then sign in here.', true);
 }
@@ -167,7 +167,7 @@ async function doMagicLink(){
   const email = $('em').value.trim().toLowerCase();
   if(!email) return amsg('Please enter your email.');
   const {error} = await sb.auth.signInWithOtp({email, options:{shouldCreateUser:true, emailRedirectTo: REDIR()}});
-  if(error) return amsg('Could not send: ' + error.message);
+  if(error){ return amsg('Sign-in failed. Please try again.'); }
   amsg('Sign-in link sent to ' + email + '. Open it on this device.', true);
 }
 async function doLogout(){
@@ -183,8 +183,8 @@ async function showApp(){
   const {data:me, error:e1} = await sb.from('hub_app_user').select('display_name,role,position,status').eq('id', session.user.id).maybeSingle();
   if(e1){ $('app').style.display='block'; $('app').innerHTML = '<div class="card empty">Could not load your account. Please refresh.</div>'; return; }
   if(!me || me.status !== 'ACTIVE'){
-    const em = session.user.email; await sb.auth.signOut();
-    $('auth').style.display = 'block'; return amsg(em + ' does not have access. Please use your invited email.');
+    await sb.auth.signOut();
+    $('auth').style.display = 'block'; return amsg('Sign-in failed. Please try again.');
   }
   WHO = me.display_name || session.user.email; ROLE = me.role;
   $('auth').style.display = 'none'; $('app').style.display = 'block'; $('btn-logout').hidden = false;
@@ -252,6 +252,13 @@ function updateClock(){
   $('meta').textContent = (WHO ? WHO + ' · ' : '') + dd + ' · ' + tt;
 }
 setInterval(updateClock, 30000);
+(function(){
+  const q = location.search + location.hash;
+  if(/error(_description|_code)?=/i.test(q)){
+    history.replaceState(null, '', REDIR());
+    $('auth').style.display = 'block'; amsg('Sign-in failed. Please try again.');
+  }
+})();
 sb.auth.onAuthStateChange(ev => { if(ev === 'SIGNED_IN' && $('app').style.display === 'none') showApp(); });
 showApp();
 </script>
