@@ -57,6 +57,15 @@ button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
 .modetabs button{flex:1;min-height:46px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:800 16px system-ui;color:var(--ink);cursor:pointer}
 .modetabs button.on{background:var(--gold);border-color:var(--gold);color:#fff}
 .ico.photo img.fit{object-fit:contain;background:#fff;height:72px}
+.detin{flex-basis:100%;min-height:40px;margin-top:4px;font-size:15px}.food:has(.detin){flex-wrap:wrap}
+.food.pick{width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit}.food.pick .loc{line-height:1.45}
+.plusbig{min-width:44px;height:44px;border-radius:12px;background:var(--green);color:#fff;font:800 22px system-ui;display:flex;align-items:center;justify-content:center}
+.food.pick.chosen .plusbig{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+.shrow{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fff}.shrow.on{border-color:#87b69a;background:#f3f9f3}
+.shname{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:12px;font:700 16px system-ui;color:var(--ink);text-align:left}
+.tick{width:26px;height:26px;border-radius:8px;border:2px solid var(--green);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:900;flex:none}
+.shrow.on .tick{background:var(--green)}
+.shdet{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 12px 12px 48px}.shdet input{flex:1;min-width:140px;min-height:42px}
 body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .printonly{display:none}
 @media print{.printonly{display:block}.modetabs,.hero,.pills,.sectionhead,.card:not(#printarea .card),.hint,#hdr{display:none!important}#printarea .hint{display:block!important}body{background:#fff}}
@@ -67,7 +76,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -217,10 +226,13 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
  cancelQ:'Remove this item?',harv:'Lorry harvest',harvTodo:'Not sent · tap here',harvSent:n=>`Sent ${n} baskets · baskets not counted yet`,harvDone:n=>`Sent ${n} baskets`,harvOpen:'Open harvest form',harvNote:'This is the real form in use now. If you are only looking, do not send.',att:'Roll call today',attTodo:'Not done · tap here',attDone:'Done',work:'Work',half:'Half day',off:'Off',sick:'Sick',busy:'Personal',other:'Other',allWork:'✓ All working',attSave:'✓ Done',attLeft:n=>`${n} not marked`,pickWhy:'Pick a reason for Off',attSaved:'Roll call saved ✓',attEdit:'Edit',home:'🏠 Back to home',added:'Added ✓',tripN:n=>`Waited ${n-1} wk`,pickW:'Pick a worker first',card:'List card',share:'Save / Send WhatsApp',close:'Close',foodNote:'This is the current FoodOrder order screen, unchanged'}};
   const T2 = {
     my:{waitTitle:'📱 သူဌေး အတည်ပြုရန် စောင့်ပါ', waitText:'ဒီကုဒ်ကို သူဌေးကို ပြပါ', again:'ပြန်စစ်မယ်', locked:'🔒 ဒီဖုန်း သုံးလို့ မရတော့ပါ', lockedText:'သူဌေးကို ပြောပါ',
+        detailPh:'အသေးစိတ် (ဆိုဒ်၊ အရောင်…)', whoWants:'ဘယ်သူ လိုချင်လဲ? (အများကြီး ရွေးလို့ရ)', qty:'အရေအတွက်', ok:'OK', cancel:'မလုပ်တော့ဘူး', remove:'ဖယ်မယ်', add:'ထည့်', otherHead:'စာရင်းထဲ မပါတာ', already:'စာရင်းထဲ ရှိပြီးသား', phone:'ဖုန်းနံပါတ်', amount:'ငွေပမာဏ', needTop:'လူတိုင်း ဖုန်းနံပါတ်နဲ့ ငွေပမာဏ ဖြည့်ပါ', topTitle:'TOP UP · ဖုန်းနံပါတ်နဲ့ ငွေ',
         pinTitle:n=>`${n} · PIN ရိုက်ပါ`, pinWrong:n=>`PIN မှားတယ် · ${n} ကြိမ် ကျန်သေး`, pinNone:'သူဌေးကို PIN တောင်းပါ', farm:'ခြံ', err:'မရဘူး · ပြန်ကြိုးစားပါ', noWorkers:'ဒီခြံမှာ အလုပ်သမား မရှိသေးပါ'},
     zh:{waitTitle:'📱 等老板批准', waitText:'把这组码给老板看', again:'再检查一次', locked:'🔒 这支手机已经不能用', lockedText:'请找老板',
+        detailPh:'细节（尺码、颜色…）', whoWants:'谁要？（可以选几个）', qty:'数量', ok:'好', cancel:'取消', remove:'拿掉', add:'加', otherHead:'清单上没有的', already:'已经在清单上', phone:'电话号码', amount:'金额', needTop:'每个人都要填电话和金额', topTitle:'TOP UP · 电话和金额',
         pinTitle:n=>`${n} · 输入 PIN`, pinWrong:n=>`PIN 不对 · 还剩 ${n} 次`, pinNone:'请老板给你设 PIN', farm:'园', err:'没成功 · 再试一次', noWorkers:'这个园还没有工人'},
     en:{waitTitle:'📱 Waiting for the boss', waitText:'Show this code to the boss', again:'Check again', locked:'🔒 This phone can no longer be used', lockedText:'Please ask the boss',
+        detailPh:'Detail (size, colour…)', whoWants:'Who wants it? (pick one or more)', qty:'Quantity', ok:'OK', cancel:'Cancel', remove:'Remove', add:'Add', otherHead:'Not on the list', already:'already on the list', phone:'Phone number', amount:'Amount', needTop:'Fill phone and amount for each person', topTitle:'TOP UP · phone and amount',
         pinTitle:n=>`${n} · Type your PIN`, pinWrong:n=>`Wrong PIN · ${n} tries left`, pinNone:'Ask the boss to set your PIN', farm:'Farm', err:'Did not work · try again', noWorkers:'No workers on this farm yet'}};
   const TILES=[{"id": "farm_supplies", "order": 1, "icon": "🧤", "zh": {"title": "园里用品", "subtitle": "园里付款 · 不扣薪"}, "my": {"title": "ခြံသုံးပစ္စည်း", "subtitle": "ခြံက ပေးမယ် · လစာမဖြတ်ဘူး"}, "en": {"title": "Farm Supplies", "subtitle": "Farm pays · No salary deduction"}, "payment": "FARM", "salary_deduction": false}, {"id": "groceries", "order": 2, "icon": "🥬", "zh": {"title": "这次买菜", "dateLine": "26/11 前订好 · 30/11 送到", "subtitle": "全场平分 · 从薪水扣"}, "my": {"title": "စားစရာမှာမယ်", "dateLine": "26/11 အမီ မှာပါ · 30/11 ပို့မယ်", "subtitle": "အားလုံး မျှပေးမယ် · လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Groceries", "dateLine": "Order by 26/11 · Delivery 30/11", "subtitle": "Shared equally · Salary deduction"}, "payment": "ALL_WORKERS_EQUAL_SHARE", "salary_deduction": true}, {"id": "personal_items", "order": 3, "icon": "🛍️", "zh": {"title": "个人想买", "subtitle": "本人承担 · 从薪水扣"}, "my": {"title": "ကိုယ့်အတွက်", "subtitle": "ကိုယ့်လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Personal Items", "subtitle": "Own cost · Salary deduction"}, "payment": "NAMED_WORKER", "salary_deduction": true}, {"id": "shared_items", "order": 4, "icon": "🧺", "zh": {"title": "大家共用", "subtitle": "全场平分 · 从薪水扣"}, "my": {"title": "အတူသုံးဖို့", "subtitle": "အားလုံး မျှပေးမယ် · လစာထဲက ဖြတ်မယ်"}, "en": {"title": "Shared Items", "subtitle": "Shared equally · Salary deduction"}, "payment": "ALL_WORKERS_EQUAL_SHARE", "salary_deduction": true}];
 
@@ -310,7 +322,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     const tag = l.status === 'BOUGHT' ? `<span class="tag ok">${esc(t('bought').replace('🛍 ',''))}</span>` : l.status === 'REJECTED' ? `<span class="tag bad">${esc(t('nobuy').replace('✗ ',''))}</span>`
       : l.trip > 1 ? `<span class="tag ${l.trip > 2 ? 'bad' : 'warn'}">${esc(t('tripN')(l.trip))}</span>` : '';
     const canCancel = l.status === 'REQUESTED' && l.trip === 1 && l.kind !== 'FOOD' && (l.from_phone || MGR);
-    return `<div class="food" style="margin-bottom:8px">${ico}<div class="foodname"><b>${esc(name)} <span class="mut" style="font-weight:600">× ${l.qty}</span></b><small class="loc">${esc(who)}</small>${l.note ? `<small style="color:var(--red)">${esc(l.note)}</small>` : ''}</div>${tag}${canCancel ? `<button class="btn small light" style="min-width:40px" onclick="Leader.cancel('${l.id}')" aria-label="remove">✕</button>` : ''}</div>`;
+    return `<div class="food" style="margin-bottom:8px">${ico}<div class="foodname"><b>${esc(name)} <span class="mut" style="font-weight:600">× ${l.qty}</span></b><small class="loc">${esc(who)}</small>${l.detail ? `<small class="loc">📝 ${esc(l.detail)}</small>` : ''}${l.note ? `<small style="color:var(--red)">${esc(l.note)}</small>` : ''}</div>${tag}${canCancel ? `<button class="btn small light" style="min-width:40px" onclick="Leader.cancel('${l.id}')" aria-label="remove">✕</button>` : ''}</div>`;
   }
   function home(){
     const L = lines(), F = foodRound();
@@ -334,36 +346,67 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function openTile(id){ const k = TILE_KIND[id]; if(k === 'FOOD') startFood(); else startAdd(k); }
   function openHarvest(){ location.href = `${HARVEST_FORM}?farm=${encodeURIComponent(String(FARM).replace(/\s+/g,''))}&lock=1&lang=${LANG}`; }
 
-  /* ---------- add: who → which worker → what ---------- */
-  function startAdd(k){ ui = {view:'add', kind:k, picked:[], qty:{}, other:''}; render(); scrollTo(0,0); }
+  /* ---------- add: what → (personal) who → each person's quantity and detail ---------- */
+  function startAdd(k){ ui = {view:'add', kind:k, cart:{}, other:''}; SH = null; render(); scrollTo(0,0); }
+  const isTop = i => i && (i.code === 'TOP UP' || i.label === 'TOP UP');
+  const amtOk = x => /\d{6,}/.test(String(x.phone||'').replace(/\D/g,'')) && parseFloat(x.amt) > 0;
+  const cartItem = key => key.startsWith('c:') ? {id:null, label:key.slice(2), custom:true} : itemById(key);
+  let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
+  function cartSummary(key){ const c = ui.cart[key]; if(!c) return '';
+    if(ui.kind === 'PERSONAL') return Object.entries(c.rows).map(([w, r]) => `${(D.workers.find(x => x.id === w)||{}).name} ×${r.qty}${r.phone ? ' · ' + r.phone + ' · RM ' + r.amt : r.det ? ' · ' + r.det : ''}`).join('<br>');
+    return `×${c.qty}${c.det ? ' · ' + esc(c.det) : ''}`; }
   function addPage(){
     const k = ui.kind, list = items(k);
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
-      <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>`;
-    let n = 2;
-    if(k === 'PERSONAL'){
-      h += `<div class="sectionhead">${n++} · ${t('s2')}</div>` + ((D.workers||[]).length ? `<div class="pills" style="flex-wrap:wrap">${D.workers.map(w => `<button class="pill ${ui.picked.includes(w.id)?'on':''}" onclick="Leader.toggleW('${w.id}')">${esc(w.name)}</button>`).join('')}</div>` : `<div class="note warn">${t('noWorkers')}</div>`);
-    }
-    const dups = [];
-    for(const i of list) if(ui.qty[i.id] > 0){
-      if(k === 'PERSONAL') for(const w of ui.picked){ if(lines().some(l => l.status !== 'REJECTED' && l.worker_id === w && l.item_id === i.id)) dups.push(t('dup')((D.workers.find(x=>x.id===w)||{}).name, i.label)); }
-      else if(lines().some(l => l.status !== 'REJECTED' && l.kind === k && l.item_id === i.id)) dups.push(t('dup')(ct(k,'title'), i.label));
-    }
-    h += `<div class="sectionhead">${n} · ${t('s3')}</div><div class="itemsgrid">${list.map(i => `<div class="food ${ui.qty[i.id]?'chosen':''}">${icoBox(i, i.label)}<div class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}</div><div class="step"><button onclick="Leader.step('${i.id}',-1)">−</button><input class="count" readonly value="${ui.qty[i.id]||0}"><button class="plus" onclick="Leader.step('${i.id}',1)">+</button></div></div>`).join('')}</div>
-      <div class="field" style="margin-top:12px"><input placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"></div>
-      ${dups.length ? `<div class="note warn">⚠ ${dups.map(esc).join('<br>⚠ ')}</div>` : ''}<div class="bottom" id="bottombar"></div>`;
+      <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
+      <div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${list.map(i => { const on = !!ui.cart[i.id];
+        return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openSheet('${i.id}')">${icoBox(i, i.label)}<span class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}${on ? `<small class="loc">✓ ${cartSummary(i.id)}</small>` : ''}</span><span class="plusbig">${on ? '✎' : '+'}</span></button>`; }).join('')}</div>
+      <div class="sectionhead">${t('otherHead')}</div>
+      <div class="btnrow"><input class="grow" placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ ${t('add')}</button></div>
+      ${Object.keys(ui.cart).filter(x => x.startsWith('c:')).map(key => `<button class="food pick chosen" style="margin-top:8px;width:100%" onclick="Leader.openSheet(${esc(JSON.stringify(key))})"><span class="ico">📦</span><span class="foodname"><b>${esc(key.slice(2))}</b><small class="loc">✓ ${cartSummary(key)}</small></span><span class="plusbig">✎</span></button>`).join('')}
+      <div class="bottom" id="bottombar"></div>`;
     return h;
   }
-  function toggleW(w){ ui.picked = ui.picked.includes(w) ? ui.picked.filter(x => x !== w) : [...ui.picked, w]; render(); }
-  function step(id, d){ ui.qty[id] = Math.max(0, Math.min(ui.kind === 'PERSONAL' ? 20 : 999, (ui.qty[id]||0) + d)); render(); }
-  function setOther(v){ ui.other = v; drawBottom(); }
-  function addCount(){ const per = ui.kind === 'PERSONAL' ? ui.picked.length : 1; return (Object.values(ui.qty).filter(q => q > 0).length + (ui.other.trim() ? 1 : 0)) * per; }
+  function setOther(v){ ui.other = v; }
+  function openOther(){ const n = ui.other.trim().toUpperCase().replace(/\s+/g, ' '); if(!n) return; ui.other = ''; openSheet('c:' + n); }
+  function openSheet(key){ const c = ui.cart[key];
+    SH = c ? JSON.parse(JSON.stringify({key, ...c})) : {key, rows:{}, qty:1, det:''}; drawSheet(); }
+  function sheetOk(){ const it = cartItem(SH.key);
+    if(ui.kind !== 'PERSONAL') return SH.qty > 0;
+    const rs = Object.values(SH.rows); return rs.length > 0 && rs.every(r => r.qty > 0 && (!isTop(it) || amtOk(r))); }
+  function sheetBtn(){ const b = document.getElementById('shok'); if(b) b.disabled = !sheetOk(); }
+  function drawSheet(){ const it = cartItem(SH.key), top = isTop(it);
+    const stepper = (w, q) => `<span class="step"><button onclick="Leader.shQty('${w}',-1)">−</button><input class="count" readonly value="${q}"><button class="plus" onclick="Leader.shQty('${w}',1)">+</button></span>`;
+    let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>`;
+    if(ui.kind === 'PERSONAL'){
+      h += `<div class="sectionhead" style="margin-top:0">${t('whoWants')}</div>`;
+      h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
+        return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
+          ${r ? `<div class="shdet">${top ? `<input inputmode="tel" placeholder="${esc(t('phone'))}" value="${esc(r.phone||'')}" oninput="Leader.shSet('${w.id}','phone',this.value)">
+              <span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,50].map(a => `<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span>
+              <input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,50].map(String).includes(String(r.amt)) ? '' : esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`
+            : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
+        : `<div class="note warn">${t('noWorkers')}</div>`;
+    } else {
+      h += `<div class="titleline"><span>${t('qty')}</span>${stepper('_', SH.qty)}</div><div class="field"><input placeholder="${esc(t('detailPh'))}" value="${esc(SH.det||'')}" oninput="Leader.shSet('_','det',this.value)"></div>`;
+    }
+    h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
+    openModal(h); sheetBtn(); }
+  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else SH.rows[w] = {qty:1}; drawSheet(); }
+  function shQty(w, d){ if(w === '_') SH.qty = Math.max(1, Math.min(999, SH.qty + d)); else SH.rows[w].qty = Math.max(1, Math.min(20, SH.rows[w].qty + d)); drawSheet(); }
+  function shSet(w, k, v, redraw){ if(w === '_') SH[k] = v; else SH.rows[w][k] = v; if(redraw) drawSheet(); else sheetBtn(); }
+  function shOk(){ if(!sheetOk()) return; const {key, ...c} = SH; ui.cart[key] = c; SH = null; closeModal(); render(); }
+  function shDel(){ delete ui.cart[SH.key]; SH = null; closeModal(); render(); }
+  function cartReqs(){ const reqs = [];
+    for(const [key, c] of Object.entries(ui.cart)){ const it = cartItem(key), base = it.custom ? {custom_name: it.label} : {item_id: it.id};
+      if(ui.kind === 'PERSONAL') for(const [w, r] of Object.entries(c.rows)) reqs.push({...base, workers:[w], qty: isTop(it) ? 1 : r.qty, detail: isTop(it) ? `${String(r.phone).trim()} · RM ${parseFloat(r.amt)}` : ((r.det||'').trim() || undefined)});
+      else reqs.push({...base, qty:c.qty, detail:(c.det||'').trim() || undefined}); }
+    return reqs; }
+  function addCount(){ return cartReqs().length; }
   async function commitAdd(){
-    const reqs = Object.entries(ui.qty).filter(([,q]) => q > 0).map(([id,q]) => ({item_id:id, qty:q}));
-    if(ui.other.trim()) reqs.push({custom_name: ui.other.trim(), qty:1});
-    busy(1);
+    const reqs = cartReqs(); if(!reqs.length) return; busy(1);
     try {
-      for(const r of reqs) await call('shop_request', {device_key: deviceKey(), farm: FARM, client_id: uuid(), kind: ui.kind, ...r, workers: ui.kind === 'PERSONAL' ? ui.picked : undefined});
+      for(const r of reqs) await call('shop_request', {device_key: deviceKey(), farm: FARM, client_id: uuid(), kind: ui.kind, ...r});
       await load(); ui = {view:'done', what:'add'};
     } catch(e){ toast(t('err') + ' · ' + e.message); try { await load(); } catch(x){} }
     busy(0); render(); scrollTo(0,0);
@@ -452,7 +495,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       const it = itemById(l.item_id);
       g.fillStyle = '#f4f3ec'; rr(36,y+14,88,88,14); g.fill(); g.font = `48px 'Noto Color Emoji',sans-serif`; g.textAlign = 'center'; g.fillText(l.kind === 'FOOD' ? (it.icon||'🥬') : icon(l.item), 80, y+76); g.textAlign = 'left';
       g.fillStyle = '#1f2937'; g.font = F(800,34); g.fillText(l.item, 146, y+52);
-      const w1 = l.kind === 'PERSONAL' ? l.worker : l.kind === 'FOOD' ? ((FO_IN.my||{})[it.code] || tileOf('FOOD').my.title) : tileOf(l.kind).my.title;
+      const w1 = (l.kind === 'PERSONAL' ? l.worker : l.kind === 'FOOD' ? ((FO_IN.my||{})[it.code] || tileOf('FOOD').my.title) : tileOf(l.kind).my.title) + (l.detail ? ' · ' + l.detail : '');
       const z1 = l.kind === 'PERSONAL' ? '' : l.kind === 'FOOD' ? ((FO_IN.zh||{})[it.code] || '') : tileOf(l.kind).zh.title;
       g.font = F(700,24); g.fillStyle = '#4b5563'; g.fillText(w1, 146, y+90); if(z1){ const ww = g.measureText(w1).width; g.font = F(400,19); g.fillStyle = '#9ca3af'; g.fillText(z1, 156+ww, y+90); }
       g.fillStyle = C; g.font = F(900,46); g.textAlign = 'right'; g.fillText(`× ${l.qty}`, 826, y+76);
@@ -479,7 +522,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     if(ui.view === 'att'){ const is = attIssue(); b.innerHTML = `<button class="btn primary" ${is?'disabled':''} onclick="Leader.saveAtt()">${esc(is || t('attSave'))}</button>`; return; }
     if(ui.view === 'food'){ const n = Object.values(ui.qty).filter(q => q > 0).length; const had = lines().some(l => l.kind === 'FOOD' && l.status === 'REQUESTED');
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n || had ? '' : 'disabled'} onclick="Leader.commitFood()">${esc(t('addFood')(n))}</button>`; return; }
-    if(ui.view === 'add'){ const n = addCount(), needW = ui.kind === 'PERSONAL' && !ui.picked.length;
+    if(ui.view === 'add'){ const n = addCount(), needW = false;
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n && !needW ? '' : 'disabled'} onclick="Leader.commitAdd()">${esc(needW ? t('pickW') : t('addN')(n))}</button>`; }
   }
   function render(){
@@ -492,7 +535,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();
   }
   function goHome(){ ui = {view:'home'}; render(); scrollTo(0,0); }
-  return {start, startManager, setLang, pinKey, pickFarm, cancel, openTile, openHarvest, toggleW, step, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start, startManager, setLang, openSheet, openOther, shW, shQty, shSet, shOk, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
@@ -594,13 +637,17 @@ const Owner = (() => {
     let kind = '';
     for(const x of g){ if(x.kind !== kind){ kind = x.kind; h += `<div class="sectionhead">${KINDS[kind].ico} ${KINDS[kind].name}</div>`; }
       const old = Math.max(...x.lines.map(l => l.trip));
-      h += `<div class="food" style="margin-bottom:8px">${icoBox(IT(x.item_id), x.name)}<div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b><small class="loc">${byFarm(x.lines)}</small>${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
+      h += `<div class="food" style="margin-bottom:8px">${icoBox(IT(x.item_id), x.name)}<div class="foodname"><b>${esc(x.name)} <span class="mut">× ${sumQty(x.lines)}</span></b>${lineList(x.lines)}${old>1?`<small style="color:var(--${old>2?'red':'warn'})">${Z(`oldest waited ${old-1} wk`, `最久的已等 ${old-1} 个礼拜`)}</small>`:''}</div><button class="btn small primary" onclick="Owner.buySheet('${esc(x.key)}')">${Z('Bought…','买了…')}</button></div>`; }
     if(!g.length) h += `<div class="empty">${Z('Nothing to buy. 👍','没有要买的。👍')}</div>`;
     const left = toBuy().length;
     return h + `<div class="bottom" id="bottombar"><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
   }
   function alc(){ ALC = !ALC; lsSet('runcit_alcohol', ALC); render(); }
-  function copyList(){ const txt = '🛒 Kedai Runcit · ' + ddm(nextTrip()) + '\n' + groups(toBuy()).map(x => `${x.name} × ${sumQty(x.lines)}  (${byFarm(x.lines)})`).join('\n');
+  /* one row per line when it matters (who it is for, size, phone + amount); otherwise farm totals */
+  const lineTxt = l => `${l.farm}${l.kind === 'PERSONAL' ? ' · ' + l.worker : ''}${l.detail ? ' · ' + l.detail : ''} × ${l.qty}`;
+  const needRows = ls => ls.some(l => l.detail || l.kind === 'PERSONAL');
+  function lineList(ls){ return needRows(ls) ? ls.map(l => `<small class="loc">${l.detail ? '📝 ' : ''}${esc(lineTxt(l))}</small>`).join('') : `<small class="loc">${byFarm(ls)}</small>`; }
+  function copyList(){ const txt = '🛒 Kedai Runcit · ' + ddm(nextTrip()) + '\n' + groups(toBuy()).map(x => needRows(x.lines) ? `${x.name} × ${sumQty(x.lines)}\n` + x.lines.map(l => '   - ' + lineTxt(l)).join('\n') : `${x.name} × ${sumQty(x.lines)}  (${byFarm(x.lines)})`).join('\n');
     try { navigator.clipboard.writeText(txt); } catch(e){} toast(Z('Copied','已复制')); }
   function buySheet(key, pool){ const src = pool === 'food' ? food().filter(l => l.status === 'REQUESTED') : toBuy(); const lines = src.filter(l => lkey(l) === key); if(!lines.length) return;
     BS = {key, pool, ticks:Object.fromEntries(lines.map(l => [l.id, true])), price: IT(lines[0].item_id).default ?? null, by: ME()}; drawBuy(); }
@@ -610,7 +657,7 @@ const Owner = (() => {
     openModal(`<h2>${ico(x)} ${esc(lname(x))}${it.unit ? ` <span class="mut" style="font-size:14px">${esc(it.unit)}</span>` : ''}</h2>
       <div class="field"><label>${Z('Actual price per unit (RM)','实际单价 (RM)')}</label><div class="pills" style="flex-wrap:wrap">${(it.prices||[]).map(p => `<button class="pill ${BS.price==p?'on':''}" onclick="Owner.bsSet('price',${p})">${p}</button>`).join('')}</div>
         <input id="bsprice" type="number" inputmode="decimal" step="0.01" value="${BS.price ?? ''}" placeholder="${Z('Price','价钱')}" oninput="Owner.bsPrice(this.value)"></div>
-      <div class="field"><label>${Z('Bought for (untick = not this trip, stays on the list)','买给谁（不勾 = 这趟不买，留在清单上）')}</label>${lines.map(l => `<label class="checkrow line"><span style="display:flex;gap:10px;align-items:center"><input type="checkbox" ${BS.ticks[l.id]?'checked':''} onchange="Owner.bsTick('${l.id}',this.checked)"> <span><b>${l.farm}</b> · ${esc(who(l))} × ${l.qty} ${waitTag(l)}</span></span>${l.kind==='FOOD'?'':`<button class="btn small light" onclick="event.preventDefault();Owner.nobuy('${l.id}')">${Z("Won't buy",'不买')}</button>`}</label>`).join('')}</div>
+      <div class="field"><label>${Z('Bought for (untick = not this trip, stays on the list)','买给谁（不勾 = 这趟不买，留在清单上）')}</label>${lines.map(l => `<label class="checkrow line"><span style="display:flex;gap:10px;align-items:center"><input type="checkbox" ${BS.ticks[l.id]?'checked':''} onchange="Owner.bsTick('${l.id}',this.checked)"> <span><b>${l.farm}</b> · ${esc(who(l))} × ${l.qty} ${waitTag(l)}${l.detail ? `<br><span class="mut">📝 ${esc(l.detail)}</span>` : ''}</span></span>${l.kind==='FOOD'?'':`<span class="btnrow"><button class="btn small light" onclick="event.preventDefault();closeModal();Owner.editLine('${l.id}')">✎ ${Z('Edit','改')}</button><button class="btn small light" onclick="event.preventDefault();Owner.nobuy('${l.id}')">${Z("Won't buy",'不买')}</button></span>`}</label>`).join('')}</div>
       <div class="field"><label>${Z('Paid by','谁付钱')}</label><div class="pills">${BUYERS.map(b => `<button class="pill ${BS.by===b?'on':''}" onclick="Owner.bsSet('by','${b}')">${b}</button>`).join('')}</div></div>
       <div class="line totrow" style="padding:10px;border-radius:10px"><span>${q} × ${Z('price','单价')}</span><strong id="bstot">${BS.price ? RM(BS.price*q) : '—'}</strong></div>
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" id="bsok" ${n.length && BS.price > 0 ? '' : 'disabled'} onclick="Owner.confirmBuy()">${Z('✓ Bought','✓ 买了')} (${n.length})</button></div>`);
@@ -670,7 +717,7 @@ const Owner = (() => {
       const money = l.kind === 'PERSONAL' ? Z(`Deduct from salary: ${RM(tot)}`, `从薪水扣：${RM(tot)}`) : l.kind === 'FARM' ? Z(`Farm cost ${RM(tot)} · no deduction`, `园里开销 ${RM(tot)} · 不扣薪`)
         : l.kind === 'FOOD' ? Z(`${RM(tot)} · part of Groceries ${RM(foodTot)}`, `${RM(tot)} · 买菜合计 ${RM(foodTot)} 的一部分`) : `${RM(tot)} ÷ ${s.ws.length} = ${s.ws.length ? RM(tot/s.ws.length) : '—'} ${Z('each','每人')}`;
       h += `<div class="food ${s.on?'chosen':''}" style="margin-bottom:8px;flex-wrap:wrap"><input type="checkbox" style="width:24px;height:24px;min-height:24px" ${s.on?'checked':''} onchange="Owner.hoTick('${l.id}',this.checked)">${icoBox(IT(l.item_id), lname(l))}
-        <div class="foodname"><b>${esc(lname(l))} × ${l.qty}</b><small class="loc">${esc(who(l))}</small><small>${money} · ${Z('bought','买于')} ${dm(l.bought_at)}${l.buy.paid_by ? Z(' by ',' · 付钱：') + esc(l.buy.paid_by) : ''}</small></div><button class="btn small light" onclick="Owner.unbuy('${l.id}')">${Z('Undo','撤回')}</button>
+        <div class="foodname"><b>${esc(lname(l))} × ${l.qty}</b><small class="loc">${esc(who(l))}${l.detail ? ' · 📝 ' + esc(l.detail) : ''}</small><small>${money} · ${Z('bought','买于')} ${dm(l.bought_at)}${l.buy.paid_by ? Z(' by ',' · 付钱：') + esc(l.buy.paid_by) : ''}</small></div><button class="btn small light" onclick="Owner.unbuy('${l.id}')">${Z('Undo','撤回')}</button>
         ${l.kind === 'SHARED' ? shareBox(l.id, ws) : ''}</div>`; }
     const fl = ls.filter(l => l.kind === 'FOOD');
     if(fl.length){ const s = HO[fl[0].id]; h += `<div class="card" style="padding:12px"><b>🥬 ${Z('Groceries','买菜')} ${RM(foodTot)} ÷ ${s.ws.length} = ${s.ws.length ? RM(foodTot/s.ws.length) : '—'} ${Z('each','每人')}</b><div class="hint">${Z('Untick anyone who does not share food.','不分伙食的人不要勾。')}</div>${shareBox(fl[0].id, ws, true)}</div>`; }
@@ -702,11 +749,11 @@ const Owner = (() => {
     h += SP.kind ? `<div class="sectionhead">2 · ${Z('What kind','哪一种')}</div><div class="food chosen"><div class="ico">${KINDS[SP.kind].ico}</div><div class="foodname"><b>${KINDS[SP.kind].name}</b><small>${KINDS[SP.kind].sub}</small></div><button class="btn small" onclick="Owner.sp({kind:null,item:null,worker:null})">${Z('Change','换')}</button></div>`
       : `<div class="sectionhead">2 · ${Z('What kind','哪一种')}</div><div class="farmgrid">${K.map(k => `<button class="farmcard" style="min-height:90px" onclick="Owner.sp({kind:'${k}',item:null,worker:null,ws:${k==='SHARED'?'null':'null'}})"><span style="font-size:30px">${KINDS[k].ico}</span><b style="font-size:17px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>`;
     if(!SP.kind) return h;
-    let n = 3;
-    if(SP.kind === 'PERSONAL'){ h += `<div class="sectionhead">3 · ${Z('Who','谁')}</div><div class="pills" style="flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.worker===w.id?'on':''}" onclick="Owner.sp({worker:'${w.id}'})">${esc(w.name)}</button>`).join('')}</div>`; n = 4; }
     if(SP.kind === 'SHARED'){ if(!SP.ws) SP.ws = workers(SP.farm).map(w => w.id); }
-    h += `<div class="sectionhead">${n} · ${Z('Item','物品')}</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
+    h += `<div class="sectionhead">3 · ${Z('Item','物品')}</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
       <div class="field" style="margin-top:8px"><input placeholder="${Z('Other item (type it)','其他物品（自己打）')}" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>
+      <div class="field"><input placeholder="${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}" value="${esc(SP.detail||'')}" oninput="Owner.spDet(this.value)"></div>
+      ${SP.kind === 'PERSONAL' ? `<div class="sectionhead">4 · ${Z('Who','谁')}</div><div class="pills" style="flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.worker===w.id?'on':''}" onclick="Owner.sp({worker:'${w.id}'})">${esc(w.name)}</button>`).join('')}</div>` : ''}
       <div class="titleline" style="margin-top:6px"><span>${Z('Quantity','数量')}</span><div class="step"><button onclick="Owner.sp({qty:Math.max(1,${SP.qty}-1)})">−</button><input class="count" readonly value="${SP.qty}"><button class="plus" onclick="Owner.sp({qty:${SP.qty}+1})">+</button></div></div>
       <div class="field"><label>${Z('Price per unit (RM) — needed for "took it now"','单价 (RM) —「已经拿了」要填')}</label><input type="number" inputmode="decimal" step="0.01" value="${SP.price ?? ''}" oninput="Owner.spPrice(this.value)"></div>
       ${SP.kind === 'SHARED' ? `<div class="field"><label>${Z('Shared by (for "took it now")','谁分（「已经拿了」用）')}</label>${shareSp()}</div>` : ''}
@@ -716,6 +763,7 @@ const Owner = (() => {
   function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
   function sp(o){ SP = {...SP, ...o}; render(); }
   function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
+  function spDet(v){ SP.detail = v; }
   function spCustom(v){ SP.custom = v.toUpperCase(); SP.item = null; spotBar(); }
   function spPrice(v){ SP.price = parseFloat(v) || null; spotBar(); }
   function spotReady(){ return SP && SP.farm && SP.kind && (SP.item || SP.custom.trim()) && (SP.kind !== 'PERSONAL' || SP.worker); }
@@ -724,11 +772,26 @@ const Owner = (() => {
   async function spot(mode){
     const p = {farm:SP.farm, kind:SP.kind, worker_id: SP.kind === 'PERSONAL' ? SP.worker : undefined, qty:SP.qty, mode};
     if(SP.item) p.item_id = SP.item; else p.custom_name = SP.custom.trim();
+    if((SP.detail||'').trim()) p.detail = SP.detail.trim();
     if(mode === 'TAKEN'){ p.price = SP.price; p.paid_by = ME(); if(SP.kind === 'SHARED') p.share_ids = SP.ws;
       if(!confirm(Z(`Write ${RM(SP.price*SP.qty)} now?`, `马上记 ${RM(SP.price*SP.qty)}？`))) return; }
     const r = await act('shop_owner_spot', p, mode === 'TAKEN' ? Z('Written now','已经记了') : Z('Added to the next trip — the Leader sees it too','已加进下一趟 — 工头也看得到'));
-    if(r){ SP = {farm:SP.farm, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null}; render(); }
+    if(r){ SP = {farm:SP.farm, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null, detail:''}; render(); }
   }
+
+  /* ---------- edit a line not bought yet: detail, farm, kind, worker ---------- */
+  let ED = null;
+  function editLine(id){ const l = B.lines.find(x => x.id === id); if(!l) return; ED = {id, detail:l.detail || '', farm:l.farm, kind:l.kind, worker:l.worker_id}; drawEdit(); }
+  function drawEdit(){ const l = B.lines.find(x => x.id === ED.id);
+    openModal(`<h2>✎ ${esc(lname(l))} × ${l.qty}</h2>
+      <div class="field"><label>${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}</label><input id="eddet" maxlength="80" value="${esc(ED.detail)}" oninput="Owner.edSet('detail',this.value,1)"></div>
+      <div class="field"><label>${Z('Farm','园')}</label><div class="pills">${FARMS.map(f => `<button class="pill ${ED.farm===f?'on':''}" onclick="Owner.edSet('farm','${f}')">${f}</button>`).join('')}</div></div>
+      <div class="field"><label>${Z('Kind','类别')}</label><div class="pills" style="flex-wrap:wrap">${['FARM','PERSONAL','SHARED'].map(k => `<button class="pill ${ED.kind===k?'on':''}" onclick="Owner.edSet('kind','${k}')">${KINDS[k].ico} ${KINDS[k].name}</button>`).join('')}</div><div class="hint">${KINDS[ED.kind].sub}</div></div>
+      ${ED.kind === 'PERSONAL' ? `<div class="field"><label>${Z('For whom','给谁')}</label><div class="pills" style="flex-wrap:wrap">${workers(ED.farm).map(w => `<button class="pill ${ED.worker===w.id?'on':''}" onclick="Owner.edSet('worker','${w.id}')">${esc(w.name)}</button>`).join('')}</div></div>` : ''}
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" ${ED.kind === 'PERSONAL' && !workers(ED.farm).some(w => w.id === ED.worker) ? 'disabled' : ''} onclick="Owner.saveEdit()">${Z('Save','存')}</button></div>`); }
+  function edSet(k, v, quiet){ ED[k] = v; if(k === 'farm' && !workers(v).some(w => w.id === ED.worker)) ED.worker = null; if(!quiet) drawEdit(); }
+  async function saveEdit(){ const p = {id:ED.id, detail:ED.detail.trim(), farm:ED.farm, kind:ED.kind}; if(ED.kind === 'PERSONAL') p.worker_id = ED.worker;
+    closeModal(); await act('shop_owner_line_edit', p, Z('Saved','已存')); }
 
   /* ---------- Doctor / medicine (managers only items: UBAT, DOCTOR …) ---------- */
   let MD = null;
@@ -852,7 +915,7 @@ const Owner = (() => {
   }
   return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
-          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, voidRec, _state: () => ({B, ui, HO, SP, MD})};
+          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
 
 
