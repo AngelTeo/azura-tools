@@ -161,7 +161,7 @@ function leadOf(S,p){const s=supplierOf(S,p);const n=Number(s&&s.leadDays);retur
 /* purchase plan: H = cycle + safety days. returns {moves, buys:[{pid,packs,alloc,shortBase}], perFarm} */
 /* ordered-not-received POs, in base units of the slot they were bought for (it.for = original pid when a substitute was ordered) */
 function onOrder(S){const o={};const ratio=(orig,alt)=>{for(const r of S.recipe||[])for(const m of MIXES)for(const it of (r.mixes&&r.mixes[m])||[]){const ch=[{pid:it.pid,dose:Number(it.dose)},...(it.alts||[]).map(a=>({pid:a.pid,dose:Number(a.dose)||Number(it.dose)}))];const a=ch.find(c=>c.pid===orig),b=ch.find(c=>c.pid===alt);if(a&&b&&a.dose&&b.dose)return b.dose/a.dose}return 1};
-  for(const po of S.po||[]){if(po.status!=='ordered')continue;for(const it of po.items||[]){if(it.cancelled)continue;const p=S.products.find(x=>x.id===it.pid);const pb=packBase(p);if(!pb||!(Number(it.packs)>0))continue;const k=it.for||it.pid;const q=Number(it.packs)*pb/(it.for?ratio(it.for,it.pid):1);o[k]=(o[k]||0)+q}}
+  for(const po of S.po||[]){if(po.status==='cancelled')continue;for(const it of po.items||[]){if(it.cancelled)continue;const p=S.products.find(x=>x.id===it.pid);const pb=packBase(p);const owe=Number(it.packs||0)-Number(it.recvPacks||0);if(!pb||!(owe>1e-6))continue;const k=it.for||it.pid;const q=owe*pb/(it.for?ratio(it.for,it.pid):1);o[k]=(o[k]||0)+q}}
   return o}
 function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safety)||7);const t=todayStr();const {st}=stockAt(S,t,{last:'recorded'});
   const P=pool(S);const res={};const end={};
