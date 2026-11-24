@@ -33,16 +33,16 @@ Download Supplier Top Up Statement (.xlsx) 是正式对账出口，删除复制 
 当前先按勾选的整笔充值全额结算；供应商部分支付单笔如何分配需另行确认，不擅自设规则。
 
 ## 4. 统一付款组件（已确认设计，未上线）
-Management Pay / 管理层垫付：必须选 AT、EX、LZ 三个之一。
+Management Pay / 管理层垫付：必须选 TBF、LEX、LZF 三个之一。
 Petty Cash / 公司备用金：公司直接支付，不产生个人待报销余额。
 使用实际付款来源/付款人，不把操作人自动等同于付款人；记录登录操作人及时间。
-前端现有历史名称 Teo、EX、Mr. Low；新展示统一 AT、EX、LZ；上线前核对历史身份映射及数据库接受值，禁止改写或丢失旧记录。
+前端历史名称 Teo、EX、Mr. Low；已确认统一简称映射：AT → TBF，LZ → LZF，EX → LEX。所有新界面、付款人选项、报销及导出使用 TBF、LEX、LZF；上线前核对历史身份与数据库接受值，保留原始记录，不直接改写历史付款数据。
 适用于全部实际付款：Personal Items、Farm Supplies、Shared Items、Food Order、MGMT Top Up、Supplier Top Up 实际结算、Medical、At the Farm。
 
 ## 5. Petty Cash Statement & Reimburse（已确认设计，未上线）
 在 Management 首页新增独立 Petty Cash 入口，保留其他已确认首页布局。
-实际付款自动入账一次；管理者垫付自动进入对应 AT/EX/LZ 待报销；公司备用金直接支出。
-按 AT/EX/LZ、付款来源、日期、报销状态筛选；显示项目、日期、金额、付款人、待报销/已报销。
+实际付款自动入账一次；管理者垫付自动进入对应 TBF/LEX/LZF 待报销；公司备用金直接支出。
+按 TBF/LEX/LZF、付款来源、日期、报销状态筛选；显示项目、日期、金额、付款人、待报销/已报销。
 Reimburse：选择一位管理者，勾选其未报销记录或全选，显示合计，确认实际报销日期及凭证/参考；保存报销批次和操作人，状态更新。已报销记录不能再被选中，未报销跨月保留。
 Download Petty Cash Statement (.xlsx)，导出内部付款及报销明细，按人/日期/状态筛选。
 公司偿还垫付款不是第二笔采购费用，区分原采购付款、个人垫付款偿还与公司现金流。
