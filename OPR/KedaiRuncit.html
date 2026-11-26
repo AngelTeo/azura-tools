@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -230,6 +230,31 @@ function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&Strin
 function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
 function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
 
+function fixedVariant(it){
+ if(!it||it.custom)return null;
+ const norm=x=>String(x||'').trim().toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
+ for(const n of [norm(it.label),norm(it.code)]){
+  if(/^(?:USB )?CABLE (?:MICRO USB|MICRO)$/.test(n)||n==='MICRO USB CABLE')return {group:'CABLE',spec:'Micro USB'};
+  if(/^(?:USB )?CABLE (?:TYPE C|USB C)$/.test(n)||n==='TYPE C CABLE'||n==='USB C CABLE')return {group:'CABLE',spec:'Type-C'};
+  if(/^(?:USB )?CHARGER (?:USB A|TYPE A)$/.test(n))return {group:'CHARGER',spec:'USB-A'};
+  if(/^(?:USB )?CHARGER (?:USB C|TYPE C)$/.test(n))return {group:'CHARGER',spec:'Type-C'};
+ }
+ return null;
+}
+function catalogEntries(list){
+ const gs=new Map(),out=[];
+ for(const it of list){const v=fixedVariant(it);if(v){if(!gs.has(v.group))gs.set(v.group,[]);gs.get(v.group).push(it);}}
+ for(const it of list){const v=fixedVariant(it),m=v&&gs.get(v.group);
+  // Group only genuine, unique variants. Keep duplicates visible for a manager to resolve.
+  if(m&&m.length===2&&new Set(m.map(x=>fixedVariant(x).spec)).size===2){
+   if(!out.some(x=>x.group===v.group))out.push({group:v.group,label:v.group,variants:m.slice().sort((a,b)=>fixedVariant(a).spec.localeCompare(fixedVariant(b).spec))});
+  }else out.push({item:it});
+ }
+ return out;
+}
+function variantPickerHTML(group, variants, onpick, onclose, marked){
+ return `<h2>${esc(group)}</h2><div class="itemsgrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${variants.map(it=>{const v=fixedVariant(it),on=marked&&marked(it.id);return `<button class="food pick ${on?'chosen':''}" style="display:flex;flex-direction:column;align-items:center;min-width:0;padding:10px;gap:8px;text-align:center" data-id="${esc(it.id)}" onclick="${onpick}(this.dataset.id)"><div style="width:100%;display:flex;justify-content:center">${icoBox(it,it.label)}</div><b style="font-size:15px">${esc(v.spec)}</b>${on?'<small>✓</small>':''}</button>`;}).join('')}</div><div class="modalfoot"><button class="btn" onclick="${onclose}()">${esc(group)} · ×</button></div>`;
+}
 function personalSpecs(it){
  if(!it||it.custom)return [];
  const norm=x=>String(x||'').trim().toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
@@ -238,8 +263,8 @@ function personalSpecs(it){
  const any=a=>codes.some(x=>a.includes(x));
  if(any(['CABLE','USB CABLE','CHARGING CABLE','PHONE CABLE','USB CHARGING CABLE']))return ['Type-C','Micro USB'];
  if(any(['CHARGER','USB CHARGER','PHONE CHARGER','USB ADAPTER','CHARGING ADAPTER']))return ['USB-A','Type-C'];
- if(any(['BAJU','SELUAR']))return ['S','M','L','XL','2XL','3XL'];
- if(any(['SELIPAR','KASUT']))return ['37','38','39','40','41','42','43','44','45','46'];
+ if(any(['BAJU','SELUAR','PANTS SHORT','PANTS LONG','PANTS','SHORTS','SHIRT','T SHIRT']))return ['S','M','L','XL','2XL','3XL'];
+ if(any(['SELIPAR','KASUT','SLIPPER','SLIPPERS','FLIP FLOP','FLIP FLOPS']))return ['37','38','39','40','41','42','43','44','45','46'];
  return [];
 }
 
@@ -394,12 +419,19 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   const cartItem = key => key.startsWith('c:') ? {id:null, label:key.slice(2), custom:true} : itemById(key);
   let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
   function cartSummary(key){const c=ui.cart[key];if(!c)return '';if(ui.kind==='PERSONAL')return Object.entries(c.rows).map(([w,r])=>`${esc((D.workers.find(x=>x.id===w)||{}).name||'?')} ×${r.qty}${r.phone?' · '+esc(r.phone)+(r.telco?' · '+esc(r.telco):'')+' · RM '+esc(r.amt):r.det?' · '+esc(r.det):''}`).join('<br>');return `×${c.qty}${c.det?' · '+esc(c.det):''}`;}
+  function leaderCatalogCards(list,k){
+ const entries=k==='PERSONAL'?catalogEntries(list):list.map(item=>({item}));
+ return entries.map(e=>{
+ if(e.group){const vs=e.variants,on=vs.some(i=>ui.cart[i.id]);return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openVariantGroup('${e.group}')"><span style="display:flex;flex:none;gap:2px">${vs.map(i=>icoBox(i,i.label,true)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${vs.map(i=>esc(fixedVariant(i).spec)).join(' / ')}</small>${on?vs.filter(i=>ui.cart[i.id]).map(i=>`<small class="loc">✓ ${esc(fixedVariant(i).spec)} · ${cartSummary(i.id)}</small>`).join(''):''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;}
+ const i=e.item,on=!!ui.cart[i.id];return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openSheet('${i.id}')">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label)?`<small style="color:var(--warn)">${t('alcohol')}</small>`:''}${on?`<small class="loc">✓ ${cartSummary(i.id)}</small>`:''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;
+ }).join('');
+}
+  function openVariantGroup(group){const e=catalogEntries(items(ui.kind)).find(x=>x.group===group);if(!e)return;openModal(variantPickerHTML(group,e.variants,'Leader.openSheet','closeModal',id=>!!ui.cart[id]));}
   function addPage(){
     const k = ui.kind, list = items(k);
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
-      <div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${list.map(i => { const on = !!ui.cart[i.id];
-        return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openSheet('${i.id}')">${icoBox(i, i.label)}<span class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label) ? `<small style="color:var(--warn)">${t('alcohol')}</small>` : ''}${on ? `<small class="loc">✓ ${cartSummary(i.id)}</small>` : ''}</span><span class="plusbig">${on ? '✎' : '+'}</span></button>`; }).join('')}</div>
+      <div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${leaderCatalogCards(list,k)}</div>
       <div class="sectionhead">${t('otherHead')}</div>
       <div class="btnrow"><input class="grow" placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ ${t('add')}</button></div>
       ${Object.keys(ui.cart).filter(x => x.startsWith('c:')).map(key => `<button class="food pick chosen" style="margin-top:8px;width:100%" onclick="Leader.openSheet(${esc(JSON.stringify(key))})"><span class="ico">📦</span><span class="foodname"><b>${esc(key.slice(2))}</b><small class="loc">✓ ${cartSummary(key)}</small></span><span class="plusbig">✎</span></button>`).join('')}
@@ -429,15 +461,15 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function shSpecWorker(w){const opts=specOptions(cartItem(SH.key));if(SH.rows[w]&&opts.includes(SH.spec)){SH.rows[w].det=SH.spec;drawSheet();}}
   function sheetOk(){const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return SH.qty>0;const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det)));}
   function sheetBtn(){ const b = document.getElementById('shok'); if(b) b.disabled = !sheetOk(); }
-  function drawSheet(){ const it = cartItem(SH.key), top = isTop(it), opts=ui.kind==='PERSONAL'?specOptions(it):[];
+  function drawSheet(){ const it = cartItem(SH.key), top = isTop(it), opts=ui.kind==='PERSONAL'?specOptions(it):[],fixed=ui.kind==='PERSONAL'?fixedVariant(it):null;
     const stepper = (w, q) => `<span class="step"><button onclick="Leader.shQty('${w}',-1)">−</button><input class="count" readonly value="${q}"><button class="plus" onclick="Leader.shQty('${w}',1)">+</button></span>`;
-    let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>`;
+    let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>${fixed?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${icoBox(it,it.label)}<b>${esc(fixed.spec)}</b></div>`:''}`;
     if(ui.kind === 'PERSONAL'){
       if(opts.length)h+=`<div class="sectionhead" style="margin-top:0">${specLabel('1 · Choose specification','1 · 选择规格','၁ · အမျိုးအစား ရွေးပါ')}</div><div class="pills" style="flex-wrap:wrap">${opts.map(v=>`<button class="pill ${SH.spec===v?'on':''}" style="min-height:44px" onclick="Leader.specSelect('${v}')">${esc(v)}</button>`).join('')}</div>`;
       h += `<div class="sectionhead" style="margin-top:0">${opts.length?'2 · ':''}${t('whoWants')}</div>`;
       h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
         return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
-          ${r ? `<div class="shdet">${top ? topWorkerFields(w,r) : opts.length ? specWorkerFields(w,r,stepper) : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
+          ${r ? `<div class="shdet">${top ? topWorkerFields(w,r) : fixed ? stepper(w.id,r.qty) : opts.length ? specWorkerFields(w,r,stepper) : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
         : `<div class="note warn">${t('noWorkers')}</div>`;
     } else {
       h += `<div class="titleline"><span>${t('qty')}</span>${stepper('_', SH.qty)}</div><div class="field"><input placeholder="${esc(t('detailPh'))}" value="${esc(SH.det||'')}" oninput="Leader.shSet('_','det',this.value)"></div>`;
@@ -588,7 +620,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();
   }
   function goHome(){ ui = {view:'home'}; render(); scrollTo(0,0); }
-  return {start, startManager, setLang, openSheet, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start, startManager, setLang, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
@@ -939,7 +971,7 @@ const Owner = (() => {
 }
   function whiskeyBar(b){const ok=whiskeySingleReady();b.innerHTML=`<button class="btn primary" ${ok?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} · ${Z('deduct now','马上扣')}${ok?' · '+RM(50):''}</button><div class="note warn">${ok?Z('Next-trip and multi-person salary posting require a verified database connection.','下一趟申请及多人扣薪仍需核实数据库接口。'):Z('Multi-person or multi-bottle posting is not enabled. No salary deduction has been made.','多人或多瓶扣薪暂未接通，不会写入薪资。')}</div>`;}
   let SpotSpecBusy=false;
-  function spotSpecs(){return SP&&SP.kind==='PERSONAL'&&SP.item?personalSpecs(IT(SP.item)):[];}
+  function spotSpecs(){if(!SP||SP.kind!=='PERSONAL'||!SP.item)return [];const it=IT(SP.item),v=fixedVariant(it);return v?[v.spec]:personalSpecs(it);}
   function spotRows(){if(!SP.specRows)SP.specRows={};return SP.specRows;}
   function spotChooseSpec(v){if(!spotSpecs().includes(v))return;SP.spec=v;render();}
   function spotWorkerToggle(id){if(!workers(SP.farm).some(w=>w.id===id))return;const rs=spotRows();if(rs[id])delete rs[id];else{if(!spotSpecs().includes(SP.spec))return toast(Z('Choose the specification first.','请先选择规格。'));rs[id]={qty:1,detail:SP.spec};}render();}
@@ -967,13 +999,21 @@ const Owner = (() => {
  const it=IT(item),desc=rows.map(([id,r])=>`${wname(id)} · ${r.detail} × ${r.qty}`).join('\n');
  if(!confirm(taken?`${Z('Confirm actual advance and salary deduction','确认实际垫付及扣薪')}\n${desc}\n${RM(price*rows[0][1].qty)} · ${payerLabel(payer)}`:`${Z('Add to next trip','加入下一趟')}\n${it.label}\n${desc}`))return;
  SpotSpecBusy=true;busy(1);let saved=0,err=null;
- try{for(const [id,r] of rows){const p={farm,kind:'PERSONAL',item_id:item,worker_id:id,qty:r.qty,detail:r.detail,mode};if(taken){p.price=price;p.paid_by=payer;}await rpc('shop_owner_spot',p);saved++;}}
+ try{for(const [id,r] of rows){const p={farm,kind:'PERSONAL',item_id:item,worker_id:id,qty:r.qty,detail:fixedVariant(it)?undefined:r.detail,mode};if(taken){p.price=price;p.paid_by=payer;}await rpc('shop_owner_spot',p);saved++;}}
  catch(e){err=e;}
  SP={farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};
  try{await reload();render();}catch(e){err=err||e;}finally{SpotSpecBusy=false;busy(0);}
  if(err)openModal(`<h2>${Z('Check saved results','核对保存结果')}</h2><div class="note warn">${Z('Confirmed saved','已确认保存')} ${saved}/${rows.length} · ${esc(errZ(err.message))}</div><p>${Z('Refresh and check before submitting any remaining request again.','请刷新并核对原记录，避免重复提交；未确认部分不会自动重试。')}</p><button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button>`);
  else toast(taken?Z('Written now','已经记了'):Z('Added to next trip','已加入下一趟'));
 }
+  function ownerSpotCatalog(list){
+ return (SP.kind==='PERSONAL'?catalogEntries(list):list.map(item=>({item}))).map(e=>{
+ if(e.group){const on=e.variants.some(i=>i.id===SP.item);return `<button class="food pick ${on?'chosen':''}" style="width:100%" onclick="Owner.openSpotVariants('${e.group}')"><span style="display:flex;gap:2px;flex:none">${e.variants.map(i=>icoBox(i,i.label,true)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${esc(on?fixedVariant(IT(SP.item)).spec:e.variants.map(i=>fixedVariant(i).spec).join(' / '))}</small></span><span class="plusbig">›</span></button>`;}
+ const i=e.item;return `<button class="food pick ${SP.item===i.id?'chosen':''}" style="width:100%" data-id="${esc(i.id)}" onclick="Owner.pickSpotItem(this.dataset.id)">${icoBox(i,i.label,true)}<span class="foodname"><b>${esc(i.label)}</b></span><span class="plusbig">${SP.item===i.id?'✓':'+'}</span></button>`;
+ }).join('');
+}
+  function pickSpotItem(id){const it=IT(id);if(!it.id||it.kind!==SP.kind)return;closeModal();sp({item:id,price:it.default??null,custom:''});}
+  function openSpotVariants(group){const e=catalogEntries(B.items.filter(i=>i.kind===SP.kind)).find(x=>x.group===group);if(e)openModal(variantPickerHTML(group,e.variants,'Owner.pickSpotItem','closeModal',id=>SP.item===id));}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
     let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','在园里当场记')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
@@ -984,7 +1024,7 @@ const Owner = (() => {
       : `<div class="sectionhead">2 · ${Z('What kind','哪一种')}</div><div class="farmgrid">${K.map(k => `<button class="farmcard" style="min-height:90px" onclick="Owner.sp({kind:'${k}',item:null,worker:null,ws:${k==='SHARED'?'null':'null'}})"><span style="font-size:30px">${KINDS[k].ico}</span><b style="font-size:17px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>`;
     if(!SP.kind) return h;
     if(SP.kind === 'SHARED'){ if(!SP.ws) SP.ws = workers(SP.farm).map(w => w.id); }
-    h += `<div class="sectionhead">3 · ${Z('Item','物品')}</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
+    h += `<div class="sectionhead">3 · ${Z('Item','物品')}</div><div class="itemsgrid">${ownerSpotCatalog(B.items.filter(i=>i.kind===SP.kind))}</div>
       <div class="field" style="margin-top:8px"><input placeholder="${Z('Other item (type it)','其他物品（自己打）')}" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>`;
     if(whiskeySpot())return h+whiskeySpotPage();
     if(spotSpecs().length)return h+spotSpecPage();
@@ -997,7 +1037,7 @@ const Owner = (() => {
     return h;
   }
   function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
-  function sp(o){ const prev=SP||{}; SP={...prev,...o}; if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;SP.spec='';SP.specRows={};SP.specPayer=null;}render(); }
+  function sp(o){ const prev=SP||{}; SP={...prev,...o}; if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;SP.spec=fixedVariant(IT(SP.item))?.spec||'';SP.specRows={};SP.specPayer=null;}render(); }
   function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
   function spDet(v){ SP.detail = v; }
   function spCustom(v){ const was=whiskeySpot()||spotSpecs().length;SP.custom=v.toUpperCase();SP.item=null;if(was){SP.bottles=[[]];SP.bottleOpen=0;SP.price=null;render();}else spotBar(); }
@@ -1189,7 +1229,7 @@ const Owner = (() => {
     spotBar(); medBar();
   }
   return {start, refresh, itemsKind, hideItem, editItem, saveItem, edMgr, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
-          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, pickLeader, saveLeader, pinFor, savePin, unlead,
+          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
 
