@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -229,6 +229,19 @@ const FO_PHOTOS=new Set(['ajinomoto','asam_jawa','ayam','bawang_merah','bawang_p
 function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&String(s).replace(/\D/g,'').length>=6&&String(s).replace(/\D/g,'').length<=15;}
 function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
 function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
+
+function personalSpecs(it){
+ if(!it||it.custom)return [];
+ const norm=x=>String(x||'').trim().toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
+ const codes=[norm(it.label),norm(it.code)];
+ if(codes.some(x=>/\b(?:TYPE C|MICRO USB|USB A|LIGHTNING)\b/.test(x)))return [];
+ const any=a=>codes.some(x=>a.includes(x));
+ if(any(['CABLE','USB CABLE','CHARGING CABLE','PHONE CABLE','USB CHARGING CABLE']))return ['Type-C','Micro USB'];
+ if(any(['CHARGER','USB CHARGER','PHONE CHARGER','USB ADAPTER','CHARGING ADAPTER']))return ['USB-A','Type-C'];
+ if(any(['BAJU','SELUAR']))return ['S','M','L','XL','2XL','3XL'];
+ if(any(['SELIPAR','KASUT']))return ['37','38','39','40','41','42','43','44','45','46'];
+ return [];
+}
 
 /* ================= Leader phone: one straight line ================= */
 const Leader = (() => {
@@ -374,15 +387,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function startAdd(k){ ui = {view:'add', kind:k, cart:{}, other:''}; SH = null; render(); scrollTo(0,0); }
   const isTop = i => i && (i.code === 'TOP UP' || i.label === 'TOP UP');
   const amtOk = x => phoneValid(x.phone) && String(x.telco||'').trim() && amountValid(x.amt);
-  function specOptions(it){
-  if(!it||it.custom)return [];
-  const n=String(it.label||'').trim().toUpperCase();
-  if(n==='CABLE')return ['Type-C','Micro USB'];
-  if(n==='CHARGER')return ['USB-A','Type-C'];
-  if(n==='BAJU'||n==='SELUAR')return ['S','M','L','XL','2XL','3XL'];
-  if(n==='SELIPAR'||n==='KASUT')return ['37','38','39','40','41','42','43','44','45','46'];
-  return [];
-}
+  const specOptions = personalSpecs;
   function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&String(s).replace(/\D/g,'').length>=6&&String(s).replace(/\D/g,'').length<=15;}
   function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
   function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
@@ -753,14 +758,15 @@ const Owner = (() => {
   function detailSig(l){return JSON.stringify([l.id,l.status,l.farm,l.kind,l.worker_id,l.worker,l.item_id,l.item,l.qty,l.detail,l.buy?.price,l.buy?.paid_by,l.bought_at]);}
   function detailPriceOk(v){return Number.isFinite(Number(v))&&Number(v)>0&&Number(v)<=999999&&Math.abs(Number(v)*100-Math.round(Number(v)*100))<0.000001;}
   function detailBatches(ls,getPrice){const m=new Map();for(const l of ls){const p=Number(getPrice(l));if(!detailPriceOk(p))throw Error('Invalid price');if(!m.has(p))m.set(p,[]);m.get(p).push(l.id);}return m;}
+  function specMissing(l){const o=l.kind==='PERSONAL'?personalSpecs(IT(l.item_id)):[];return o.length&&!o.includes(String(l.detail||'').trim());}
   function itemPage(){
   const lines=detailLines();if(!lines.length){ui={view:'buy'};return buyPage();}
   const x=groups(lines)[0],it=IT(x.item_id),n=lines.filter(l=>l.status==='REQUESTED').length;
   const tick=(l,hand)=>{const done=hand?l.status==='DONE_DETAIL':l.status!=='REQUESTED';return `<button class="detail-tick ${done?'done':''}" ${hand&&l.status!=='BOUGHT'?'disabled':''} data-id="${esc(l.id)}" aria-label="${esc(hand?Z('Hand over','交货'):Z('Purchase / record','购买／记录'))}" onclick="Owner.${hand?'detailHand':'detailBuy'}(this.dataset.id)">${done?'✓':''}</button>`;};
-  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Back to List','返回清单')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}</td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
+  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Back to List','返回清单')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${l.status==='REQUESTED'&&specMissing(l)?`<button class="btn small light" data-id="${esc(l.id)}" onclick="Owner.editLine(this.dataset.id)">${Z('Choose spec','选规格')}</button>`:esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}</td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
 }
   function detailBuy(id){
-  const ls=detailLines(),l=ls.find(x=>x.id===id);if(l&&l.status!=='REQUESTED')return detailRecord(l);
+  const ls=detailLines(),l=ls.find(x=>x.id===id);if(l&&l.status!=='REQUESTED')return detailRecord(l);if(l&&specMissing(l))return editLine(l.id);
   const pending=ls.filter(x=>x.status==='REQUESTED');if(!pending.length)return;
   const def=IT(pending[0].item_id).default;
   DBuy={key:ui.key,ticks:Object.fromEntries(pending.map(x=>[x.id,id?x.id===id:true])),same:true,common:def??'',prices:Object.fromEntries(pending.map(x=>[x.id,def??''])),by:ME(),snap:Object.fromEntries(pending.map(x=>[x.id,detailSig(x)]))};drawDetailBuy();
@@ -768,7 +774,7 @@ const Owner = (() => {
   function detailBuyRows(){return detailLines().filter(l=>l.status==='REQUESTED'&&Object.prototype.hasOwnProperty.call(DBuy.ticks,l.id));}
   function detailSelected(){return detailBuyRows().filter(l=>DBuy.ticks[l.id]);}
   function detailPrice(l){return DBuy.same?DBuy.common:DBuy.prices[l.id];}
-  function detailBuyTotal(){const ls=detailSelected(),tot=ls.reduce((n,l)=>n+Math.round((Number(detailPrice(l))||0)*100)*Number(l.qty),0)/100;const el=$('#detail-buy-total'),ok=$('#detail-buy-ok');if(el)el.textContent=RM(tot);if(ok)ok.disabled=!ls.length||ls.some(l=>!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(DBuy.by);}
+  function detailBuyTotal(){const ls=detailSelected(),tot=ls.reduce((n,l)=>n+Math.round((Number(detailPrice(l))||0)*100)*Number(l.qty),0)/100;const el=$('#detail-buy-total'),ok=$('#detail-buy-ok');if(el)el.textContent=RM(tot);if(ok)ok.disabled=!ls.length||ls.some(l=>specMissing(l)||!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(DBuy.by);}
   function drawDetailBuy(){
   const ls=detailBuyRows(),n=detailSelected().length,it=IT(ls[0]?.item_id);if(!ls.length){closeModal();return;}
   const input=l=>`<input type="number" min="0.01" max="999999" step="0.01" inputmode="decimal" style="width:85px;min-height:36px;padding:5px" data-id="${esc(l.id)}" value="${esc(DBuy.prices[l.id])}" ${DBuy.ticks[l.id]?'':'disabled'} oninput="Owner.detailSetPrice(this.dataset.id,this.value)">`;
@@ -783,7 +789,7 @@ const Owner = (() => {
   function detailPayer(p){DBuy.by=p;drawDetailBuy();}
   async function detailSaveBuy(){
   if(DetailBusy||!DBuy||ui.key!==DBuy.key)return;
-  const ls=detailSelected(),by=DBuy.by;if(!ls.length||ls.some(l=>!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(by))return;
+  const ls=detailSelected(),by=DBuy.by;if(!ls.length||ls.some(l=>specMissing(l)||!detailPriceOk(detailPrice(l)))||!['Teo','EX','Mr. Low','Petty Cash'].includes(by))return;
   const gs=detailBatches(ls,detailPrice),snap=ls.map(l=>[l.id,DBuy.snap[l.id]]);DetailBusy=true;busy(1);closeModal();let saved=0,err=null;
   try{await reload();if(snap.some(([id,s])=>{const l=toBuy().find(x=>x.id===id);return !l||detailSig(l)!==s;}))throw Error(Z('List changed. Please review again.','清单已更新，请重新确认。'));
   for(const [price,ids] of gs){const r=await rpc('shop_owner_buy',{ids,price,paid_by:by});if(Number(r?.count)!==ids.length)throw Error(Z('Unexpected saved count. Check latest list before retrying.','保存数量不符，请先核对最新清单。'));saved+=ids.length;}}
@@ -932,6 +938,42 @@ const Owner = (() => {
  return `<div class="sectionhead">4 · ${Z('Share per bottle','每瓶独立选人')}</div><div class="hint">${Z('1 person RM50 · 2 people RM25 each · 3 people RM17 each','1人 RM50 · 2人 每人RM25 · 3人 每人RM17')}</div>${cards}<button class="btn block light" ${a[a.length-1].length?'':'disabled'} onclick="Owner.whiskeyAdd()">＋ ${Z('Add next bottle','增加下一瓶')}</button><div class="line totrow" style="padding:10px;margin:12px 0"><span>${Z('Total charge','全部收费合计')}</span><strong>${RM(tot)}</strong></div><div class="hint">${Z('Fixed worker charges, not the actual purchase cost.','固定个人收费，不等同实际采购成本。')}</div><div id="bottombar" class="bottom" style="flex-direction:column;align-items:stretch"></div>`;
 }
   function whiskeyBar(b){const ok=whiskeySingleReady();b.innerHTML=`<button class="btn primary" ${ok?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} · ${Z('deduct now','马上扣')}${ok?' · '+RM(50):''}</button><div class="note warn">${ok?Z('Next-trip and multi-person salary posting require a verified database connection.','下一趟申请及多人扣薪仍需核实数据库接口。'):Z('Multi-person or multi-bottle posting is not enabled. No salary deduction has been made.','多人或多瓶扣薪暂未接通，不会写入薪资。')}</div>`;}
+  let SpotSpecBusy=false;
+  function spotSpecs(){return SP&&SP.kind==='PERSONAL'&&SP.item?personalSpecs(IT(SP.item)):[];}
+  function spotRows(){if(!SP.specRows)SP.specRows={};return SP.specRows;}
+  function spotChooseSpec(v){if(!spotSpecs().includes(v))return;SP.spec=v;render();}
+  function spotWorkerToggle(id){if(!workers(SP.farm).some(w=>w.id===id))return;const rs=spotRows();if(rs[id])delete rs[id];else{if(!spotSpecs().includes(SP.spec))return toast(Z('Choose the specification first.','请先选择规格。'));rs[id]={qty:1,detail:SP.spec};}render();}
+  function spotWorkerQty(id,d){const r=spotRows()[id];if(r)r.qty=Math.max(1,Math.min(20,r.qty+d));render();}
+  function spotWorkerSpec(id){const r=spotRows()[id];if(r&&spotSpecs().includes(SP.spec))r.detail=SP.spec;render();}
+  function spotSpecReady(){const o=spotSpecs(),ws=workers(SP.farm),rs=Object.entries(spotRows());return !!(o.length&&rs.length&&rs.every(([id,r])=>ws.some(w=>w.id===id)&&o.includes(r.detail)&&Number.isInteger(r.qty)&&r.qty>=1&&r.qty<=20));}
+  function spotSpecPayer(v){if(BUYERS.includes(v))SP.specPayer=v;render();}
+  function spotSpecPage(){
+ const it=IT(SP.item),opts=spotSpecs(),rs=spotRows(),q=Object.values(rs).reduce((n,r)=>n+r.qty,0);
+ return `<div class="card" style="padding:12px;margin:8px 0"><div style="display:flex;align-items:center;gap:12px">${icoBox(it,it.label)}<div><b>${esc(it.label)}</b><div class="hint">${esc(it.unit||'')}</div></div></div>
+ <div class="sectionhead">4 · ${Z('Choose specification','选择规格')}</div><div class="pills" style="flex-wrap:wrap">${opts.map(v=>`<button class="pill ${SP.spec===v?'on':''}" onclick="Owner.spotChooseSpec('${v}')">${esc(v)}</button>`).join('')}</div>
+ <div class="sectionhead">5 · ${Z('Choose workers','选择工人')}</div>${workers(SP.farm).map(w=>{const r=rs[w.id];return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Owner.spotWorkerToggle('${w.id}')"><span class="tick">${r?'✓':''}</span>${esc(w.name)}</button>${r?`<div class="shdet"><span class="pill on">${esc(r.detail)}</span><div class="step"><button onclick="Owner.spotWorkerQty('${w.id}',-1)">−</button><input class="count" readonly value="${r.qty}"><button class="plus" onclick="Owner.spotWorkerQty('${w.id}',1)">+</button></div>${SP.spec!==r.detail&&opts.includes(SP.spec)?`<button class="btn small light" onclick="Owner.spotWorkerSpec('${w.id}')">${esc(Z('Change to ','改为 ')+SP.spec)}</button>`:''}</div>`:''}</div>`;}).join('')||`<div class="note warn">${Z('No workers','没有工人')}</div>`}
+ <div class="line"><b>${Z('Selected quantity','已选数量')}</b><b>${q}</b></div></div>
+ <div class="field"><label>${Z('Actual unit price (RM) — only for items already taken','实际单价 (RM) — 已经拿了才填写')}</label><div class="pills" style="flex-wrap:wrap">${(it.prices||[]).filter(detailPriceOk).map(p=>`<button class="pill ${Number(SP.price)===Number(p)?'on':''}" onclick="Owner.sp({price:${Number(p)}})">${RM(p)}</button>`).join('')}</div><input type="number" inputmode="decimal" min="0.01" step="0.01" value="${esc(SP.price??'')}" oninput="Owner.spPrice(this.value)"></div>
+ <div class="field"><label>${Z('Who actually advanced the money?','实际由谁垫付？')}</label><div class="pills" style="flex-wrap:wrap">${BUYERS.map(p=>`<button class="pill ${SP.specPayer===p?'on':''}" onclick="Owner.spotSpecPayer('${p}')">${esc(payerLabel(p))}</button>`).join('')}</div><div class="hint">${Z('Only existing management advances are supported here. If company or worker paid, confirm the payment source first.','此处只支持现有管理层垫付接口；公司或工人自己付款，请先确认来源，不要重复扣薪。')}</div></div>
+ <div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"></div>`;
+}
+  function spotSpecBar(b){const ok=spotSpecReady()&&!SpotSpecBusy,rs=Object.values(spotRows()),n=rs.reduce((a,r)=>a+r.qty,0),canTaken=ok&&rs.length===1&&detailPriceOk(SP.price)&&BUYERS.includes(SP.specPayer);
+ b.innerHTML=`<button class="btn primary" ${canTaken?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} ${canTaken?' · '+RM(n*Number(SP.price)):''}</button><button class="btn" ${ok?'':'disabled'} onclick="Owner.spot('WANT')">${Z('➕ Wants it · add to next trip','➕ 想要 · 加进下一趟')} (${rs.length})</button>${rs.length>1?`<div class="hint">${Z('Multi-worker requests are supported. Immediate salary posting remains one worker at a time until batch posting is verified.','可一次提交多名工人需求；当场已拿的扣薪暂时一次一人，待核实批量入账接口。')}</div>`:''}`;
+}
+  async function spotSpecSave(mode){
+ if(SpotSpecBusy||!spotSpecReady()||!['TAKEN','WANT'].includes(mode))return;
+ const rows=Object.entries(spotRows()),taken=mode==='TAKEN',farm=SP.farm,item=SP.item,price=Number(SP.price),payer=SP.specPayer;
+ if(taken&&(rows.length!==1||!detailPriceOk(price)||!BUYERS.includes(payer)))return;
+ const it=IT(item),desc=rows.map(([id,r])=>`${wname(id)} · ${r.detail} × ${r.qty}`).join('\n');
+ if(!confirm(taken?`${Z('Confirm actual advance and salary deduction','确认实际垫付及扣薪')}\n${desc}\n${RM(price*rows[0][1].qty)} · ${payerLabel(payer)}`:`${Z('Add to next trip','加入下一趟')}\n${it.label}\n${desc}`))return;
+ SpotSpecBusy=true;busy(1);let saved=0,err=null;
+ try{for(const [id,r] of rows){const p={farm,kind:'PERSONAL',item_id:item,worker_id:id,qty:r.qty,detail:r.detail,mode};if(taken){p.price=price;p.paid_by=payer;}await rpc('shop_owner_spot',p);saved++;}}
+ catch(e){err=e;}
+ SP={farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};
+ try{await reload();render();}catch(e){err=err||e;}finally{SpotSpecBusy=false;busy(0);}
+ if(err)openModal(`<h2>${Z('Check saved results','核对保存结果')}</h2><div class="note warn">${Z('Confirmed saved','已确认保存')} ${saved}/${rows.length} · ${esc(errZ(err.message))}</div><p>${Z('Refresh and check before submitting any remaining request again.','请刷新并核对原记录，避免重复提交；未确认部分不会自动重试。')}</p><button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button>`);
+ else toast(taken?Z('Written now','已经记了'):Z('Added to next trip','已加入下一趟'));
+}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
     let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','在园里当场记')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
@@ -945,6 +987,7 @@ const Owner = (() => {
     h += `<div class="sectionhead">3 · ${Z('Item','物品')}</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
       <div class="field" style="margin-top:8px"><input placeholder="${Z('Other item (type it)','其他物品（自己打）')}" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>`;
     if(whiskeySpot())return h+whiskeySpotPage();
+    if(spotSpecs().length)return h+spotSpecPage();
     h+=`<div class="field"><input placeholder="${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}" value="${esc(SP.detail||'')}" oninput="Owner.spDet(this.value)"></div>
       ${SP.kind === 'PERSONAL' ? `<div class="sectionhead">4 · ${Z('Who','谁')}</div><div class="pills" style="flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.worker===w.id?'on':''}" onclick="Owner.sp({worker:'${w.id}'})">${esc(w.name)}</button>`).join('')}</div>` : ''}
       <div class="titleline" style="margin-top:6px"><span>${Z('Quantity','数量')}</span><div class="step"><button onclick="Owner.sp({qty:Math.max(1,${SP.qty}-1)})">−</button><input class="count" readonly value="${SP.qty}"><button class="plus" onclick="Owner.sp({qty:${SP.qty}+1})">+</button></div></div>
@@ -954,15 +997,16 @@ const Owner = (() => {
     return h;
   }
   function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
-  function sp(o){ const prev=SP||{}; SP={...prev,...o}; if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;}render(); }
+  function sp(o){ const prev=SP||{}; SP={...prev,...o}; if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;SP.spec='';SP.specRows={};SP.specPayer=null;}render(); }
   function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
   function spDet(v){ SP.detail = v; }
-  function spCustom(v){ const was=whiskeySpot();SP.custom=v.toUpperCase();SP.item=null;if(was){SP.bottles=[[]];SP.bottleOpen=0;SP.price=null;render();}else spotBar(); }
+  function spCustom(v){ const was=whiskeySpot()||spotSpecs().length;SP.custom=v.toUpperCase();SP.item=null;if(was){SP.bottles=[[]];SP.bottleOpen=0;SP.price=null;render();}else spotBar(); }
   function spPrice(v){ SP.price = parseFloat(v) || null; spotBar(); }
   function spotReady(){ return SP && SP.farm && SP.kind && (SP.item || SP.custom.trim()) && (SP.kind !== 'PERSONAL' || SP.worker); }
-  function spotBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'spot') return; if(whiskeySpot()){whiskeyBar(b);return;}const ok = spotReady(), okT = ok && SP.price > 0 && (SP.kind !== 'SHARED' || SP.ws.length);
+  function spotBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'spot') return; if(whiskeySpot()){whiskeyBar(b);return;}if(spotSpecs().length){spotSpecBar(b);return;}const ok = spotReady(), okT = ok && SP.price > 0 && (SP.kind !== 'SHARED' || SP.ws.length);
     b.innerHTML = `<button class="btn primary" ${okT?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} · ${SP.kind==='FARM'?Z('farm cost now','马上记园里开销'):Z('deduct now','马上扣')}${SP.price ? ' · ' + RM(SP.price*SP.qty) : ''}</button><button class="btn" ${ok?'':'disabled'} onclick="Owner.spot('WANT')">${Z('➕ Wants it · add to next trip','➕ 想要 · 加进下一趟')}</button>`; }
   async function spot(mode){
+    if(spotSpecs().length)return spotSpecSave(mode);
     if(whiskeySpot()){
       if(mode!=='TAKEN'||!whiskeySingleReady())return toast(Z('This sharing cannot be posted safely yet.','多人分摊暂未接通，不会扣薪。'));
       const id=whiskeyBottles()[0][0];if(!confirm(Z('Deduct RM50 for one bottle from '+wname(id)+'?','确认 '+wname(id)+' 一人一瓶，扣 RM50？')))return;
@@ -981,15 +1025,15 @@ const Owner = (() => {
   /* ---------- edit a line not bought yet: detail, farm, kind, worker ---------- */
   let ED = null;
   function editLine(id){ const l = B.lines.find(x => x.id === id); if(!l) return; ED = {id, detail:l.detail || '', farm:l.farm, kind:l.kind, worker:l.worker_id}; drawEdit(); }
-  function drawEdit(){ const l = B.lines.find(x => x.id === ED.id);
+  function drawEdit(){ const l = B.lines.find(x => x.id === ED.id);const opts=ED.kind==='PERSONAL'?personalSpecs(IT(l.item_id)):[];
     openModal(`<h2>✎ ${esc(lname(l))} × ${l.qty}</h2>
-      <div class="field"><label>${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}</label><input id="eddet" maxlength="80" value="${esc(ED.detail)}" oninput="Owner.edSet('detail',this.value,1)"></div>
+      <div class="field"><label>${Z('Detail / specification','细节 / 规格')}</label>${opts.length?`<div class="pills" style="flex-wrap:wrap">${opts.map(v=>`<button class="pill ${ED.detail===v?'on':''}" onclick="Owner.edSet('detail','${v}')">${esc(v)}</button>`).join('')}</div>${ED.detail&&!opts.includes(ED.detail)?`<div class="hint">${Z('Previous detail: ','原有细节：')}${esc(ED.detail)}</div>`:''}`:`<input id="eddet" maxlength="80" value="${esc(ED.detail)}" oninput="Owner.edSet('detail',this.value,1)">`}</div>
       <div class="field"><label>${Z('Farm','园')}</label><div class="pills">${FARMS.map(f => `<button class="pill ${ED.farm===f?'on':''}" onclick="Owner.edSet('farm','${f}')">${f}</button>`).join('')}</div></div>
       <div class="field"><label>${Z('Kind','类别')}</label><div class="pills" style="flex-wrap:wrap">${['FARM','PERSONAL','SHARED'].map(k => `<button class="pill ${ED.kind===k?'on':''}" onclick="Owner.edSet('kind','${k}')">${KINDS[k].ico} ${KINDS[k].name}</button>`).join('')}</div><div class="hint">${KINDS[ED.kind].sub}</div></div>
       ${ED.kind === 'PERSONAL' ? `<div class="field"><label>${Z('For whom','给谁')}</label><div class="pills" style="flex-wrap:wrap">${workers(ED.farm).map(w => `<button class="pill ${ED.worker===w.id?'on':''}" onclick="Owner.edSet('worker','${w.id}')">${esc(w.name)}</button>`).join('')}</div></div>` : ''}
-      <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" ${ED.kind === 'PERSONAL' && !workers(ED.farm).some(w => w.id === ED.worker) ? 'disabled' : ''} onclick="Owner.saveEdit()">${Z('Save','存')}</button></div>`); }
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" ${(ED.kind === 'PERSONAL' && !workers(ED.farm).some(w => w.id === ED.worker)||opts.length&&!opts.includes(ED.detail)) ? 'disabled' : ''} onclick="Owner.saveEdit()">${Z('Save','存')}</button></div>`); }
   function edSet(k, v, quiet){ ED[k] = v; if(k === 'farm' && !workers(v).some(w => w.id === ED.worker)) ED.worker = null; if(!quiet) drawEdit(); }
-  async function saveEdit(){ const p = {id:ED.id, detail:ED.detail.trim(), farm:ED.farm, kind:ED.kind}; if(ED.kind === 'PERSONAL') p.worker_id = ED.worker;
+  async function saveEdit(){ const l=B.lines.find(x=>x.id===ED.id),opts=ED.kind==='PERSONAL'?personalSpecs(IT(l?.item_id)):[];if(opts.length&&!opts.includes(ED.detail))return toast(Z('Choose specification','请选择规格'));const p = {id:ED.id, detail:ED.detail.trim(), farm:ED.farm, kind:ED.kind}; if(ED.kind === 'PERSONAL') p.worker_id = ED.worker;
     closeModal(); await act('shop_owner_line_edit', p, Z('Saved','已存')); }
 
   /* ---------- Doctor / medicine (managers only items: UBAT, DOCTOR …) ---------- */
@@ -1145,7 +1189,7 @@ const Owner = (() => {
     spotBar(); medBar();
   }
   return {start, refresh, itemsKind, hideItem, editItem, saveItem, edMgr, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
-          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, pickLeader, saveLeader, pinFor, savePin, unlead,
+          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
 
