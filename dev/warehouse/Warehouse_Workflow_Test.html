@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-Hans"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kedai Runcit · Warehouse workflow test</title>
+<style>
+:root{--gold:#8c6b32;--green:#206e54;--ink:#26382e;--muted:#69776f;--paper:#f5f7f2;--line:#dce2db;--warn:#a16b21}*{box-sizing:border-box}body{margin:0;background:var(--paper);font:16px/1.45 system-ui,sans-serif;color:var(--ink)}button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}header{background:var(--gold);color:#fff;padding:15px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2}header strong{font-size:23px}header small{font-size:12px;background:#ffffff22;padding:4px 9px;border-radius:15px}.demo{background:#fff2ce;color:#684a14;padding:9px 14px;font-size:13px}.wrap{max-width:780px;margin:auto;padding:15px}.row{display:flex;gap:10px;align-items:center}.spread{justify-content:space-between}.stack{display:grid;gap:11px}.card{background:white;border:1px solid var(--line);border-radius:18px;padding:15px;box-shadow:0 2px 5px #182a2010}.wide{display:block;width:100%;text-align:left;color:inherit}.wide h2{margin:0;font-size:23px}.muted,small{color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}.stat{background:#edf2ec;border:1px solid transparent;border-radius:12px;text-align:center;padding:10px 5px;min-width:0;color:var(--ink)}.stat strong{display:block;font-size:27px}.stat.active{border-color:var(--green);background:#deede4}.buy{color:var(--warn)}.give{color:var(--green)}.primary,.secondary,.smallbtn{border-radius:9px;min-height:42px;padding:9px 12px;font-weight:650}.primary{background:var(--green);color:white;border:1px solid var(--green)}.secondary,.smallbtn{background:white;color:var(--ink);border:1px solid var(--line)}.full{width:100%}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.grid button{padding:15px 8px}h1{font-size:25px;margin:0}h2{font-size:19px;margin:0 0 6px}h3{font-size:15px;margin:14px 0 5px}.divider{border-top:1px solid var(--line);margin:12px 0}.badge{font-size:12px;background:#edf2ec;border-radius:12px;padding:4px 8px;white-space:nowrap}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.actions button{flex:1}.line{border-top:1px solid var(--line);padding:10px 0}.line:first-child{border-top:0}.label{font-size:13px;font-weight:650;display:block;margin:10px 0 4px}input,select{border:1px solid #cbd4cb;border-radius:8px;padding:10px;width:100%;background:white;color:var(--ink);min-height:44px}dialog{border:1px solid var(--line);border-radius:17px;width:min(94vw,520px);max-height:86vh;padding:17px;overflow:auto}dialog::backdrop{background:#17251f77}dialog h2{font-size:21px}.error{color:#a32b24;background:#fff1ef;padding:8px;border-radius:8px;margin:8px 0;display:none}.ok{color:var(--green);font-weight:650}.empty{padding:26px 6px;text-align:center;color:var(--muted)}table{border-collapse:collapse;width:100%;font-size:14px}td,th{text-align:left;padding:8px 4px;border-bottom:1px solid var(--line)}td:last-child,th:last-child{text-align:right}.nav{margin-bottom:12px}.note{font-size:13px;color:var(--muted);margin-top:9px}.money{font-variant-numeric:tabular-nums}.pill{font-size:13px;color:var(--green)}.check{display:flex;gap:8px;align-items:flex-start}.check input{width:20px;min-height:20px;margin-top:3px}.footer{padding:18px 0;font-size:12px;color:var(--muted)}@media(max-width:360px){.wrap{padding:9px}.card{padding:11px}header strong{font-size:19px}.stat strong{font-size:23px}}
+</style></head><body><header><strong>🛍️ Kedai Runcit</strong><small>Warehouse · TEST</small></header><div class="demo">独立试用 · 所有资料均为模拟 · 不连接 Supabase，不写入工资或真实账目</div><main class="wrap" id="app"></main><dialog id="modal"><form id="form"><div id="fields"></div><div id="error" class="error" role="alert"></div><div class="actions"><button type="button" class="secondary" id="close">取消</button><button type="submit" class="primary">确认</button></div></form></dialog>
+<script>
+// Deterministic reference logic for warehouse planning. No I/O, no production mutations.
+// Monetary amounts are integer sen. Actual reservations, payment and salary writes MUST be atomic server-side.
+function planStock({batches,requests,reservations=[]}){
+ const require=(ok,msg)=>{if(!ok)throw Error(msg);};
+ const qok=n=>Number.isSafeInteger(n)&&n>=0;
+ const sorted=batches.slice().sort((a,b)=>String(a.receivedAt).localeCompare(String(b.receivedAt))||String(a.id).localeCompare(String(b.id)));
+ const bm=new Map(),rm=new Map(),remaining=new Map(),reserved=new Map();
+ for(const b of sorted){require(b.id&&b.itemId&&b.receivedAt&&qok(b.qty)&&qok(b.unitCostCents)&&!bm.has(b.id),"Invalid batch");bm.set(b.id,b);remaining.set(b.id,b.qty);}
+ for(const r of requests){require(r.id&&r.itemId&&r.askedAt&&qok(r.openQty)&&qok(r.orderedQty??0)&&!rm.has(r.id),"Invalid request");rm.set(r.id,r);}
+ for(const a of reservations){const b=bm.get(a.batchId),r=rm.get(a.requestId);require(b&&r&&b.itemId===r.itemId&&qok(a.qty)&&a.qty>0,"Invalid reservation");remaining.set(b.id,remaining.get(b.id)-a.qty);require(remaining.get(b.id)>=0,"Over-reserved batch");reserved.set(r.id,(reserved.get(r.id)||0)+a.qty);}
+ const proposed=[],routes=[];
+ const ordered=requests.slice().sort((a,b)=>String(a.askedAt).localeCompare(String(b.askedAt))||String(a.id).localeCompare(String(b.id)));
+ for(const r of ordered){
+  let ready=reserved.get(r.id)||0, onOrder=r.orderedQty??0;
+  require(ready+onOrder<=r.openQty,"Request over-allocated");
+  let shortage=r.openQty-ready-onOrder;
+  if(r.approved!==false){for(const b of sorted){if(!shortage)break;if(b.itemId!==r.itemId)continue;const n=Math.min(shortage,remaining.get(b.id));if(n){remaining.set(b.id,remaining.get(b.id)-n);proposed.push({requestId:r.id,batchId:b.id,qty:n});ready+=n;shortage-=n;}}}
+  routes.push({requestId:r.id,itemId:r.itemId,ready,ordered:onOrder,toBuy:r.approved===false?0:shortage,blocked:r.approved===false?shortage:0,approvalBlocked:r.approved===false});
+ }
+ const balances=[...new Set(sorted.map(b=>b.itemId).concat(requests.map(r=>r.itemId)))].map(itemId=>{const bs=sorted.filter(b=>b.itemId===itemId),physical=bs.reduce((s,b)=>s+b.qty,0),available=bs.reduce((s,b)=>s+remaining.get(b.id),0);return {itemId,physical,reserved:physical-available,available,inventoryCostCents:bs.reduce((s,b)=>s+b.qty*b.unitCostCents,0)};});
+ return {proposed,routes,balances};
+}
+
+function issueCost({batches,allocations,requestId,qty}){
+ if(!Number.isSafeInteger(qty)||qty<=0)throw Error("Invalid issue quantity");
+ const byId=new Map(batches.map(b=>[b.id,b]));
+ const grouped=new Map();for(const a of allocations.filter(a=>a.requestId===requestId)){if(!Number.isSafeInteger(a.qty)||a.qty<=0||!byId.has(a.batchId))throw Error("Invalid allocation");grouped.set(a.batchId,(grouped.get(a.batchId)||0)+a.qty);}
+ const rows=[...grouped].map(([id,n])=>({b:byId.get(id),n})).sort((a,b)=>String(a.b.receivedAt).localeCompare(String(b.b.receivedAt))||String(a.b.id).localeCompare(String(b.b.id)));
+ let left=qty,costCents=0;const consumed=[];
+ for(const {b,n} of rows){if(!Number.isSafeInteger(b.qty)||n>b.qty||!Number.isSafeInteger(b.unitCostCents)||b.unitCostCents<0)throw Error("Invalid reserved batch");const take=Math.min(left,n);if(take){consumed.push({batchId:b.id,qty:take,unitCostCents:b.unitCostCents});costCents+=take*b.unitCostCents;left-=take;}}
+ if(left)throw Error("Insufficient reserved stock");
+ return {qty,costCents,consumed};
+}
+
+function routeDirect({openQty,receivedQty,orderedQty=0,approved=true}){
+ if(![openQty,receivedQty,orderedQty].every(n=>Number.isSafeInteger(n)&&n>=0)||receivedQty+orderedQty>openQty)throw Error("Invalid direct request");
+ const rest=openQty-receivedQty-orderedQty;
+ return {ready:receivedQty,ordered:orderedQty,toBuy:approved?rest:0,blocked:approved?0:rest,approvalBlocked:!approved};
+}
+
+function restockQty({shortage=0,available=0,inboundUnallocated=0,minAvailable=0,packSize=1,minOrder=0}){
+ if(![shortage,available,inboundUnallocated,minAvailable,packSize,minOrder].every(n=>Number.isSafeInteger(n)&&n>=0)||packSize<1)throw Error("Invalid restock values");
+ const need=Math.max(0,shortage+minAvailable-available-inboundUnallocated);
+ return need?Math.ceil(Math.max(need,minOrder)/packSize)*packSize:0;
+}
+
+function saleSnapshot({qty,costCents,pricingMode,fixedSellCents,actualSellCents,workerPaid=false}){
+ const sell=pricingMode==="FIXED"?fixedSellCents:pricingMode==="VARIABLE"?actualSellCents:undefined;
+ if(!Number.isSafeInteger(qty)||qty<=0||!Number.isSafeInteger(costCents)||costCents<0||!Number.isSafeInteger(sell)||sell<0)throw Error("Unconfirmed price or quantity");
+ if(pricingMode==="FIXED"&&actualSellCents!=null&&actualSellCents!==sell)throw Error("Fixed sell price cannot be overridden");
+ const chargeCents=qty*sell;
+ return {qty,costCents,sellUnitCents:sell,chargeCents,differenceCents:chargeCents-costCents,deductionCents:workerPaid?0:chargeCents};
+}
+
+// Isolated transaction reference model. Copy-on-write atomicity in one process only.
+// No database, authentication, network, production pay or salary operations.
+function createWarehouse(seed={}){
+ const clone=x=>JSON.parse(JSON.stringify(x));
+ let state=clone({items:[],requests:[],orders:[],batches:[],reservations:[],payments:[],issues:[],adjustments:[],operations:{},...seed});
+ const assert=(ok,msg)=>{if(!ok)throw Error(msg);};
+ const integer=(n,min=0)=>Number.isSafeInteger(n)&&n>=min;
+ const qty=n=>{assert(integer(n,1),"Invalid quantity");return n;};
+ const money=n=>{assert(integer(n),"Invalid cost or price");return n;};
+ const find=(rows,id)=>{const r=rows.find(x=>x.id===id);assert(r,"Unknown record: "+id);return r;};
+ const add=(rows,row)=>{assert(row.id&&!rows.some(x=>x.id===row.id),"Duplicate record");rows.push(row);return row;};
+ const fingerprint=x=>JSON.stringify(x,Object.keys(x).sort()); // only used below for flat commands
+ const canonical=x=>x===null||typeof x!=="object"?JSON.stringify(x):Array.isArray(x)?"["+x.map(canonical).join(",")+"]":"{"+Object.keys(x).sort().map(k=>JSON.stringify(k)+":"+canonical(x[k])).join(",")+"}";
+ const openQty=r=>r.qty-r.delivered-r.cancelled;
+ const outstanding=o=>o.qty-o.received-o.cancelled;
+ const pendingOrders=(s,r)=>s.orders.filter(o=>o.requestId===r.id).reduce((n,o)=>n+outstanding(o),0);
+ const allocated=(s,r)=>s.reservations.filter(a=>a.requestId===r.id).reduce((n,a)=>n+a.qty,0);
+ function routes(s){
+  return s.requests.map(r=>{
+   const it=find(s.items,r.itemId),ordered=pendingOrders(s,r);
+   const ready=it.stock?allocated(s,r):r.received-r.delivered;
+   const rest=openQty(r)-ready-ordered;
+   assert(integer(rest),"Request overallocated");
+   return {id:r.id,itemId:r.itemId,ready,ordered,toBuy:r.approved?rest:0,blocked:r.approved?0:rest};
+  });
+ }
+ function allocate(s,itemId){
+  const it=find(s.items,itemId);if(!it.stock)return;
+  const r=s.requests.filter(r=>r.itemId===itemId&&openQty(r)>0).map(r=>({id:r.id,itemId,askedAt:r.askedAt,openQty:openQty(r),orderedQty:pendingOrders(s,r),approved:r.approved}));
+  const rs=s.reservations.filter(a=>r.some(x=>x.id===a.requestId));
+  const bs=s.batches.filter(b=>b.itemId===itemId);
+  const plan=planStock({batches:bs,requests:r,reservations:rs});
+  s.reservations.push(...plan.proposed);
+ }
+ function validate(s){
+  const ids=new Set();
+  for(const b of s.batches){assert(integer(b.qty)&&integer(b.unitCostCents)&&!ids.has(b.id),"Invalid batch");ids.add(b.id);
+   assert(s.reservations.filter(a=>a.batchId===b.id).reduce((n,a)=>n+a.qty,0)<=b.qty,"Overreserved");}
+  for(const a of s.reservations){const b=find(s.batches,a.batchId),r=find(s.requests,a.requestId);assert(b.itemId===r.itemId&&integer(a.qty,1),"Invalid allocation");}
+  for(const r of s.requests){assert(integer(openQty(r))&&integer(r.delivered)&&integer(r.cancelled),"Invalid request balance");}
+  for(const o of s.orders){assert(integer(outstanding(o)),"Order exceeded");}
+  routes(s);
+  return true;
+ }
+ function run(op){
+  assert(typeof op.id==="string"&&op.id.length>0,"Missing operation ID");
+  const key=canonical(op);
+  if(Object.prototype.hasOwnProperty.call(state.operations,op.id)){
+   const prior=state.operations[op.id];assert(prior.key===key,"Operation ID reused with different payload");return clone(prior.result);
+  }
+  const s=clone(state);let result={id:op.id,type:op.type};
+  if(op.type==="REQUEST"){
+   const it=find(s.items,op.itemId);qty(op.qty);assert(op.askedAt,"Missing request date");
+   assert(it.pricing==="FIXED"||it.pricing==="VARIABLE","Unsupported special pricing");
+   const fixed=it.pricing==="FIXED"?money(it.fixedSellCents):null;
+   add(s.requests,{id:op.id,itemId:it.id,qty:op.qty,askedAt:op.askedAt,approved:op.approved!==false,pricing:it.pricing,fixedSellCents:fixed,received:0,delivered:0,cancelled:0,receivedLots:[]});
+   allocate(s,it.id);
+  }else if(op.type==="ORDER"){
+   const it=find(s.items,op.itemId);qty(op.qty);assert(op.supplier&&op.date,"Missing supplier/date");
+   if(op.requestId){const r=find(s.requests,op.requestId),route=routes(s).find(x=>x.id===r.id);assert(r.itemId===it.id&&r.approved&&op.qty<=route.toBuy,"Quantity exceeds shortage");}
+   else assert(it.stock,"Direct purchase needs a request");
+   add(s.orders,{id:op.id,itemId:it.id,requestId:op.requestId||null,qty:op.qty,received:0,cancelled:0,supplier:op.supplier,date:op.date});
+  }else if(op.type==="PAY"){
+   const o=find(s.orders,op.orderId);money(op.amountCents);assert(op.amountCents>0&&op.date&&["TBF","LEX","LZF","Petty Cash"].includes(op.payer),"Invalid actual payment");
+   assert(op.ref,"Missing payment reference");
+   assert(!s.payments.some(p=>p.orderId===o.id&&p.ref===op.ref),"Duplicate payment reference");
+   add(s.payments,{id:op.id,orderId:o.id,amountCents:op.amountCents,payer:op.payer,date:op.date,ref:op.ref});
+  }else if(op.type==="RECEIVE"){
+   const o=find(s.orders,op.orderId),it=find(s.items,o.itemId);qty(op.qty);money(op.unitCostCents);assert(op.receivedAt&&op.qty<=outstanding(o),"Receipt exceeds outstanding order");
+   o.received+=op.qty;
+   if(it.stock){
+    add(s.batches,{id:op.id,itemId:it.id,orderId:o.id,qty:op.qty,originalQty:op.qty,unitCostCents:op.unitCostCents,receivedAt:op.receivedAt});
+    allocate(s,it.id);
+   }else{
+    const r=find(s.requests,o.requestId),sell=r.pricing==="FIXED"?r.fixedSellCents:money(op.actualSellCents);
+    if(r.pricing==="FIXED"&&op.actualSellCents!=null)assert(op.actualSellCents===sell,"Fixed price cannot be overridden");
+    r.received+=op.qty;r.receivedLots.push({id:op.id,qty:op.qty,unitCostCents:op.unitCostCents,sellUnitCents:sell});
+   }
+  }else if(op.type==="ISSUE"){
+   const r=find(s.requests,op.requestId),it=find(s.items,r.itemId),route=routes(s).find(x=>x.id===r.id);qty(op.qty);
+   assert(r.approved&&op.date&&op.qty<=route.ready,"Not ready for delivery");
+   assert(op.workerPaid===true||op.deductionAuthorised===true,"Payment/deduction not confirmed");
+   let costCents=0,chargeCents=0,consumed=[];
+   if(it.stock){
+    const issue=issueCost({batches:s.batches,allocations:s.reservations,requestId:r.id,qty:op.qty});costCents=issue.costCents;consumed=issue.consumed;
+    const sale=saleSnapshot({qty:op.qty,costCents,pricingMode:r.pricing,fixedSellCents:r.fixedSellCents,actualSellCents:op.actualSellCents,workerPaid:op.workerPaid===true});chargeCents=sale.chargeCents;
+    for(const c of consumed){find(s.batches,c.batchId).qty-=c.qty;let left=c.qty;for(const a of s.reservations.filter(a=>a.requestId===r.id&&a.batchId===c.batchId)){const n=Math.min(a.qty,left);a.qty-=n;left-=n;}assert(left===0,"Reservation mismatch");}
+    s.reservations=s.reservations.filter(a=>a.qty>0);
+   }else{
+    let left=op.qty;for(const lot of r.receivedLots){const n=Math.min(left,lot.qty);if(n){costCents+=n*lot.unitCostCents;chargeCents+=n*lot.sellUnitCents;consumed.push({receiptId:lot.id,qty:n,unitCostCents:lot.unitCostCents,sellUnitCents:lot.sellUnitCents});lot.qty-=n;left-=n;}}
+    assert(!left,"Receipt balance mismatch");
+   }
+   r.delivered+=op.qty;const deductionCents=op.workerPaid?0:chargeCents;
+   const entry=add(s.issues,{id:op.id,requestId:r.id,qty:op.qty,costCents,chargeCents,deductionCents,differenceCents:chargeCents-costCents,date:op.date,consumed});
+   result={...result,...entry};
+  }else if(op.type==="CANCEL_REQUEST"){
+   const r=find(s.requests,op.requestId),it=find(s.items,r.itemId);qty(op.qty);assert(op.reason,"Cancellation reason required");
+   assert(op.qty<=openQty(r)-pendingOrders(s,r)-(it.stock?0:r.received-r.delivered),"Cancel outstanding order/return received goods first");
+   if(it.stock){const route=routes(s).find(x=>x.id===r.id);let release=Math.max(0,op.qty-route.toBuy-route.blocked);
+    for(const a of s.reservations.filter(a=>a.requestId===r.id).reverse()){const n=Math.min(release,a.qty);a.qty-=n;release-=n;}assert(release===0,"Invalid cancellation");s.reservations=s.reservations.filter(a=>a.qty>0);}
+   r.cancelled+=op.qty;allocate(s,it.id);
+  }else if(op.type==="CANCEL_ORDER"){
+   const o=find(s.orders,op.orderId);qty(op.qty);assert(op.reason&&op.qty<=outstanding(o),"Invalid order cancellation");
+   assert(!s.payments.some(p=>p.orderId===o.id),"Paid order needs reconciled refund first");
+   o.cancelled+=op.qty;allocate(s,o.itemId);
+  }else if(op.type==="ADJUST_DOWN"){
+   const b=find(s.batches,op.batchId);qty(op.qty);assert(op.reason&&op.date,"Adjustment reason/date required");
+   const reserved=s.reservations.filter(a=>a.batchId===b.id).reduce((n,a)=>n+a.qty,0);
+   assert(op.qty<=b.qty-reserved,"Adjustment conflicts with reserved stock");
+   b.qty-=op.qty;add(s.adjustments,{id:op.id,batchId:b.id,qty:-op.qty,reason:op.reason,date:op.date,costCents:op.qty*b.unitCostCents});
+  }else throw Error("Unsupported command");
+  validate(s);s.operations[op.id]={key,result};state=s;return clone(result);
+ }
+ function board(){const ss=clone(state);return {...ss,routes:routes(ss),stock:ss.items.filter(i=>i.stock).map(i=>{const bs=ss.batches.filter(b=>b.itemId===i.id),physical=bs.reduce((n,b)=>n+b.qty,0),reserved=ss.reservations.filter(a=>bs.some(b=>b.id===a.batchId)).reduce((n,a)=>n+a.qty,0);return {itemId:i.id,physical,reserved,available:physical-reserved,costCents:bs.reduce((n,b)=>n+b.qty*b.unitCostCents,0)};})};}
+ validate(state);return {run,board};
+}
+
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),rm=n=>'RM '+(n/100).toFixed(2);
+const date='2026-11-27',items=[{id:'a',name:'库存商品 A',stock:true,pricing:'FIXED',fixedSellCents:5700},{id:'b',name:'库存商品 B',stock:true,pricing:'FIXED',fixedSellCents:1800},{id:'shirt',name:'BAJU',stock:false,pricing:'VARIABLE'},{id:'pants',name:'PANTS - SHORT',stock:false,pricing:'VARIABLE'}],meta={r1:{farm:'AD1',worker:'Worker A',detail:'一套'},r2:{farm:'AD2',worker:'Worker B',detail:'XL'},r3:{farm:'AD3',worker:'Worker C',detail:'L'},r4:{farm:'AD2',worker:'Worker D',detail:'一件'}};
+let model,serial,view='home',tab='toBuy',flash='';
+const id=()=> 'test-'+(++serial);
+const cmd=(type,data)=>model.run({type,id:id(),...data});
+function reset(){serial=100;model=createWarehouse({items});model.run({type:'ORDER',id:'o1',itemId:'a',qty:5,supplier:'模拟供应商',date});model.run({type:'RECEIVE',id:'b1',orderId:'o1',qty:5,unitCostCents:4800,receivedAt:'2026-11-20'});model.run({type:'ORDER',id:'o2',itemId:'b',qty:20,supplier:'模拟供应商',date});model.run({type:'RECEIVE',id:'b2',orderId:'o2',qty:20,unitCostCents:1100,receivedAt:'2026-11-22'});for(const [r,itemId,qty] of [['r1','a',8],['r2','shirt',5],['r3','pants',2],['r4','b',4]])model.run({type:'REQUEST',id:r,itemId,qty,askedAt:date});view='home';tab='toBuy';render()}
+const item=id=>items.find(i=>i.id===id),label={toBuy:'待购买',ordered:'已订购',ready:'待交货'};
+const button=(text,action,cls='secondary')=>'<button class="'+cls+'" data-action="'+esc(action)+'">'+esc(text)+'</button>';
+const top=(title,sub='')=>'<div class="row spread nav"><div><h1>'+esc(title)+'</h1><small>'+esc(sub)+'</small></div>'+button('‹ 首页','home')+'</div>';
+function stats(b,clickable=true){return '<div class="stats">'+['toBuy','ordered','ready'].map(k=>{const n=b.routes.filter(r=>r[k]>0).length,q=b.routes.reduce((s,r)=>s+r[k],0);return '<button class="stat '+(tab===k&&view==='buy'?'active ':'')+(k==='toBuy'?'buy':k==='ready'?'give':'')+'" data-action="tab:'+k+'"><strong>'+n+'</strong>'+label[k]+'<div style="font-size:11px">'+q+'件</div></button>'}).join('')+'</div>'}
+function render(){const b=model.board();let h='';if(view==='home'){h='<div class="row spread nav"><div><h1>Management</h1><small>27/11 · TEST</small></div>'+button('重置试用','reset')+'</div><div class="stack"><section class="card"><div class="row spread"><div><h2 style="font-size:24px">🛒 Buying List</h2><small>日常采购</small></div>'+button('进入 ›','buy')+'</div>'+stats(b)+'<small>下一趟 2/12 · 截单 1/12</small></section><section class="card"><h2>🥬 Food Order</h2><small>正式功能保持原样 · 不在本试用范围</small></section><button class="card wide" data-action="warehouse"><h2>📦 Warehouse　›</h2><small>库存 · 采购入库 · 补货 · 点算</small></button><div class="grid"><div class="card"><b>✍️ At the Farm</b><br><small>不在本试用范围</small></div><div class="card"><b>🩺 Medical</b><br><small>不在本试用范围</small></div></div><button class="card wide" data-action="ledger"><h2>💰 Petty Cash / Records　›</h2><small>模拟付款及出库记录</small></button></div>'}
+else if(view==='buy'){h=top('🛒 Buying List','按商品分组 · 三个工作状态')+stats(b);const rows=b.routes.filter(r=>r[tab]>0);if(!rows.length)h+='<div class="card empty">这个状态没有待处理项目</div>';for(const it of items){const rs=rows.filter(r=>r.itemId===it.id);if(!rs.length)continue;h+='<section class="card" style="margin:10px 0"><div class="row spread"><h2>'+esc(it.name)+'</h2><span class="badge">'+(it.stock?'库存商品':'按需代购')+'</span></div><small>'+rs.reduce((n,r)=>n+r[tab],0)+' 件'+(it.pricing==='FIXED'?' · 固定卖价 '+rm(it.fixedSellCents):' · 每次确定卖价')+'</small>';for(const r of rs){const m=meta[r.id]||{},req=b.requests.find(x=>x.id===r.id);h+='<div class="line"><div class="row spread"><b>'+esc(m.farm||'模拟园区')+' · '+esc(m.worker||r.id)+'</b><strong>× '+r[tab]+'</strong></div><small>'+esc(m.detail||'')+' · 申请 '+esc(req.askedAt)+'</small><div class="actions">';if(tab==='toBuy')h+=button('确认订购…','order:'+r.id,'primary')+button('取消需求…','cancel:'+r.id);if(tab==='ready')h+=button('确认交货…','issue:'+r.id,'primary');if(tab==='ordered'){for(const o of b.orders.filter(o=>o.requestId===r.id&&o.qty>o.received+o.cancelled)){h+=button('实际到货 '+(o.qty-o.received-o.cancelled),'receive:'+o.id,'primary')+button('记录付款…','pay:'+o.id)}}h+='</div></div>'}h+='</section>'}h+='<div class="note">按工作行计数；同一需求可分布在多个状态。未确认供应商订单不会列入已订购。</div>'}
+else if(view==='warehouse'){h=top('📦 Warehouse','库存只在实际收货及出库时变动')+'<div class="grid">'+button('＋ 采购补货','restock','primary')+button('库存点算','count')+button('批次明细','batches')+button('订单／收货','orders')+'</div><h3>当前库存</h3>';for(const x of b.stock){const i=item(x.itemId);h+='<section class="card" style="margin:10px 0"><div class="row spread"><h2>'+esc(i.name)+'</h2><small>'+rm(i.fixedSellCents)+'/件</small></div><div class="stats"><div class="stat"><strong>'+x.physical+'</strong>实际库存</div><div class="stat"><strong>'+x.reserved+'</strong>已预留</div><div class="stat give"><strong>'+x.available+'</strong>可用</div></div><div class="row spread"><small>剩余批次成本</small><b>'+rm(x.costCents)+'</b></div></section>'}}
+else if(view==='orders'){h=top('供应商订单','付款与到货独立记录')+button('‹ Warehouse','warehouse');for(const o of b.orders){const left=o.qty-o.received-o.cancelled,paid=b.payments.filter(p=>p.orderId===o.id).reduce((s,p)=>s+p.amountCents,0);h+='<section class="card" style="margin:10px 0"><h2>'+esc(item(o.itemId).name)+'</h2><small>'+esc(o.supplier)+' · '+esc(o.date)+'</small><div class="line">订购 '+o.qty+' · 已到 '+o.received+' · 未到 '+left+'</div><div class="row spread"><span>已记录实际付款</span><b>'+rm(paid)+'</b></div><div class="actions">'+(left?button('实际到货…','receive:'+o.id,'primary'):'')+button('记录付款…','pay:'+o.id)+'</div></section>'}}
+else if(view==='batches'||view==='count'){h=top(view==='count'?'库存点算':'采购批次','FIFO · 实际批次成本')+button('‹ Warehouse','warehouse');for(const x of b.batches){const reserved=b.reservations.filter(a=>a.batchId===x.id).reduce((s,a)=>s+a.qty,0);h+='<section class="card" style="margin:10px 0"><h2>'+esc(item(x.itemId).name)+'</h2><small>'+esc(x.id)+' · '+esc(x.receivedAt)+'</small><div class="line">实际库存 '+x.qty+' · 预留 '+reserved+' · 可用 '+(x.qty-reserved)+'</div><div class="row spread"><span>批次买价</span><b>'+rm(x.unitCostCents)+'</b></div>'+(view==='count'?'<div class="actions">'+button('损坏／减少库存…','adjust:'+x.id)+'</div>':'')+'</section>'}if(view==='count')h+='<div class="note">本试用只支持已知批次的库存减少，不会自动释放工人预留。实际盘盈及未知成本须待正式数据库处理。</div>'}
+else if(view==='ledger'){h=top('模拟交易记录','采购付款与个人费用分开')+'<section class="card"><h2>实际付款</h2>'+(!b.payments.length?'<div class="empty">尚无模拟付款</div>':b.payments.map(p=>'<div class="line row spread"><span>'+esc(p.payer)+' · '+esc(p.ref)+'</span><b>'+rm(p.amountCents)+'</b></div>').join(''))+'</section><section class="card" style="margin-top:10px"><h2>交货／个人费用</h2>'+(!b.issues.length?'<div class="empty">尚无模拟交货</div>':b.issues.map(i=>'<div class="line"><b>'+esc((meta[i.requestId]||{}).worker||i.requestId)+' · '+i.qty+'件</b><div>成本 '+rm(i.costCents)+' · 个人收费 '+rm(i.chargeCents)+'</div><small>拟记工资扣款 '+rm(i.deductionCents)+'（仅模拟）</small></div>').join(''))+'</section>'}
+$('#app').innerHTML=(flash?'<div class="card ok" style="margin-bottom:12px">'+esc(flash)+'</div>':'')+h+'<div class="footer">试用资料会在刷新页面时重置。未接入实际采购、支付、Salary 或正式库存。</div>';flash=''}
+function field(name,title,value='',type='text',extra=''){return '<label class="label" for="'+name+'">'+esc(title)+'</label><input id="'+name+'" name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+extra+' required>'}
+function select(name,title,opts){return '<label class="label" for="'+name+'">'+esc(title)+'</label><select id="'+name+'" name="'+name+'" required>'+opts.map(o=>'<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>').join('')+'</select>'}
+const qtyField=(q)=>field('qty','数量',q,'number','min="1" max="'+q+'" step="1"');
+const cents=x=>{const v=String(x).trim();if(!/^\d+(\.\d{1,2})?$/.test(v))throw Error('请输入正确金额，最多两位小数');return Math.round(Number(v)*100)};
+function show(title,fields,fn){$('#fields').innerHTML='<h2>'+esc(title)+'</h2>'+fields;$('#error').style.display='none';$('#form').onsubmit=e=>{e.preventDefault();try{fn(Object.fromEntries(new FormData(e.currentTarget)));$('#modal').close();flash='✓ 模拟操作已记录';render()}catch(err){$('#error').textContent=err.message;$('#error').style.display='block'}};$('#modal').showModal()}
+$('#close').onclick=()=>$('#modal').close();
+function action(a){const [act,key]=a.split(':'),b=model.board(),r=b.routes.find(x=>x.id===key),o=b.orders.find(x=>x.id===key),batch=b.batches.find(x=>x.id===key);if(['home','buy','warehouse','orders','batches','count','ledger'].includes(act)){view=act;render();return}if(act==='tab'){view='buy';tab=key;render();return}if(act==='reset'){if(confirm('重置所有模拟操作？'))reset();return}
+if(act==='order')show('确认供应商订购',qtyField(r.toBuy)+field('supplier','供应商')+field('date','订购日期',date,'date'),d=>cmd('ORDER',{itemId:r.itemId,requestId:r.id,qty:Number(d.qty),supplier:d.supplier,date:d.date}));
+if(act==='restock')show('独立补货订单',select('itemId','商品',items.filter(i=>i.stock).map(i=>[i.id,i.name]))+field('qty','订购数量','10','number','min="1" step="1"')+field('supplier','供应商')+field('date','订购日期',date,'date'),d=>cmd('ORDER',{...d,qty:Number(d.qty)}));
+if(act==='receive'){const i=item(o.itemId);show('实际到货 · '+i.name,qtyField(o.qty-o.received-o.cancelled)+field('buy','本批实际买价 RM','','number','min="0" step=".01"')+(!i.stock&&i.pricing==='VARIABLE'?field('sell','本次确认卖价 RM','','number','min="0" step=".01"'):'')+field('date','实际收货日期',date,'date')+'<p class="note">收货不是付款。实际付款另行确认。</p>',d=>cmd('RECEIVE',{orderId:o.id,qty:Number(d.qty),unitCostCents:cents(d.buy),actualSellCents:d.sell==null?undefined:cents(d.sell),receivedAt:d.date}))}
+if(act==='pay')show('记录实际付款',field('amount','实际付款金额 RM','','number','min=".01" step=".01"')+select('payer','付款人',[['TBF','TBF'],['LEX','LEX'],['LZF','LZF'],['Petty Cash','Petty Cash']])+field('date','实际付款日期',date,'date')+field('ref','付款参考号')+'<p class="note">此操作不会增加库存。</p>',d=>cmd('PAY',{orderId:o.id,amountCents:cents(d.amount),payer:d.payer,date:d.date,ref:d.ref}));
+if(act==='issue'){const i=item(r.itemId),req=b.requests.find(x=>x.id===r.id);show('确认实际交货 · '+i.name,qtyField(r.ready)+(i.stock&&req.pricing==='FIXED'?'<p>已确认固定卖价：<b>'+rm(req.fixedSellCents)+'/件</b></p>':'<p class="note">使用收货时保存的实际卖价。</p>')+field('date','交货日期',date,'date')+select('method','个人费用处理',[['','请选择'],['paid','工人已付现金'],['deduct','已确认合法授权扣薪']])+'<p class="note">出库不会产生第二次采购付款；仅记录模拟个人费用。</p>',d=>{if(!d.method)throw Error('请选择个人费用处理方式');cmd('ISSUE',{requestId:r.id,qty:Number(d.qty),date:d.date,workerPaid:d.method==='paid',deductionAuthorised:d.method==='deduct'})})}
+if(act==='cancel')show('取消未采购需求',qtyField(r.toBuy)+field('reason','原因'),d=>cmd('CANCEL_REQUEST',{requestId:r.id,qty:Number(d.qty),reason:d.reason}));
+if(act==='adjust'){const available=batch.qty-b.reservations.filter(a=>a.batchId===batch.id).reduce((s,a)=>s+a.qty,0);if(!available){flash='没有未预留库存可以调整';render();return}show('损坏／库存减少',qtyField(available)+field('reason','调整原因')+field('date','日期',date,'date'),d=>cmd('ADJUST_DOWN',{batchId:batch.id,qty:Number(d.qty),reason:d.reason,date:d.date}))}
+}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(el)action(el.dataset.action)});reset();
+</script></body></html>
