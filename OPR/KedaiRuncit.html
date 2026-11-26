@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -603,7 +603,7 @@ const Owner = (() => {
   const back = () => `<button class="btn small" onclick="Owner.go('home')">${ui.view==='buy'||ui.view==='food'?Z('← Home','← 回首页'):Z('← Back','← 返回')}</button>`;
 
   async function reload(){ B = await rpc('shop_owner_board', {}); }
-  const ERR_ZH = [[/^Buy and hand over, or take away, its open lines first/, '这样东西还有没买或没交货的单，先处理好才能删除'], [/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
+  const ERR_ZH = [[/^Name 1 to 30 letters/, '名字要 1 到 30 个字'], [/^Buy and hand over, or take away, its open lines first/, '这样东西还有没买或没交货的单，先处理好才能删除'], [/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
   function errZ(m){ if(OL !== 'zh') return m; for(const [re, z] of ERR_ZH) if(re.test(m)) return m.replace(re, z); return m; }
   async function act(name, p, ok){
     busy(1);
@@ -1018,10 +1018,34 @@ const Owner = (() => {
     for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
       for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
-        <span class="btnrow"><button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Price','价钱')}</button><button class="btn small light" onclick="Owner.photo('${i.id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="Owner.photoDel('${i.id}')">✕</button>` : ''}${k === 'FOOD' ? '' : `<button class="btn small light" onclick="Owner.moveItem('${i.id}')">${Z('Move','换类')}</button><button class="btn small ${i.mgr_only?'gold':'light'}" onclick="Owner.mgrOnly('${i.id}',${!i.mgr_only})">${i.mgr_only ? Z('🔒 Managers only','🔒 只给管理层') : Z('Managers only?','只给管理层？')}</button><button class="btn small light danger" onclick="Owner.hideItem('${i.id}')">🗑 ${Z('Delete','删除')}</button>`}</span></div>`;
+        <button class="btn small light" onclick="Owner.editItem('${i.id}')">✎ ${Z('Edit','编辑')}</button></div>`;
       h += '</div>'; }
     return h;
   }
+  /* v13: one Edit sheet per item — name, prices, photo, list, managers only, delete */
+  function editItem(id){ const i = IT(id); if(!i) return closeModal(); const food = i.kind === 'FOOD';
+    openModal(`<h2>✎ ${esc(i.label)}</h2>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">${icoBox(i, i.label)}<span class="btnrow"><button class="btn small light" onclick="closeModal();Owner.photo('${id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="closeModal();Owner.photoDel('${id}')">✕ ${Z('Remove photo','拿掉照片')}</button>` : ''}</span></div>
+      ${food ? '' : `<div class="field"><label>${Z('Name','名字')}</label><input id="ein" maxlength="30" value="${esc(i.label)}"></div>`}
+      <div class="field"><label>${Z('Usual prices (RM), separated by commas','常用价钱 (RM)，用逗号分开')}</label><input id="pp" inputmode="decimal" value="${(i.prices||[]).join(', ')}"></div>
+      <div class="field"><label>${Z('Most common price','最常用的价钱')}</label><input id="pd" type="number" step="0.01" inputmode="decimal" value="${i.default ?? ''}"></div>
+      <button class="btn primary block" onclick="Owner.saveItem('${id}')">${Z(food ? 'Save prices' : 'Save name and prices', food ? '存价钱' : '存名字和价钱')}</button>
+      ${food ? '' : `<div class="field" style="margin-top:16px"><label>${Z('List','类别')}</label><div class="seg">${['PERSONAL','FARM','SHARED'].map(k => `<button class="${i.kind===k?'on':''}" onclick="${i.kind===k?'':`Owner.saveMove('${id}','${k}')`}">${KINDS[k].ico} ${KINDS[k].name}</button>`).join('')}</div></div>
+      <div class="field"><label>${Z('Who can pick it','谁可以选')}</label><div class="seg"><button class="${i.mgr_only?'':'on'}" onclick="Owner.edMgr('${id}',false)">${Z('Leaders too','工头也可以')}</button><button class="${i.mgr_only?'on':''}" onclick="Owner.edMgr('${id}',true)">🔒 ${Z('Managers only','只给管理层')}</button></div></div>
+      <button class="btn light danger block" style="margin-top:8px" onclick="closeModal();Owner.hideItem('${id}')">🗑 ${Z('Delete this item','删除这样物品')}</button>`}
+      <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Close','关闭')}</button></div>`); }
+  async function saveItem(id){ const i = IT(id), ein = $('#ein'), nm = ein ? ein.value.trim().replace(/\s+/g, ' ').toUpperCase() : i.label;
+    const ps = $('#pp').value.split(/[,\s]+/).map(Number).filter(x => x > 0), d = Number($('#pd').value) || null;
+    if(d && !ps.includes(d)) ps.push(d);
+    if(!nm) return toast(Z('Type a name','要写名字'));
+    const pc = ps.join(',') !== (i.prices||[]).join(',') || (d ?? null) != (i.default ?? null);
+    closeModal(); busy(1);
+    try { if(nm !== i.label) await rpc('shop_owner_item_rename', {item_id:id, label:nm});
+      if(pc) await rpc('shop_owner_prices_set', {item_id:id, prices:ps, default:d});
+      await reload(); render(); toast(Z('Saved','已存'));
+    } catch(e){ toast(errZ(e.message)); try { await reload(); render(); } catch(x){} }
+    finally { busy(0); } }
+  async function edMgr(id, on){ closeModal(); await mgrOnly(id, on); editItem(id); }
   async function hideItem(id){ const i = IT(id), n = (B.lines||[]).filter(l => l.item_id === id && (l.status === 'REQUESTED' || l.status === 'BOUGHT')).length;
     if(n) return toast(Z(`${i.label} still has ${n} open line${n>1?'s':''} — buy and hand over, or take away, first`, `${i.label} 还有 ${n} 笔没买或没交货，先处理好才能删除`));
     if(!confirm(Z(`Delete ${i.label}? Leaders won't see it any more. Old records and salary stay.`, `确定删除 ${i.label} 吗？删除后工头和清单都看不到，旧记录和已扣的薪水照旧。`))) return;
@@ -1069,7 +1093,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, itemsKind, hideItem, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, itemsKind, hideItem, editItem, saveItem, edMgr, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
