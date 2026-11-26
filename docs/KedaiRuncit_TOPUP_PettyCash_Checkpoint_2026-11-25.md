@@ -69,3 +69,13 @@ TOP UP 专属 UX 与统一付款/报销规则作为当前基准，不再重复�
 - 酒类按瓶独立记录分摊人，下一瓶加号在名单下方，固定分摊规则以用户已确认的规格为准；需要真实按瓶、参与人、实际采购成本与收费的结构及合法扣薪核验，尚未接入。
 - ROKOK KING STAR / ROKOK FENZO 名称、单位、图片及已确认价格属于云端商品资料更新；目前未核实或执行数据库修改。不得硬编码覆盖云端目录和历史金额。GLUE 图片同样未核实。
 - 本次通过 JS 语法检查、11 项纯逻辑测试及模拟工头多规格/多工人/充值金额数据流测试；真实登录和数据库写入未测试。GitHub Pages 状态需以该提交的部署记录核实。
+
+## 9. Personal Items — Buy Price / Sell Price（26/11/2026 新确认）
+状态：REQUIREMENT CONFIRMED / DATABASE IMPLEMENTATION BLOCKED。
+- Management → Settings → Items & Prices → Edit：所有 PERSONAL 商品分别显示及保存 Buy Price（采购参考价）与 Sell Price（个人承担参考价）。原有商品 ID、型号、照片及历史资料不变。FARM、SHARED、FOOD 不增加此卖价栏。
+- 实际采购保存实际买价及付款来源；实际个人费用以确认的卖价独立保存，交付后按合法扣薪机制记入 Salary。工人已经自行支付的款不得重复扣薪。
+- 一笔交易必须独立保存实际采购价、实际个人收费、数量、付款人及原记录关联；历史完成交易不得因商品参考价修改而变化；报销以实际垫付款为准，不以卖价计算。
+- 现有 prices/default 及 shop_owner_prices_set、shop_owner_buy、shop_owner_hand、shop_owner_spot 仍为旧单价流程，原有 price/default 属于买价还是卖价不能一概假定，不自动迁移为两个相同价格，不使用 localStorage 模拟云端。
+- Whiskey 仍遵守用户已确认的每瓶按人数固定收费规则，实际买价单独记录；TOP UP 按实际确认金额，不擅自加价。
+- 验收：保存后另一管理者可见两个价格；实际采购 RM8、个人收费 RM10、数量 2 的示例应分别产生 RM16 成本、RM20 个人费用、RM4 差额；改商品参考价后历史不变；取消、退回、报销不得重复记账。此数值仅为测试示例。
+- 26/11 再次调用 Azura Delta Supabase 项目读取返回 permission denied，未部署数据库或前端伪字段。获得权限后须先核实表、RPC、历史价格含义和薪资接口，再以完整联动实施。
