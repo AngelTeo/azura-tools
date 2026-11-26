@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 17;
+const APP_VERSION = 17.1;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -323,7 +323,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   const sig = () => JSON.stringify(lines().filter(l => l.status === 'REQUESTED' || l.status === 'BOUGHT').map(l => [l.id, l.qty]));
 
   function langBar(){ return `<div class="lang">${[['my','မြန်မာ'],['zh','中文'],['en','EN']].map(([k,v]) => `<button class="${LANG===k?'on':''}" onclick="Leader.setLang('${k}')">${v}</button>`).join('')}</div>`; }
-  function header(){ $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit</span>${langBar()}`; }
+  function header(){ $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit <small style="font-size:11px;font-weight:500;opacity:.8">v${APP_VERSION}</small></span>${langBar()}`; }
   function setLang(l){ LANG = l; lsSet(LK(), l); document.documentElement.lang = l; render(); }
 
   async function load(){
@@ -422,7 +422,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function leaderCatalogCards(list,k){
  const entries=k==='PERSONAL'?catalogEntries(list):list.map(item=>({item}));
  return entries.map(e=>{
- if(e.group){const vs=e.variants,on=vs.some(i=>ui.cart[i.id]);return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openVariantGroup('${e.group}')"><span style="display:flex;flex:none;gap:2px">${vs.map(i=>icoBox(i,i.label,true)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${vs.map(i=>esc(fixedVariant(i).spec)).join(' / ')}</small>${on?vs.filter(i=>ui.cart[i.id]).map(i=>`<small class="loc">✓ ${esc(fixedVariant(i).spec)} · ${cartSummary(i.id)}</small>`).join(''):''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;}
+ if(e.group){const vs=e.variants,on=vs.some(i=>ui.cart[i.id]);return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openVariantGroup('${e.group}')"><span style="display:flex;flex:none;gap:2px">${vs.map(i=>icoBox(i,i.label)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${vs.map(i=>esc(fixedVariant(i).spec)).join(' / ')}</small>${on?vs.filter(i=>ui.cart[i.id]).map(i=>`<small class="loc">✓ ${esc(fixedVariant(i).spec)} · ${cartSummary(i.id)}</small>`).join(''):''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;}
  const i=e.item,on=!!ui.cart[i.id];return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openSheet('${i.id}')">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label)?`<small style="color:var(--warn)">${t('alcohol')}</small>`:''}${on?`<small class="loc">✓ ${cartSummary(i.id)}</small>`:''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;
  }).join('');
 }
@@ -1008,8 +1008,8 @@ const Owner = (() => {
 }
   function ownerSpotCatalog(list){
  return (SP.kind==='PERSONAL'?catalogEntries(list):list.map(item=>({item}))).map(e=>{
- if(e.group){const on=e.variants.some(i=>i.id===SP.item);return `<button class="food pick ${on?'chosen':''}" style="width:100%" onclick="Owner.openSpotVariants('${e.group}')"><span style="display:flex;gap:2px;flex:none">${e.variants.map(i=>icoBox(i,i.label,true)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${esc(on?fixedVariant(IT(SP.item)).spec:e.variants.map(i=>fixedVariant(i).spec).join(' / '))}</small></span><span class="plusbig">›</span></button>`;}
- const i=e.item;return `<button class="food pick ${SP.item===i.id?'chosen':''}" style="width:100%" data-id="${esc(i.id)}" onclick="Owner.pickSpotItem(this.dataset.id)">${icoBox(i,i.label,true)}<span class="foodname"><b>${esc(i.label)}</b></span><span class="plusbig">${SP.item===i.id?'✓':'+'}</span></button>`;
+ if(e.group){const on=e.variants.some(i=>i.id===SP.item);return `<button class="food pick ${on?'chosen':''}" style="width:100%" onclick="Owner.openSpotVariants('${e.group}')"><span style="display:flex;gap:2px;flex:none">${e.variants.map(i=>icoBox(i,i.label)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${esc(on?fixedVariant(IT(SP.item)).spec:e.variants.map(i=>fixedVariant(i).spec).join(' / '))}</small></span><span class="plusbig">›</span></button>`;}
+ const i=e.item;return `<button class="food pick ${SP.item===i.id?'chosen':''}" style="width:100%" data-id="${esc(i.id)}" onclick="Owner.pickSpotItem(this.dataset.id)">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b></span><span class="plusbig">${SP.item===i.id?'✓':'+'}</span></button>`;
  }).join('');
 }
   function pickSpotItem(id){const it=IT(id);if(!it.id||it.kind!==SP.kind)return;closeModal();sp({item:id,price:it.default??null,custom:''});}
