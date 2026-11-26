@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -916,6 +916,22 @@ const Owner = (() => {
   }
 
   /* ---------- At the farm ---------- */
+  function whiskeyItem(it){return !!it&&/\bWHISK(?:EY|Y)\b/i.test(String(it.label||'')+' '+String(it.code||''));}
+  function whiskeyRate(n){return ({1:50,2:25,3:17})[n]||0;}
+  function whiskeySpot(){return !!(SP&&SP.item&&whiskeyItem(IT(SP.item)));}
+  function whiskeyBottles(){if(!Array.isArray(SP.bottles)||!SP.bottles.length)SP.bottles=[[]];return SP.bottles;}
+  function whiskeyToggle(i,id){const a=whiskeyBottles()[i];if(!a||!workers(SP.farm).some(w=>w.id===id))return;if(a.includes(id))a.splice(a.indexOf(id),1);else if(a.length<3)a.push(id);else return toast(Z('Maximum 3 people per bottle','每瓶最多3人'));render();}
+  function whiskeyAdd(){const a=whiskeyBottles();if(!a[a.length-1].length)return; a.push([]);SP.bottleOpen=a.length-1;render();}
+  function whiskeyOpen(i){SP.bottleOpen=i;render();}
+  function whiskeyRemove(i){const a=whiskeyBottles();if(a.length<=1)return;a.splice(i,1);SP.bottleOpen=Math.min(i,a.length-1);render();}
+  function whiskeySingleReady(){const a=whiskeyBottles();return a.length===1&&a[0].length===1&&workers(SP.farm).some(w=>w.id===a[0][0])&&(SP.kind==='PERSONAL'||SP.kind==='SHARED');}
+  function whiskeySpotPage(){
+ const a=whiskeyBottles(),idx=SP.bottleOpen??0,tot=a.reduce((sum,b)=>sum+b.length*whiskeyRate(b.length),0);
+ const cards=a.map((b,i)=>{const n=b.length,rate=whiskeyRate(n),open=idx===i,names=b.map(id=>workers(SP.farm).find(w=>w.id===id)?.name||'—');
+ return `<div class="card" style="padding:12px;margin:10px 0"><div class="titleline"><button class="btn small light" onclick="Owner.whiskeyOpen(${i})">${Z('Bottle','第')} ${i+1}${Z('','瓶')} ${open?'▾':'▸'}</button><b>${n?`${n} ${Z('people','人')} · ${RM(rate)} / ${Z('person','人')}`:Z('Choose people','选择工人')}</b>${a.length>1?`<button class="btn small light danger" onclick="Owner.whiskeyRemove(${i})">${Z('Remove','删除')}</button>`:''}</div>${open?`<div class="pills" style="flex-wrap:wrap;margin:8px 0">${workers(SP.farm).map(w=>`<button class="pill ${b.includes(w.id)?'on':''}" onclick="Owner.whiskeyToggle(${i},'${w.id}')">${esc(w.name)}</button>`).join('')}</div>`:`<div class="hint">${esc(names.join(' · '))}</div>`}<div class="line"><span>${Z('Total charge','本瓶收费合计')}</span><strong>${RM(n*rate)}</strong></div></div>`;}).join('');
+ return `<div class="sectionhead">4 · ${Z('Share per bottle','每瓶独立选人')}</div><div class="hint">${Z('1 person RM50 · 2 people RM25 each · 3 people RM17 each','1人 RM50 · 2人 每人RM25 · 3人 每人RM17')}</div>${cards}<button class="btn block light" ${a[a.length-1].length?'':'disabled'} onclick="Owner.whiskeyAdd()">＋ ${Z('Add next bottle','增加下一瓶')}</button><div class="line totrow" style="padding:10px;margin:12px 0"><span>${Z('Total charge','全部收费合计')}</span><strong>${RM(tot)}</strong></div><div class="hint">${Z('Fixed worker charges, not the actual purchase cost.','固定个人收费，不等同实际采购成本。')}</div><div id="bottombar" class="bottom" style="flex-direction:column;align-items:stretch"></div>`;
+}
+  function whiskeyBar(b){const ok=whiskeySingleReady();b.innerHTML=`<button class="btn primary" ${ok?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} · ${Z('deduct now','马上扣')}${ok?' · '+RM(50):''}</button><div class="note warn">${ok?Z('Next-trip and multi-person salary posting require a verified database connection.','下一趟申请及多人扣薪仍需核实数据库接口。'):Z('Multi-person or multi-bottle posting is not enabled. No salary deduction has been made.','多人或多瓶扣薪暂未接通，不会写入薪资。')}</div>`;}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
     let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','在园里当场记')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
@@ -927,8 +943,9 @@ const Owner = (() => {
     if(!SP.kind) return h;
     if(SP.kind === 'SHARED'){ if(!SP.ws) SP.ws = workers(SP.farm).map(w => w.id); }
     h += `<div class="sectionhead">3 · ${Z('Item','物品')}</div><div class="pills" style="flex-wrap:wrap">${B.items.filter(i => i.kind === SP.kind).map(i => `<button class="pill ${SP.item===i.id?'on':''}" onclick="Owner.sp({item:'${i.id}',price:${i.default ?? 'null'},custom:''})">${icon(i.label, i.icon)} ${esc(i.label)}</button>`).join('')}</div>
-      <div class="field" style="margin-top:8px"><input placeholder="${Z('Other item (type it)','其他物品（自己打）')}" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>
-      <div class="field"><input placeholder="${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}" value="${esc(SP.detail||'')}" oninput="Owner.spDet(this.value)"></div>
+      <div class="field" style="margin-top:8px"><input placeholder="${Z('Other item (type it)','其他物品（自己打）')}" value="${esc(SP.custom)}" oninput="Owner.spCustom(this.value)"></div>`;
+    if(whiskeySpot())return h+whiskeySpotPage();
+    h+=`<div class="field"><input placeholder="${Z('Detail (size, colour, phone + RM for TOP UP)','细节（尺码、颜色；TOP UP 写电话和 RM 金额）')}" value="${esc(SP.detail||'')}" oninput="Owner.spDet(this.value)"></div>
       ${SP.kind === 'PERSONAL' ? `<div class="sectionhead">4 · ${Z('Who','谁')}</div><div class="pills" style="flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.worker===w.id?'on':''}" onclick="Owner.sp({worker:'${w.id}'})">${esc(w.name)}</button>`).join('')}</div>` : ''}
       <div class="titleline" style="margin-top:6px"><span>${Z('Quantity','数量')}</span><div class="step"><button onclick="Owner.sp({qty:Math.max(1,${SP.qty}-1)})">−</button><input class="count" readonly value="${SP.qty}"><button class="plus" onclick="Owner.sp({qty:${SP.qty}+1})">+</button></div></div>
       <div class="field"><label>${Z('Price per unit (RM) — needed for "took it now"','单价 (RM) —「已经拿了」要填')}</label><input type="number" inputmode="decimal" step="0.01" value="${SP.price ?? ''}" oninput="Owner.spPrice(this.value)"></div>
@@ -937,15 +954,21 @@ const Owner = (() => {
     return h;
   }
   function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
-  function sp(o){ SP = {...SP, ...o}; render(); }
+  function sp(o){ const prev=SP||{}; SP={...prev,...o}; if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;}render(); }
   function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
   function spDet(v){ SP.detail = v; }
-  function spCustom(v){ SP.custom = v.toUpperCase(); SP.item = null; spotBar(); }
+  function spCustom(v){ const was=whiskeySpot();SP.custom=v.toUpperCase();SP.item=null;if(was){SP.bottles=[[]];SP.bottleOpen=0;SP.price=null;render();}else spotBar(); }
   function spPrice(v){ SP.price = parseFloat(v) || null; spotBar(); }
   function spotReady(){ return SP && SP.farm && SP.kind && (SP.item || SP.custom.trim()) && (SP.kind !== 'PERSONAL' || SP.worker); }
-  function spotBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'spot') return; const ok = spotReady(), okT = ok && SP.price > 0 && (SP.kind !== 'SHARED' || SP.ws.length);
+  function spotBar(){ const b = document.getElementById('bottombar'); if(!b || ui.view !== 'spot') return; if(whiskeySpot()){whiskeyBar(b);return;}const ok = spotReady(), okT = ok && SP.price > 0 && (SP.kind !== 'SHARED' || SP.ws.length);
     b.innerHTML = `<button class="btn primary" ${okT?'':'disabled'} onclick="Owner.spot('TAKEN')">${Z('✓ Took it now','✓ 已经拿了')} · ${SP.kind==='FARM'?Z('farm cost now','马上记园里开销'):Z('deduct now','马上扣')}${SP.price ? ' · ' + RM(SP.price*SP.qty) : ''}</button><button class="btn" ${ok?'':'disabled'} onclick="Owner.spot('WANT')">${Z('➕ Wants it · add to next trip','➕ 想要 · 加进下一趟')}</button>`; }
   async function spot(mode){
+    if(whiskeySpot()){
+      if(mode!=='TAKEN'||!whiskeySingleReady())return toast(Z('This sharing cannot be posted safely yet.','多人分摊暂未接通，不会扣薪。'));
+      const id=whiskeyBottles()[0][0];if(!confirm(Z('Deduct RM50 for one bottle from '+wname(id)+'?','确认 '+wname(id)+' 一人一瓶，扣 RM50？')))return;
+      const p={farm:SP.farm,kind:SP.kind,item_id:SP.item,qty:1,mode:'TAKEN',price:50,paid_by:ME()};if(SP.kind==='PERSONAL')p.worker_id=id;else p.share_ids=[id];
+      const r=await act('shop_owner_spot',p,Z('Written now','已经记了'));if(r){SP={farm:SP.farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};render();}return;
+    }
     const p = {farm:SP.farm, kind:SP.kind, worker_id: SP.kind === 'PERSONAL' ? SP.worker : undefined, qty:SP.qty, mode};
     if(SP.item) p.item_id = SP.item; else p.custom_name = SP.custom.trim();
     if((SP.detail||'').trim()) p.detail = SP.detail.trim();
@@ -1122,7 +1145,7 @@ const Owner = (() => {
     spotBar(); medBar();
   }
   return {start, refresh, itemsKind, hideItem, editItem, saveItem, edMgr, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
-          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
+          hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
 
