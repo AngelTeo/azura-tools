@@ -246,7 +246,7 @@ p.h{font-size:12px;color:var(--mut);margin:0 0 8px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 const SYS = 'Workers';
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
@@ -303,7 +303,7 @@ async function load(){
   const q = (t, cols, f) => { let x = sb.from(t).select(cols); return f ? f(x) : x; };
   const ord = x => x.is('voided_at', null).order('effective_from').order('created_at');
   const res = await Promise.all([
-    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,phone2,telco,photo_path,shares_food,cost_co', x => x.is('voided_at', null).order('worker_no')),
+    q('hub_worker', 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,phone2,telco,telco2,photo_path,shares_food,cost_co', x => x.is('voided_at', null).order('worker_no')),
     q('hub_worker_rate', 'id,worker_id,rate_type,rate,effective_from', ord),
     q('hub_worker_company', 'id,worker_id,company_id,effective_from', ord),
     q('hub_worker_payee', 'id,worker_id,beneficiary_name,account_no,effective_from,slot', ord),
@@ -413,8 +413,9 @@ async function openWorker(id){
     + it('Joined', w.join_date ? fmtD(w.join_date) : 'Not set', '', 'sheetJoin()')
     + it('Food', w.shares_food === false ? 'Not shared <span style="color:var(--mut);font-weight:400">· ticked by hand only</span>' : 'Shares food', '', 'sheetFood()')
     + it('Phone', esc(w.phone || 'Not set'), '', 'sheetPhone()')
-    + it('Phone 2', esc(w.phone2 || 'Not set'), '', 'sheetPhone2()')
     + it('Telco', w.telco ? esc(D.telco[w.telco] || w.telco) : 'Not set', '', 'sheetTelco()')
+    + it('Phone 2', esc(w.phone2 || 'Not set'), '', 'sheetPhone2()')
+    + it('Telco 2', w.telco2 ? esc(D.telco[w.telco2] || w.telco2) : (w.phone2 ? '<span style="color:var(--danger)">Not set · needed for Phone 2 TOP UP</span>' : 'Not set'), '', 'sheetTelco(2)')
     + it('Passport', pas ? last4(pas.passport_no) : 'Not set', '', 'sheetPassport()')
     + (w.stop_note ? it('Stop note', esc(w.stop_note), '', '') : '')
     + '<div class="it tap" onclick="sheetHistory()"><div class="k">Change log</div><div class="v" style="color:var(--mut);font-weight:400">All changes</div><span class="chg">Open →</span></div>';
@@ -591,13 +592,13 @@ function sheetCostCo(){
 }
 function sheetPhone(){ const w = cur(); sheetText('Phone', w.phone, 'tel', v => db(sb.from('hub_worker').update({phone:v || null}).eq('id', w.id))); }
 function sheetPhone2(){ const w = cur(); sheetText('Phone 2', w.phone2, 'tel', v => db(sb.from('hub_worker').update({phone2:v || null}).eq('id', w.id))); }
-function sheetTelco(){
-  const w = cur();
-  sheet('<h3>Telco</h3><p class="h">Shown with the phone number when a Leader asks for TOP UP.</p>'
-    + opts('tel', D.telcos.map(x => [x.code, esc(x.label)]).concat([['', 'Not set']]), w.telco || '', '', 'g2') + '<button class="save" id="s-save">Save</button>');
+function sheetTelco(n){
+  const w = cur(), f = n === 2 ? 'telco2' : 'telco';
+  sheet('<h3>' + (n === 2 ? 'Telco 2' : 'Telco') + '</h3><p class="h">' + (n === 2 ? 'The telco of Phone 2' + (w.phone2 ? ' (' + esc(w.phone2) + ')' : '') + '. Needed before a Leader can TOP UP Phone 2.' : 'Shown with the phone number when a Leader asks for TOP UP.') + '</p>'
+    + opts('tel', D.telcos.map(x => [x.code, esc(x.label)]).concat([['', 'Not set']]), w[f] || '', '', 'g2') + '<button class="save" id="s-save">Save</button>');
   $('s-save').onclick = () => saveWith($('s-save'), async () => {
-    const v = pick('tel') || null; if(v === (w.telco || null)) return 'No change';
-    await db(sb.from('hub_worker').update({telco:v}).eq('id', w.id));
+    const v = pick('tel') || null; if(v === (w[f] || null)) return 'No change';
+    await db(sb.from('hub_worker').update({[f]:v}).eq('id', w.id));
   }, 'Saved');
 }
 function sheetPassport(){
@@ -677,7 +678,7 @@ async function sheetHistory(){
     sb.from('hub_worker_payee').select('slot,effective_from,beneficiary_name,account_no,voided_at').eq('worker_id', w.id).order('effective_from'),
     sb.from('hub_worker_farm').select('effective_from,farm_id,voided_at').eq('worker_id', w.id).order('effective_from'),
   ]);
-  const F = {name:'Name', title:'Position', phone:'Phone', phone2:'Phone 2', telco:'Telco', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
+  const F = {name:'Name', title:'Position', phone:'Phone', phone2:'Phone 2', telco:'Telco', telco2:'Telco 2', join_date:'Joined', stop_date:'Stopped', stop_reason:'Reason', stop_note:'Note', worker_type:'Type'};
   const rows = [];
   (lg.data || []).forEach(x => { const b = x.before_data || {}, a = x.after_data || {};
     const ch = Object.keys(F).filter(k => (b[k] ?? null) !== (a[k] ?? null)).map(k => F[k] + ': ' + esc(b[k] ?? '—') + ' → ' + esc(a[k] ?? '—'));
@@ -765,7 +766,7 @@ function renderManage(){
 // ══════ Export / Import ══════
 const EXP = ['hub_worker', 'hub_worker_rate', 'hub_worker_company', 'hub_worker_farm', 'hub_worker_payee', 'hub_worker_passport'];
 const EXP_COLS = {
-  hub_worker: 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,phone2,telco,photo_path,shares_food,cost_co',
+  hub_worker: 'id,worker_no,name,title,worker_type,join_date,stop_date,stop_reason,stop_note,phone,phone2,telco,telco2,photo_path,shares_food,cost_co',
   hub_worker_rate: 'id,worker_id,rate_type,rate,effective_from',
   hub_worker_company: 'id,worker_id,company_id,effective_from',
   hub_worker_farm: 'id,worker_id,farm_id,effective_from',

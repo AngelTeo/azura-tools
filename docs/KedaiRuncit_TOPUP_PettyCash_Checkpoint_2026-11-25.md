@@ -79,3 +79,12 @@ TOP UP 专属 UX 与统一付款/报销规则作为当前基准，不再重复�
 - Whiskey 仍遵守用户已确认的每瓶按人数固定收费规则，实际买价单独记录；TOP UP 按实际确认金额，不擅自加价。
 - 验收：保存后另一管理者可见两个价格；实际采购 RM8、个人收费 RM10、数量 2 的示例应分别产生 RM16 成本、RM20 个人费用、RM4 差额；改商品参考价后历史不变；取消、退回、报销不得重复记账。此数值仅为测试示例。
 - 26/11 再次调用 Azura Delta Supabase 项目读取返回 permission denied，未部署数据库或前端伪字段。获得权限后须先核实表、RPC、历史价格含义和薪资接口，再以完整联动实施。
+
+## 10. 26 November — v18 + database v60 LIVE (Claude)
+状态：IMPLEMENTED / DATABASE LIVE / TESTED。
+- 资料库 v60（三段迁移 v60_kedai_runcit_money_part1–3）：付款总账 shop_payment、报销批次 shop_reimb、TOP UP shop_topup、供应商结算 shop_settle、参考买价 shop_item_cost；shop_request 加 buy_price / sell_price / pay_id / worker_paid / bottle_id / bottle_n；hub_worker 加 telco2。旧函数备份 backup.v60_20261126_functions。上线前正式库没有任何已买或已交货的单，没有历史被改写。
+- 已确认规则：旧价钱 = 个人物品卖价；买价另填。TOP UP 在「充值成功」扣一次薪；付供应商不再扣。Worker Pay 只在交货时可选，不扣薪、不产生付款或报销。TBF = Teo，LEX = EX，LZF = Levis（Mr. Low）。付款人每次必选，不由操作人推断。
+- 已完成：买价/卖价（Items Edit，部分保存会如实显示）；买了 → 一次付款（TBF/LEX/LZF/Petty Cash），多价一笔；交货按卖价扣薪、可选工人已付；TOP UP 页（电话｜RM｜成功｜付款、MGMT/供应商混合、撤回）；供应商对账（累计/已付/未付、批量结算一笔付款、跨月未付、.xlsx 1–15/16–月底/整月/自定义/全部未付，电话为文字）；Petty Cash（TBF/LEX/LZF 待报销、公司备用金、报销批次、撤回、.xlsx）；Whiskey 按瓶 1 人 50 / 2 人各 25 / 3 人各 17（工头、管理工头画面、当场记），整瓶一起买，买价另记；Phone 2 + Telco 2（FarmHub v23）。
+- 测试：资料库 55/55，画面 55/55（真实写入测试资料库）。
+- 商品资料：CIGARETTES 显示为 ROKOK FENZO（单位 CARTON），ROKOK KING STAR 单位 SET；原 ID/历史不变（备份 backup.v61_20261126_rokok_items）。
+- 待 Owner 提供：各个人物品实际买价；KING STAR / FENZO 照片是否为已确认那张；TOP UP 供应商名称（可在系统直接新增）；SELIPAR / KASUT / SELUAR / CHARGER 两种暂不新增（Owner 决定）；供应商部分付款规则未定，暂时整笔结算。
