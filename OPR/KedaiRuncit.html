@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 13;
+const APP_VERSION = 14;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -225,6 +225,10 @@ const FO_SEED=[
  ['ubat_gigi','Ubat Gigi','Household','batang','Grocery','🪥',0]
 ];
 const FO_PHOTOS=new Set(['ajinomoto','asam_jawa','ayam','bawang_merah','bawang_putih','beras','cili','fish_sauce','garam','halia','ikan_bilis','ikan_keli','kacang_kuning','kacang_tanah','kentang','kicap_pekat','kobis','kobis_bunga','kopi_3in1','kunyit','mee_hoon','mee_sedap','minyak','rebung','sabun_baju','sabun_mandi','ubat_gigi','gula','vesedap','sardin','shampoo','susu','telur','tepung','tomato']);
+
+function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&String(s).replace(/\D/g,'').length>=6&&String(s).replace(/\D/g,'').length<=15;}
+function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
+function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
 
 /* ================= Leader phone: one straight line ================= */
 const Leader = (() => {
@@ -369,12 +373,22 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   /* ---------- add: what → (personal) who → each person's quantity and detail ---------- */
   function startAdd(k){ ui = {view:'add', kind:k, cart:{}, other:''}; SH = null; render(); scrollTo(0,0); }
   const isTop = i => i && (i.code === 'TOP UP' || i.label === 'TOP UP');
-  const amtOk = x => /\d{6,}/.test(String(x.phone||'').replace(/\D/g,'')) && parseFloat(x.amt) > 0;
+  const amtOk = x => phoneValid(x.phone) && String(x.telco||'').trim() && amountValid(x.amt);
+  function specOptions(it){
+  if(!it||it.custom)return [];
+  const n=String(it.label||'').trim().toUpperCase();
+  if(n==='CABLE')return ['Type-C','Micro USB'];
+  if(n==='CHARGER')return ['USB-A','Type-C'];
+  if(n==='BAJU'||n==='SELUAR')return ['S','M','L','XL','2XL','3XL'];
+  if(n==='SELIPAR'||n==='KASUT')return ['37','38','39','40','41','42','43','44','45','46'];
+  return [];
+}
+  function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&String(s).replace(/\D/g,'').length>=6&&String(s).replace(/\D/g,'').length<=15;}
+  function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
+  function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
   const cartItem = key => key.startsWith('c:') ? {id:null, label:key.slice(2), custom:true} : itemById(key);
   let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
-  function cartSummary(key){ const c = ui.cart[key]; if(!c) return '';
-    if(ui.kind === 'PERSONAL') return Object.entries(c.rows).map(([w, r]) => `${(D.workers.find(x => x.id === w)||{}).name} ×${r.qty}${r.phone ? ' · ' + r.phone + (r.telco ? ' · ' + r.telco : '') + ' · RM ' + r.amt : r.det ? ' · ' + r.det : ''}`).join('<br>');
-    return `×${c.qty}${c.det ? ' · ' + esc(c.det) : ''}`; }
+  function cartSummary(key){const c=ui.cart[key];if(!c)return '';if(ui.kind==='PERSONAL')return Object.entries(c.rows).map(([w,r])=>`${esc((D.workers.find(x=>x.id===w)||{}).name||'?')} ×${r.qty}${r.phone?' · '+esc(r.phone)+(r.telco?' · '+esc(r.telco):'')+' · RM '+esc(r.amt):r.det?' · '+esc(r.det):''}`).join('<br>');return `×${c.qty}${c.det?' · '+esc(c.det):''}`;}
   function addPage(){
     const k = ui.kind, list = items(k);
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
@@ -390,29 +404,42 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function setOther(v){ ui.other = v; }
   function openOther(){ const n = ui.other.trim().toUpperCase().replace(/\s+/g, ' '); if(!n) return; ui.other = ''; openSheet('c:' + n); }
   function openSheet(key){ const c = ui.cart[key];
-    SH = c ? JSON.parse(JSON.stringify({key, ...c})) : {key, rows:{}, qty:1, det:''}; drawSheet(); }
-  function sheetOk(){ const it = cartItem(SH.key);
-    if(ui.kind !== 'PERSONAL') return SH.qty > 0;
-    const rs = Object.values(SH.rows); return rs.length > 0 && rs.every(r => r.qty > 0 && (!isTop(it) || amtOk(r))); }
+    SH = c ? JSON.parse(JSON.stringify({key, ...c})) : {key, rows:{}, qty:1, det:''}; if(ui.kind==='PERSONAL'&&specOptions(cartItem(key)).length&&!SH.spec)SH.spec=''; drawSheet(); }
+  function specSelect(v){const opts=specOptions(cartItem(SH.key));if(!opts.includes(v))return;SH.spec=v;drawSheet();}
+  function specLabel(a,b,c){return LANG==='my'?c:LANG==='zh'?b:a;}
+  function shTopPhone(w,k){
+  const wk=(D.workers||[]).find(x=>x.id===w)||{},r=SH.rows[w];if(!r)return;
+  if(k===2){if(!wk.phone2||!wk.telco2)return;r.phone=wk.phone2;r.telco=wk.telco2;}
+  else {r.phone=wk.phone||'';r.telco=wk.telco||'';}
+  drawSheet();
+}
+  function topWorkerValid(w,r){const wk=(D.workers||[]).find(x=>x.id===w)||{};return amtOk(r)&&((String(r.phone)===String(wk.phone||'')&&String(r.telco)===String(wk.telco||''))||(wk.phone2&&wk.telco2&&String(r.phone)===String(wk.phone2)&&String(r.telco)===String(wk.telco2)));}
+  function topWorkerFields(w,r){
+  const primary=String(w.phone||''),second=String(w.phone2||''),can2=!!(second&&w.telco2);
+  const btn=(n,phone,telco)=>`<button class="pill ${String(r.phone)===String(phone)?'on':''}" onclick="Leader.shTopPhone('${w.id}',${n})">${esc(phone)} · ${esc(telco||'—')}</button>`;
+  const valid=phoneValid(r.phone)&&String(r.telco||'').trim();
+  return `<div style="width:100%"><b>${esc(t('phone'))}</b><div class="pills" style="flex-wrap:wrap;padding:3px 0">${primary?btn(1,primary,w.telco):''}${can2?btn(2,second,w.telco2):''}</div>${second&&!can2?`<div class="hint">${specLabel('Phone 2 needs its own telco in Master Hub.','第二号码需在 Master Hub 确认独立 Telco。','ဒုတိယ ဖုန်းနံပါတ်အတွက် ဖုန်းလိုင်းအချက်အလက် လိုအပ်သည်။')}</div>`:''}${!valid?`<div class="note warn">${specLabel('Phone / telco missing — ask management to update Master Hub.','电话或 Telco 不完整，请管理层更新 Master Hub。','ဖုန်းနံပါတ် သို့မဟုတ် ဖုန်းလိုင်း အချက်အလက် မပြည့်စုံပါ။ တာဝန်ခံကို ပြောပါ။')}</div>`:''}</div><span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,40,50].map(a=>`<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span><input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,40,50].map(String).includes(String(r.amt))?'':esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`;
+}
+  function specWorkerFields(w,r,stepper){return `${stepper(w.id,r.qty)}<span class="pill on" style="pointer-events:none">${esc(r.det||'—')}</span>${r.det!==SH.spec&&SH.spec?`<button class="btn small light" onclick="Leader.shSpecWorker('${w.id}')">${esc(specLabel('Change to ','改为 ','ပြောင်းမည် ')+SH.spec)}</button>`:''}`;}
+  function shSpecWorker(w){const opts=specOptions(cartItem(SH.key));if(SH.rows[w]&&opts.includes(SH.spec)){SH.rows[w].det=SH.spec;drawSheet();}}
+  function sheetOk(){const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return SH.qty>0;const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det)));}
   function sheetBtn(){ const b = document.getElementById('shok'); if(b) b.disabled = !sheetOk(); }
-  function drawSheet(){ const it = cartItem(SH.key), top = isTop(it);
+  function drawSheet(){ const it = cartItem(SH.key), top = isTop(it), opts=ui.kind==='PERSONAL'?specOptions(it):[];
     const stepper = (w, q) => `<span class="step"><button onclick="Leader.shQty('${w}',-1)">−</button><input class="count" readonly value="${q}"><button class="plus" onclick="Leader.shQty('${w}',1)">+</button></span>`;
     let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>`;
     if(ui.kind === 'PERSONAL'){
-      h += `<div class="sectionhead" style="margin-top:0">${t('whoWants')}</div>`;
+      if(opts.length)h+=`<div class="sectionhead" style="margin-top:0">${specLabel('1 · Choose specification','1 · 选择规格','၁ · အမျိုးအစား ရွေးပါ')}</div><div class="pills" style="flex-wrap:wrap">${opts.map(v=>`<button class="pill ${SH.spec===v?'on':''}" style="min-height:44px" onclick="Leader.specSelect('${v}')">${esc(v)}</button>`).join('')}</div>`;
+      h += `<div class="sectionhead" style="margin-top:0">${opts.length?'2 · ':''}${t('whoWants')}</div>`;
       h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
         return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
-          ${r ? `<div class="shdet">${top ? `<input inputmode="tel" placeholder="${esc(t('phone'))}" value="${esc(r.phone||'')}" oninput="Leader.shSet('${w.id}','phone',this.value)">${r.telco ? `<span class="pill on" style="pointer-events:none">📶 ${esc(r.telco)}</span>` : ''}
-              <span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,40,50].map(a => `<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span>
-              <input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,40,50].map(String).includes(String(r.amt)) ? '' : esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`
-            : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
+          ${r ? `<div class="shdet">${top ? topWorkerFields(w,r) : opts.length ? specWorkerFields(w,r,stepper) : `${stepper(w.id, r.qty)}<input placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}</div>` : ''}</div>`; }).join('')
         : `<div class="note warn">${t('noWorkers')}</div>`;
     } else {
       h += `<div class="titleline"><span>${t('qty')}</span>${stepper('_', SH.qty)}</div><div class="field"><input placeholder="${esc(t('detailPh'))}" value="${esc(SH.det||'')}" oninput="Leader.shSet('_','det',this.value)"></div>`;
     }
     h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
     openModal(h); sheetBtn(); }
-  function shW(w){ if(SH.rows[w]) delete SH.rows[w]; else { SH.rows[w] = {qty:1}; if(isTop(cartItem(SH.key))){ const wk = (D.workers||[]).find(x => x.id === w)||{}; if(wk.phone) SH.rows[w].phone = wk.phone; if(wk.telco) SH.rows[w].telco = wk.telco; } } drawSheet(); }
+  function shW(w){if(SH.rows[w]){delete SH.rows[w];drawSheet();return;}const it=cartItem(SH.key),opts=specOptions(it);if(ui.kind==='PERSONAL'&&opts.length&&!opts.includes(SH.spec)){toast(specLabel('Choose a specification first.','请先选择规格。','အမျိုးအစား အရင်ရွေးပါ။'));return;}SH.rows[w]={qty:1};if(opts.length)SH.rows[w].det=SH.spec;if(isTop(it)){const wk=(D.workers||[]).find(x=>x.id===w)||{};SH.rows[w].phone=wk.phone||'';SH.rows[w].telco=wk.telco||'';}drawSheet();}
   function shQty(w, d){ if(w === '_') SH.qty = Math.max(1, Math.min(999, SH.qty + d)); else SH.rows[w].qty = Math.max(1, Math.min(20, SH.rows[w].qty + d)); drawSheet(); }
   function shSet(w, k, v, redraw){ if(w === '_') SH[k] = v; else SH.rows[w][k] = v; if(redraw) drawSheet(); else sheetBtn(); }
   function shOk(){ if(!sheetOk()) return; const {key, ...c} = SH; ui.cart[key] = c; SH = null; closeModal(); render(); }
@@ -424,6 +451,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     return reqs; }
   function addCount(){ return cartReqs().length; }
   async function commitAdd(){
+    if(ui.kind==='PERSONAL'&&Object.entries(ui.cart).some(([key,c])=>{const it=cartItem(key),opts=specOptions(it);return Object.entries(c.rows||{}).some(([w,r])=>(isTop(it)&&!topWorkerValid(w,r))||(opts.length&&!opts.includes(r.det)));})){toast(specLabel('Check item specifications or Master Hub phone details.','请检查物品规格或 Master Hub 电话资料。','အမျိုးအစားနှင့် ဖုန်းအချက်အလက် စစ်ပါ။'));return;}
     const reqs = cartReqs(); if(!reqs.length) return; busy(1);
     try {
       for(const r of reqs) await call('shop_request', {device_key: deviceKey(), farm: FARM, client_id: uuid(), kind: ui.kind, ...r});
@@ -555,7 +583,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();
   }
   function goHome(){ ui = {view:'home'}; render(); scrollTo(0,0); }
-  return {start, startManager, setLang, openSheet, openOther, shW, shQty, shSet, shOk, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start, startManager, setLang, openSheet, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
@@ -664,9 +692,9 @@ const Owner = (() => {
   for(const x of gs){
     const it=IT(x.item_id),top=isTopIt(it)||String(x.name).trim().toUpperCase()==='TOP UP';
     if(top){
-      const details=x.lines.map(l=>String(l.detail||'').trim());
-      if(details.some(d=>!/^(\+?[\d\s()-]{6,})\s*·\s*(?:[^·\d][^·]{0,19}\s*·\s*)?RM\s*\d+(?:\.\d{1,2})?$/i.test(d)||d.split('·')[0].replace(/\D/g,'').length<6||Number(d.split(/RM/i)[1])<=0))throw new Error(Z('TOP UP: please complete the phone number and amount before ordering.','TOP UP：请先补齐正确的电话号码和充值金额，再订购。'));
-      blocks.push(x.name+'\n'+details.map(d=>d.replace(/\s*·\s*/g,'  ')).join('\n'));
+      const details=x.lines.map(l=>topDetail(l.detail));
+      if(details.some(d=>!d))throw new Error(Z('TOP UP: please complete the phone number and amount before ordering.','TOP UP：请先补齐正确的电话号码和充值金额，再订购。'));
+      blocks.push(x.name+'\n'+details.map(d=>d.phone+'  RM '+d.amount.toFixed(2)).join('\n'));
       continue;
     }
     const totals=new Map();
