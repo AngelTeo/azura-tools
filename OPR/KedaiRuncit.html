@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -603,7 +603,7 @@ const Owner = (() => {
   const back = () => `<button class="btn small" onclick="Owner.go('home')">${ui.view==='buy'||ui.view==='food'?Z('← Home','← 回首页'):Z('← Back','← 返回')}</button>`;
 
   async function reload(){ B = await rpc('shop_owner_board', {}); }
-  const ERR_ZH = [[/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
+  const ERR_ZH = [[/^Buy and hand over, or take away, its open lines first/, '这样东西还有没买或没交货的单，先处理好才能删除'], [/^Hand over or take away its open lines first/, '这样东西还有没交货的单，先交货或拿掉再换类'], [/^That list already has (.*)/, '那一类已经有 $1'], [/^Not allowed/, '没有权限'], [/^Bad photo/, '照片有问题，再试一次']];
   function errZ(m){ if(OL !== 'zh') return m; for(const [re, z] of ERR_ZH) if(re.test(m)) return m.replace(re, z); return m; }
   async function act(name, p, ok){
     busy(1);
@@ -1018,10 +1018,14 @@ const Owner = (() => {
     for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
       for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
-        <span class="btnrow"><button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Price','价钱')}</button><button class="btn small light" onclick="Owner.photo('${i.id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="Owner.photoDel('${i.id}')">✕</button>` : ''}${k === 'FOOD' ? '' : `<button class="btn small light" onclick="Owner.moveItem('${i.id}')">${Z('Move','换类')}</button><button class="btn small ${i.mgr_only?'gold':'light'}" onclick="Owner.mgrOnly('${i.id}',${!i.mgr_only})">${i.mgr_only ? Z('🔒 Managers only','🔒 只给管理层') : Z('Managers only?','只给管理层？')}</button>`}</span></div>`;
+        <span class="btnrow"><button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Price','价钱')}</button><button class="btn small light" onclick="Owner.photo('${i.id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="Owner.photoDel('${i.id}')">✕</button>` : ''}${k === 'FOOD' ? '' : `<button class="btn small light" onclick="Owner.moveItem('${i.id}')">${Z('Move','换类')}</button><button class="btn small ${i.mgr_only?'gold':'light'}" onclick="Owner.mgrOnly('${i.id}',${!i.mgr_only})">${i.mgr_only ? Z('🔒 Managers only','🔒 只给管理层') : Z('Managers only?','只给管理层？')}</button><button class="btn small light danger" onclick="Owner.hideItem('${i.id}')">🗑 ${Z('Delete','删除')}</button>`}</span></div>`;
       h += '</div>'; }
     return h;
   }
+  async function hideItem(id){ const i = IT(id), n = (B.lines||[]).filter(l => l.item_id === id && (l.status === 'REQUESTED' || l.status === 'BOUGHT')).length;
+    if(n) return toast(Z(`${i.label} still has ${n} open line${n>1?'s':''} — buy and hand over, or take away, first`, `${i.label} 还有 ${n} 笔没买或没交货，先处理好才能删除`));
+    if(!confirm(Z(`Delete ${i.label}? Leaders won't see it any more. Old records and salary stay.`, `确定删除 ${i.label} 吗？删除后工头和清单都看不到，旧记录和已扣的薪水照旧。`))) return;
+    await act('shop_owner_item_hide', {item_id:id}, Z('Deleted','已删除')); }
   function itemsKind(k){ lsSet('runcit_items_kind', k); render(); scrollTo(0,0); }
   function editPrice(id){ const i = IT(id); openModal(`<h2>${esc(i.label)}</h2><div class="field"><label>${Z('Usual prices (RM), separated by commas','常用价钱 (RM)，用逗号分开')}</label><input id="pp" value="${(i.prices||[]).join(', ')}"></div>
       <div class="field"><label>${Z('Most common price','最常用的价钱')}</label><input id="pd" type="number" step="0.01" value="${i.default ?? ''}"></div>
@@ -1065,7 +1069,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, itemsKind, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, itemsKind, hideItem, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
