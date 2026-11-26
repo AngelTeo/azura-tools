@@ -59,3 +59,13 @@ Download Petty Cash Statement (.xlsx)，导出内部付款及报销明细，按�
 TOP UP 专属 UX 与统一付款/报销规则作为当前基准，不再重复讨论已确认内容。
 正式财务实施需要云端核实及数据库支持；可交 Crody 对接或在获得合适权限后实施。
 继续逐项整理 Personal Items；不凭空增加物品，实际商品名单从现有系统确认。每一项分别确认工头输入、供应商采购方式、管理按钮及完成/费用规则。
+
+## 8. 26 November checkpoint — v13 → v14
+- 今早 v11–v13 的 Items & Prices 分类、删除、统一 Edit 完整保留。
+- v14 正式代码提交 b9e29d3291de9493f4751cb852633de2b2ce7a1c：已有通用个人用品名称 CABLE / CHARGER / BAJU / SELUAR / SELIPAR / KASUT 的规格必选，先选规格再多选工人并按人调整数量，切换规格保留已选其他工人的资料。现有商品照片、名称、ID 和请求接口不改；每个工人每商品仍为一条申请，不新增重复申请结构。
+- CABLE: Type-C / Micro USB；CHARGER: USB-A / Type-C；BAJU、SELUAR: S–3XL；SELIPAR/KASUT: 37–46。商品实际名称若为其他别名，需核实云端目录再适配。现有独立型号商品无需重复选择。型号选择目前是文字按钮，原商品图保留；型号专属图尚未接入。
+- TOP UP：选择工人自动带入 Master Hub 的 phone 和 telco，不再手填；金额 RM5/10/20/30/40/50 或手填，支持多位工人不同金额。缺资料阻止提交并提示管理层补齐。Phone 2 仅在服务端确实返回 phone2 + 独立 telco2 时可选，未假定两个号码同 Telco。旧版及带 Telco 的 TOP UP 格式均可生成仅号码与金额的供应商 WhatsApp。不得把发送等同付款/成功。
+- 26/11 再次核实 Azura Delta Supabase 访问被拒绝，以下尚未实施：MGMT/Supplier Top Up 的持久化成功与付款状态、Supplier Statement 和 Excel、统一 Management Pay / Petty Cash 全入口、Petty Cash Statement / Reimburse 和 Excel、Phone 2 服务端字段映射。
+- 酒类按瓶独立记录分摊人，下一瓶加号在名单下方，固定分摊规则以用户已确认的规格为准；需要真实按瓶、参与人、实际采购成本与收费的结构及合法扣薪核验，尚未接入。
+- ROKOK KING STAR / ROKOK FENZO 名称、单位、图片及已确认价格属于云端商品资料更新；目前未核实或执行数据库修改。不得硬编码覆盖云端目录和历史金额。GLUE 图片同样未核实。
+- 本次通过 JS 语法检查、11 项纯逻辑测试及模拟工头多规格/多工人/充值金额数据流测试；真实登录和数据库写入未测试。GitHub Pages 状态需以该提交的部署记录核实。
