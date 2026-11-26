@@ -39,6 +39,7 @@ button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
 .wd{background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px 5px;min-height:92px;font-size:11px;display:flex;flex-direction:column;gap:3px}
 .wd b{font-size:12px;color:var(--mut)}.wd span{background:#f3f5ef;border-radius:6px;padding:2px 4px;line-height:1.3}
 .wd.today{border:2px solid var(--green)}.wd.off{opacity:.55}
+.kfilter{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:6px}.kfilter button{display:flex;align-items:center;gap:10px;text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;min-height:58px;color:var(--ink)}.kfilter button.on{border-color:var(--gold);background:#fff8ea}.kfilter .kico{font-size:24px}.kfilter .ktx b{display:block;font-size:15px}.kfilter .ktx small{color:var(--mut);font-size:12px}@media(min-width:760px){.kfilter{grid-template-columns:repeat(4,1fr)}}
 .seg{display:flex;gap:4px;flex-wrap:wrap}.seg button{border:1px solid var(--line);background:#fff;border-radius:9px;min-height:36px;padding:4px 10px;font-weight:700}.seg button.on{background:var(--green);color:#fff;border-color:var(--green)}
 .checkrow.line{gap:8px}
 .bottom .btn{min-height:50px}
@@ -92,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 10.8;
+const APP_VERSION = 11;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1011,13 +1012,17 @@ const Owner = (() => {
   /* ---------- Items & prices ---------- */
   function pricesPage(){
     let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','物品和价钱')}</h1><div class="sub">${Z('Usual prices show as buttons when you tick "Bought"','按「买了」时，常用价钱会变成按钮')}</div></div>${back()}</div>`;
-    for(const k of ['PERSONAL','SHARED','FARM','FOOD']){
+    /* v11: filter cards — show one kind at a time, remembered */
+    const KS = ['PERSONAL','FARM','SHARED','FOOD'], cur = KS.includes(lsGet('runcit_items_kind','PERSONAL')) ? lsGet('runcit_items_kind','PERSONAL') : 'PERSONAL';
+    h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${B.items.filter(x => x.kind === k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
+    for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
       for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${(i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
         <span class="btnrow"><button class="btn small light" onclick="Owner.editPrice('${i.id}')">${Z('Price','价钱')}</button><button class="btn small light" onclick="Owner.photo('${i.id}')">📷 ${i.photo ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${i.photo ? `<button class="btn small light" onclick="Owner.photoDel('${i.id}')">✕</button>` : ''}${k === 'FOOD' ? '' : `<button class="btn small light" onclick="Owner.moveItem('${i.id}')">${Z('Move','换类')}</button><button class="btn small ${i.mgr_only?'gold':'light'}" onclick="Owner.mgrOnly('${i.id}',${!i.mgr_only})">${i.mgr_only ? Z('🔒 Managers only','🔒 只给管理层') : Z('Managers only?','只给管理层？')}</button>`}</span></div>`;
       h += '</div>'; }
     return h;
   }
+  function itemsKind(k){ lsSet('runcit_items_kind', k); render(); scrollTo(0,0); }
   function editPrice(id){ const i = IT(id); openModal(`<h2>${esc(i.label)}</h2><div class="field"><label>${Z('Usual prices (RM), separated by commas','常用价钱 (RM)，用逗号分开')}</label><input id="pp" value="${(i.prices||[]).join(', ')}"></div>
       <div class="field"><label>${Z('Most common price','最常用的价钱')}</label><input id="pd" type="number" step="0.01" value="${i.default ?? ''}"></div>
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" onclick="Owner.savePrice('${id}')">${Z('Save','存')}</button></div>`); }
@@ -1060,7 +1065,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, item:itemPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, itemsKind, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED})};
 })();
