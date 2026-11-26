@@ -88,3 +88,10 @@ TOP UP 专属 UX 与统一付款/报销规则作为当前基准，不再重复�
 - 测试：资料库 55/55，画面 55/55（真实写入测试资料库）。
 - 商品资料：CIGARETTES 显示为 ROKOK FENZO（单位 CARTON），ROKOK KING STAR 单位 SET；原 ID/历史不变（备份 backup.v61_20261126_rokok_items）。
 - 待 Owner 提供：各个人物品实际买价；KING STAR / FENZO 照片是否为已确认那张；TOP UP 供应商名称（可在系统直接新增）；SELIPAR / KASUT / SELUAR / CHARGER 两种暂不新增（Owner 决定）；供应商部分付款规则未定，暂时整笔结算。
+
+## 11. 已完成：v19 补录 + 要求日期（2026-11-26 上线）
+- 资料库 v62 已跑：50 笔 31/10–24/11 直接写进 Salary 的扣款（TOP UP 16、ROKOK 13、FENZO 7、WHISKEY 13、PHONE 1，合计 RM 2,731.59）连回原本的 Salary 行，Salary 笔数与总额前后一致（1095 笔 / RM 49,912.06）。
+- 谁付钱、买价、TOP UP 谁充的：先「待补」，Owner 在 TOP UP 页、Petty Cash 页自己补；可以 ↶ 撤回。
+- 每一行物品显示「📅 要求日期」；补录查不到原单的留空（待补 ✎）。
+- 修好 v18 首次打开 TOP UP / Petty Cash 没资料。
+- 备份：backup.v62_20261126_*（functions、shop_request、shop_topup、shop_entry、salary_personal、hub_option）。
