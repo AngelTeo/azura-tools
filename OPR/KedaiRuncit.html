@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 51;
+const APP_VERSION = 52;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -882,38 +882,124 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       ...L.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD' && l.trip === 1).map(l => ({l, pill:['#dcfce7','#166534','အသစ်','新']})),
       ...L.filter(l => l.status === 'REQUESTED' && l.kind === 'FOOD').map(l => ({l, pill:['#fff2dc','#945d0c', dm(foodRound().order)+' အမီ', dm(foodRound().order)+' 前订']})),
       ...L.filter(l => l.status === 'BOUGHT').map(l => ({l, pill:['#dcfce7','#166534','ဝယ်ပြီး','已买']}))]; }
-  function drawCard(){
-    const rows = cardRows(), W = 1028, K = 1.4, C = '#8b6a32', RH = 118, H = 24 + 186 + 20 + rows.length*RH + 20 + 40*2 + 30;
-    const c = document.createElement('canvas'); c.width = W*K; c.height = H*K; const g = c.getContext('2d'); g.scale(K,K); g.fillStyle = '#fff'; g.fillRect(0,0,W,H);
-    const F = (w,s) => `${w} ${s}px ${CF}`, rr = (x,y,w,h,r) => { g.beginPath(); g.roundRect ? g.roundRect(x,y,w,h,r) : g.rect(x,y,w,h); };
-    g.fillStyle = C; rr(24,24,980,186,22); g.fill(); g.fillStyle = '#fff'; g.font = F(900,58); g.fillText('ဝယ်စာရင်း',52,100); const tw = g.measureText('ဝယ်စာရင်း').width; g.font = F(700,30); g.fillText('采购清单',62+tw,98);
-    g.font = F(400,22); g.fillText('မရောက်သေးတာ စာရင်းထဲ ကျန်နေမယ် ｜ 没到的会一直留在清单上',52,160);
-    g.font = F(900,54); const fw = g.measureText(FARM).width + 44; g.fillStyle = '#fff'; rr(980-fw,70,fw,90,16); g.fill(); g.fillStyle = C; g.textAlign = 'center'; g.fillText(FARM,980-fw/2,135); g.textAlign = 'left';
-    let y = 230;
-    for(const {l, pill} of rows){
-      if(pill[1] === '#b91c1c'){ g.fillStyle = '#fef2f2'; g.fillRect(24,y,980,RH); } g.fillStyle = '#e5e7eb'; g.fillRect(24,y+RH-2,980,2);
-      const it = itemById(l.item_id);
-      g.fillStyle = '#f4f3ec'; rr(36,y+14,88,88,14); g.fill(); g.font = `48px 'Noto Color Emoji',sans-serif`; g.textAlign = 'center'; g.fillText(l.kind === 'FOOD' ? (it.icon||'🥬') : icon(l.item), 80, y+76); g.textAlign = 'left';
-      g.fillStyle = '#1f2937'; g.font = F(800,34); g.fillText(l.item, 146, y+52);
-      const w1 = (l.kind === 'PERSONAL' ? l.worker : l.kind === 'FOOD' ? ((FO_IN.my||{})[it.code] || tileOf('FOOD').my.title) : tileOf(l.kind).my.title) + (l.detail ? ' · ' + l.detail : '');
-      const z1 = l.kind === 'PERSONAL' ? '' : l.kind === 'FOOD' ? ((FO_IN.zh||{})[it.code] || '') : tileOf(l.kind).zh.title;
-      g.font = F(700,24); g.fillStyle = '#4b5563'; g.fillText(w1, 146, y+90); if(z1){ const ww = g.measureText(w1).width; g.font = F(400,19); g.fillStyle = '#9ca3af'; g.fillText(z1, 156+ww, y+90); }
-      g.fillStyle = C; g.font = F(900,46); g.textAlign = 'right'; g.fillText(`× ${l.qty}`, 826, y+76);
-      g.fillStyle = pill[0]; rr(846,y+15,150,88,12); g.fill(); g.fillStyle = pill[1]; g.textAlign = 'center'; g.font = F(900, pill[2].length > 8 ? 18 : 22); g.fillText(pill[2],921,y+54); g.font = F(700,17); g.fillText(pill[3],921,y+84); g.textAlign = 'left';
-      y += RH;
+
+  /* v52: use the same catalogue images as the real shopping page, never guess a different item. */
+  const cardNorm=s=>String(s??'').trim().replace(/\s+/g,' ').toUpperCase();
+  function cardItem(l){
+    if(l.item_id)return itemById(l.item_id);
+    const name=cardNorm(l.item);
+    const matches=(D.items||[]).filter(i=>i.kind===l.kind&&name&&[i.label,i.code].some(v=>cardNorm(v)===name));
+    return matches.length===1?matches[0]:{};
+  }
+  function cardImage(src){
+    if(!src)return Promise.resolve(null);
+    return new Promise(resolve=>{
+      let done=false;const im=new Image();
+      const finish=v=>{if(done)return;done=true;clearTimeout(timer);im.onload=im.onerror=null;resolve(v);};
+      const timer=setTimeout(()=>finish(null),5000);
+      im.onload=()=>{try{
+        if(!im.naturalWidth||!im.naturalHeight)return finish(null);
+        const test=document.createElement('canvas');test.width=test.height=1;
+        const ctx=test.getContext('2d');ctx.drawImage(im,0,0,1,1);ctx.getImageData(0,0,1,1);
+        finish(im);
+      }catch(e){finish(null);}};
+      im.onerror=()=>finish(null);
+      if(/^https?:\/\//i.test(src))im.crossOrigin='anonymous';
+      im.src=src;
+    });
+  }
+  async function cardImages(rows,auth){
+    const out=new Map(),cache=new Map();
+    const imageOnce=src=>{if(!src)return Promise.resolve(null);if(!cache.has(src))cache.set(src,cardImage(src));return cache.get(src);};
+    for(let i=0;i<rows.length;i+=6)await Promise.all(rows.slice(i,i+6).map(async({l,it})=>{
+      let im=null,reference=false,unavailable=false;
+      if(l.photo_count&&l.id){
+        try{
+          const photos=await Promise.race([rpc('shop_request_photo_get',{request_id:l.id,first:true,...auth}),new Promise(ok=>setTimeout(()=>ok([]),5000))]);
+          const raw=photos?.[0];
+          if(typeof raw==='string'&&/^[A-Za-z0-9+/]+={0,2}$/.test(raw))im=await imageOnce('data:image/jpeg;base64,'+raw);
+          reference=!!im;if(!im)unavailable=true;
+        }catch(e){unavailable=true;}
+      }
+      if(!im){
+        const src=itemPhoto(it);
+        if(src){im=await imageOnce(src);if(im)reference=src.startsWith('data:image/svg+xml');else unavailable=true;}
+      }
+      out.set(l.id,{im,reference,unavailable});
+    }));
+    return out;
+  }
+  function cardFingerprint(rows=cardRows()){
+    return JSON.stringify(rows.map(({l})=>{const it=cardItem(l);return [l.id,l.kind,l.item_id,l.item,l.qty,l.status,l.trip,l.detail,l.worker,l.photo_count,it.id,it.photo,it.code];}));
+  }
+  function drawCard(rows,photos,farm){
+    const W=1028,K=1.4,C='#8b6a32',RH=136,H=24+186+20+rows.length*RH+20+40*2+30;
+    const c=document.createElement('canvas');c.width=Math.round(W*K);c.height=Math.round(H*K);
+    const g=c.getContext('2d');g.scale(K,K);g.fillStyle='#fff';g.fillRect(0,0,W,H);
+    const F=(w,s)=>`${w} ${s}px ${CF}`,rr=(x,y,w,h,r)=>{g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h);};
+    g.fillStyle=C;rr(24,24,980,186,22);g.fill();g.fillStyle='#fff';g.font=F(900,58);g.fillText('ဝယ်စာရင်း',52,100);const tw=g.measureText('ဝယ်စာရင်း').width;g.font=F(700,30);g.fillText('采购清单',62+tw,98);
+    g.font=F(400,22);g.fillText('မရောက်သေးတာ စာရင်းထဲ ကျန်နေမယ် ｜ 没到的会一直留在清单上',52,160,730);
+    g.font=F(900,54);const fw=g.measureText(farm).width+44;g.fillStyle='#fff';rr(980-fw,70,fw,90,16);g.fill();g.fillStyle=C;g.textAlign='center';g.fillText(farm,980-fw/2,135);g.textAlign='left';
+    let y=230;
+    for(const {l,pill,it} of rows){
+      if(pill[1]==='#b91c1c'){g.fillStyle='#fef2f2';g.fillRect(24,y,980,RH);}
+      g.fillStyle='#e5e7eb';g.fillRect(24,y+RH-2,980,2);
+      const p=photos.get(l.id),im=p?.im;
+      g.fillStyle='#fff';rr(36,y+12,108,108,12);g.fill();
+      if(im){const k=Math.min(100/im.naturalWidth,100/im.naturalHeight),w=im.naturalWidth*k,hh=im.naturalHeight*k;
+        g.drawImage(im,90-w/2,y+66-hh/2,w,hh);
+        if(p.reference){g.fillStyle='#ffffffed';g.fillRect(36,y+98,108,22);g.font=F(700,14);g.fillStyle='#64756c';g.textAlign='center';g.fillText('参考图',90,y+115);g.textAlign='left';}
+      }else{
+        g.fillStyle='#f3f5ef';rr(36,y+12,108,108,12);g.fill();g.fillStyle='#728074';g.font=F(700,18);g.textAlign='center';
+        g.fillText(p?.unavailable?'ပုံမရပါ':'ပုံမရှိပါ',90,y+55,100);g.font=F(400,17);g.fillText(p?.unavailable?'图片未载入':'无照片',90,y+84,100);g.textAlign='left';
+      }
+      g.fillStyle='#1f2937';g.font=F(800,32);g.fillText(l.item,160,y+48,575);
+      const w1=(l.kind==='PERSONAL'?(l.worker||''):l.kind==='FOOD'?((FO_IN.my||{})[it.code]||tileOf('FOOD').my.title):tileOf(l.kind).my.title);
+      const z1=l.kind==='PERSONAL'?'':l.kind==='FOOD'?((FO_IN.zh||{})[it.code]||''):tileOf(l.kind).zh.title;
+      g.font=F(700,23);g.fillStyle='#4b5563';g.fillText([w1,z1].filter(Boolean).join(' · '),160,y+82,575);
+      if(l.detail){g.font=F(400,21);g.fillStyle='#647067';g.fillText(String(l.detail),160,y+112,575);}
+      g.fillStyle=C;g.font=F(900,44);g.textAlign='right';g.fillText(`× ${l.qty}`,826,y+82,86);
+      g.fillStyle=pill[0];rr(846,y+23,150,88,12);g.fill();g.fillStyle=pill[1];g.textAlign='center';g.font=F(900,pill[2].length>8?18:22);g.fillText(pill[2],921,y+62,140);g.font=F(700,17);g.fillText(pill[3],921,y+92,140);g.textAlign='left';
+      y+=RH;
     }
-    y += 24; g.fillStyle = '#374151'; g.font = F(700,22); g.fillText('ထပ်လိုတာ ရှိရင် စာရင်းထဲ ထည့်ပြီး ပြန်ပို့ပါ။', 24, y+24); y += 40;
-    g.font = F(400,19); g.fillStyle = '#6b7280'; g.fillText('还要什么就加进清单，再传一次。', 24, y+22);
+    y+=24;g.fillStyle='#374151';g.font=F(700,22);g.fillText('ထပ်လိုတာ ရှိရင် စာရင်းထဲ ထည့်ပြီး ပြန်ပို့ပါ။',24,y+24);y+=40;
+    g.font=F(400,19);g.fillStyle='#6b7280';g.fillText('还要什么就加进清单，再传一次。',24,y+22);
     return c;
   }
-  function showCard(){ const c = drawCard(); showCard.c = c;
-    openModal(`<h2>${esc(FARM)} · ${t('card')}</h2><img src="${c.toDataURL('image/png')}" style="width:100%;border-radius:12px;border:1px solid var(--line)"><div class="btnrow" style="margin-top:12px"><button class="btn gold grow" onclick="Leader.shareCard()">${t('share')}</button><button class="btn" onclick="closeModal()">${t('close')}</button></div>`); }
+  let CARD_PREP=0,CARD_READY=null,CARD_SHARING=false;
+  async function showCard(){
+    if(LeaderBusy||PhotoBusy)return;
+    const token=++CARD_PREP,farm=FARM,fp=cardFingerprint(),oldSig=sig();
+    const rows=cardRows().map(({l,pill})=>({l:{...l},pill:[...pill],it:{...cardItem(l)}}));
+    const auth={farm,manager:MGR,...(!MGR?{device_key:deviceKey()}:{})};
+    CARD_READY=null;
+    const title=esc(farm)+' · '+esc(t('card'));
+    openModal('<h2>'+title+'</h2><div id="leader-card-loading" class="note">'+esc(specLabel('Loading item photos…','正在读取商品照片…','ပစ္စည်းပုံများ ဖတ်နေပါသည်…'))+'</div><button class="btn block" onclick="closeModal()">'+esc(t('close'))+'</button>');
+    const current=()=>token===CARD_PREP&&FARM===farm&&$('#modalOverlay')?.classList.contains('on')&&!!$('#leader-card-loading');
+    try{
+      const [photos]=await Promise.all([cardImages(rows,auth),document.fonts?.ready||Promise.resolve()]);
+      if(!current())return;
+      if(cardFingerprint()!==fp){openModal('<h2>'+title+'</h2><div class="note warn">'+esc(specLabel('List changed. Open the card again.','清单已变化，请重新打开清单卡。','စာရင်း ပြောင်းသွားပါသည်။ ပြန်ဖွင့်ပါ။'))+'</div><button class="btn block" onclick="closeModal()">'+esc(t('close'))+'</button>');return;}
+      const c=drawCard(rows,photos,farm);
+      const blob=await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(Error('Cannot create image')),'image/png'));
+      if(!current())return;
+      CARD_READY={blob,farm,fp,oldSig};
+      const missing=rows.filter(({l})=>!photos.get(l.id)?.im).length;
+      openModal('<h2>'+title+'</h2><img src="'+c.toDataURL('image/png')+'" style="width:100%;border-radius:12px;border:1px solid var(--line)" alt="'+esc(t('card'))+'">'+(missing?'<div class="hint" style="margin-top:8px">'+esc(specLabel(missing+' item(s) without available photos; no substitute images used.',missing+' 项没有可用照片，未使用替代商品图片。','ပုံမရသော ပစ္စည်း '+missing+' မျိုး။ အစားထိုးပုံ မသုံးပါ။'))+'</div>':'')+'<div class="btnrow" style="margin-top:12px"><button class="btn gold grow" id="leader-card-share" onclick="Leader.shareCard()">'+esc(t('share'))+'</button><button class="btn" onclick="closeModal()">'+esc(t('close'))+'</button></div>');
+    }catch(e){if(current())openModal('<h2>'+title+'</h2><div class="note warn">'+esc(specLabel('Could not prepare card. Please retry.','清单卡生成失败，请重试。','စာရင်းပုံ မပြုလုပ်နိုင်ပါ။ ထပ်စမ်းပါ။'))+'</div><button class="btn primary block" onclick="Leader.showCard()">'+esc(specLabel('Retry','重试','ထပ်စမ်းမယ်'))+'</button><button class="btn block" onclick="closeModal()">'+esc(t('close'))+'</button>');}
+  }
   async function shareCard(){
-    const name = `${String(FARM).replace(' ','')}_List_${klToday()}.png`, blob = await new Promise(ok => showCard.c.toBlob(ok, 'image/png')), file = new File([blob], name, {type:'image/png'});
-    let done = false;
-    if(navigator.canShare && navigator.canShare({files:[file]})){ try { await navigator.share({files:[file], title:name}); done = true; } catch(x){ if(x.name === 'AbortError') return; } }
-    if(!done){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
-    sentSig = sig(); lsSet('runcit_sent', sentSig); closeModal(); ui = {view:'home'}; render(); scrollTo(0,0); toast(t('sent') + ' ✓');
+    const ready=CARD_READY;if(!ready||CARD_SHARING)return;
+    if(ready.farm!==FARM||ready.fp!==cardFingerprint()){toast(specLabel('List changed. Open the card again.','清单已变化，请重新打开清单卡。','စာရင်း ပြောင်းသွားပါသည်။ ပြန်ဖွင့်ပါ။'));return;}
+    const name=String(ready.farm).replace(' ','')+'_List_'+klToday()+'.png';
+    CARD_SHARING=true;const btn=$('#leader-card-share');if(btn)btn.disabled=true;
+    try{
+      let done=false;
+      if(typeof File==='function'&&navigator.canShare){const file=new File([ready.blob],name,{type:'image/png'});if(navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});done=true;}catch(x){if(x.name==='AbortError')return;}}}
+      if(!done){const a=document.createElement('a');const u=URL.createObjectURL(ready.blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);}
+      sentSig=ready.oldSig;lsSet('runcit_sent',sentSig);closeModal();ui={view:'home'};render();scrollTo(0,0);toast(t('sent')+' ✓');
+    }catch(e){toast(specLabel('Unable to save or share. Please retry.','无法保存或分享，请重试。','သိမ်းရန် / မျှဝေရန် မရပါ။ ထပ်စမ်းပါ။'));}
+    finally{CARD_SHARING=false;if(btn)btn.disabled=false;}
   }
 
   /* ---------- bottom bar + render ---------- */
