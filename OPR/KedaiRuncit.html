@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 29;
+const APP_VERSION = 30;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -823,7 +823,7 @@ const Owner = (() => {
     document.documentElement.lang=OL;render();
     if(!WH&&!WHLoad){WHLoad=reload().then(()=>render()).catch(e=>{WHError=e.message;render();}).finally(()=>{WHLoad=null;});}
   }
-  function go(v, extra){ if(v!=='item'||ui.key!==extra?.key)DetailDone.clear();if(v==='buy'&&extra?.tab)BuyTab=extra.tab; if(v==='topstmt'&&ui.view!=='topstmt'){TS=null;ST=null;} if(v==='petty'&&ui.view!=='petty')PC=null; ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
+  function go(v, extra){ if(['monthcards','monthcard'].includes(ui.view)&&!['monthcards','monthcard'].includes(v)){++MC.epoch;mcDiscard();MC.preparing=false;} if(v!=='item'||ui.key!==extra?.key)DetailDone.clear();if(v==='buy'&&extra?.tab)BuyTab=extra.tab; if(v==='topstmt'&&ui.view!=='topstmt'){TS=null;ST=null;} if(v==='petty'&&ui.view!=='petty')PC=null; ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
 
   /* ---------- Management homepage UX ---------- */
   function handLink(kind){
@@ -847,6 +847,7 @@ const Owner = (() => {
       <button class="attcard ${(B.deliveries||[]).some(x=>x.valid&&x.received_qty<x.sent_qty)?'todo':'plain'}" onclick="Owner.go('receipts')"><span class="aico">📦</span><span class="atxt"><b>${Z('Leader receipts','工头点收')}</b><small>${(B.deliveries||[]).filter(x=>x.valid&&x.received_qty<x.sent_qty).length} ${Z('awaiting confirmation','笔未点收')} · ${(B.deliveries||[]).filter(x=>x.valid&&x.received_qty<x.sent_qty&&x.last_note).length} ${Z('reported issues','笔异常')}</small></span><span class="aarr">›</span></button>
       <div class="homequickgrid">${shortcut('✍️','At the Farm','园里现场记录','On-site record','spot')}${shortcut('🩺','Medical','看医生／买药','Medical expenses','med')}</div>
       <button class="attcard plain homerecord" onclick="Owner.go('petty')"><span class="aico" style="font-size:28px">💰</span><span class="atxt"><b>Petty Cash</b><small>${(money().unpaid_buys || []).length ? Z(`${money().unpaid_buys.length} old lines to fill in · `, `补录待补 ${money().unpaid_buys.length} 笔 · `) : ''}${(() => { const o = money().payments.filter(p => p.source === 'MGMT' && !p.reimb_id && Number(p.amount)>0); return o.length ? Z(`${RM(o.reduce((s,p) => s + Number(p.amount), 0))} to reimburse (TBF / LEX / LZF)`, `待报销 ${RM(o.reduce((s,p) => s + Number(p.amount), 0))}（TBF / LEX / LZF）`) : Z('Payments & reimburse','付款记录和报销'); })()}</small></span><span class="aarr">›</span></button>
+      <button class="attcard plain homerecord" onclick="Owner.openMonthCards()"><span class="aico" style="font-size:28px">🧾</span><span class="atxt"><b>Monthly Shopping Card</b><small>${Z('One worker · one card · WhatsApp','每人一张月结购物卡 · WhatsApp')}</small></span><span class="aarr">›</span></button>
       <button class="attcard plain homerecord" onclick="Owner.go('records')"><span class="aico" style="font-size:28px">📒</span><span class="atxt"><b>Records</b><small>${Z('Expense records','历史采购及费用记录')}</small></span><span class="aarr">›</span></button>
       <details class="card homefold"><summary>${Z('Farm attendance / weekly schedule','各园点名 / 每周安排')}</summary>${weekStrip()}${FARMS.map(f=>`<div class="line"><b>${f}</b><span>${att(f)}</span></div>`).join('')}</details>`;
   }
@@ -1662,6 +1663,88 @@ const Owner = (() => {
     return h;
   }
 
+
+  let MC={month:null,roster:null,card:null,farm:'ALL',search:'',loading:false,error:'',epoch:0,prepared:null};
+  const MMY={title:'လစဉ် ဝယ်ယူမှုစာရင်း',personal:'ကိုယ်ပိုင် ဝယ်ယူမှု',shared:'အတူမျှဝေ ကုန်ကျစရိတ်',cash:'ငွေသား ပေးပြီး',instal:'အရစ်ကျ ဝယ်ယူမှု',pending:'မပြီးသေးသော ပစ္စည်းများ',salary:'လစာမှ ဖြတ်မည့် ဝယ်ယူစရိတ်',locked:'လစာမှတ်တမ်း အတည်ပြုပြီး',draft:'ယာယီစာရင်း · လစာ အတည်မပြုရသေး',round:'ဒသမကိန်း ညှိနှိုင်းမှု',date:'ရက်စွဲ',item:'ပစ္စည်း',qty:'အရေအတွက်',amount:'ငွေပမာဏ',none:'စာရင်း မရှိပါ',cashnote:'ငွေသားပေးပြီး · လစာမှ ထပ်မဖြတ်ပါ',instalnote:'အရစ်ကျ ငွေကို သီးခြား စာရင်းသွင်းထားပါသည်',pendingnote:'မပြီးသေးပါ · ဤစာရင်း၏ စုစုပေါင်းတွင် မပါပါ',help:'စာရင်း မမှန်ပါက တာဝန်ခံကို ပြောပါ။'};
+  const mcMoney=v=>'RM '+Number(v||0).toFixed(2);
+  const mcDate=v=>v&&/^\d{4}-\d{2}-\d{2}/.test(v)?v.slice(8,10)+'/'+v.slice(5,7):'—';
+  const mcStatus=x=>x.ordered?'မှာပြီး · Ordered':x.status==='BOUGHT'?'ဝယ်ပြီး · Bought':'စောင့်နေဆဲ · Pending';
+  const mcSafe=c=>c&&Array.isArray(c.issues)&&c.issues.length===0;
+  function mcDiscard(){if(MC.prepared?.url)URL.revokeObjectURL(MC.prepared.url);MC.prepared=null;}
+  async function openMonthCards(month){
+    if(!B)return;const m=month||MC.month||B.today.slice(0,7),epoch=MC.epoch+1;mcDiscard();MC={month:m,roster:null,card:null,farm:'ALL',search:'',loading:true,error:'',epoch,prepared:null};ui={view:'monthcards'};render();scrollTo(0,0);
+    try{const r=await rpc('shop_owner_month_card',{month:m});if(MC.epoch!==epoch||ui.view!=='monthcards')return;if(!r||r.month!==m||!Array.isArray(r.workers))throw Error('Invalid monthly worker list');MC.roster=r;}
+    catch(e){if(MC.epoch===epoch)MC.error=errZ(e.message);}
+    finally{if(MC.epoch===epoch){MC.loading=false;if(ui.view==='monthcards')render();}}
+  }
+  function mcWorkers(){return (MC.roster?.workers||[]).filter(w=>(MC.farm==='ALL'||w.farm===MC.farm)&&String(w.worker_name).toLowerCase().includes(MC.search.toLowerCase()));}
+  function mcFilter(f){MC.farm=f;render();}
+  function mcSearch(v){MC.search=v;const el=$('#mc-workers');if(el)el.innerHTML=mcWorkerRows();}
+  function mcWorkerRows(){const list=mcWorkers();return list.length?list.map(w=>'<button class="food pick" style="margin:7px 0" data-id="'+esc(w.worker_id)+'" onclick="Owner.mcOpen(this.dataset.id)"><span class="ico">👷</span><span class="foodname"><b>'+esc(w.worker_name)+'</b><small>'+esc(w.farm)+(w.stopped?' · '+Z('Left','已离职'):'')+'</small></span><span class="aarr">›</span></button>').join(''):'<div class="empty">'+Z('No matching worker','没有对应工人')+'</div>';}
+  async function mcOpen(id){const w=(MC.roster?.workers||[]).find(w=>w.worker_id===id);if(!w)return;const epoch=++MC.epoch,m=MC.month;mcDiscard();MC.preparing=false;MC.card=null;MC.loading=true;MC.error='';ui={view:'monthcard',worker:id};render();scrollTo(0,0);
+    try{const c=await rpc('shop_owner_month_card',{month:m,worker_id:id});if(MC.epoch!==epoch||ui.view!=='monthcard'||ui.worker!==id)return;if(c?.worker?.worker_id!==id||c.month!==m||!['personal','cash','shared','instalments','pending','issues'].every(k=>Array.isArray(c[k])))throw Error('Invalid card response');MC.card=c;}
+    catch(e){if(MC.epoch===epoch)MC.error=errZ(e.message);}
+    finally{if(MC.epoch===epoch){MC.loading=false;if(ui.view==='monthcard')render();}}
+  }
+  function mcBack(){++MC.epoch;mcDiscard();MC.preparing=false;MC.card=null;MC.loading=false;MC.error='';ui={view:'monthcards'};render();scrollTo(0,0);}
+  function mcNext(){const a=mcWorkers(),i=a.findIndex(w=>w.worker_id===ui.worker);if(i>=0&&i<a.length-1)return mcOpen(a[i+1].worker_id);}
+  function monthCardsPage(){let h=whHeader('Monthly Shopping Card','月结购物总卡',Z('Select a worker and share their own record','选择工人，一人一张，只发给本人'))+'<div class="field"><label>'+Z('Salary month','工资月份')+'</label><input type="month" min="2026-11" max="'+esc(B.today.slice(0,7))+'" value="'+esc(MC.month||B.today.slice(0,7))+'" onchange="Owner.openMonthCards(this.value)"></div>';
+    if(MC.loading)return h+'<div class="empty">'+Z('Reading official records…','正在读取正式记录…')+'</div>';
+    if(MC.error)return h+'<div class="note warn">'+esc(MC.error)+'</div><button class="btn block" onclick="Owner.openMonthCards()">'+Z('Retry','重试')+'</button>';
+    if(!MC.roster)return h+'<button class="btn block" onclick="Owner.openMonthCards()">'+Z('Load workers','读取名单')+'</button>';
+    h+='<div class="note '+(MC.roster.locked?'':'warn')+'">'+(MC.roster.locked?Z('Salary month locked','工资月份已锁定'):Z('Provisional — salary not yet locked','暂结 · 工资尚未锁定'))+' · '+MC.roster.workers.length+' '+Z('workers','名工人')+'</div><div class="pills">'+['ALL',...FARMS].map(f=>'<button class="pill '+(MC.farm===f?'on':'')+'" onclick="Owner.mcFilter(\''+f+'\')">'+esc(f==='ALL'?Z('All','全部'):f)+'</button>').join('')+'</div><input style="width:100%" placeholder="'+Z('Search worker','搜索工人')+'" value="'+esc(MC.search)+'" oninput="Owner.mcSearch(this.value)"><div id="mc-workers">'+mcWorkerRows()+'</div>';return h;
+  }
+  function mcRows(c){
+    const rows=[];const section=(my,en,zh,list)=>{if(list.length)rows.push({type:'section',label:my+' · '+en,zh},...list);};
+    const regular=(x)=>({type:'item',date:mcDate(x.date),label:x.item||'—',sub:[x.qty!=null?'× '+x.qty:'',x.detail||'',x.source==='SALARY'?'Salary record':'',x.receipt_pending?'Receipt not confirmed':''].filter(Boolean).join(' · '),amount:mcMoney(x.amount)});
+    section(MMY.personal,'Personal','个人费用',c.personal.map(regular));
+    section(MMY.shared,'Shared / food','伙食及共用分摊',c.shared.map(x=>({type:'item',date:mcDate(x.date),label:x.item||'Shared expense',sub:[x.n?'÷ '+x.n+' people':'',...(x.items||[]).map(i=>i.item+' × '+i.qty)].filter(Boolean).join(' · '),amount:mcMoney(x.amount)})));
+    if(c.shared.length&&Number(c.shared_rounding)!==0)rows.push({type:'item',date:'',label:MMY.round+' · Rounding',sub:'Salary monthly rounding',amount:(Number(c.shared_rounding)>0?'+ ':'− ')+mcMoney(Math.abs(Number(c.shared_rounding)))});
+    rows.push({type:'total',label:MMY.salary+' · Shopping salary deduction',amount:mcMoney(c.salary_total)});
+    section(MMY.cash,'Cash paid','已付现金（不再扣薪）',c.cash.map(regular));
+    if(c.cash.length)rows.push({type:'note',label:MMY.cashnote+' · Not deducted again · '+mcMoney(c.cash_total)});
+    section(MMY.instal,'Instalment purchase','分期购买（本金独立）',c.instalments.map(x=>({type:'item',date:mcDate(x.date),label:x.item,sub:'Total '+mcMoney(x.amount)+' · Deposit '+mcMoney(x.deposit)+' · Loan '+mcMoney(x.principal)+' · Agreed / month '+mcMoney(x.monthly)+' · From '+x.start_month,amount:''})));
+    if(c.instalments.length)rows.push({type:'note',label:MMY.instalnote+' · Not included in shopping deduction total'});
+    section(MMY.pending,'Still open as of '+c.today,'截至今日尚未完成（不计入总额）',c.pending.map(x=>({type:'item',date:mcDate(x.date),label:x.item||'—',sub:['× '+x.qty,x.detail||'',mcStatus(x)].filter(Boolean).join(' · '),amount:''})));
+    if(c.pending.length)rows.push({type:'note',label:MMY.pendingnote+' · Excluded from total'});
+    if(!c.personal.length&&!c.shared.length&&!c.cash.length&&!c.instalments.length&&!c.pending.length)rows.unshift({type:'note',label:MMY.none+' · No purchase records'});
+    return rows;
+  }
+  function mcHtml(c){return '<div id="mc-preview" style="background:#fff;color:#17241d;border:1px solid #cfdacf;border-radius:14px;overflow:hidden"><div style="background:#184e3d;color:#fff;padding:18px"><small>AZURA DELTA · KEDAI RUNCIT</small><h2 style="font-size:21px;margin:10px 0">'+MMY.title+'</h2><div style="font-size:15px">MONTHLY SHOPPING CARD · '+esc(c.month)+'</div><h2 style="margin:15px 0 0">'+esc(c.worker.worker_name)+'</h2><div>'+esc(c.worker.farm)+' · '+esc(c.today)+'</div></div><div style="padding:12px"><div class="note '+(c.locked?'':'warn')+'">'+esc(c.locked?MMY.locked+' · Confirmed':MMY.draft+' · Provisional')+'</div>'+mcRows(c).map(r=>r.type==='section'?'<div style="background:#edf4ef;padding:9px;border-radius:7px;margin-top:12px;font-weight:800">'+esc(r.label)+'</div>':r.type==='total'?'<div style="padding:15px;background:#184e3d;color:#fff;border-radius:10px;margin-top:12px"><div>'+esc(r.label)+'</div><div style="font-size:28px;font-weight:800;margin-top:6px">'+esc(r.amount)+'</div></div>':r.type==='note'?'<div class="hint" style="padding:8px 0">'+esc(r.label)+'</div>':'<div class="line" style="gap:10px;align-items:flex-start"><span style="min-width:40px;color:#68776d">'+esc(r.date)+'</span><span style="flex:1;min-width:0"><b>'+esc(r.label)+'</b>'+(r.sub?'<div class="hint" style="overflow-wrap:anywhere">'+esc(r.sub)+'</div>':'')+'</span><b style="white-space:nowrap">'+esc(r.amount)+'</b></div>').join('')+'<div style="padding:12px 0;font-size:13px;color:#58695f">'+MMY.help+'<div>Contact management if any item is incorrect.</div></div></div></div>';}
+  function monthCardPage(){const c=MC.card,w=MC.roster?.workers?.find(x=>x.worker_id===ui.worker),list=mcWorkers(),next=list.findIndex(x=>x.worker_id===ui.worker)<list.length-1;let h='<div class="hero"><div><h1>'+Z('Monthly shopping card','月结购物卡')+'</h1><div class="sub">'+esc(w?.worker_name||'')+' · '+esc(MC.month)+'</div></div><button class="btn small" onclick="Owner.mcBack()">'+Z('← Workers','← 工人名单')+'</button></div>';
+    if(MC.loading)return h+'<div class="empty">'+Z('Checking Salary records…','正在核对 Salary…')+'</div>';
+    if(MC.error||!c)return h+'<div class="note warn">'+esc(MC.error||Z('No card data','没有购物卡资料'))+'</div><button class="btn block" onclick="Owner.mcOpen(\''+esc(ui.worker)+'\')">'+Z('Retry','重试')+'</button>';
+    if(!mcSafe(c))h+='<div class="note warn">'+Z('Salary reconciliation required. Sharing disabled until verified.','Salary 与原记录需要核对，暂不允许发送购物卡。')+'<div>'+esc(c.issues.join(' · '))+'</div></div>';
+    h+=mcHtml(c)+'<div class="btnrow" style="margin-top:12px"><button class="btn primary grow" '+(!mcSafe(c)||MC.preparing?'disabled':'')+' onclick="Owner.mcPrepare()">'+(MC.preparing?Z('Preparing…','制作中…'):Z('Prepare WhatsApp image','生成 WhatsApp 图片'))+'</button><button class="btn" '+(!mcSafe(c)?'disabled':'')+' onclick="Owner.mcCopy()">'+Z('Copy text','复制文字')+'</button></div>';
+    if(MC.prepared)h+='<div class="card" style="padding:12px;margin-top:10px"><img alt="Shopping card" src="'+esc(MC.prepared.url)+'" style="width:100%;height:auto;border-radius:8px"><div class="btnrow"><button class="btn gold grow" onclick="Owner.mcShare()">'+Z('Share image','分享图片')+'</button><button class="btn" onclick="Owner.mcDownload()">'+Z('Download PNG','保存图片')+'</button></div><small>'+Z('Choose the worker’s own WhatsApp chat. The system does not send automatically.','请选择该工人本人的 WhatsApp 对话。系统不会自动发送。')+'</small></div>';
+    h+='<div class="btnrow" style="margin-top:10px"><button class="btn" onclick="Owner.mcOpen(\''+esc(ui.worker)+'\')">↻ '+Z('Refresh','刷新')+'</button><button class="btn grow" '+(next?'':'disabled')+' onclick="Owner.mcNext()">'+Z('Next worker →','下一个工人 →')+'</button></div>';return h;
+  }
+  const MC_FONT="'Noto Sans Myanmar','Myanmar Text','Padauk','Noto Sans SC',sans-serif";
+  function mcCanvas(c){
+    const W=900,pad=36,rows=mcRows(c),cv=document.createElement('canvas'),g=cv.getContext('2d');
+    const font=(weight,size)=>weight+' '+size+'px '+MC_FONT;
+    function wrap(v,width,f){g.font=f;const text=String(v??'');if(!text)return [];const out=[];let line='';const tokens=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)].map(x=>x.segment):Array.from(text);for(const t of tokens){if(line&&g.measureText(line+t).width>width){out.push(line);line=t;}else line+=t;}if(line)out.push(line);return out;}
+    const blocks=rows.map(r=>{const wide=r.type==='item'?W-2*pad-96-176:W-2*pad-32,f=r.type==='section'?font(700,28):r.type==='total'?font(700,27):r.type==='note'?font(400,23):font(700,27),a=wrap(r.label,wide,f),b=wrap(r.sub,wide,font(400,22));return {...r,a,b,h:r.type==='total'?Math.max(118,a.length*37+82):r.type==='section'?a.length*40+26:r.type==='note'?a.length*33+24:Math.max(84,a.length*38+b.length*31+26)};});
+    const nameLines=wrap(c.worker.worker_name,W-2*pad,font(800,43)),statusLines=wrap(c.locked?'CONFIRMED · '+MMY.locked:'PROVISIONAL · '+MMY.draft,W-2*pad,font(600,21)),headerH=222+nameLines.length*56+statusLines.length*31,foot=106,H=headerH+blocks.reduce((v,r)=>v+r.h,0)+foot;
+    if(H>14000)throw Error('Card too long for one reliable image; copy text instead');
+    cv.width=W;cv.height=H;const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.textBaseline='top';
+    const write=(t,x,y,f,col='#17241d',align='left')=>{ctx.font=f;ctx.fillStyle=col;ctx.textAlign=align;ctx.fillText(String(t),x,y);};
+    ctx.fillStyle='#184e3d';ctx.fillRect(0,0,W,headerH);write('AZURA DELTA  ·  KEDAI RUNCIT',pad,26,font(700,23),'#e0ede5');write(MMY.title,pad,67,font(800,39),'#fff');write('MONTHLY SHOPPING CARD  ·  '+c.month,pad,125,font(700,24),'#fff');
+    let yy=165;for(const n of nameLines){write(n,pad,yy,font(800,43),'#fff');yy+=56;}write(c.worker.farm+'  ·  '+c.today,pad,yy,font(400,24),'#fff');statusLines.forEach((v,i)=>write(v,pad,yy+34+i*31,font(600,21),'#e0ede5'));
+    let y=headerH;for(const r of blocks){
+      if(r.type==='section'){ctx.fillStyle='#edf4ef';ctx.fillRect(pad,y+8,W-2*pad,r.h-13);r.a.forEach((v,i)=>write(v,pad+13,y+18+i*40,font(700,28)));}
+      else if(r.type==='total'){ctx.fillStyle='#184e3d';ctx.fillRect(pad,y+8,W-2*pad,r.h-16);r.a.forEach((v,i)=>write(v,pad+16,y+20+i*37,font(700,27),'#fff'));write(r.amount,W-pad-16,y+r.h-62,font(800,45),'#fff','right');}
+      else if(r.type==='note'){r.a.forEach((v,i)=>write(v,pad,y+11+i*33,font(400,23),'#68776d'));}
+      else{ctx.fillStyle='#e1e8e2';ctx.fillRect(pad,y+r.h-1,W-2*pad,1);write(r.date,pad,y+13,font(400,22),'#68776d');r.a.forEach((v,i)=>write(v,pad+96,y+13+i*38,font(700,27)));r.b.forEach((v,i)=>write(v,pad+96,y+13+r.a.length*38+i*31,font(400,22),'#68776d'));write(r.amount,W-pad,y+13,font(700,25),'#184e3d','right');}y+=r.h;
+    }
+    write(MMY.help,pad,y+24,font(400,23),'#58695f');write('Contact management if any item is incorrect.',pad,y+59,font(400,21),'#58695f');return cv;
+  }
+  async function mcPrepare(){const c=MC.card;if(!mcSafe(c)||MC.preparing)return;const epoch=MC.epoch;MC.preparing=true;render();try{if(document.fonts?.ready)await document.fonts.ready;const canvas=mcCanvas(c),blob=await new Promise(ok=>canvas.toBlob(ok,'image/png'));if(!blob)throw Error('Cannot generate image');if(epoch!==MC.epoch||ui.view!=='monthcard'||MC.card!==c)return;mcDiscard();MC.prepared={blob,url:URL.createObjectURL(blob),name:'AD_Shopping_'+c.month+'_'+String(c.worker.worker_name).replace(/[^\p{L}\p{N}_-]+/gu,'_')+'.png',worker:c.worker.worker_id,month:c.month};}catch(e){toast(errZ(e.message));}finally{if(epoch===MC.epoch){MC.preparing=false;if(ui.view==='monthcard')render();}}}
+  function mcFile(){const p=MC.prepared,c=MC.card;return p&&mcSafe(c)&&p.worker===c.worker.worker_id&&p.month===c.month?p:null;}
+  function mcDownload(){const p=mcFile();if(!p)return;const a=document.createElement('a');a.href=p.url;a.download=p.name;a.click();}
+  async function mcShare(){const p=mcFile();if(!p)return;const file=new File([p.blob],p.name,{type:'image/png'});try{if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Azura Delta · '+p.month});toast(Z('Share action completed — verify the correct recipient','分享操作完成，请核实正确收件人'));return;}}catch(e){if(e.name==='AbortError')return;toast(Z('Share not completed — save image instead','未完成分享，请保存图片'));return;}mcDownload();toast(Z('Image download requested — attach it in WhatsApp','已发起图片下载，请在 WhatsApp 手动附加')); }
+  async function mcCopy(){const c=MC.card;if(!mcSafe(c))return;const txt=['AZURA DELTA · '+MMY.title,c.worker.worker_name+' · '+c.worker.farm+' · '+c.month,c.locked?'CONFIRMED':'PROVISIONAL · '+MMY.draft,...mcRows(c).map(r=>[r.date,r.label,r.sub,r.amount].filter(Boolean).join(' · ')),MMY.help].join('\n');try{await navigator.clipboard.writeText(txt);toast(Z('Copied — paste in the worker’s chat','已复制，请贴到该工人对话'));}catch(e){openModal('<h2>'+Z('Copy shopping card text','复制购物卡文字')+'</h2><textarea rows="15" style="width:100%">'+esc(txt)+'</textarea><button class="btn block" onclick="closeModal()">OK</button>');}}
+
   function recordsPage(){
     const W = B.written, f = ui.f || 'ALL', ok = x => f === 'ALL' || x.farm === f;
     const row = (x, txt, to, fn) => `<div class="line" style="${x.void ? 'opacity:.45;text-decoration:line-through' : ''}"><span><b>${dm(x.date)}</b> · ${x.farm} · ${txt} <span class="mut">${to}</span><div>${askTag({asked: x.asked, legacy: !!x.req_id}, x.void ? '' : x.req_id || '')}</div></span><span><strong>${RM(x.amount)}</strong> ${x.void ? '' : `<button class="btn small light" onclick="Owner.voidRec('${fn}','${x.id}')">${Z('Void','作废')}</button>`}</span></div>`;
@@ -1842,10 +1925,10 @@ const Owner = (() => {
 
   function render(){
     if(!WH&&['buy','review','item','warehouse','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;return;}
-    $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
+    $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
