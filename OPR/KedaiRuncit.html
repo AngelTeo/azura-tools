@@ -113,7 +113,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 36;
+const APP_VERSION = 37;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -517,7 +517,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
  }).join('');
 }
   function openVariantGroup(group){const e=leaderEntries(items(ui.kind)).find(x=>x.group===group);if(!e)return;if(!e.garment)return openModal(variantPickerHTML(group,e.variants,'Leader.openSheet','closeModal',id=>!!ui.cart[id]));openModal('<h2>'+esc(groupLabel(group))+'</h2><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+e.variants.map(i=>{const v=garment(i);return '<button class="food pick '+(ui.cart[i.id]?'chosen':'')+'" style="display:flex;flex-direction:column;text-align:center;padding:12px;gap:5px" data-id="'+esc(i.id)+'" onclick="Leader.openSheet(this.dataset.id)">'+garmentArt(group,v.spec)+'<b>'+esc(variantLabel(group,v.spec))+'</b><small>'+esc(v.spec)+'</small></button>';}).join('')+'</div><div class="modalfoot"><button class="btn" onclick="closeModal()">'+t('cancel')+'</button></div>');}
-  function personalTileCount(keys){return keys.reduce((n,k)=>{const c=ui.cart[k];return n+(c?.bottles?.length||Object.keys(c?.rows||{}).length);},0);}
+  function personalTileCount(keys){return keys.reduce((n,k)=>{const c=ui.cart[k];return n+(ui.kind==='FARM'?Number(c?.qty||0):(c?.bottles?.length||Object.keys(c?.rows||{}).length));},0);}
   function personalTile(e){
     const vs=e.group?e.variants:[e.item],ids=vs.map(i=>i.id),keys=Object.keys(ui.cart).filter(k=>ids.includes(baseKey(k))),n=personalTileCount(keys);
     const first=vs[0],label=e.group?(e.garment?e.group:groupLabel(e.group)):first.label;
@@ -541,9 +541,40 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function photoStart(camera){if(ui.pending||LeaderBusy||PhotoBusy)return;openSheet('p:'+uuid());pickPhotos('_',camera);}
   function personalReview(){if(ui.pending||LeaderBusy||PhotoBusy)return;if(SH){drawSheet();return;}const n=addCount();if(!n)return;openModal('<h2>🛒 '+esc(specLabel('My shopping list','购物清单','ဝယ်မည့်စာရင်း'))+' · '+n+'</h2>'+Object.keys(ui.cart).map(personalReviewRow).join('')+'<div class="lp-reviewfoot"><button class="btn" onclick="closeModal()">'+esc(specLabel('Keep adding','继续添加','ထပ်ထည့်မယ်'))+'</button><button class="btn primary" onclick="Leader.personalSubmit()">✓ '+esc(specLabel('Submit to management','提交给管理层','တာဝန်ခံထံ ပို့မယ်'))+'</button></div>');}
   function personalSubmit(){if(ui.pending||LeaderBusy||PhotoBusy||SH)return;closeModal();return commitAdd();}
+  // v37: same visual catalogue as personal items, but FARM never selects a worker.
+  const FARM_LABELS={
+    'GLOVES':['手套','လက်အိတ်'],'CABLE TIE':['扎带','ကြိုးချည်'],'ROPE':['绳子','ကြိုး'],'PLASTIC':['塑料布','ပလတ်စတစ်'],'PAIL':['水桶','ရေပုံး'],'HOSE':['水管','ရေပိုက်'],'BOOTS':['水鞋','ဘွတ်ဖိနပ်'],'STRAW HAT':['草帽','ကောက်ရိုးဦးထုပ်'],'HEADLAMP':['头灯','ခေါင်းမီး'],'TRIMMER LINE':['割草机绳','မြက်ဖြတ်ကြိုး'],'BRAKE SHOE':['刹车片','ဘရိတ်ရှူး'],'LED TUBE':['LED灯管','LED မီးချောင်း'],'LIGHTER':['打火机','မီးခြစ်'],'GLUE':['胶水','ကော်'],'PIPE WRENCH':['管钳','ပိုက်ဂွ'],'BATTERY - AAA':['AAA电池','AAA ဓာတ်ခဲ'],'PRUNING SHEARS':['修枝剪','ကိုင်းဖြတ်ကတ်ကြေး']
+  };
+  const farmFixed=it=>!it.custom&&['STRAW HAT','HEADLAMP','LIGHTER','PIPE WRENCH','PRUNING SHEARS','BATTERY - AAA'].includes(String(it.code||'').toUpperCase());
+  function farmLabel(it){const c=String(it.code||'').toUpperCase();return c==='BATTERY - AAA'?'BATTERY · AAA':c==='PRUNING SHEARS'?'PRUNING SHEARS':it.label;}
+  function farmTile(it){const keys=Object.keys(ui.cart).filter(k=>baseKey(k)===it.id),n=personalTileCount(keys),tr=FARM_LABELS[String(it.code||'').toUpperCase()];
+    return '<button class="lp-tile '+(n?'chosen':'')+'" data-key="'+esc(it.id)+'" onclick="Leader.openSheet(this.dataset.key)"><span class="lp-art">'+icoBox(it,it.label)+'</span><b>'+esc(farmLabel(it))+'</b>'+(tr&&LANG!=='en'?'<span class="lp-sub">'+esc(LANG==='my'?tr[1]:tr[0])+'</span>':'')+(n?'<span class="lp-count">✓ '+n+'</span>':'')+'</button>';}
+  function farmPage(list){const customKeys=Object.keys(ui.cart).filter(k=>pOnly(baseKey(k))||k.startsWith('b:')||baseKey(k).startsWith('c:')||!list.some(i=>i.id===baseKey(k)));
+    return '<div class="lp-head"><div><h1>🧤 '+esc(ct('FARM','title'))+'</h1><div class="sub">'+esc(FARM)+' · '+esc(ct('FARM','subtitle'))+'</div></div><button class="btn small" onclick="Leader.home()">'+esc(t('back'))+'</button></div>'
+      +'<div class="lp-photo"><div class="lp-photo-title"><span style="font-size:30px">📷</span><span>'+esc(specLabel('Order by photo','照片订购','ဓာတ်ပုံဖြင့် မှာမယ်'))+'<small>'+esc(specLabel('Parts / tools — no name needed','机器零件／工具 · 不必知道名称','စက်အပိုပစ္စည်း / ကိရိယာ · နာမည် မလိုပါ'))+'</small></span></div><div class="lp-photo-actions"><button class="btn" onclick="Leader.photoStart(true)">📷 '+esc(specLabel('Camera','拍照','ဓာတ်ပုံ ရိုက်မယ်'))+'</button><button class="btn" onclick="Leader.photoStart(false)">🖼 '+esc(specLabel('Gallery','相册','ဓာတ်ပုံ ရွေးမယ်'))+'</button></div></div>'
+      +'<div class="lp-grid">'+list.map(farmTile).join('')+'</div>'
+      +(customKeys.length?'<div class="sectionhead">'+esc(specLabel('Other items in your list','其他已选物品','ရွေးထားသော အခြားပစ္စည်း'))+'</div>'+customKeys.map(personalReviewRow).join(''):'')
+      +'<details class="lp-other"><summary>'+esc(t('otherHead'))+'</summary><div class="btnrow"><input class="grow" maxlength="40" placeholder="'+esc(t('other'))+'" value="'+esc(ui.other)+'" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ '+esc(t('add'))+'</button></div></details><div class="bottom" id="bottombar"></div>';
+  }
+  function farmQty(v){if(!SH||ui.kind!=='FARM'||PhotoBusy)return;const n=Number(v);if(!Number.isInteger(n)||n<1||n>999){toast(specLabel('Enter 1–999','请输入1至999','၁ မှ ၉၉၉ အထိ ရိုက်ပါ'));drawSheet();return;}SH.qty=n;saveCart();sheetBtn();}
+  function farmSheet(it){
+    const hasPhoto=!!SH.photos?.length,photoOnly=!!it.photoOnly,fixed=farmFixed(it),isEdit=!!ui.cart[SH.key];
+    let out='<h2>'+esc(photoOnly?photoLabel():farmLabel(it))+'</h2><div class="hint" style="margin-bottom:10px;color:#17654e">'+esc(ct('FARM','subtitle'))+' · '+esc(FARM)+'</div>';
+    if(!photoOnly)out+='<div style="display:flex;align-items:center;justify-content:center;min-height:80px">'+icoBox(it,it.label)+'</div>';
+    if(photoOnly||!fixed||hasPhoto)out+=photoControls('_',SH.photos);
+    if(photoOnly&&!hasPhoto){out+='<div class="hint">'+esc(specLabel('Add a photo first','先添加照片','ဓာတ်ပုံ အရင်ထည့်ပါ'))+'</div><div class="modalfoot"><button class="btn" onclick="Leader.shCancel()">'+esc(t('cancel'))+'</button></div>';openModal(out);saveCart();return;}
+    const qty=Number(SH.qty)||1;
+    out+='<div class="titleline" style="margin:14px 0"><b>'+esc(t('qty'))+'</b><span class="step"><button onclick="Leader.shQty(\'_\',-1)">−</button><input type="number" inputmode="numeric" min="1" max="999" step="1" aria-label="'+esc(t('qty'))+'" class="count" style="width:76px;min-width:76px" value="'+qty+'" onchange="Leader.farmQty(this.value)"><button class="plus" onclick="Leader.shQty(\'_\',1)">+</button></span></div>';
+    if(!fixed||SH.det)out+='<details '+(SH.det?'open':'')+' style="margin:8px 0"><summary>'+esc(specLabel('Size / model (optional)','规格／型号（选填）','အရွယ်အစား / မော်ဒယ် (လိုမှ)'))+'</summary><input style="width:100%;margin-top:6px" maxlength="80" placeholder="'+esc(specLabel('Size or model','尺寸或型号','အရွယ်အစား / မော်ဒယ်'))+'" value="'+esc(SH.det||'')+'" oninput="Leader.shSet(\'_\',\'det\',this.value)"></details>';
+    if(photoOnly)out+='<details style="margin:8px 0" '+(SH.name?'open':'')+'><summary>'+esc(specLabel('Item name (optional)','物品名称（选填）','ပစ္စည်းနာမည် (လိုမှ)'))+'</summary><input maxlength="40" style="width:100%" value="'+esc(SH.name||'')+'" oninput="Leader.photoName(this.value)"></details>';
+    if(isEdit&&!photoOnly&&!fixed)out+='<button class="btn block light" onclick="Leader.shNew()">'+esc(specLabel('＋ Another size / model','＋ 另一规格／型号','＋ နောက်တစ်မျိုး'))+'</button>';
+    out+='<div class="modalfoot">'+(isEdit?'<button class="btn danger" onclick="Leader.shDel()">'+esc(t('remove'))+'</button>':'')+'<button class="btn" onclick="Leader.shCancel()">'+esc(t('cancel'))+'</button><button class="btn primary" id="shok" onclick="Leader.shOk()">✓ '+esc(t('ok'))+'</button></div>';
+    openModal(out);sheetBtn();saveCart();
+  }
  function addPage(){
     const k=ui.kind,list=items(k);if(ui.pending)return `<div class="hero"><h1>${photoLabel()} · ${esc(FARM)}</h1><button class="btn small" onclick="Leader.home()">${t('back')}</button></div><div class="note warn">${specLabel('Not confirmed — retry the same batch','提交尚未确认，请重试原批次','ပို့ထားသောစာရင်း မသေချာသေးပါ။ ဒီစာရင်းကိုပဲ ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitAdd()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and edit unsaved batch','核实后修改未保存批次','စစ်ဆေးပြီး မသိမ်းရသေးသောစာရင်း ပြင်မယ်')}</button>`;
     if(k==='PERSONAL')return personalPage(list);
+    if(k==='FARM')return farmPage(list);
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
       <button class="btn gold block" style="min-height:64px;margin-bottom:10px" onclick="Leader.photoOnly()">📷 ${specLabel('Photo only — no name needed','直接上传照片 · 不用知道名称','ဓာတ်ပုံဖြင့် မှာမယ် · နာမည် မလိုပါ')}</button>${k==='FOOD'?`<div class="note">${specLabel('Extra photo request for this delivery round','本轮额外照片需求，与普通订菜分开','ဒီအကြိမ်အတွက် ဓာတ်ပုံဖြင့် အပိုမှာရန်')} · ${esc(ui.round)}</div>`:''}<div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${leaderCatalogCards(list,k)}</div>
@@ -580,9 +611,10 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
 }
   function specWorkerFields(w,r,stepper){const it=cartItem(SH.key),last=sizeLast(it,w.id);return `<div class="pills" style="flex-wrap:wrap;width:100%;padding:0">${specOptions(it).map(v=>`<button class="pill ${r.det===v?'on':''}" style="min-height:44px" data-w="${esc(w.id)}" data-v="${esc(v)}" onclick="Leader.shSet(this.dataset.w,'det',this.dataset.v,1)">${esc(v)}${last===v&&r.det!==v?' ↺':''}</button>`).join('')}</div>`;}
  function shSpecWorker(w){const opts=specOptions(cartItem(SH.key));if(SH.rows[w]&&opts.includes(SH.spec)){SH.rows[w].det=SH.spec;drawSheet();}}
-  function sheetOk(){if(!SH||PhotoBusy)return false;const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return SH.qty>0&&(!(it.photoOnly||ui.kind==='FOOD')||!!SH.photos?.length);if(isWhisky(it))return SH.bottles.length>0&&SH.bottles.every(b=>b.length>=1&&b.length<=3);const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det))&&(!it.photoOnly||!!effectivePhotos(SH,r).length));}
+  function sheetOk(){if(!SH||PhotoBusy)return false;const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return Number.isInteger(Number(SH.qty))&&Number(SH.qty)>=1&&Number(SH.qty)<=999&&(!(it.photoOnly||ui.kind==='FOOD')||!!SH.photos?.length);if(isWhisky(it))return SH.bottles.length>0&&SH.bottles.every(b=>b.length>=1&&b.length<=3);const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det))&&(!it.photoOnly||!!effectivePhotos(SH,r).length));}
   function sheetBtn(){ const b = document.getElementById('shok'); if(b) b.disabled = !sheetOk(); }
   function drawSheet(){ const it = cartItem(SH.key), top = isTop(it), opts=ui.kind==='PERSONAL'?specOptions(it):[],fixed=ui.kind==='PERSONAL'?fixedVariant(it):null;
+    if(ui.kind==='FARM')return farmSheet(it);
     const stepper = (w, q) => `<span class="step"><button onclick="Leader.shQty('${w}',-1)">−</button><input class="count" readonly value="${q}"><button class="plus" onclick="Leader.shQty('${w}',1)">+</button></span>`;
     let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>${fixed?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${icoBox(it,it.label)}<b>${esc(fixed.spec)}</b></div>`:''}`;
     const flexible=ui.kind==='PERSONAL'&&!top&&!isWhisky(it)&&photoMode(it), gv=garment(it);
@@ -632,6 +664,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     if(LeaderBusy||!D||D.status!=='ACTIVE'||D.farm!==FARM)return;
     if(!ui.pending){
       if(ui.kind==='PERSONAL'&&Object.entries(ui.cart).some(([key,c])=>{const it=cartItem(key),opts=specOptions(it);return (!it.custom&&!it.id)||Object.entries(c.rows||{}).some(([w,r])=>(isTop(it)&&!topWorkerValid(w,r))||(opts.length&&!opts.includes(r.det))||(it.photoOnly&&!effectivePhotos(c,r).length)||!D.workers.some(x=>x.id===w));})){toast(specLabel('Check worker and item details','请核对工人及规格','အလုပ်သမား အချက်အလက် စစ်ပါ။'));return;}
+      if(ui.kind==='FARM'&&Object.entries(ui.cart).some(([key,c])=>{const it=cartItem(key);return (!it.custom&&!it.id)||!Number.isInteger(Number(c.qty))||Number(c.qty)<1||Number(c.qty)>999||(it.photoOnly&&!c.photos?.length);})){toast(specLabel('Check items, quantity and photos','请核对商品、数量及照片','ပစ္စည်း၊ အရေအတွက်၊ ဓာတ်ပုံ စစ်ပါ။'));return;}
       const reqs=cartReqs();if(!reqs.length)return;
       if(reqs.length>40||JSON.stringify(reqs).length>1450000){toast(specLabel('Too many photos — submit fewer items','照片过多，请分批提交','ဓာတ်ပုံ များလွန်းပါ။ ခွဲပြီး ပို့ပါ။'));return;}
       ui.pending={op_id:uuid(),farm:FARM,manager:MGR,requests:reqs.map(r=>({...r,kind:ui.kind,client_id:uuid()}))};SH=null;
@@ -748,7 +781,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     if(ui.view === 'food'){ const n = Object.values(ui.qty).filter(q => q > 0).length; const had=lines().some(l=>l.kind==='FOOD'&&l.status==='REQUESTED'&&l.round===ui.round&&!l.photo_count);
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n || had ? '' : 'disabled'} onclick="Leader.commitFood()">${esc(t('addFood')(n))}</button>`; return; }
     if(ui.view === 'add'){if(ui.pending)return;const n=addCount(),needW=false;
-      if(ui.kind==='PERSONAL'){b.innerHTML='<span style="font-weight:800;font-size:18px;min-width:32px">'+n+'</span><button class="btn primary" '+(n?'':'disabled')+' onclick="Leader.personalReview()">🛒 '+esc(specLabel('View list','查看购物清单','စာရင်းကြည့်မယ်'))+' · '+n+' →</button>';return;}
+      if(ui.kind==='PERSONAL'||ui.kind==='FARM'){b.innerHTML='<span style="font-weight:800;font-size:18px;min-width:32px">'+n+'</span><button class="btn primary" '+(n?'':'disabled')+' onclick="Leader.personalReview()">🛒 '+esc(specLabel('View list','查看购物清单','စာရင်းကြည့်မယ်'))+' · '+n+' →</button>';return;}
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n && !needW ? '' : 'disabled'} onclick="Leader.commitAdd()">${esc(needW ? t('pickW') : t('addN')(n))}</button>`; }
   }
 
@@ -788,7 +821,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();hydrateReferencePreviews({farm:FARM,manager:MGR,device_key:deviceKey()});
   }
   function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
-  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,photoStart,personalReview,personalSubmit,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shNew, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,photoStart,farmQty,personalReview,personalSubmit,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shNew, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
