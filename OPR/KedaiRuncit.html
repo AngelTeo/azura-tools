@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -729,7 +729,7 @@ const Owner = (() => {
     let w;
     try{w=await rpc('shop_owner_wh_board',{});if(!w||!Array.isArray(w.links)||!Array.isArray(w.orders)||!Array.isArray(w.policy)||!Array.isArray(w.stock)||!Array.isArray(w.batches))throw Error('Invalid Warehouse response');}
     catch(e){WH=null;WHError=e.message;throw e;}
-    try{const [b,m]=await Promise.all([rpc('shop_owner_board',{}),rpc('shop_owner_money',{})]);WH=w;WHError='';B=b;B.money=m;}catch(e){WH=null;WHError=e.message;throw e;}
+    try{const [b,m,phones]=await Promise.all([rpc('shop_owner_board',{}),rpc('shop_owner_money',{}),rpc('shop_owner_wh_phones',{})]);if(!Array.isArray(phones))throw Error('Invalid instalment response');WH={...w,phones};WHError='';B=b;B.money=m;}catch(e){WH=null;WHError=e.message;throw e;}
   }
   /* v18 money helpers */
   const isWhiskeyLine = l => !!l.bottle_id;
@@ -853,8 +853,8 @@ const Owner = (() => {
   function reviewPage(){
     const rows=reviewLines(),codes=['WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
     let h='<div class="hero"><div><h1>⚠ '+Z('Needs review','需要核实')+'</h1><div class="sub">'+Z('No purchase or deduction is created here','这里只核实，不自动采购或扣薪')+'</div></div><button class="btn small" onclick="Owner.go(\'buy\')">‹ '+Z('Buying list','采购清单')+'</button></div>';
-    for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+(k==='CATALOG'?whBtn('Link actual item','关联正式商品','LINK_ITEM',l.id):k==='OPENING'?whBtn('Confirm opening stock','确认期初库存','OPENING',l.item_id):'')+'</div>';}
-    if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';
+    for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+'<div class="btnrow" style="flex-wrap:wrap;margin-top:8px">'+reviewActions(l,k)+'</div></div>';}
+    if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';h+='<button class="btn block" onclick="Owner.go(\'whphones\')">'+Z('Phone instalment records','手机分期记录')+'</button>';
     return h;
   }
   function alc(){ ALC = !ALC; lsSet('runcit_alcohol', ALC); render(); }
@@ -1583,12 +1583,12 @@ const Owner = (() => {
   function recordsPage(){
     const W = B.written, f = ui.f || 'ALL', ok = x => f === 'ALL' || x.farm === f;
     const row = (x, txt, to, fn) => `<div class="line" style="${x.void ? 'opacity:.45;text-decoration:line-through' : ''}"><span><b>${dm(x.date)}</b> · ${x.farm} · ${txt} <span class="mut">${to}</span><div>${askTag({asked: x.asked, legacy: !!x.req_id}, x.void ? '' : x.req_id || '')}</div></span><span><strong>${RM(x.amount)}</strong> ${x.void ? '' : `<button class="btn small light" onclick="Owner.voidRec('${fn}','${x.id}')">${Z('Void','作废')}</button>`}</span></div>`;
-    const all = [...W.personal.filter(ok).map(x => ({x, h: row(x, `${esc(x.worker)} · ${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, 'Salary Personal', 'shop_owner_void')})),
+    const all = [...W.personal.filter(ok).map(x => ({x, h: row(x, `${esc(x.worker)} · ${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, (/HANDPHONE \(instalment\)/i.test(x.item)?'Salary Advance':'Salary Personal'), 'shop_owner_void')})),
                  ...W.shared.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)} ÷ ${x.n}`, 'Salary Food', 'shop_owner_share_void')})),
                  ...W.farm.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, 'Farm cost', 'shop_owner_cost_void')}))]
                  .sort((a,b) => String(b.x.date).localeCompare(String(a.x.date)));
     return `<div class="hero"><div><h1>📒 ${Z('Records','记录')}</h1><div class="sub">${Z('What was written to Salary · everything since 31/10','写进 Salary 的 · 31/10 接手以后全部')}</div></div>${back()}</div>
-      <div class="pills">${['ALL', ...FARMS].map(x => `<button class="pill ${f===x?'on':''}" onclick="Owner.go('records',{f:'${x}'})">${x === 'ALL' ? Z('All','全部') : x}</button>`).join('')}</div>
+      <button class="btn block" onclick="Owner.go('whphones')">📱 ${Z('Phone instalment records','手机分期记录')}</button><div class="pills">${['ALL', ...FARMS].map(x => `<button class="pill ${f===x?'on':''}" onclick="Owner.go('records',{f:'${x}'})">${x === 'ALL' ? Z('All','全部') : x}</button>`).join('')}</div>
       <div class="card" style="padding:8px 14px">${all.length ? all.map(a => a.h).join('') : `<div class="empty">${Z('Nothing written yet.','还没有记录。')}</div>`}</div>
       <div class="hint">${Z('Void takes the line out of Salary too. It cannot be undone — enter it again if needed.','作废会连 Salary 那笔一起作废，不能复原 — 需要的话重新记一次。')}</div>`;
   }
@@ -1628,6 +1628,7 @@ const Owner = (() => {
   const wd=()=>wf('date','Actual date','实际日期',B.today,'date','max="'+B.today+'" required');
   const wr=()=>wf('reason','Reason / evidence','原因／凭证','','text','maxlength="300" required');
   function whOpen(action,id){
+    if(['LINK_SALARY','MEDICAL_ACTUAL','CANCEL_REVIEW','PHONE_QUOTE','PHONE_APPROVE','PHONE_BUY','PHONE_DELIVER'].includes(action))return specialOpen(action,id);
     if(!WH||WHBusy)return;const l=whFindLine(id),o=whFindOrder(id),i=IT(id),p=whPolicy(id),b=WH.batches.find(x=>x.id===id);let h='',title='',payload={action,op_id:uuid()},note='';
     if(action==='POLICY'){title=i.label;payload.item_id=id;h=ws('stock','Fulfilment','采购模式',[['false',Z('Buy on request','按需代购')],['true',Z('Stock item','库存商品')]],String(!!p.stock_managed));if(i.kind==='PERSONAL')h+=ws('price_mode','Selling price','卖价模式',[['VARIABLE',Z('Variable','浮动卖价')],['FIXED',Z('Fixed','固定卖价')]],p.price_mode||'VARIABLE')+wf('fixed_sell','Fixed selling price RM','固定卖价 RM',p.fixed_sell??'','number','min="0.01" max="5000" step=".01"');else payload.price_mode='VARIABLE';h+=wf('minimum','Minimum stock (optional)','最低库存（可空）',p.minimum_qty??'','number','min="0" step="1"')+wf('pack','Purchase pack (optional)','采购包装数量（可空）',p.pack_qty??'','number','min="1" step="1"');note=Z('Stock must be counted before use. Changing price mode does not change past charges.','库存必须实盘确认；修改价格模式不会改历史收费。');}
     else if(action==='OPENING'){title=Z('Confirm actual opening stock','确认实际期初库存')+' · '+i.label;payload.item_id=id;h=wf('qty','Physical count (0 only if counted)','实盘数量（确实为零才填0）','','number','min="0" max="99999" step="1" required')+wf('unit_cost','Verified actual unit cost RM','已核实实际单位成本 RM','','number','min=".01" max="5000" step=".01"')+wd()+wr();note=Z('No purchase payment is created. Unknown cost: do not guess.','不产生采购付款。成本未知时不可估填。');}
@@ -1642,27 +1643,106 @@ const Owner = (() => {
     else return;
     WForm={action,id,payload};openModal(`<h2>${esc(title)}</h2><form id="whform" onsubmit="event.preventDefault();Owner.whSubmit()">${h}<div class="hint" style="margin:10px 0">${esc(note)}</div><div id="wherr" class="note bad" style="display:none"></div><div class="modalfoot"><button type="button" class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button type="submit" id="whsave" class="btn primary">${Z('Confirm','确认')}</button></div></form>`);if(action==='POLICY')whChange('price_mode',$('#wf_price_mode')?.value);
   }
-  function whChange(n,v){if(n==='price_mode'){const el=$('#wf_fixed_sell');if(el){el.required=v==='FIXED';el.disabled=v!=='FIXED';}}}
+
+  const phoneFind=id=>WH?.phones?.find(x=>x.request_id===id);
+  const phoneStage=x=>({QUOTED:Z('Quote recorded','报价已记录'),APPROVED:Z('Terms approved','分期已批准'),BOUGHT:Z('Purchased / pending delivery','已购买／待交付'),DELIVERED:Z('Delivered / Salary loan','已交付／Salary 分期'),CANCELLED:Z('Cancelled','已取消')}[x]||Z('Awaiting quote','等待报价'));
+  function reviewActions(l,k){
+    if(k==='OPENING')return whBtn('Confirm opening stock','确认期初库存','OPENING',l.item_id);
+    if(k==='CATALOG')return whBtn('Link actual item','关联正式商品','LINK_ITEM',l.id,'btn primary grow')+whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id);
+    if(k==='WORKER')return whBtn('Link verified deduction','关联已核实扣款','LINK_SALARY',l.id,'btn primary grow')+(l.status==='REQUESTED'?whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id):'');
+    if(k==='MEDICAL')return whBtn('Already deducted? Link','已有扣款 · 关联','LINK_SALARY',l.id,'btn primary grow')+whBtn('New verified expense','补录实际费用','MEDICAL_ACTUAL',l.id);
+    if(k==='INSTALMENT'){const p=phoneFind(l.id),st=p?.stage;
+      const next=!st?['Record quote','录入报价','PHONE_QUOTE']:st==='QUOTED'?['Approve terms','批准分期方案','PHONE_APPROVE']:st==='APPROVED'?['Record actual purchase','记录实际购买','PHONE_BUY']:st==='BOUGHT'?['Confirm actual delivery','确认交付及借款','PHONE_DELIVER']:null;
+      return '<div class="hint" style="width:100%">'+esc(phoneStage(st))+(p?' · '+esc(p.model)+' · '+RM(p.quote_price):'')+'</div>'+(next?whBtn(...next,l.id,'btn primary grow'):'')+(['QUOTED','APPROVED'].includes(st)?whBtn('Revise quote','修改报价','PHONE_QUOTE',l.id):'')+(st==='APPROVED'?whBtn('Review terms','调整批准方案','PHONE_APPROVE',l.id):'')+(l.status==='REQUESTED'?whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id):'');
+    }return '';
+  }
+  function phonePage(){
+    const ps=WH.phones||[];let h=whHeader('📱 Phone instalments','📱 手机分期',Z('Quote, actual purchase, delivery and Salary loan','报价、实际采购、交付与 Salary 借款'))+'<button class="btn block" onclick="Owner.go(\'review\')">'+Z('Open pending requests','查看待核实需求')+'</button>';
+    if(!ps.length)return h+'<div class="empty">'+Z('No confirmed quote or instalment record yet','尚无已确认的报价或分期记录')+'</div>';
+    const moneyLine=(a,b,v)=>v==null?'':'<div class="line"><span>'+Z(a,b)+'</span><b>'+RM(v)+'</b></div>';
+    for(const p of ps){
+      const l=whFindLine(p.request_id);
+      h+='<div class="card" style="padding:14px;margin:10px 0"><div class="line"><b>'+esc(p.model)+'</b><span class="tag">'+esc(phoneStage(p.stage))+'</span></div><div>'+esc(p.farm)+' · '+esc(p.worker)+'</div><div class="hint">'+esc(p.supplier)+' · '+esc(p.quoted_on)+' · '+esc(p.quote_ref)+'</div>'+moneyLine('Supplier quote','供应商报价',p.quote_price)+moneyLine('Actual purchase','实际采购价',p.actual_buy)+moneyLine('Agreed selling price','确认卖价',p.agreed_sell)+moneyLine(p.stage==='DELIVERED'?'Deposit received':'Agreed deposit',p.stage==='DELIVERED'?'已收首期款':'约定首期款',p.deposit)+moneyLine('Financed principal','分期本金',p.principal)+moneyLine('Agreed phone instalment / month','约定手机月供',p.monthly)+moneyLine('Salary combined monthly repayment','Salary 合并月还款',p.combined_monthly);
+      if(p.start_month)h+='<div class="line"><span>'+Z('Salary start month','Salary 起扣月份')+'</span><b>'+esc(p.start_month)+'</b></div>';
+      if(p.principal!=null&&Number(p.monthly)>0)h+='<div class="line"><span>'+Z('Planned phone months','约定手机期数（预计）')+'</span><b>'+Math.ceil(Number(p.principal)/Number(p.monthly))+'</b></div>';
+      if(p.stage==='DELIVERED'){
+        h+='<div class="hint">'+Z('Delivered','实际交付')+' '+esc(p.delivered_on||'—')+'</div>';
+        if(p.loan_voided)h+='<div class="note warn">'+Z('Linked loan was voided in Salary. Reconcile before further action.','Salary 借款记录已作废，必须核对后再处理。')+'</div>';
+        else h+=moneyLine(p.other_loans?'Combined outstanding after locked salaries':'Outstanding after locked salaries',p.other_loans?'已锁薪确认的合计未扣余额':'已锁薪确认的未扣余额',p.confirmed_combined_balance);
+        if(p.other_loans)h+='<div class="hint">'+Z('Salary uses one loan balance per worker. Phone-only repayments are not inferred from combined deductions.','Salary 按工人合计借款；有其他借款时不凭空拆分手机已还本金。')+'</div>';
+      }
+      if(l&&p.stage!=='DELIVERED'&&p.stage!=='CANCELLED')h+='<div class="btnrow" style="flex-wrap:wrap">'+reviewActions(l,'INSTALMENT')+'</div>';
+      h+='</div>';
+    }return h;
+  }
+  const sf=(n,en,zh,val='',type='text',more='')=>wf(n,en,zh,val,type,more);
+  const smoney=(n,en,zh,v='',min='0.01')=>sf(n,en,zh,v,'number','min="'+min+'" max="50000" step=".01" required');
+  const sdate=(v='')=>sf('date','Actual date','实际日期',v,'date','max="'+B.today+'" required');
+  const scheck=(n,en,zh,required=false)=>'<label class="checkrow" style="margin:9px 0"><input type="checkbox" name="'+n+'" id="wf_'+n+'" value="true" '+(required?'required':'')+'> '+esc(Z(en,zh))+'</label>';
+  const spayer=()=>ws('payer','Who actually paid','实际付款人',[['',Z('Choose','请选择')],...BUYERS.map(x=>[x,x])]);
+  const sref=()=>sf('ref','Actual receipt / reference','实际收据／参考号','','text','maxlength="80" required');
+  const planText=c=>esc(Z('Existing plan for selected month','所选月份已有计划'))+': <b>'+RM(c.current_plan?.monthly??0)+'</b> · '+esc(Z('Loan records','借款记录'))+' '+Number(c.loan_count||0)+(Number(c.future_plan_count)>0?' · '+esc(Z('Future plan exists — check Salary','存在未来计划，须核对 Salary')):'');
+  async function specialPlan(v){
+    const f=WForm;if(!f||f.action!=='PHONE_APPROVE')return;
+    f.planMonth=null;const el=$('#special-plan');if(el)el.textContent=Z('Checking Salary plan…','核对 Salary 计划中…');
+    if(!v||!/^\d{4}-\d{2}$/.test(v))return;
+    try{const c=await rpc('shop_owner_wh_special_context',{request_id:f.id,start_month:v});if(WForm!==f||$('#wf_start_month')?.value!==v)return;f.planMonth=v;f.plan=c;if(el)el.innerHTML=planText(c);}catch(e){if(WForm===f&&el)el.textContent=errZ(e.message);}
+  }
+  async function specialOpen(action,id){
+    if(!WH||WHBusy)return;const l=whFindLine(id);if(!l)return;
+    let c=null;WHBusy=true;busy(1);
+    try{if(action!=='CANCEL_REVIEW')c=await rpc('shop_owner_wh_special_context',{request_id:id});}
+    catch(e){toast(errZ(e.message));return;}finally{WHBusy=false;busy(0);}
+    const p=c?.phone||phoneFind(id);let title='',h='<div class="note">'+esc(l.farm)+' · '+esc(l.worker||'—')+'<br>'+esc(l.item)+' · '+esc(l.detail||'')+'</div>',note='';
+    if(action==='LINK_SALARY'){
+      title=Z('Link an existing Salary deduction','关联已有 Salary 扣款');
+      const rows=(c?.salary_candidates||[]).filter(x=>!x.resolved);
+      if(!rows.length){toast(Z('No eligible existing deduction. Verify the original expense first.','没有可关联的既有扣款，请先核对原费用。'));return;}
+      h+=ws('salary_id','Exact existing deduction','实际对应的原扣款',[['',Z('Choose exact record','选择完全相符的一笔')],...rows.map(x=>[x.id,(x.date||x.month)+' · '+(x.description||'—')+' · '+RM(x.amount)+(x.linked?' · '+Z('already in Kedai','已有 Kedai 记录'):'')])])+wr()+scheck('payment_pending','Actual company payment still needs filling in (only if verified missing)','实际公司付款确实尚未记录，需要后续补录');
+      note=Z('This only links the original deduction. No new salary deduction or payment.','仅关联原扣款，不新增 Salary 扣款、不新增付款。');
+    }else if(action==='MEDICAL_ACTUAL'){
+      title=Z('Reconcile actual medical expense','补录已发生医疗费用');h+=smoney('amount','Actual receipt amount RM','实际医疗收据金额 RM')+sdate()+ws('mode','Actual fee handling','费用承担方式',[['',Z('Choose','请选择')],['COMPANY',Z('Company expense — no salary deduction','公司承担 · 不扣薪')],['DEDUCT',Z('Company paid, lawful deduction authorised','公司先付 · 已依法授权扣薪')],['WORKER_CASH',Z('Worker paid directly — no company payment','工人已直接付款 · 不重复付款')]])+spayer()+sref()+wr()+scheck('deduction_authorised','Lawful salary deduction authorisation verified (deduct mode only)','已核实合法扣薪授权（仅扣薪模式）');
+      note=Z('Check the original Salary record and payment before submitting. Do not re-enter an expense already recorded.','提交前核对原扣款与付款，不得重复补录已有费用。');
+    }else if(action==='CANCEL_REVIEW'){
+      title=Z('Cancel verified unfulfilled request','取消已核实未发生的需求');h+=wr()+scheck('unfulfilled_confirmed','Verified: no actual purchase, delivery, payment or deduction took place','已核实没有实际采购、交付、付款或扣薪',true);note=Z('If there was an actual expense, reconcile it instead.','已发生费用时，必须核对原记录而非取消。');
+    }else if(action==='PHONE_QUOTE'){
+      title=Z('Record supplier quote','记录供应商实际报价');h+=sf('model','Exact phone model','实际手机型号',p?.model||'','text','maxlength="100" required')+sf('supplier','Supplier','供应商',p?.supplier||'','text','maxlength="100" required')+smoney('quote_price','Quoted cost RM','报价 RM',p?.quote_price??'')+sf('ref','Quote reference','报价参考号',p?.quote_ref||'','text','maxlength="100" required')+sdate(p?.quoted_on||'');note=Z('A quote is not a purchase or a loan. Revising a quote resets approval.','报价不是采购或借款；修改报价后需重新批准。');
+    }else if(action==='PHONE_APPROVE'){
+      if(!p)return;title=Z('Approve instalment terms','批准实际分期方案');h+='<div class="line"><span>'+esc(p.model)+' · '+Z('Supplier quote','供应商报价')+'</span><b>'+RM(p.quote_price)+'</b></div>'+smoney('sell','Agreed total selling price RM','确认总卖价 RM',p.agreed_sell??'')+smoney('deposit','Agreed upfront amount RM','约定首期款 RM',p.deposit??'','0')+smoney('monthly','Agreed phone repayment / month RM','约定手机每月还款 RM',p.monthly??'')+sf('start_month','Agreed first Salary month','约定起扣月份',p.start_month||'','month','min="'+B.today.slice(0,7)+'" required onchange="Owner.specialPlan(this.value)"')+'<div id="special-plan" class="note">'+planText(c)+'</div>'+smoney('combined_monthly','Approved total monthly Salary loan repayment RM','批准 Salary 合计每月借款扣额 RM',p.combined_monthly??'')+scheck('replace_plan','Explicitly authorise changing the existing combined plan if different','若与旧合计计划不同，明确批准调整现有月还款')+wr()+scheck('deduction_authorised','Verified lawful deduction authorisation and agreed terms','已核实合法扣薪授权及双方分期条款',true);
+      note=Z('Salary has one combined loan balance per worker. Approval creates no purchase, payment or loan.','Salary 按工人合计管理借款；批准本身不会采购、付款或新增借款。');
+    }else if(action==='PHONE_BUY'){
+      if(!p)return;title=Z('Record actual phone purchase','记录实际手机采购');h+='<div class="line"><span>'+esc(p.model)+' · '+Z('Approved quote','已批准报价')+'</span><b>'+RM(p.quote_price)+'</b></div>'+smoney('amount','Actual paid purchase cost RM','实际已付买价 RM')+spayer()+sdate()+sref();note=Z('Only record actual payment. No Salary loan until actual delivery.','仅记录真实已付款；实际交付前不会新增 Salary 借款。');
+    }else if(action==='PHONE_DELIVER'){
+      if(!p)return;title=Z('Confirm actual phone delivery','确认实际手机交付');h+='<div class="line"><span>'+Z('Agreed selling price','确认卖价')+'</span><b>'+RM(p.agreed_sell)+'</b></div><div class="line"><span>'+Z('Agreed deposit','约定首期款')+'</span><b>'+RM(p.deposit)+'</b></div><div class="line"><span>'+Z('Loan principal','分期本金')+'</span><b>'+RM(Number(p.agreed_sell)-Number(p.deposit))+'</b></div><div class="line"><span>'+Z('Salary month / combined monthly repayment','起扣月份／合计月还款')+'</span><b>'+esc(p.start_month)+' · '+RM(p.combined_monthly)+'</b></div>'+sdate()+(Number(p.deposit)>0?scheck('deposit_received','Confirmed upfront payment actually received','已确认实际收到约定首期款',true):'')+scheck('deduction_authorised','Confirm actual delivery and lawful deduction authorisation','已实际交付并核实合法扣薪授权',true);note=Z('Creates one linked Salary loan, not a full personal deduction or a second supplier payment.','只新增一笔关联 Salary 借款，不一次扣全额、不重复记录供应商付款。');
+    }else return;
+    const f={action,id,payload:{action,request_id:id,op_id:uuid()},special:true,planMonth:null,plan:null};WForm=f;openModal('<h2>'+esc(title)+'</h2><form id="whform" onsubmit="event.preventDefault();Owner.whSubmit()">'+h+'<div class="hint" style="margin:10px 0">'+esc(note)+'</div><div id="wherr" class="note bad" style="display:none"></div><div class="modalfoot"><button type="button" class="btn" onclick="closeModal()">'+Z('Cancel','取消')+'</button><button type="submit" id="whsave" class="btn primary">'+Z('Confirm','确认')+'</button></div></form>');
+    if(action==='PHONE_APPROVE'&&p.start_month)await specialPlan(p.start_month);
+    if(action==='MEDICAL_ACTUAL')whChange('mode',$('#wf_mode')?.value);
+  }
+
+  function whChange(n,v){if(n==='price_mode'){const el=$('#wf_fixed_sell');if(el){el.required=v==='FIXED';el.disabled=v!=='FIXED';}}if(WForm?.action==='MEDICAL_ACTUAL'&&n==='mode'){const payer=$('#wf_payer'),auth=$('#wf_deduction_authorised');if(payer){payer.disabled=v==='WORKER_CASH';payer.required=v==='COMPANY'||v==='DEDUCT';}if(auth)auth.required=v==='DEDUCT';}}
+
   async function whSubmit(){
     if(!WForm||WHBusy||!WH)return;const f=$('#whform');if(!f||!f.reportValidity())return;const d=Object.fromEntries(new FormData(f)),p={...WForm.payload,...d};
     delete p.method;delete p.share_ids;
-    for(const k of ['qty','unit_cost','sell','amount','fixed_sell','minimum','pack'])if(k in p){if(p[k]==='')delete p[k];else p[k]=Number(p[k]);}
+    for(const k of ['qty','unit_cost','sell','amount','fixed_sell','minimum','pack','quote_price','deposit','monthly','combined_monthly'])if(k in p){if(p[k]==='')delete p[k];else p[k]=Number(p[k]);}
     if('stock'in p)p.stock=p.stock==='true';if(p.price_mode!=='FIXED')delete p.fixed_sell;
     if(WForm.action==='ADJUST_DOWN')p.qty=-p.qty;
     if(WForm.action==='ISSUE'){p.worker_paid=d.method==='cash';p.deduction_authorised=d.method==='deduct';p.share_ids=new FormData(f).getAll('share_ids');}
     if(WForm.action==='PAY'&&!p.payer||WForm.action==='LINK_ITEM'&&!p.item_id||WForm.action==='ISSUE'&&whFindLine(WForm.id)?.kind==='PERSONAL'&&!d.method||WForm.action==='ISSUE'&&whFindLine(WForm.id)?.kind==='SHARED'&&!p.share_ids.length||WForm.action==='OPENING'&&p.qty>0&&!p.unit_cost){toast(Z('Complete required confirmed details','请填写所有已确认的必要资料'));return;}
+    if(WForm.special){for(const k of ['payment_pending','replace_plan','deposit_received','deduction_authorised','unfulfilled_confirmed'])p[k]=d[k]==='true';if(WForm.action==='PHONE_APPROVE'&&(WForm.planMonth!==p.start_month||!WForm.plan)){toast(Z('Check the Salary plan for the selected start month first','请先核对所选月份的 Salary 计划'));return;}if(WForm.action==='PHONE_APPROVE'&&!Number(WForm.plan?.loan_count)&&p.combined_monthly!==p.monthly){toast(Z('No other loan records: combined monthly payment must equal agreed phone repayment','无其他借款记录：合计月还款须等于约定手机月供'));return;}if(WForm.action==='LINK_SALARY'&&!p.salary_id||WForm.action==='MEDICAL_ACTUAL'&&(!p.mode||p.mode!=='WORKER_CASH'&&!p.payer||p.mode==='DEDUCT'&&!p.deduction_authorised)||WForm.action==='PHONE_BUY'&&!p.payer||WForm.action==='CANCEL_REVIEW'&&!p.unfulfilled_confirmed){toast(Z('Confirm all actual evidence and required details','请确认实际凭证与必要资料'));return;}}
     const err=$('#wherr');WHBusy=true;busy(1);$('#whsave').disabled=true;let saved=false;
-    try{const r=await rpc('shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();render();toast(Z('Saved to official database','已保存到正式数据库'));}
+    try{const r=await rpc(WForm.special?'shop_owner_wh_special':'shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();render();toast(Z('Saved to official database','已保存到正式数据库'));}
     catch(e){if(saved){WH=null;WHError=e.message;render();toast(Z('Saved; refresh to verify the new status','已保存，请刷新核对状态'));}else if(err){err.textContent=errZ(e.message)+' · '+Z('If the result is uncertain, keep this form or refresh before retrying.','结果不明确时保留此表或刷新核对，避免重复付款。');err.style.display='block';}}
     finally{WHBusy=false;busy(0);if($('#whsave'))$('#whsave').disabled=false;}
   }
 
   function render(){
-    if(!WH&&['buy','review','item','warehouse','whorders','whpolicy','whbatches','hand','spot'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;return;}
-    $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
+    if(!WH&&['buy','review','item','warehouse','whorders','whpolicy','whbatches','whphones','hand','spot'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;return;}
+    $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, whOpen, whSubmit, whChange, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
