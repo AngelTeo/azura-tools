@@ -1681,12 +1681,12 @@ const Owner = (() => {
   function mcFilter(f){MC.farm=f;render();}
   function mcSearch(v){MC.search=v;const el=$('#mc-workers');if(el)el.innerHTML=mcWorkerRows();}
   function mcWorkerRows(){const list=mcWorkers();return list.length?list.map(w=>'<button class="food pick" style="margin:7px 0" data-id="'+esc(w.worker_id)+'" onclick="Owner.mcOpen(this.dataset.id)"><span class="ico">👷</span><span class="foodname"><b>'+esc(w.worker_name)+'</b><small>'+esc(w.farm)+(w.stopped?' · '+Z('Left','已离职'):'')+'</small></span><span class="aarr">›</span></button>').join(''):'<div class="empty">'+Z('No matching worker','没有对应工人')+'</div>';}
-  async function mcOpen(id){const w=(MC.roster?.workers||[]).find(w=>w.worker_id===id);if(!w)return;const epoch=++MC.epoch,m=MC.month;mcDiscard();MC.card=null;MC.loading=true;MC.error='';ui={view:'monthcard',worker:id};render();scrollTo(0,0);
+  async function mcOpen(id){const w=(MC.roster?.workers||[]).find(w=>w.worker_id===id);if(!w)return;const epoch=++MC.epoch,m=MC.month;mcDiscard();MC.preparing=false;MC.card=null;MC.loading=true;MC.error='';ui={view:'monthcard',worker:id};render();scrollTo(0,0);
     try{const c=await rpc('shop_owner_month_card',{month:m,worker_id:id});if(MC.epoch!==epoch||ui.view!=='monthcard'||ui.worker!==id)return;if(c?.worker?.worker_id!==id||c.month!==m||!['personal','cash','shared','instalments','pending','issues'].every(k=>Array.isArray(c[k])))throw Error('Invalid card response');MC.card=c;}
     catch(e){if(MC.epoch===epoch)MC.error=errZ(e.message);}
     finally{if(MC.epoch===epoch){MC.loading=false;if(ui.view==='monthcard')render();}}
   }
-  function mcBack(){++MC.epoch;mcDiscard();MC.card=null;MC.loading=false;MC.error='';ui={view:'monthcards'};render();scrollTo(0,0);}
+  function mcBack(){++MC.epoch;mcDiscard();MC.preparing=false;MC.card=null;MC.loading=false;MC.error='';ui={view:'monthcards'};render();scrollTo(0,0);}
   function mcNext(){const a=mcWorkers(),i=a.findIndex(w=>w.worker_id===ui.worker);if(i>=0&&i<a.length-1)return mcOpen(a[i+1].worker_id);}
   function monthCardsPage(){let h=whHeader('Monthly Shopping Card','月结购物总卡',Z('Select a worker and share their own record','选择工人，一人一张，只发给本人'))+'<div class="field"><label>'+Z('Salary month','工资月份')+'</label><input type="month" min="2026-11" max="'+esc(B.today.slice(0,7))+'" value="'+esc(MC.month||B.today.slice(0,7))+'" onchange="Owner.openMonthCards(this.value)"></div>';
     if(MC.loading)return h+'<div class="empty">'+Z('Reading official records…','正在读取正式记录…')+'</div>';
@@ -1705,7 +1705,7 @@ const Owner = (() => {
     if(c.cash.length)rows.push({type:'note',label:MMY.cashnote+' · Not deducted again · '+mcMoney(c.cash_total)});
     section(MMY.instal,'Instalment purchase','分期购买（本金独立）',c.instalments.map(x=>({type:'item',date:mcDate(x.date),label:x.item,sub:'Total '+mcMoney(x.amount)+' · Deposit '+mcMoney(x.deposit)+' · Loan '+mcMoney(x.principal)+' · Agreed / month '+mcMoney(x.monthly)+' · From '+x.start_month,amount:''})));
     if(c.instalments.length)rows.push({type:'note',label:MMY.instalnote+' · Not included in shopping deduction total'});
-    section(MMY.pending,'Not completed yet','尚未完成（不计入总额）',c.pending.map(x=>({type:'item',date:mcDate(x.date),label:x.item||'—',sub:['× '+x.qty,x.detail||'',mcStatus(x)].filter(Boolean).join(' · '),amount:''})));
+    section(MMY.pending,'Still open as of '+c.today,'截至今日尚未完成（不计入总额）',c.pending.map(x=>({type:'item',date:mcDate(x.date),label:x.item||'—',sub:['× '+x.qty,x.detail||'',mcStatus(x)].filter(Boolean).join(' · '),amount:''})));
     if(c.pending.length)rows.push({type:'note',label:MMY.pendingnote+' · Excluded from total'});
     if(!c.personal.length&&!c.shared.length&&!c.cash.length&&!c.instalments.length&&!c.pending.length)rows.unshift({type:'note',label:MMY.none+' · No purchase records'});
     return rows;
@@ -1725,12 +1725,12 @@ const Owner = (() => {
     const font=(weight,size)=>weight+' '+size+'px '+MC_FONT;
     function wrap(v,width,f){g.font=f;const text=String(v??'');if(!text)return [];const out=[];let line='';const tokens=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)].map(x=>x.segment):Array.from(text);for(const t of tokens){if(line&&g.measureText(line+t).width>width){out.push(line);line=t;}else line+=t;}if(line)out.push(line);return out;}
     const blocks=rows.map(r=>{const wide=r.type==='item'?W-2*pad-96-176:W-2*pad-32,f=r.type==='section'?font(700,28):r.type==='total'?font(700,27):r.type==='note'?font(400,23):font(700,27),a=wrap(r.label,wide,f),b=wrap(r.sub,wide,font(400,22));return {...r,a,b,h:r.type==='total'?Math.max(118,a.length*37+82):r.type==='section'?a.length*40+26:r.type==='note'?a.length*33+24:Math.max(84,a.length*38+b.length*31+26)};});
-    const nameLines=wrap(c.worker.worker_name,W-2*pad,font(800,43)),headerH=215+nameLines.length*56,foot=106,H=headerH+blocks.reduce((v,r)=>v+r.h,0)+foot;
+    const nameLines=wrap(c.worker.worker_name,W-2*pad,font(800,43)),statusLines=wrap(c.locked?'CONFIRMED · '+MMY.locked:'PROVISIONAL · '+MMY.draft,W-2*pad,font(600,21)),headerH=222+nameLines.length*56+statusLines.length*31,foot=106,H=headerH+blocks.reduce((v,r)=>v+r.h,0)+foot;
     if(H>14000)throw Error('Card too long for one reliable image; copy text instead');
     cv.width=W;cv.height=H;const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.textBaseline='top';
     const write=(t,x,y,f,col='#17241d',align='left')=>{ctx.font=f;ctx.fillStyle=col;ctx.textAlign=align;ctx.fillText(String(t),x,y);};
     ctx.fillStyle='#184e3d';ctx.fillRect(0,0,W,headerH);write('AZURA DELTA  ·  KEDAI RUNCIT',pad,26,font(700,23),'#e0ede5');write(MMY.title,pad,67,font(800,39),'#fff');write('MONTHLY SHOPPING CARD  ·  '+c.month,pad,125,font(700,24),'#fff');
-    let yy=165;for(const n of nameLines){write(n,pad,yy,font(800,43),'#fff');yy+=56;}write(c.worker.farm+'  ·  '+c.today,pad,yy,font(400,24),'#fff');write(c.locked?'CONFIRMED · '+MMY.locked:'PROVISIONAL · '+MMY.draft,pad,yy+34,font(600,21),'#e0ede5');
+    let yy=165;for(const n of nameLines){write(n,pad,yy,font(800,43),'#fff');yy+=56;}write(c.worker.farm+'  ·  '+c.today,pad,yy,font(400,24),'#fff');statusLines.forEach((v,i)=>write(v,pad,yy+34+i*31,font(600,21),'#e0ede5'));
     let y=headerH;for(const r of blocks){
       if(r.type==='section'){ctx.fillStyle='#edf4ef';ctx.fillRect(pad,y+8,W-2*pad,r.h-13);r.a.forEach((v,i)=>write(v,pad+13,y+18+i*40,font(700,28)));}
       else if(r.type==='total'){ctx.fillStyle='#184e3d';ctx.fillRect(pad,y+8,W-2*pad,r.h-16);r.a.forEach((v,i)=>write(v,pad+16,y+20+i*37,font(700,27),'#fff'));write(r.amount,W-pad-16,y+r.h-62,font(800,45),'#fff','right');}
