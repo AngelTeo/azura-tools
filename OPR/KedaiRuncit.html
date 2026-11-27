@@ -74,7 +74,7 @@ table.mx td{padding:6px;border-bottom:1px solid #f0f0f0;vertical-align:top}table
 .shrow{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fff}.shrow.on{border-color:#87b69a;background:#f3f9f3}
 .shname{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;padding:12px;font:700 16px system-ui;color:var(--ink);text-align:left}
 .tick{width:26px;height:26px;border-radius:8px;border:2px solid var(--green);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:900;flex:none}
-.shrow.on .tick{background:var(--green)}
+.shrow.on .tick{background:var(--green)} .shrow .step{flex:none;gap:2px}.shrow .step button{width:34px;min-width:34px;height:40px}.shrow .step .count{width:30px;min-width:30px;padding:0;text-align:center}
 .shdet{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 12px 12px 48px}.shdet input{flex:1;min-width:140px;min-height:42px}
 body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .printonly{display:none}
@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 33;
+const APP_VERSION = 35;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -266,14 +266,14 @@ function variantPickerHTML(group, variants, onpick, onclose, marked){
  return `<h2>${esc(group)}</h2><div class="itemsgrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${variants.map(it=>{const v=fixedVariant(it),on=marked&&marked(it.id);return `<button class="food pick ${on?'chosen':''}" style="display:flex;flex-direction:column;align-items:center;min-width:0;padding:10px;gap:8px;text-align:center" data-id="${esc(it.id)}" onclick="${onpick}(this.dataset.id)"><div style="width:100%;display:flex;justify-content:center">${icoBox(it,it.label)}</div><b style="font-size:15px">${esc(v.spec)}</b>${on?'<small>✓</small>':''}</button>`;}).join('')}</div><div class="modalfoot"><button class="btn" onclick="${onclose}()">${esc(group)} · ×</button></div>`;
 }
 function personalSpecs(it){
- if(!it||it.custom)return [];
+ if(!it)return [];if(it.custom)return /^(SHIRT - (SHORT|LONG) SLEEVE|PANTS - (SHORT|LONG))$/i.test(it.label||'')?['S','M','L','XL','2XL','3XL']:[];
  const norm=x=>String(x||'').trim().toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
  const codes=[norm(it.label),norm(it.code)];
  if(codes.some(x=>/\b(?:TYPE C|MICRO USB|USB A|LIGHTNING)\b/.test(x)))return [];
  const any=a=>codes.some(x=>a.includes(x));
  if(any(['CABLE','USB CABLE','CHARGING CABLE','PHONE CABLE','USB CHARGING CABLE']))return ['Type-C','Micro USB'];
  if(any(['CHARGER','USB CHARGER','PHONE CHARGER','USB ADAPTER','CHARGING ADAPTER']))return ['USB-A','Type-C'];
- if(any(['BAJU','SELUAR','PANTS SHORT','PANTS LONG','PANTS','SHORTS','SHIRT','T SHIRT']))return ['S','M','L','XL','2XL','3XL'];
+ if(any(['BAJU','SELUAR','PANTS SHORT','PANTS LONG','PANTS','SHORTS','SHIRT','T SHIRT','SHIRT 短袖','SHIRT 长袖','SHIRT SHORT SLEEVE','SHIRT LONG SLEEVE']))return ['S','M','L','XL','2XL','3XL'];
  if(any(['SELIPAR','KASUT','SLIPPER','SLIPPERS','FLIP FLOP','FLIP FLOPS']))return ['37','38','39','40','41','42','43','44','45','46'];
  return [];
 }
@@ -471,25 +471,40 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function phoneValid(s){return /^\+?[\d ()-]+$/.test(String(s||'').trim())&&String(s).replace(/\D/g,'').length>=6&&String(s).replace(/\D/g,'').length<=15;}
   function amountValid(s){const v=String(s??'').trim();return /^\d+(?:\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=999999;}
   function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
-  const cartItem=key=>pOnly(key)?{id:null,label:photoLabel(),custom:true,photoOnly:true}:key.startsWith('c:')?{id:null,label:key.slice(2),custom:true}:itemById(key);
-  let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
+  const baseKey=k=>String(k).startsWith('b:')?String(k).slice(String(k).indexOf(':',2)+1):String(k);
+ const cartItem=key=>{key=baseKey(key);return pOnly(key)?{id:null,label:photoLabel(),custom:true,photoOnly:true}:key.startsWith('c:')?{id:null,label:key.slice(2),custom:true}:itemById(key);};
+ function garment(it){const n=String(it?.label||'').toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
+ if(/^(SHIRT|T SHIRT) (短袖|SHORT(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'SHORT SLEEVE'};
+ if(/^(SHIRT|T SHIRT) (长袖|LONG(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'LONG SLEEVE'};
+ if(/^PANTS (SHORT|短裤)$/.test(n))return {group:'PANTS',spec:'SHORT'};
+ if(/^PANTS (LONG|长裤)$/.test(n))return {group:'PANTS',spec:'LONG'};return null;}
+ function leaderEntries(list){const out=[],seen=new Set();for(const e of catalogEntries(list)){const v=e.item&&garment(e.item);if(!v){out.push(e);continue;}if(seen.has(v.group))continue;seen.add(v.group);const variants=list.filter(i=>garment(i)?.group===v.group);for(const spec of (v.group==='SHIRT'?['SHORT SLEEVE','LONG SLEEVE']:['SHORT','LONG']))if(!variants.some(i=>garment(i)?.spec===spec)){const label=v.group+' - '+spec;variants.push({id:'c:'+label,label,custom:true});}out.push({group:v.group,variants,garment:true});}return out;}
+ const photoMode=it=>!!(it?.custom||garment(it)||/^(BAG|KASUT|SELIPAR|SHOES?|SLIPPERS?|SANDALS?|BAJU|SELUAR|PANTS|SHIRT|T SHIRT)(?:\s|$)/i.test(String(it?.label||it?.code||'')));
+ const effectivePhotos=(c,r)=>r.photos?.length?r.photos:(c.photos||[]);
+ const sizeKey=(it,w)=>'runcit_size_v35:'+w+':'+(garment(it)?.group||it.id||it.label);
+ function sizeLast(it,w){const v=lsGet(sizeKey(it,w),'');return specOptions(it).includes(v)?v:'';}
+ function sizeSave(it,rows){if(!garment(it)&&!/^(KASUT|SELIPAR|SHOES?|SLIPPERS?|SANDALS?)(?:\s|$)/i.test(it.label||''))return;for(const [w,r] of Object.entries(rows||{}))if(specOptions(it).includes(r.det))lsSet(sizeKey(it,w),r.det);}
+ function garmentArt(g,s){const l=/LONG/.test(s),d=g==='SHIRT'?(l?'M25 16L39 8H61L75 16L96 78L79 85L70 49V94H30V49L21 85L4 78Z':'M25 16L39 8H61L75 16L96 40L80 55L70 45V94H30V45L20 55L4 40Z'):(l?'M24 8H76L83 95H56L50 43L44 95H17Z':'M24 8H76L83 67H55L50 35L45 67H17Z');return '<svg aria-hidden="true" viewBox="0 0 100 100" style="width:64px;height:64px;flex:none"><path d="'+d+'" fill="#e4eee9" stroke="#17654e" stroke-width="3" stroke-linejoin="round"/></svg>';}
+ function variantLabel(g,s){return g==='SHIRT'?(s==='LONG SLEEVE'?specLabel('Long sleeve','长袖','လက်ရှည်'):specLabel('Short sleeve','短袖','လက်တို')):(s==='LONG'?specLabel('Long pants','长裤','ဘောင်းဘီရှည်'):specLabel('Shorts','短裤','ဘောင်းဘီတို'));}
+ function groupLabel(g){return g==='SHIRT'?specLabel('SHIRT','衣服','အင်္ကျီ'):g==='PANTS'?specLabel('PANTS','裤子','ဘောင်းဘီ'):g;}
+ let SH = null;                                   // the open sheet: {key, rows:{wid:{qty,det,phone,amt}}, qty, det}
   function cartSummary(key){const c=ui.cart[key];if(!c)return '';if(ui.kind==='PERSONAL'&&c.bottles)return c.bottles.map((b,i)=>`🥃 ${i+1}: ${b.map(w=>esc((D.workers.find(x=>x.id===w)||{}).name||'?')).join(', ')}`).join('<br>');if(ui.kind==='PERSONAL')return Object.entries(c.rows).map(([w,r])=>`${esc((D.workers.find(x=>x.id===w)||{}).name||'?')} ×${r.qty}${r.phone?' · '+esc(r.phone)+(r.telco?' · '+esc(r.telco):'')+' · RM '+esc(r.amt):r.det?' · '+esc(r.det):''}`).join('<br>');return `×${c.qty}${c.det?' · '+esc(c.det):''}`;}
   function leaderCatalogCards(list,k){
- const entries=k==='PERSONAL'?catalogEntries(list):list.map(item=>({item}));
+ const entries=k==='PERSONAL'?leaderEntries(list):list.map(item=>({item}));
  return entries.map(e=>{
- if(e.group){const vs=e.variants,on=vs.some(i=>ui.cart[i.id]);return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openVariantGroup('${e.group}')"><span style="display:flex;flex:none;gap:2px">${vs.map(i=>icoBox(i,i.label)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${vs.map(i=>esc(fixedVariant(i).spec)).join(' / ')}</small>${on?vs.filter(i=>ui.cart[i.id]).map(i=>`<small class="loc">✓ ${esc(fixedVariant(i).spec)} · ${cartSummary(i.id)}</small>`).join(''):''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;}
+ if(e.group){const vs=e.variants,on=vs.some(i=>ui.cart[i.id]);return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openVariantGroup('${e.group}')">${e.garment?garmentArt(e.group,'SHORT'):icoBox(vs[0],vs[0].label)}<span class="foodname"><b>${esc(groupLabel(e.group))}</b>${e.garment?'<small>'+esc(e.group)+'</small>':''}${on?vs.filter(i=>ui.cart[i.id]).map(i=>`<small class="loc">✓ ${esc((garment(i)||fixedVariant(i)).spec)} · ${cartSummary(i.id)}</small>`).join(''):''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;}
  const i=e.item,on=!!ui.cart[i.id];return `<button class="food pick ${on?'chosen':''}" onclick="Leader.openSheet('${i.id}')">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b>${isAlcohol(i.label)?`<small style="color:var(--warn)">${t('alcohol')}</small>`:''}${on?`<small class="loc">✓ ${cartSummary(i.id)}</small>`:''}</span><span class="plusbig">${on?'✎':'+'}</span></button>`;
  }).join('');
 }
-  function openVariantGroup(group){const e=catalogEntries(items(ui.kind)).find(x=>x.group===group);if(!e)return;openModal(variantPickerHTML(group,e.variants,'Leader.openSheet','closeModal',id=>!!ui.cart[id]));}
-  function addPage(){
+  function openVariantGroup(group){const e=leaderEntries(items(ui.kind)).find(x=>x.group===group);if(!e)return;if(!e.garment)return openModal(variantPickerHTML(group,e.variants,'Leader.openSheet','closeModal',id=>!!ui.cart[id]));openModal('<h2>'+esc(groupLabel(group))+'</h2><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+e.variants.map(i=>{const v=garment(i);return '<button class="food pick '+(ui.cart[i.id]?'chosen':'')+'" style="display:flex;flex-direction:column;text-align:center;padding:12px;gap:5px" data-id="'+esc(i.id)+'" onclick="Leader.openSheet(this.dataset.id)">'+garmentArt(group,v.spec)+'<b>'+esc(variantLabel(group,v.spec))+'</b><small>'+esc(v.spec)+'</small></button>';}).join('')+'</div><div class="modalfoot"><button class="btn" onclick="closeModal()">'+t('cancel')+'</button></div>');}
+ function addPage(){
     const k=ui.kind,list=items(k);if(ui.pending)return `<div class="hero"><h1>${photoLabel()} · ${esc(FARM)}</h1><button class="btn small" onclick="Leader.home()">${t('back')}</button></div><div class="note warn">${specLabel('Not confirmed — retry the same batch','提交尚未确认，请重试原批次','ပို့ထားသောစာရင်း မသေချာသေးပါ။ ဒီစာရင်းကိုပဲ ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitAdd()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and edit unsaved batch','核实后修改未保存批次','စစ်ဆေးပြီး မသိမ်းရသေးသောစာရင်း ပြင်မယ်')}</button>`;
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
       <button class="btn gold block" style="min-height:64px;margin-bottom:10px" onclick="Leader.photoOnly()">📷 ${specLabel('Photo only — no name needed','直接上传照片 · 不用知道名称','ဓာတ်ပုံဖြင့် မှာမယ် · နာမည် မလိုပါ')}</button>${k==='FOOD'?`<div class="note">${specLabel('Extra photo request for this delivery round','本轮额外照片需求，与普通订菜分开','ဒီအကြိမ်အတွက် ဓာတ်ပုံဖြင့် အပိုမှာရန်')} · ${esc(ui.round)}</div>`:''}<div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${leaderCatalogCards(list,k)}</div>
       <div class="sectionhead">${t('otherHead')}</div>
       <div class="btnrow"><input class="grow" placeholder="${esc(t('other'))}" value="${esc(ui.other)}" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ ${t('add')}</button></div>
-      ${Object.keys(ui.cart).filter(x=>x.startsWith('c:')||pOnly(x)).map(key => `<button class="food pick chosen" style="margin-top:8px;width:100%" onclick="Leader.openSheet(${esc(JSON.stringify(key))})"><span class="ico">📦</span><span class="foodname"><b>${esc(pOnly(key)?ui.cart[key].name||photoLabel():key.slice(2))}</b><small class="loc">✓ ${cartSummary(key)}</small></span><span class="plusbig">✎</span></button>`).join('')}
+      ${Object.keys(ui.cart).filter(x=>x.startsWith('b:')||pOnly(x)||x.startsWith('c:')&&!garment(cartItem(x))).map(key => `<button class="food pick chosen" style="margin-top:8px;width:100%" onclick="Leader.openSheet(${esc(JSON.stringify(key))})"><span class="ico">📦</span><span class="foodname"><b>${esc(pOnly(key)?ui.cart[key].name||photoLabel():cartItem(key).label)}</b><small class="loc">✓ ${cartSummary(key)}</small></span><span class="plusbig">✎</span></button>`).join('')}
       <div class="bottom" id="bottombar"></div>`;
     return h;
   }
@@ -518,37 +533,39 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   const valid=phoneValid(r.phone)&&String(r.telco||'').trim();
   return `<div style="width:100%"><b>${esc(t('phone'))}</b><div class="pills" style="flex-wrap:wrap;padding:3px 0">${primary?btn(1,primary,w.telco):''}${can2?btn(2,second,w.telco2):''}</div>${second&&!can2?`<div class="hint">${specLabel('Phone 2 needs its own telco in Master Hub.','第二号码需在 Master Hub 确认独立 Telco。','ဒုတိယ ဖုန်းနံပါတ်အတွက် ဖုန်းလိုင်းအချက်အလက် လိုအပ်သည်။')}</div>`:''}${!valid?`<div class="note warn">${specLabel('Phone / telco missing — ask management to update Master Hub.','电话或 Telco 不完整，请管理层更新 Master Hub。','ဖုန်းနံပါတ် သို့မဟုတ် ဖုန်းလိုင်း အချက်အလက် မပြည့်စုံပါ။ တာဝန်ခံကို ပြောပါ။')}</div>`:''}</div><span class="pills" style="padding:0;flex-wrap:wrap">${[5,10,20,30,40,50].map(a=>`<button class="pill ${String(r.amt)===String(a)?'on':''}" onclick="Leader.shSet('${w.id}','amt','${a}',1)">RM ${a}</button>`).join('')}</span><input inputmode="decimal" style="max-width:130px" placeholder="${esc(t('amount'))} RM" value="${[5,10,20,30,40,50].map(String).includes(String(r.amt))?'':esc(r.amt||'')}" oninput="Leader.shSet('${w.id}','amt',this.value)">`;
 }
-  function specWorkerFields(w,r,stepper){return `${stepper(w.id,r.qty)}<span class="pill on" style="pointer-events:none">${esc(r.det||'—')}</span>${r.det!==SH.spec&&SH.spec?`<button class="btn small light" onclick="Leader.shSpecWorker('${w.id}')">${esc(specLabel('Change to ','改为 ','ပြောင်းမည် ')+SH.spec)}</button>`:''}`;}
-  function shSpecWorker(w){const opts=specOptions(cartItem(SH.key));if(SH.rows[w]&&opts.includes(SH.spec)){SH.rows[w].det=SH.spec;drawSheet();}}
-  function sheetOk(){if(!SH||PhotoBusy)return false;const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return SH.qty>0&&(!(it.photoOnly||ui.kind==='FOOD')||!!SH.photos?.length);if(isWhisky(it))return SH.bottles.length>0&&SH.bottles.every(b=>b.length>=1&&b.length<=3);const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det))&&(!it.photoOnly||!!r.photos?.length));}
+  function specWorkerFields(w,r,stepper){const it=cartItem(SH.key),last=sizeLast(it,w.id);return `<div class="pills" style="flex-wrap:wrap;width:100%;padding:0">${specOptions(it).map(v=>`<button class="pill ${r.det===v?'on':''}" style="min-height:44px" data-w="${esc(w.id)}" data-v="${esc(v)}" onclick="Leader.shSet(this.dataset.w,'det',this.dataset.v,1)">${esc(v)}${last===v&&r.det!==v?' ↺':''}</button>`).join('')}</div>`;}
+ function shSpecWorker(w){const opts=specOptions(cartItem(SH.key));if(SH.rows[w]&&opts.includes(SH.spec)){SH.rows[w].det=SH.spec;drawSheet();}}
+  function sheetOk(){if(!SH||PhotoBusy)return false;const it=cartItem(SH.key);if(ui.kind!=='PERSONAL')return SH.qty>0&&(!(it.photoOnly||ui.kind==='FOOD')||!!SH.photos?.length);if(isWhisky(it))return SH.bottles.length>0&&SH.bottles.every(b=>b.length>=1&&b.length<=3);const opts=specOptions(it),rs=Object.entries(SH.rows);return rs.length>0&&rs.every(([w,r])=>r.qty>0&&(!isTop(it)||topWorkerValid(w,r))&&(!opts.length||opts.includes(r.det))&&(!it.photoOnly||!!effectivePhotos(SH,r).length));}
   function sheetBtn(){ const b = document.getElementById('shok'); if(b) b.disabled = !sheetOk(); }
   function drawSheet(){ const it = cartItem(SH.key), top = isTop(it), opts=ui.kind==='PERSONAL'?specOptions(it):[],fixed=ui.kind==='PERSONAL'?fixedVariant(it):null;
     const stepper = (w, q) => `<span class="step"><button onclick="Leader.shQty('${w}',-1)">−</button><input class="count" readonly value="${q}"><button class="plus" onclick="Leader.shQty('${w}',1)">+</button></span>`;
     let h = `<h2>${it.custom ? '📦' : icon(it.label, it.icon)} ${esc(it.label)}</h2>${fixed?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${icoBox(it,it.label)}<b>${esc(fixed.spec)}</b></div>`:''}`;
-    if(it.photoOnly)h+=`<div class="field"><label>${specLabel('Item name (optional)','物品名称（可不填）','ပစ္စည်းနာမည် (မဖြည့်လည်းရ)')}</label><input maxlength="40" value="${esc(SH.name||'')}" oninput="Leader.photoName(this.value)"></div>`;
-    if(ui.kind === 'PERSONAL'){
-      if(opts.length)h+=`<div class="sectionhead" style="margin-top:0">${specLabel('1 · Choose specification','1 · 选择规格','၁ · အမျိုးအစား ရွေးပါ')}</div><div class="pills" style="flex-wrap:wrap">${opts.map(v=>`<button class="pill ${SH.spec===v?'on':''}" style="min-height:44px" onclick="Leader.specSelect('${v}')">${esc(v)}</button>`).join('')}</div>`;
+    const flexible=ui.kind==='PERSONAL'&&!top&&!isWhisky(it)&&photoMode(it), gv=garment(it);
+ if(gv)h='<h2>'+esc(groupLabel(gv.group))+'</h2><div style="display:flex;align-items:center;gap:10px">'+garmentArt(gv.group,gv.spec)+'<b>'+esc(variantLabel(gv.group,gv.spec))+'</b></div>';
+ if(flexible){h+=photoControls('_',SH.photos);if(it.photoOnly&&!SH.photos?.length&&!Object.values(SH.rows||{}).some(r=>r.photos?.length)){h+='<div class="hint">'+esc(specLabel('Add a photo first','先添加照片','ဓာတ်ပုံ အရင်ထည့်ပါ'))+'</div><div class="modalfoot"><button class="btn" onclick="Leader.shCancel()">'+t('cancel')+'</button></div>';openModal(h);saveCart();return;}if(ui.cart[SH.key]&&!it.photoOnly)h+='<button class="btn block light" onclick="Leader.shNew()">'+esc(specLabel('＋ Another style / photo','＋ 另一款式／照片','＋ နောက်တစ်မျိုး'))+'</button>';}
+ if(it.photoOnly&&ui.kind!=='PERSONAL')h+=`<div class="field"><label>${specLabel('Item name (optional)','物品名称（可不填）','ပစ္စည်းနာမည် (မဖြည့်လည်းရ)')}</label><input maxlength="40" value="${esc(SH.name||'')}" oninput="Leader.photoName(this.value)"></div>`;
+ if(ui.kind === 'PERSONAL'){
       if(isWhisky(it)) h += bottlesUI(); else {
-      h += `<div class="sectionhead" style="margin-top:0">${opts.length?'2 · ':''}${t('whoWants')}</div>`;
+      h += `<div class="sectionhead" style="margin-top:0">${t('whoWants')}</div>`;
       h += (D.workers||[]).length ? (D.workers||[]).map(w => { const r = SH.rows[w.id], dup = !it.custom && lines().some(l => l.status !== 'REJECTED' && l.worker_id === w.id && l.item_id === it.id);
-        return `<div class="shrow ${r?'on':''}"><button class="shname" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span>${esc(w.name)}${dup ? `<small style="color:var(--warn)"> · ${esc(t('already'))}</small>` : ''}</button>
-          ${r ? `<div class="shdet">${top ? topWorkerFields(w,r) : fixed ? stepper(w.id,r.qty) : opts.length ? specWorkerFields(w,r,stepper) : `${stepper(w.id, r.qty)}<input maxlength="80" placeholder="${esc(t('detailPh'))}" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)">`}${top?'':photoControls(w.id,r.photos)}</div>` : ''}</div>`; }).join('')
-        : `<div class="note warn">${t('noWorkers')}</div>`; }
+        return `<div class="shrow ${r?'on':''}"><div style="display:flex;align-items:center;gap:4px;padding-right:6px"><button class="shname" style="flex:1;min-width:0;overflow-wrap:anywhere" onclick="Leader.shW('${w.id}')"><span class="tick">${r ? '✓' : ''}</span><span>${esc(w.name)}${dup?`<small style="color:var(--warn)"> · ${esc(t('already'))}</small>`:''}</span></button>${r&&!top?stepper(w.id,r.qty):''}</div>${r&&(top||opts.length||flexible||r.det||r.photos?.length)?`<div class="shdet" style="padding:0 12px 8px 12px">${top?topWorkerFields(w,r):opts.length?specWorkerFields(w,r,stepper):flexible?`<details style="width:100%"><summary>${esc(specLabel('Extra detail (optional)','特别要求（选填）','အသေးစိတ် (လိုမှ)'))}</summary><input maxlength="80" value="${esc(r.det||'')}" oninput="Leader.shSet('${w.id}','det',this.value)"></details>`:r.det?`<small>${esc(r.det)}</small>`:''}${r.photos?.length?photoControls(w.id,r.photos):''}</div>`:''}</div>`;}).join('')
+ : `<div class="note warn">${t('noWorkers')}</div>`; }
     } else {
       h += `<div class="titleline"><span>${t('qty')}</span>${stepper('_', SH.qty)}</div><div class="field"><input maxlength="80" placeholder="${esc(t('detailPh'))}" value="${esc(SH.det||'')}" oninput="Leader.shSet('_','det',this.value)"></div>${photoControls('_',SH.photos)}`;
     }
     h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="Leader.shCancel()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
-    openModal(h); sheetBtn(); }
-  function shW(w){if(SH.rows[w]){delete SH.rows[w];drawSheet();return;}const it=cartItem(SH.key),opts=specOptions(it);if(ui.kind==='PERSONAL'&&opts.length&&!opts.includes(SH.spec)){toast(specLabel('Choose a specification first.','请先选择规格。','အမျိုးအစား အရင်ရွေးပါ။'));return;}SH.rows[w]={qty:1};if(opts.length)SH.rows[w].det=SH.spec;if(isTop(it)){const wk=(D.workers||[]).find(x=>x.id===w)||{};SH.rows[w].phone=wk.phone||'';SH.rows[w].telco=wk.telco||'';}drawSheet();}
-  function shQty(w,d){if(!SH||PhotoBusy)return;if(w==='_')SH.qty=Math.max(1,Math.min(999,SH.qty+d));else SH.rows[w].qty=Math.max(1,Math.min(20,SH.rows[w].qty+d));saveCart();drawSheet();}
+    const box=$('#modalBox'),scroll=box?.scrollTop||0;openModal(h);if(box)box.scrollTop=scroll;sheetBtn();saveCart(); }
+  function shW(w){if(!SH||PhotoBusy||LeaderBusy)return;if(SH.rows[w]){delete SH.rows[w];drawSheet();return;}const it=cartItem(SH.key),opts=specOptions(it);if(it.photoOnly&&!SH.photos?.length)return;SH.rows[w]={qty:1};if(opts.length)SH.rows[w].det='';if(isTop(it)){const wk=(D.workers||[]).find(x=>x.id===w)||{};SH.rows[w].phone=wk.phone||'';SH.rows[w].telco=wk.telco||'';}drawSheet();}
+ function shNew(){if(!SH||PhotoBusy||LeaderBusy)return;const k=baseKey(SH.key);if(!confirm(specLabel('Start another style? Unsaved edits will be discarded.','另开款式？本弹窗未确认修改将舍弃。','နောက်တစ်မျိုး ထည့်မယ်။ မသိမ်းရသေးတာ ပယ်မယ်။')))return;openSheet('b:'+uuid()+':'+k);}
+ function shQty(w,d){if(!SH||PhotoBusy)return;if(w==='_')SH.qty=Math.max(1,Math.min(999,SH.qty+d));else SH.rows[w].qty=Math.max(1,Math.min(20,SH.rows[w].qty+d));saveCart();drawSheet();}
   function shSet(w,k,v,redraw){if(!SH||PhotoBusy)return;if(w==='_')SH[k]=v;else SH.rows[w][k]=v;saveCart();if(redraw)drawSheet();else sheetBtn();}
-  function shOk(){if(!sheetOk())return;const {key,...c}=SH,old=ui.cart[key],sheet=SH;ui.cart[key]=c;SH=null;if(!saveCart()){SH=sheet;if(old)ui.cart[key]=old;else delete ui.cart[key];return;}closeModal();render();}
+  function shOk(){if(!sheetOk())return;const {key,...c}=SH,old=ui.cart[key],sheet=SH;ui.cart[key]=c;SH=null;if(!saveCart()){SH=sheet;if(old)ui.cart[key]=old;else delete ui.cart[key];return;}if(ui.kind==='PERSONAL')sizeSave(cartItem(key),c.rows);closeModal();render();}
   function shDel(){delete ui.cart[SH.key];SH=null;saveCart();closeModal();render();}
   function shCancel(){if(PhotoBusy)return;SH=null;saveCart();closeModal();render();}
   function cartReqs(){ const reqs = [];
     for(const [key, c] of Object.entries(ui.cart)){ const it=cartItem(key),base=it.custom?{custom_name:it.photoOnly?(c.name?.trim()||'PHOTO REQUEST'):it.label}:{item_id:it.id};
       if(ui.kind === 'PERSONAL' && c.bottles) for(const b of c.bottles) reqs.push({...base, workers:[...b], qty:1});
-      else if(ui.kind === 'PERSONAL') for(const [w, r] of Object.entries(c.rows)) reqs.push({...base, workers:[w], qty: isTop(it) ? 1 : r.qty, detail:isTop(it)?`${String(r.phone).trim()}${r.telco?' · '+r.telco:''} · RM ${parseFloat(r.amt)}`:((r.det||'').trim()||undefined),photos:r.photos||[]});
+      else if(ui.kind === 'PERSONAL') for(const [w, r] of Object.entries(c.rows)) reqs.push({...base, workers:[w], qty: isTop(it) ? 1 : r.qty, detail:isTop(it)?`${String(r.phone).trim()}${r.telco?' · '+r.telco:''} · RM ${parseFloat(r.amt)}`:((r.det||'').trim()||undefined),photos:effectivePhotos(c,r)});
       else reqs.push({...base,qty:c.qty,detail:(c.det||'').trim()||undefined,photos:c.photos||[],...(ui.kind==='FOOD'?{round:ui.round}:{})}); }
     return reqs; }
   function addCount(){ return cartReqs().length; }
@@ -569,7 +586,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   async function commitAdd(){
     if(LeaderBusy||!D||D.status!=='ACTIVE'||D.farm!==FARM)return;
     if(!ui.pending){
-      if(ui.kind==='PERSONAL'&&Object.entries(ui.cart).some(([key,c])=>{const it=cartItem(key),opts=specOptions(it);return Object.entries(c.rows||{}).some(([w,r])=>(isTop(it)&&!topWorkerValid(w,r))||(opts.length&&!opts.includes(r.det))||!D.workers.some(x=>x.id===w));})){toast(specLabel('Check worker and item details','请核对工人及规格','အလုပ်သမား အချက်အလက် စစ်ပါ။'));return;}
+      if(ui.kind==='PERSONAL'&&Object.entries(ui.cart).some(([key,c])=>{const it=cartItem(key),opts=specOptions(it);return Object.entries(c.rows||{}).some(([w,r])=>(isTop(it)&&!topWorkerValid(w,r))||(opts.length&&!opts.includes(r.det))||(it.photoOnly&&!effectivePhotos(c,r).length)||!D.workers.some(x=>x.id===w));})){toast(specLabel('Check worker and item details','请核对工人及规格','အလုပ်သမား အချက်အလက် စစ်ပါ။'));return;}
       const reqs=cartReqs();if(!reqs.length)return;
       if(reqs.length>40||JSON.stringify(reqs).length>1450000){toast(specLabel('Too many photos — submit fewer items','照片过多，请分批提交','ဓာတ်ပုံ များလွန်းပါ။ ခွဲပြီး ပို့ပါ။'));return;}
       ui.pending={op_id:uuid(),farm:FARM,manager:MGR,requests:reqs.map(r=>({...r,kind:ui.kind,client_id:uuid()}))};SH=null;
@@ -725,7 +742,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();hydrateReferencePreviews({farm:FARM,manager:MGR,device_key:deviceKey()});
   }
   function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
-  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shNew, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
