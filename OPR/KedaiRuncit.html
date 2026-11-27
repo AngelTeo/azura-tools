@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 33;
+const APP_VERSION = 34;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1672,7 +1672,8 @@ const Owner = (() => {
   const mcDate=v=>v&&/^\d{4}-\d{2}-\d{2}/.test(v)?v.slice(8,10)+'/'+v.slice(5,7):'—';
   const mcStatus=x=>x.ordered?'မှာပြီး · Ordered':x.status==='BOUGHT'?'ဝယ်ပြီး · Bought':'စောင့်နေဆဲ · Pending';
   const mcSharedReview=c=>Array.isArray(c?.shared_review)&&c.shared_review.length>0;
-  const mcSafe=c=>c&&Array.isArray(c.issues)&&c.issues.every(x=>x==='SHARED_MEMBERSHIP_REVIEW'&&mcSharedReview(c))&&Number.isFinite(Number(c.personal_total));
+  const mcAmountOk=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+  const mcSafe=c=>!!(c&&Array.isArray(c.issues)&&c.issues.length===0&&!mcSharedReview(c)&&[c.personal_total,c.shared_total,c.salary_total].every(mcAmountOk)&&Math.abs(Number(c.personal_total)+Number(c.shared_total)-Number(c.salary_total))<0.005);
   function mcDiscard(){if(MC.prepared?.url)URL.revokeObjectURL(MC.prepared.url);MC.prepared=null;}
   async function openMonthCards(month){
     if(!B)return;const m=month||MC.month||B.today.slice(0,7),epoch=MC.epoch+1;mcDiscard();MC={month:m,roster:null,card:null,farm:'ALL',search:'',loading:true,error:'',epoch,prepared:null};ui={view:'monthcards'};render();scrollTo(0,0);
@@ -1716,6 +1717,15 @@ const Owner = (() => {
     section(MMY.personal+' · Personal items',c.personal.map(regular));
     if(!c.personal.length)rows.push({type:'note',label:'လစာမှ ဖြတ်မည့် ကိုယ်ပိုင်ဝယ်ယူစရိတ် မရှိပါ · No personal deductions'});
     rows.push({type:'total',label:MC_TOTAL,amount:mcMoney(c.personal_total)});
+    if(mcSharedReview(c)||!mcAmountOk(c.shared_total)||!mcAmountOk(c.salary_total)){
+      rows.push({type:'note',label:MMY.shared+' · Shared costs pending reconciliation — not final'});
+    }else{
+      section(MMY.shared+' · Shared food & living costs',c.shared.map(x=>({type:'item',date:mcDate(x.date),label:x.item||'Shared expense',sub:[(Number(x.n)||0)+' people · half-month attendance',...(x.items||[]).map(i=>String(i.item||'')+(i.qty?' × '+i.qty:''))].filter(Boolean).join(' · '),amount:mcMoney(x.amount)})));
+      if(Number(c.shared_rounding))rows.push({type:'note',label:MMY.round+' · Rounding adjustment '+(Number(c.shared_rounding)>0?'+':'')+mcMoney(c.shared_rounding)});
+      rows.push({type:'total',label:MMY.shared+' · Shared deduction',amount:mcMoney(c.shared_total)});
+      rows.push({type:'total',label:MMY.salary+' · Personal + shared deduction',amount:mcMoney(c.salary_total)});
+    }
+    if(c.pending.length)rows.push({type:'note',label:MMY.pendingnote+' · '+c.pending.length+' pending item(s) — not included'});
     section(MMY.cash+' · Cash paid',c.cash.map(regular));
     if(c.cash.length)rows.push({type:'note',label:MMY.cashnote+' · '+mcMoney(c.cash_total)});
     section(MMY.instal+' · Instalment purchases',c.instalments.map(x=>({type:'item',key:mcKey(x),date:mcDate(x.date),label:mcLabel(x),sub:'Deposit '+mcMoney(x.deposit)+' · Loan '+mcMoney(x.principal)+' · '+mcMoney(x.monthly)+'/month · From '+x.start_month,amount:mcMoney(x.amount)})));
@@ -1728,7 +1738,7 @@ const Owner = (() => {
   function monthCardPage(){const c=MC.card,w=MC.roster?.workers?.find(x=>x.worker_id===ui.worker),list=mcWorkers(),next=list.findIndex(x=>x.worker_id===ui.worker)<list.length-1;let h='<div class="hero"><div><h1>'+Z('Personal shopping card','个人购物卡')+'</h1><div class="sub">'+esc(w?.worker_name||'')+' · '+esc(MC.month)+'</div></div><button class="btn small" onclick="Owner.mcBack()">'+Z('← Workers','← 工人名单')+'</button></div>';
     if(MC.loading)return h+'<div class="empty">'+Z('Checking Salary records…','正在核对 Salary…')+'</div>';
     if(MC.error||!c)return h+'<div class="note warn">'+esc(MC.error||Z('No card data','没有购物卡资料'))+'</div><button class="btn block" onclick="Owner.mcOpen(\''+esc(ui.worker)+'\')">'+Z('Retry','重试')+'</button>';
-    if(mcSharedReview(c))h+='<div class="note warn"><b>'+Z('Shared costs require reconciliation — only personal deduction is included','共同费用待核对：购物卡暂仅计个人扣薪费用')+'</b>'+c.shared_review.map(x=>'<div style="margin-top:6px">'+esc(mcDate(x.date)+' · '+x.item)+' · '+Z('Stored','原记录')+' '+Number(x.stored_count)+' / '+Z('Live Salary','Salary 当前')+' '+Number(x.live_count)+'</div>').join('')+'</div>';
+    if(mcSharedReview(c))h+='<div class="note warn"><b>'+Z('Shared costs require reconciliation — do not share this card','共同费用待核对：暂不可发送购物卡')+'</b>'+c.shared_review.map(x=>'<div style="margin-top:6px">'+esc(mcDate(x.date)+' · '+x.item)+' · '+Z('Stored','原记录')+' '+Number(x.stored_count)+' / '+Z('Live Salary','Salary 当前')+' '+Number(x.live_count)+'</div>').join('')+'</div>';
     if(!mcSafe(c))h+='<div class="note warn">'+Z('Salary reconciliation required. Sharing disabled until verified.','Salary 与原记录需要核对，暂不允许发送购物卡。')+'<div>'+esc(c.issues.join(' · '))+'</div></div>';
     h+=mcHtml(c)+'<div class="btnrow" style="margin-top:12px"><button class="btn primary grow" '+(!mcSafe(c)||MC.preparing?'disabled':'')+' onclick="Owner.mcPrepare()">'+(MC.preparing?Z('Preparing…','制作中…'):Z('Prepare WhatsApp image','生成 WhatsApp 图片'))+'</button><button class="btn" '+(!mcSafe(c)?'disabled':'')+' onclick="Owner.mcCopy()">'+Z('Copy text','复制文字')+'</button></div>';
     if(MC.prepared)h+='<div class="card" style="padding:12px;margin-top:10px"><img alt="Shopping card" src="'+esc(MC.prepared.url)+'" style="width:100%;height:auto;border-radius:8px"><div class="btnrow"><button class="btn gold grow" onclick="Owner.mcShare()">'+Z('Share image','分享图片')+'</button><button class="btn" onclick="Owner.mcDownload()">'+Z('Download PNG','保存图片')+'</button></div><small>'+Z('Choose the worker’s own WhatsApp chat. The system does not send automatically.','请选择该工人本人的 WhatsApp 对话。系统不会自动发送。')+'</small></div>';
@@ -1764,7 +1774,7 @@ const Owner = (() => {
     const W = B.written, f = ui.f || 'ALL', ok = x => f === 'ALL' || x.farm === f;
     const row = (x, txt, to, fn) => `<div class="line" style="${x.void ? 'opacity:.45;text-decoration:line-through' : ''}"><span><b>${dm(x.date)}</b> · ${x.farm} · ${txt} <span class="mut">${to}</span><div>${askTag({asked: x.asked, legacy: !!x.req_id}, x.void ? '' : x.req_id || '')}</div></span><span><strong>${RM(x.amount)}</strong> ${x.void ? '' : `<button class="btn small light" onclick="Owner.voidRec('${fn}','${x.id}')">${Z('Void','作废')}</button>`}</span></div>`;
     const all = [...W.personal.filter(ok).map(x => ({x, h: row(x, `${esc(x.worker)} · ${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, (/HANDPHONE \(instalment\)/i.test(x.item)?'Salary Advance':'Salary Personal'), 'shop_owner_void')})),
-                 ...W.shared.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)} ÷ ${x.n}`, 'Salary Food', 'shop_owner_share_void')})),
+                 ...W.shared.filter(ok).map(x => ({x, h: row(x, String(x.date||'').slice(0,7)>='2026-11'?`${esc(x.item)} · ${Z('Actual attendance: see Salary','实际分摊人数：见 Salary')}`:`${esc(x.item)} ÷ ${x.n}`, 'Salary Food', 'shop_owner_share_void')})),
                  ...W.farm.filter(ok).map(x => ({x, h: row(x, `${esc(x.item)}${x.qty > 1 ? ' × ' + x.qty : ''}`, 'Farm cost', 'shop_owner_cost_void')}))]
                  .sort((a,b) => String(b.x.date).localeCompare(String(a.x.date)));
     return `<div class="hero"><div><h1>📒 ${Z('Records','记录')}</h1><div class="sub">${Z('What was written to Salary · everything since 31/10','写进 Salary 的 · 31/10 接手以后全部')}</div></div>${back()}</div>
