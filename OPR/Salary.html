@@ -632,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 95;
+const APP_VERSION = 96;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -3216,6 +3216,17 @@ async function loadLocks(){
     fetchAll('salary_run','month,status,locked_at,locked_by'),
     fetchAll('salary_payslip','month,worker_id,data', q=>q.is('voided_at',null)),
   ]);
+  // v96: read the frozen food recipients before exposing LOCKED state.
+  const frozenMonths = runs.filter(r => r.status === 'LOCKED' && r.month >= '2026-11').map(r => r.month);
+  if(frozenMonths.length){
+    const rows = await fetchAll('salary_food','id,month,data', q=>q.in('month',frozenMonths).is('voided_at',null).order('created_at').order('id'));
+    const frozen = Object.fromEntries(frozenMonths.map(m=>[m,[]]));
+    rows.forEach(r=>{ if(frozen[r.month]) frozen[r.month].push(r.data); });
+    for(const m of frozenMonths){
+      S.food[m]=frozen[m];
+      if(SNAP) SNAP.S.food[m]=clone(frozen[m]);
+    }
+  }
   LOCKS = {}; runs.forEach(r => LOCKS[r.month] = r);
   PAYSLIPS = {}; slips.forEach(p => (PAYSLIPS[p.month] ??= {})[p.worker_id] = p.data);
 }
@@ -3355,8 +3366,12 @@ async function doLockMonth(mk){
   });
   const {data, error} = await sb.rpc('salary_lock_month', {p_month: mk, p_payslips: slips});
   if(error){ alert('Could not lock: ' + error.message); if(btn) btn.disabled=false; return; }
+  try { await loadLocks(); }
+  catch(e){
+    alert('The server has locked '+mk+', but the frozen details could not be loaded. Do not lock again. Reload Salary and check the locked payslips before proceeding. '+e.message);
+    location.reload(); return;
+  }
   const nMinus = minusToLoans(mk); if(nMinus) await waitSynced();
-  await loadLocks();
   closeModal(); refreshCurrentPage(); renderDashboard();
   toast('🔒 ' + mk + ' locked · ' + data + ' payslips final' + (nMinus ? ' · ' + nMinus + ' minus pay added to loans' : ''), 4000);
 }
@@ -4015,7 +4030,7 @@ document.getElementById('hold-app').addEventListener('click', e => { const hb = 
 // 锁月：净薪负数 → 下个月的借款（同一个月重锁不会重复）
 function minusToLoans(mk){
   const tag = '[minus ' + mk + ']', nm = nextMk(mk); let n = 0;
-  workersInMonthLive(mk).forEach(w => { const s = calcWorkerSummaryLive(w, mk), amt = s.net < 0 ? r2(-s.net) : 0;
+  workersInMonth(mk).forEach(w => { const s = calcWorkerSummary(w, mk), amt = s.net < 0 ? r2(-s.net) : 0;
     S.loans ??= {}; const L = S.loans[w.id] ??= {txn:[], plan:[], months:{}};
     const ex = L.txn.find(t => t.kind==='LOAN' && (t.note||'').startsWith(tag));
     if(ex && Math.abs(ex.amount - amt) < 0.005) return;
