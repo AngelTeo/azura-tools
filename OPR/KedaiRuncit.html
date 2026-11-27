@@ -106,6 +106,43 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 .lp-reviewfoot{display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-top:12px;position:sticky;bottom:0;background:white;padding:8px 0}
 @media(max-width:360px){.lp-grid{gap:5px}.lp-tile{padding:8px 2px;min-height:119px}.lp-tile .lp-art{height:65px}.lp-tile .ico,.lp-tile .ico.photo{height:65px}.lp-tile b{font-size:11px}}
 
+
+/* v50 · shared management design system, Warehouse reference. Leader mode unaffected. */
+.manager-ux .topin,.manager-ux .shell,.manager-ux .modetabs{min-width:0;max-width:1180px}
+.manager-ux .hero,.manager-ux .homehead{align-items:center;gap:8px;margin-bottom:16px}
+.manager-ux .hero>div,.manager-ux .homehead>div{flex:1;min-width:0}
+.manager-ux .hero h1,.manager-ux .homehead h1{font-size:clamp(19px,5.6vw,25px);line-height:1.25;overflow-wrap:anywhere;letter-spacing:-.35px}
+.manager-ux .hero .sub,.manager-ux .homehead .sub{font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.manager-ux .hero>.btn,.manager-ux .homehead>.btn{flex:0 0 auto;white-space:nowrap}
+.manager-ux .homequickgrid,.manager-ux .mg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0 14px;align-items:stretch}
+.manager-ux .mg-tile,.manager-ux .homequick{min-width:0;width:100%;max-width:100%;min-height:112px;margin:0;padding:13px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:15px;box-shadow:0 2px 9px #1c302008;font:inherit;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.manager-ux .mg-tile>*{min-width:0;max-width:100%}
+.manager-ux .mg-tile .aico,.manager-ux .homequick .aico{font-size:29px;line-height:1.15;flex:none;margin:0 0 2px}
+.manager-ux .mg-tile b,.manager-ux .homequick b{display:block;font-size:clamp(14px,4.35vw,17px);line-height:1.28;font-weight:750;overflow-wrap:anywhere}
+.manager-ux .mg-tile small,.manager-ux .homequick small{display:block;font-size:12px;line-height:1.4;font-weight:500;color:var(--mut);overflow-wrap:anywhere}
+.manager-ux .mg-tile .mg-label{font-size:13px;font-weight:600;color:var(--mut)}
+.manager-ux .mg-tile .mg-stat{font-size:clamp(16px,5vw,21px);font-weight:800;color:var(--green);line-height:1.3;overflow-wrap:anywhere}
+.manager-ux .mg-tile.mg-alert{background:#fff4e6;border:1.5px solid #e9b46a}
+.manager-ux .mg-tile.mg-alert .mg-stat,.manager-ux .mg-tile.mg-alert small{color:var(--warn)}
+.manager-ux .mg-tile:active{background:#eef5ef}
+.manager-ux .mg-tile:not(.mg-grid .mg-tile){margin:8px 0 12px}
+.manager-ux .mg-grid .mg-tile{margin:0}
+.manager-ux .mg-grid .mg-span{grid-column:1/-1}
+.manager-ux .attcard,.manager-ux .homeentry,.manager-ux .card{min-width:0;max-width:100%;border-radius:15px}
+.manager-ux .attcard .atxt,.manager-ux .homeentry .atxt,.manager-ux .foodname,.manager-ux .biname{min-width:0;overflow-wrap:anywhere}
+.manager-ux .attcard .atxt b{font-size:17px;line-height:1.35;overflow-wrap:anywhere}
+.manager-ux .attcard .aico{font-size:29px;flex-shrink:0}
+.manager-ux .aarr{flex-shrink:0;font-size:23px}
+.manager-ux .card,.manager-ux .modal{overflow-wrap:anywhere}
+.manager-ux .pills{max-width:100%}
+.manager-ux .pills.mg-farmtabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;overflow:visible}
+.manager-ux .mg-farmtabs .pill{padding:8px 3px;min-width:0;font-size:12px;white-space:normal}
+.manager-ux .btn.block{min-height:44px;margin-bottom:8px;white-space:normal}
+.manager-ux .field input,.manager-ux .field select,.manager-ux .field textarea{max-width:100%;min-width:0}
+.manager-ux .sectionhead{margin-top:16px;line-height:1.3}
+@media(max-width:420px){.manager-ux .topin{gap:6px;padding:9px 12px}.manager-ux .brand{font-size:19px;min-width:0}.manager-ux .mode{padding:3px}.manager-ux .mode button{padding:6px 12px}.manager-ux .mg-tile,.manager-ux .homequick{padding:11px 7px;min-height:108px}.manager-ux .homehead h1{font-size:21px}}
+@media print{.manager-ux .mg-grid,.manager-ux .mg-tile{display:none!important}}
+
 </style></head><body>
 <header class="top"><div class="topin" id="hdr"><span class="brand">🛍️ Kedai Runcit</span></div></header>
 <nav id="modetabs" class="modetabs" hidden></nav>
@@ -113,7 +150,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 49;
+const APP_VERSION = 50;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -217,7 +254,7 @@ const Shell = (() => {
     const zh = Owner.lang() === 'zh';
     n.innerHTML = [['leader', zh ? '🧑‍🌾 工头画面' : '🧑‍🌾 Leader'],['mgmt', zh ? '📋 管理' : '📋 Management']].map(([k,v]) => `<button class="${tab===k?'on':''}" onclick="Shell.show('${k}')">${v}</button>`).join(''); }
   async function show(t){
-    tab = t === 'mgmt' ? 'mgmt' : 'leader'; lsSet('runcit_tab', tab); bar(); scrollTo(0,0);
+    tab = t === 'mgmt' ? 'mgmt' : 'leader'; document.body.classList.toggle('manager-ux',tab==='mgmt'); lsSet('runcit_tab', tab); bar(); scrollTo(0,0);
     if(tab === 'mgmt'){ const fresh = boot0; boot0 = false; if(!ownerOn){ ownerOn = true; Owner.start(B0); if(fresh) return; } return Owner.refresh(); }
     boot0 = false; return Leader.startManager();
   }
@@ -953,32 +990,55 @@ const Owner = (() => {
     const ready=bought(),pending=(B.deliveries||[]).filter(x=>x.valid&&Number(x.received_qty)<Number(x.sent_qty)),review=reviewLines(),orders=WH?.orders||[],unpaid=orders.filter(o=>Number(o.received_cost)>Number(o.paid)&&!(WH?.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped)),adjusted=orders.filter(o=>Number(o.received_cost)>Number(o.paid)&&(WH?.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped)),adv=money().payments.filter(p=>p.source==='MGMT'&&!p.reimb_id&&Number(p.amount)>0);
     return {ready,pending,review,unpaid,adjusted,unpaidCount:new Set(unpaid.map(o=>o.receipt_group_id||o.id)).size,unpaidTotal:unpaid.reduce((n,o)=>n+Math.max(0,Number(o.received_cost)-Number(o.paid)),0),advance:adv.reduce((n,p)=>n+Number(p.amount),0),advanceN:adv.length,amountPending:review.filter(l=>reviewReason(l)==='AMOUNT_PENDING'),legacy:money().unpaid_buys||[],issues:pending.filter(x=>x.last_note)};
   }
-  function workCard(icon,en,zh,sub,action,stat=''){return '<button class="homeentry" style="text-align:left;min-height:105px" onclick="'+action+'"><span class="homelead"><span class="aico">'+icon+'</span><span class="atxt"><b>'+esc(en)+'</b><small>'+esc(zh)+'</small></span><span class="aarr">›</span></span><div style="font-size:20px;font-weight:800;margin:8px 0;color:var(--green)">'+esc(stat)+'</div><span class="homefoot">'+esc(sub)+'</span></button>';}
-  function taskRow(ico,title,sub,action,warning=false){return '<button class="attcard '+(warning?'todo':'plain')+'" style="width:100%;text-align:left;margin:7px 0" onclick="'+action+'"><span class="aico">'+ico+'</span><span class="atxt"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><span class="aarr">›</span></button>';}
+  function workCard(icon,en,zh,sub,action,stat='',warning=false){return '<button type="button" class="homequick mg-tile'+(warning?' mg-alert':'')+'" onclick="'+action+'"><span class="aico" aria-hidden="true">'+icon+'</span><b>'+esc(en)+'</b>'+(zh?'<span class="mg-label">'+esc(zh)+'</span>':'')+(stat!==''?'<span class="mg-stat">'+esc(stat)+'</span>':'')+(sub?'<small>'+esc(sub)+'</small>':'')+'</button>';}
+  function taskRow(ico,title,sub,action,warning=false){return workCard(ico,title,'',sub,action,'',warning);}
+  const workGrid=tiles=>'<div class="mg-grid">'+tiles.join('')+'</div>';
   function home(){
     const F=foodRound(B.today),pend=(B.phones||[]).filter(p=>p.status==='PENDING').length;
     let out='<div class="homehead"><div><h1>Management</h1><div class="sub">'+ddm(B.today)+' · '+esc(payerLabel(ME()))+'</div></div><button class="btn small" onclick="Owner.go(\'settings\')">⚙ '+Z('Settings','设定')+(pend?' · '+pend:'')+'</button></div>';
     if(!WH)return out+'<div class="note warn">'+esc(WHError||Z('Checking official data…','正在核对正式资料…'))+'</div><button class="btn primary block" onclick="Owner.refresh()">'+Z('Retry','重试')+'</button>';
     const s=workStats(),n=whPhysicalRows(s.ready).length,foodN=foodAll().filter(l=>l.status==='REQUESTED'&&!reviewReason(l)).length,trip=nextTrip(),stockN=WH.stock.length;
-    out+='<div class="sectionhead">'+Z('Today · next action','TODAY · 今天待办')+'</div>';
-    if(s.issues.length)out+=taskRow('⚠️',Z('Receipt discrepancies','点收异常')+' · '+s.issues.length,Z('Check actual shortage before closing salary','先核对实际短缺，再结工资'),"Owner.go('receipts',{tab:'ISSUES'})",true);
-    if(s.amountPending.length)out+=taskRow('🧾',Z('Delivered · amount pending','已交货 · 金额待补')+' · '+s.amountPending.length,Z('Complete verified prices before salary lock','补实际金额，避免漏扣'),"Owner.go('review',{reason:'AMOUNT_PENDING'})",true);
-    const other=s.review.length-s.amountPending.length;if(other)out+=taskRow('🔎',Z('Needs review','需要核实')+' · '+other,Z('Resolve special requests','核实特殊需求'),"Owner.go('review')",true);
-    if(n)out+=taskRow('🚚',Z('Ready to deliver','待交货')+' · '+n,Z('Group by AD 1 / 2 / 3','按三个园区集中处理'),"Owner.go('deliver')");
-    if(s.pending.length)out+=taskRow('📦',Z('Awaiting leader receipt','工头待点收')+' · '+s.pending.length,Z('Sent, not yet fully acknowledged','已送出，未点收齐'),"Owner.go('receipts',{tab:'PENDING'})");
-    if(s.unpaidCount)out+=taskRow('💳',Z('Supplier payment pending','供应商待付款')+' · '+RM(s.unpaidTotal),Z('Check original receipts','按原收据核对'),"Owner.go('accounts')",true);
+    out+='<div class="sectionhead">'+Z('Today · next action','TODAY · 今天待办')+'</div>';const todayTiles=[];
+    if(s.issues.length)todayTiles.push(taskRow('⚠️',Z('Receipt discrepancies','点收异常')+' · '+s.issues.length,Z('Check actual shortage before closing salary','先核对实际短缺，再结工资'),"Owner.go('receipts',{tab:'ISSUES'})",true));
+    if(s.amountPending.length)todayTiles.push(taskRow('🧾',Z('Delivered · amount pending','已交货待补金额')+' · '+s.amountPending.length,Z('Complete verified prices before salary lock','补实际金额，避免漏扣'),"Owner.go('review',{reason:'AMOUNT_PENDING'})",true));
+    const other=s.review.length-s.amountPending.length;if(other)todayTiles.push(taskRow('🔎',Z('Needs review','待核实')+' · '+other,Z('Special cases / missing details','特殊事项／缺少资料'),"Owner.go('review')",true));
+    if(n)todayTiles.push(taskRow('🚚',Z('Ready to deliver','待交货')+' · '+n,Z('Group by AD 1 / 2 / 3','按三个园区集中处理'),"Owner.go('deliver')"));
+    if(s.pending.length)todayTiles.push(taskRow('📦',Z('Awaiting leader receipt','工头待点收')+' · '+s.pending.length,Z('Sent, not yet fully acknowledged','已送出，未点收齐'),"Owner.go('receipts',{tab:'PENDING'})"));
+    if(s.unpaidCount)todayTiles.push(taskRow('💳',Z('Supplier payment pending','供应商待付款')+' · '+RM(s.unpaidTotal),Z('Check original receipts','按原收据核对'),"Owner.go('accounts')",true));
+    if(todayTiles.length)out+=workGrid(todayTiles);
     if(!s.review.length&&!n&&!s.pending.length&&!s.unpaidCount)out+='<div class="note">'+Z('No urgent exception in loaded records','已载入资料暂无紧急异常')+'</div>';
-    out+='<div class="sectionhead">'+Z('Work areas','四大工作入口')+'</div><div class="homequickgrid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
+    out+='<div class="sectionhead">'+Z('Work areas','四大工作入口')+'</div><div class="mg-grid">'+
       workCard('🛒','BUY',Z('Purchasing','采购'),Z('Requests · groceries · receipts','需求 · 买菜 · 收据'),"Owner.go('buyhub')",String(whPhysicalRows(toBuy()).length+foodN)+' '+Z('requests','待买'))+
-      workCard('📦','STOCK',Z('Warehouse','仓库'),Z('Available · batches · stock take','库存 · 批次 · 点算'),"Owner.go('warehouse')",stockN?String(stockN)+' '+Z('items','种商品'):Z('Not counted','未点算'))+
+      workCard('📦','STOCK',Z('Warehouse','仓库'),Z('Available · batches · stock take','库存 · 批次 · 点算'),"Owner.go('warehouse')",stockN?String(stockN)+' '+Z('items','种商品'):Z('Setup pending','待设定'))+
       workCard('🚚','DELIVER',Z('Delivery','交货'),Z('Three farms · leader receipts','三个园区 · 点收'),"Owner.go('deliver')",String(n)+' '+Z('ready','待交货'))+
       workCard('💰','ACCOUNTS',Z('Accounts','结账'),Z('Payments · cards · month end','付款 · 购物卡 · 月底'),"Owner.go('accounts')",s.advance?RM(s.advance)+' '+Z('advance','待报销'):Z('Review accounts','核对账目'))+'</div>';
     out+='<div class="sectionhead">'+Z('Farm work','园区进度')+'</div><div class="card" style="padding:9px 12px">'+FARMS.map(f=>'<div class="line"><b>'+esc(f)+'</b><span>'+whPhysicalRows(s.ready.filter(l=>l.farm===f)).length+' '+Z('ready','待交货')+' · '+s.pending.filter(x=>x.farm===f).length+' '+Z('receipts','待点收')+'</span><button class="btn small light" onclick="Owner.go(\'deliver\',{farm:\''+f+'\'})">›</button></div>').join('')+'</div>';
     out+='<details class="card homefold"><summary>'+Z('Schedule / attendance / more','日程／点名／其他')+'</summary><div class="hint">'+Z('Next buying trip','下次采购')+' '+ddm(trip)+' · '+Z('Groceries delivery','送菜')+' '+dm(F.deliver)+'</div>'+weekStrip()+FARMS.map(f=>{const a=(B.att||{})[f]||{},d=(a.work||0)+(a.half||0)+(a.off||0);return '<div class="line"><b>'+esc(f)+'</b><span>'+d+'/'+workers(f).length+' '+Z('attendance recorded','已点名')+'</span></div>';}).join('')+'</details>';
     return out;
   }
-  function buyHub(){const f=foodRound(B.today),s=workStats();return whHeader('BUY · Purchasing','BUY · 采购',Z('Choose the next actual purchase task','选择下一项采购工作'))+'<button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('Record actual receipt','录入一张收据')+'</button>'+taskRow('🛒',Z('Buying list','购物需求')+' · '+whPhysicalRows(toBuy()).length,Z('Daily personal and farm goods','个人与园里物品'),"Owner.go('buy',{tab:'buy'})")+taskRow('🥬',Z('Food order','买菜')+' · '+foodAll().filter(l=>l.status==='REQUESTED').length,Z('Delivery','送菜')+' '+dm(f.deliver),"Owner.go('food')")+taskRow('🚚',Z('Supplier orders','已订购')+' · '+whOrderLines().length,Z('Follow up outstanding receipts','跟进未到货'),"Owner.go('buy',{tab:'ordered'})")+taskRow('🔎',Z('Needs review','待核实')+' · '+s.review.length,Z('Special cases and missing details','特殊事项及缺少资料'),"Owner.go('review')",s.review.length>0)+taskRow('✍️',Z('At the farm','园里现场记录'),Z('Direct request or actual purchase','现场需求及采购'),"Owner.go('spot')")+taskRow('🩺',Z('Medical','看医生／买药'),Z('Verified medical expenses','核实医疗费用'),"Owner.go('med')");}
-  function accountsPage(){const s=workStats(),m=B.today.slice(0,7);return whHeader('ACCOUNTS · Settlement','ACCOUNTS · 结账',Z('Review actual payments and worker charges','核对实际付款与工人收费'))+'<div class="sectionhead">'+Z('Payment tasks','付款待办')+'</div>'+taskRow('🧾',Z('Supplier receipts / payment','供应商收据／付款')+' · '+s.unpaidCount,RM(s.unpaidTotal)+' · '+Z('received, payment pending','已收货待付款'),"Owner.go('whorders',{filter:'UNPAID'})",s.unpaidCount>0)+(s.adjusted.length?taskRow('↶',Z('Adjusted receipt allocations','退款后费用核对')+' · '+s.adjusted.length,Z('Review refunds, not a second payment','核实退款，不重复付款'),"Owner.go('whorders',{filter:'ADJUSTED'})",true):'')+taskRow('💰',Z('Management advances','管理层垫款')+' · '+RM(s.advance),s.advanceN+' '+Z('payments to reimburse','笔待报销'),"Owner.go('petty')")+taskRow('📒',Z('Old costs to fill','旧账买价待补')+' · '+s.legacy.length,Z('Do not deduct again','不重复扣薪'),"Owner.go('petty')",s.legacy.length>0)+taskRow('🧾',Z('Delivered amount pending','已交货金额待补')+' · '+s.amountPending.length,Z('Verify before salary lock','锁月前核实'),"Owner.go('review',{reason:'AMOUNT_PENDING'})",s.amountPending.length>0)+taskRow('📱',Z('Top-up supplier statement','充值供应商对账'),Z('Confirm actual supplier payments','核实实际供应商付款'),"Owner.go('topstmt')")+'<div class="sectionhead">'+Z('Month-end review','月底核对')+' · '+esc(m)+'</div><button class="btn primary block" onclick="Owner.closeMonthOpen()">📋 '+Z('Monthly reconciliation','月底结账核对')+'</button>'+taskRow('⚠️',Z('Leader receipt issues','工头点收异常')+' · '+s.issues.length,s.pending.length+' '+Z('not fully acknowledged','笔未点收齐'),"Owner.go('receipts',{tab:'ISSUES'})",s.issues.length>0)+taskRow('🚚',Z('Goods ready but not delivered','已买未交货')+' · '+whPhysicalRows(s.ready).length,Z('Only actual delivery can be confirmed','只确认实际交付'),"Owner.go('deliver')")+taskRow('🧾',Z('Personal shopping cards','个人购物总卡'),Z('One worker at a time · WhatsApp','一人一张 · WhatsApp'),"Owner.openMonthCards()")+taskRow('📒',Z('Expense records','历史费用记录'),Z('Personal, shared, and farm costs','个人、共用、园区费用'),"Owner.go('records')")+taskRow('📱',Z('Phone instalments','手机分期'),Z('Approved instalment records','已批准分期资料'),"Owner.go('whphones')")+'<div class="note">'+Z('This is a live work checklist, not a closed monthly statement. Verify Salary separately; no automatic lock.','这里是实时待办清单，不是最终月结报表；请另核对 Salary，不会自动锁月。')+'</div>';}
+  function buyHub(){const f=foodRound(B.today),s=workStats();return whHeader('BUY · Purchasing','BUY · 采购',Z('Choose the next actual purchase task','选择下一项采购工作'))+workGrid([
+    workCard('🛒',Z('Buying list','购物需求'),'',Z('Personal / farm goods','个人／园里用品'),"Owner.go('buy',{tab:'buy'})",String(whPhysicalRows(toBuy()).length)),
+    workCard('🥬',Z('Food order','买菜'),'',Z('Delivery','送菜')+' '+dm(f.deliver),"Owner.go('food')",String(foodAll().filter(l=>l.status==='REQUESTED').length)),
+    workCard('🚚',Z('Supplier orders','已订购'),'',Z('Awaiting receipt','跟进未到货'),"Owner.go('buy',{tab:'ordered'})",String(whOrderLines().length)),
+    workCard('🔎',Z('Needs review','待核实'),'',Z('Special cases / missing details','特殊事项／缺少资料'),"Owner.go('review')",String(s.review.length),s.review.length>0),
+    taskRow('✍️',Z('At the farm','园里现场记录'),Z('Direct request or purchase','现场需求／采购'),"Owner.go('spot')"),
+    taskRow('🩺',Z('Medical','看医生／买药'),Z('Verified medical expenses','核实医疗费用'),"Owner.go('med')")
+    ])+'<button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('Record actual receipt','录入一张收据')+'</button>';}
+  function accountsPage(){const s=workStats(),m=B.today.slice(0,7),pay=[
+    workCard('🧾',Z('Supplier payment','供应商付款'),'',s.unpaidCount+' '+Z('receipts pending','张待付款收据'),"Owner.go('whorders',{filter:'UNPAID'})",RM(s.unpaidTotal),s.unpaidCount>0),
+    workCard('💰',Z('Management advances','管理层垫款'),'',s.advanceN+' '+Z('payments to reimburse','笔待报销'),"Owner.go('petty')",RM(s.advance)),
+    workCard('📒',Z('Old costs pending','旧账买价待补'),'',Z('Do not deduct again','不重复扣薪'),"Owner.go('petty')",String(s.legacy.length),s.legacy.length>0),
+    workCard('🧾',Z('Delivered amount pending','已交货待补金额'),'',Z('Verify before salary lock','锁月前核实'),"Owner.go('review',{reason:'AMOUNT_PENDING'})",String(s.amountPending.length),s.amountPending.length>0),
+    taskRow('📱',Z('Top-up statement','充值供应商对账'),Z('Verify supplier payments','核实供应商付款'),"Owner.go('topstmt')")
+    ];if(s.adjusted.length)pay.push(workCard('↶',Z('Adjusted receipts','退款后费用核对'),'',Z('No second payment','不重复付款'),"Owner.go('whorders',{filter:'ADJUSTED'})",String(s.adjusted.length),true));
+    return whHeader('ACCOUNTS · Settlement','ACCOUNTS · 结账',Z('Review actual payments and worker charges','核对实际付款与工人收费'))+'<div class="sectionhead">'+Z('Payment tasks','付款待办')+'</div>'+workGrid(pay)+'<div class="sectionhead">'+Z('Month-end review','月底核对')+' · '+esc(m)+'</div>'+workGrid([
+    taskRow('📋',Z('Monthly reconciliation','月底结账核对'),Z('Compare with Salary','核对工资扣款'),"Owner.closeMonthOpen()"),
+    taskRow('🧾',Z('Shopping cards','个人购物总卡'),Z('One worker · WhatsApp','一人一张／WhatsApp'),"Owner.openMonthCards()"),
+    workCard('⚠️',Z('Receipt issues','工头点收异常'),'',s.pending.length+' '+Z('not fully acknowledged','笔未点收齐'),"Owner.go('receipts',{tab:'ISSUES'})",String(s.issues.length),s.issues.length>0),
+    workCard('🚚',Z('Ready to deliver','已买未交货'),'',Z('Confirm actual delivery','确认实际交付'),"Owner.go('deliver')",String(whPhysicalRows(s.ready).length)),
+    taskRow('📒',Z('Expense records','历史费用记录'),Z('Personal / shared / farm','个人／共用／园区'),"Owner.go('records')"),
+    taskRow('📱',Z('Phone instalments','手机分期'),Z('Approved instalment records','已批准分期资料'),"Owner.go('whphones')")
+    ])+'<div class="note">'+Z('Live checklist only. Verify Salary separately; no automatic lock.','实时待办，不是最终月结；另核对 Salary，不会自动锁月。')+'</div>';}
   // Full-quantity farm delivery. Preparation is local; a separate confirmation posts accounting.
   let DV={};
   const dvRows=f=>whPhysicalRows(bought().filter(l=>l.farm===f));
@@ -993,8 +1053,8 @@ const Owner = (() => {
   function dvAll(f,on){const d=dvState(f);if(d.submitted||WHBusy)return;d.picks=Object.fromEntries(dvRows(f).map(l=>[l.id,on]));d.snap=on?Object.fromEntries(dvRows(f).map(l=>[l.id,dvSignature(l)])):{};d.cash={};d.sell={};d.verified=false;d.authorised=false;d.error='';render();}
   function dvPayload(f,d){if(!dvSync(f,d))return null;const rows=dvRows(f).filter(l=>d.picks[l.id]);if(!d.verified||!rows.length||rows.length>100||!d.date||d.date>B.today||d.date<'2026-11-01')return null;const payload=[];for(const l of rows){const members=dvMembers(l);if(l.bottle_id){if(members.length!==Number(l.bottle_n))return null;const cash=members.filter(x=>d.cash[x.id]).map(x=>x.id);if(cash.length!==members.length&&!d.authorised)return null;payload.push({request_id:l.id,qty:l.qty,cash_ids:cash});continue;}const sell=l.kind==='PERSONAL'?(sellOf(l)??d.sell[l.id]):null;if(l.kind==='PERSONAL'&&(!detailPriceOk(sell)||(!d.cash[l.id]&&!d.authorised)))return null;payload.push({request_id:l.id,qty:l.qty,sell:l.kind==='PERSONAL'?Number(sell):null,worker_paid:!!d.cash[l.id]});}return {action:'DELIVER_FARM',farm:f,date:d.date,physical_verified:true,deduction_authorised:!!d.authorised,rows:payload};}
   function dvCard(f,l,d){const checked=!!d.picks[l.id],members=dvMembers(l),p=sellOf(l),locked=!!d.submitted,disable=locked?'disabled':'',isBottle=!!l.bottle_id;return '<div class="card" style="padding:12px;margin:8px 0"><label class="checkrow" style="align-items:center"><input type="checkbox" style="width:23px;height:23px" '+disable+' '+(checked?'checked':'')+' data-id="'+esc(l.id)+'" onchange="Owner.dvPick(\''+f+'\',this.dataset.id,this.checked)">'+icoBox(IT(l.item_id),l.item)+'<span style="flex:1"><b>'+esc(l.item)+' × '+(isBottle?1:l.qty)+'</b><br><small>'+esc(l.detail||'—')+' · '+esc(isBottle?members.map(who).join(' / '):who(l))+'</small></span></label><div class="hint">'+(whReady(l)?Z('From warehouse / supplier receipt','仓库／供应商收货'):Z('Purchased directly','直接代购'))+(l.buy?.batch_id?' · Batch '+esc(String(l.buy.batch_id).slice(0,8)):'')+'</div>'+(l.kind==='PERSONAL'&&checked?(isBottle?members.map(x=>'<div class="line"><span>'+esc(who(x))+' · '+RM(whiskeyRate(x.bottle_n))+'</span><label class="checkrow"><input type="checkbox" '+disable+' '+(d.cash[x.id]?'checked':'')+' data-id="'+esc(x.id)+'" onchange="Owner.dvCash(\''+f+'\',this.dataset.id,this.checked)">'+Z('Cash received','已付现金')+'</label></div>').join(''):'<div class="line"><span>'+Z('Worker pays','工人收费')+'</span>'+(p!=null?'<b>'+RM(Number(p)*l.qty)+'</b>':'<input type="number" min=".01" step=".01" value="'+esc(d.sell[l.id]??'')+'" '+disable+' data-id="'+esc(l.id)+'" onchange="Owner.dvSell(\''+f+'\',this.dataset.id,this.value)" placeholder="'+Z('Unit sell price','单位卖价')+'">')+'</div><label class="checkrow"><input type="checkbox" '+disable+' '+(d.cash[l.id]?'checked':'')+' data-id="'+esc(l.id)+'" onchange="Owner.dvCash(\''+f+'\',this.dataset.id,this.checked)">'+Z('Worker already paid cash','工人已付现金 · 不扣薪')+'</label>'):'')+(l.kind==='SHARED'||l.kind==='FOOD'?'<div class="hint">'+halfHint()+'</div>':'')+(!locked&&whReady(l)&&!isBottle&&Number(l.qty)>1?whBtn('Partial delivery','部分交货','ISSUE',l.id):'')+'</div>';}
-  function deliverPage(){const s=workStats(),f=ui.farm||'ALL';let out=whHeader('DELIVER · Farm delivery','DELIVER · 园区交货',Z('Prepare first; confirm only after actual delivery','先配货，实际交付后才确认'))+'<div class="pills" style="flex-wrap:wrap">'+['ALL',...FARMS].map(k=>'<button class="pill '+(k===f?'on':'')+'" onclick="Owner.go(\'deliver\',{farm:\''+k+'\'})">'+esc(k==='ALL'?Z('All farms','三个园区'):k)+(k==='ALL'?'':' · '+dvRows(k).length)+'</button>').join('')+'</div>';
-    if(f==='ALL'){for(const k of FARMS){const ls=dvRows(k),p=s.pending.filter(x=>x.farm===k);out+=taskRow('🚚',k+' · '+ls.length+' '+Z('ready','待交货'),p.length+' '+Z('leader receipts pending','笔待点收'),"Owner.go('deliver',{farm:'"+k+"'})",p.some(x=>x.last_note));}return out+taskRow('📦',Z('All leader receipts','全部工头点收')+' · '+s.pending.length,Z('Check shortage and actual acknowledgement','核对实际收货数量'),"Owner.go('receipts')",s.issues.length>0);}
+  function deliverPage(){const s=workStats(),f=ui.farm||'ALL';let out=whHeader('DELIVER · Farm delivery','DELIVER · 园区交货',Z('Prepare first; confirm only after actual delivery','先配货，实际交付后才确认'))+(f==='ALL'?'':'<div class="pills mg-farmtabs">'+['ALL',...FARMS].map(k=>'<button class="pill '+(k===f?'on':'')+'" onclick="Owner.go(\'deliver\',{farm:\''+k+'\'})">'+esc(k==='ALL'?Z('All farms','三个园区'):k)+(k==='ALL'?'':' · '+dvRows(k).length)+'</button>').join('')+'</div>');
+    if(f==='ALL'){const tiles=FARMS.map(k=>{const ls=dvRows(k),p=s.pending.filter(x=>x.farm===k);return workCard('🚚',k,'',p.length+' '+Z('receipts pending','笔待点收'),"Owner.go('deliver',{farm:'"+k+"'})",ls.length+' '+Z('ready','待交货'),p.some(x=>x.last_note));});tiles.push(workCard('📦',Z('Leader receipts','工头点收'),'',Z('Check actual receipt','核对实际收货数量'),"Owner.go('receipts')",String(s.pending.length),s.issues.length>0));return out+workGrid(tiles)+'<button class="btn block" onclick="Owner.go(\'whreturns\')">↶ '+Z('Delivery history / returns','出库历史／退回仓库')+'</button>'+(!s.ready.length?'<div class="note">'+Z('No goods ready for delivery','目前没有待交货商品')+'</div>':'');}
     const d=dvState(f);dvSync(f,d);const ls=dvRows(f),selected=ls.filter(l=>d.picks[l.id]),needsAuth=selected.some(l=>l.kind==='PERSONAL'&&dvMembers(l).some(x=>!d.cash[x.id])),disable=d.submitted?'disabled':'';
     out+=taskRow('📦',Z('Leader receipts','工头点收')+' · '+s.pending.filter(x=>x.farm===f).length,Z('Already sent · awaiting acknowledgement','已送出 · 待点收'),"Owner.go('receipts',{farm:'"+f+"'})");
     if(!ls.length&&!d.submitted)return out+(d.error?'<div class="note warn">'+esc(d.error)+'</div>':'')+'<div class="empty">'+Z('No goods ready for delivery','目前没有待交货商品')+'</div>';
@@ -1006,10 +1066,10 @@ const Owner = (() => {
   async function dvRecover(f){const d=dvState(f);if(!d.submitted||WHBusy)return;WHBusy=true;busy(1);try{const r=await rpc('shop_owner_wh_op_status',{op_id:d.submitted.op_id});if(r?.saved){delete DV[f];await reload();toast(Z('Existing delivery confirmed','已核实交货记录'));}else{await reload();d.submitted=null;d.picks={};d.snap={};d.cash={};d.sell={};d.verified=false;d.authorised=false;d.error='';toast(Z('No saved operation found; recheck goods','未发现已保存操作，请重新核对商品'));}}catch(e){d.error=errZ(e.message);}finally{WHBusy=false;busy(0);render();}}
   function settingsPage(){
     const pend=B.phones.filter(p=>p.status==='PENDING').length;
-    return `<div class="hero"><h1>⚙ ${Z('Settings','设定')}</h1>${back()}</div>
-      <button class="attcard ${pend?'todo':'plain'}" onclick="Owner.go('people')"><span class="aico">👷</span><span class="atxt"><b>${Z('Leaders & phones','工头和手机')}</b><small>${pend?Z(`${pend} awaiting approval`,`${pend} 支手机等批准`):Z('Manage access','权限管理')}</small></span><span class="aarr">›</span></button>
-      <button class="attcard plain" onclick="Owner.go('prices')"><span class="aico">🏷</span><span class="atxt"><b>${Z('Items & prices','物品和价钱')}</b></span><span class="aarr">›</span></button>
-      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>${Z('Buying day','买东西的日子')}</span><span class="seg">${[1,2,3,4,5].map(d=>`<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div><div class="hint">${Z("Never Saturday or Sunday. The Leaders' list closes the night before.",'礼拜六、礼拜日不买。工头的清单在前一天晚上截止。')}</div>${B.me&&B.me.role!=='OWNER'?`<div class="line" style="border:0"><span>${Z('This phone is','这支手机是')}</span><span class="seg">${['EX','Mr. Low'].map(n=>`<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${esc(payerLabel(n))}</button>`).join('')}</span></div>`:''}</div>`;
+    return whHeader('Settings','设定','')+workGrid([
+      workCard('👷',Z('Leaders & phones','工头和手机'),'',Z('Manage access','权限管理'),"Owner.go('people')",pend?String(pend):'',pend>0),
+      taskRow('🏷',Z('Items & prices','物品和价钱'),Z('Catalogue / prices','商品及定价'),"Owner.go('prices')")
+    ])+`      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>${Z('Buying day','买东西的日子')}</span><span class="seg">${[1,2,3,4,5].map(d=>`<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div><div class="hint">${Z("Never Saturday or Sunday. The Leaders' list closes the night before.",'礼拜六、礼拜日不买。工头的清单在前一天晚上截止。')}</div>${B.me&&B.me.role!=='OWNER'?`<div class="line" style="border:0"><span>${Z('This phone is','这支手机是')}</span><span class="seg">${['EX','Mr. Low'].map(n=>`<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${esc(payerLabel(n))}</button>`).join('')}</span></div>`:''}</div>`;
   }
   function weekStrip(){ const t = B.today, d0 = new Date(t+'T00:00:00'), mon = addD(t, -((d0.getDay()+6)%7)), trip = nextTrip(), F = foodRound(t);
     return `<div class="week">${[0,1,2,3,4,5,6].map(i => { const d = addD(mon,i), wd = new Date(d+'T00:00:00').getDay(), ev = [];
@@ -1963,7 +2023,12 @@ const Owner = (() => {
   }
   function whOrderedPage(h){const os=whOrderLines();return h+(os.length?os.map(whOrderCard).join(''):`<div class="empty">${Z('No outstanding supplier orders','没有待到货的供应商订单')}</div>`);}
   function warehousePage(){
-    let h=whHeader('📦 Warehouse','📦 Warehouse',Z('Actual stock · reservation · cost','实际库存 · 预留 · 批次成本'))+`<div class="homequickgrid"><button class="homequick" onclick="Owner.go('whpolicy')"><span class="aico">⚙</span><b>${Z('Item setup','商品设定')}</b><small>${Z('Stock / price mode','库存／定价')}</small></button><button class="homequick" onclick="Owner.go('whorders')"><span class="aico">🚚</span><b>${Z('Orders / receipt','订单／收货')}</b><small>${Z('Supplier & payment','供应商及付款')}</small></button><button class="homequick" onclick="Owner.go('whbatches')"><span class="aico">📋</span><b>${Z('Batch / stock take','批次／点算')}</b><small>${Z('Actual cost & corrections','实际成本与调整')}</small></button><button class="homequick" onclick="Owner.refresh()"><span class="aico">↻</span><b>${Z('Refresh','刷新')}</b><small>${Z('Reserve available stock','自动预留可用库存')}</small></button></div><button class="btn block" onclick="Owner.go('whreturns')">↶ ${Z('Delivery history / returns','出库历史／退回仓库')}</button>`;
+    let h=whHeader('STOCK · Warehouse','STOCK · 仓库',Z('Actual stock · reservation · cost','实际库存 · 预留 · 批次成本'))+workGrid([
+      taskRow('⚙',Z('Item setup','商品设定'),Z('Stock / price mode','库存／定价'),"Owner.go('whpolicy')"),
+      taskRow('🚚',Z('Orders / receipt','订单／收货'),Z('Supplier & payment','供应商及付款'),"Owner.go('whorders')"),
+      taskRow('📋',Z('Batch / stock take','批次／点算'),Z('Actual cost & corrections','实际成本与调整'),"Owner.go('whbatches')"),
+      taskRow('↻',Z('Refresh','刷新'),Z('Reserve available stock','自动预留可用库存'),"Owner.refresh()")
+    ])+'<button class="btn block" onclick="Owner.go(\'whreturns\')">↶ '+Z('Delivery history / returns','出库历史／退回仓库')+'</button>';
     h+='<button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('Record actual receipt','录入实际采购收据')+'</button>';
     if(!WH.stock.length)h+=`<div class="card" style="padding:16px"><b>${Z('No stock items configured','尚未设定库存商品')}</b><p>${Z('Select the actual item, fulfilment mode and price mode. Confirm physical count before purchasing.','先选择实际商品的经营模式和定价模式，再确认期初库存。系统不会猜测库存数量。')}</p><button class="btn primary block" onclick="Owner.go('whpolicy')">${Z('Set up items','设定商品')}</button></div>`;
     for(const x of WH.stock){const av=Number(x.physical)-Number(x.reserved),need=x.minimum!=null?Math.max(0,Number(x.minimum)-av-Number(x.inbound)):null;
