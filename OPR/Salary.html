@@ -632,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 95;
+const APP_VERSION = 96;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1486,7 +1486,8 @@ function foodHalf(mk, date){ const last = mk + '-' + pad2(daysInMonth(...mk.spli
 const inServiceBetween = (w, a, b) => (!w.joinDate || w.joinDate <= b) && (!w.stopDate || w.stopDate >= a);
 function foodPeople(mk, date){ if(mk < FOOD_HALF_START || !date) return foodPeopleOn(mk, date); const [a, b] = foodHalf(mk, date); return workersInMonth(mk).filter(w => inServiceBetween(w, a, b)); }
 function foodHalfLabel(mk, date){ const [a, b] = foodHalf(mk, date); return Number(a.slice(8)) + '–' + Number(b.slice(8)) + ' ' + MONTHS[Number(mk.slice(5))-1].slice(0,3); }
-function foodAutoOn(mk, date){ if(mk >= '2026-11' && date){const [a,b]=foodHalf(mk,date); return workersInMonth(mk).filter(w=>w.sharesFood!==false && Object.entries(S.attendance[mk]?.[w.id]||{}).some(([day,code])=>Number(day)>=Number(a.slice(8))&&Number(day)<=Number(b.slice(8))&&['ad','ad_half','hx','hx_half','both','split'].includes(code)));} return foodPeople(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
+function foodCompanyAD(w,mk){const row=(W_COMP[w.id]||[]).filter(r=>r.effective_from<=mk).slice(-1)[0];return !!row&&CO_CODE[row.company_id]==='AD';}
+function foodAutoOn(mk, date){ if(mk >= '2026-11' && date){const [a,b]=foodHalf(mk,date);return workersInMonth(mk).filter(w=>w.sharesFood!==false&&inServiceBetween(w,a,b)&&foodCompanyAD(w,mk));}return foodPeople(mk,date).filter(w=>w.sharesFood!==false); }
 function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
   ensureFood(); const mk = monthKey(), rows = S.food[mk], lock = isLocked(mk), [y, m] = mk.split('-').map(Number);
@@ -1565,7 +1566,7 @@ function fdDraw(){
   sh.innerHTML = h;
 }
 function fdWhoLabel(mk, n){
-  if(mk >= '2026-11' && FD.date) return 'Actual attendance · '+foodHalfLabel(mk,FD.date);
+  if(mk >= '2026-11' && FD.date) return 'AD employment · '+foodHalfLabel(mk,FD.date);
   if(mk < FOOD_AUTO_START || !FD.date) return FD.autoSel ? 'Everyone working that day' : n + ' people picked';
   const ex = foodExceptions(mk, FD.date, FD.workerIds), x = [];
   if(ex.addIds.length) x.push(ex.addIds.length + ' added'); if(ex.removeIds.length) x.push(ex.removeIds.length + ' removed');
@@ -1616,7 +1617,7 @@ document.getElementById('fd-sheet').addEventListener('click', e => {
   if(a === 'shops'){ fdKeep(); FD_MODE = 'shops'; fdDraw(); return; }
   if(b.dataset.hide){ const x = FOOD_SHOPS.find(z => z.id === b.dataset.hide); if(!x) return;
     sb.from('hub_option').update({shown:false}).eq('id', x.id).then(({error}) => { if(error){ toast('Could not hide: ' + error.message); return; } x.shown = false; if(sameShop(FD.vendor, x.label)) FD.vendor = ''; fdDraw(); toast(x.label + ' hidden'); }); return; }
-  if(a === 'who' && mk >= '2026-11'){fdKeep(); FD.workerIds=foodAutoIds(mk,FD.date); fdDraw(); alert('Actual attendance: '+FD.workerIds.map(id=>getWorker(id)?.name||id).join(', '));return;}
+  if(a === 'who' && mk >= '2026-11'){fdKeep(); FD.workerIds=foodAutoIds(mk,FD.date); fdDraw(); alert('AD employees in half-month: '+FD.workerIds.map(id=>getWorker(id)?.name||id).join(', '));return;}
   if(a === 'who'){ fdKeep(); FD_MODE = 'who'; fdDraw(); document.getElementById('fd-sheet').scrollTop = 0; return; }
   if(a === 'back'){ FD_MODE = 'form'; fdDraw(); return; }
   if(a === 'everyone'){ FD.workerIds = foodAutoOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
@@ -3212,12 +3213,14 @@ const nextMk = mk => { const [y,m]=mk.split('-').map(Number); return m===12 ? `$
 const isLocked = mk => !!(LOCKS[mk] && LOCKS[mk].status==='LOCKED');
 
 async function loadLocks(){
-  const [runs, slips] = await Promise.all([
+  const [runs, slips, foods] = await Promise.all([
     fetchAll('salary_run','month,status,locked_at,locked_by'),
     fetchAll('salary_payslip','month,worker_id,data', q=>q.is('voided_at',null)),
+    fetchAll('salary_food','id,month,data', q=>q.is('voided_at',null).order('created_at').order('id')),
   ]);
   LOCKS = {}; runs.forEach(r => LOCKS[r.month] = r);
   PAYSLIPS = {}; slips.forEach(p => (PAYSLIPS[p.month] ??= {})[p.worker_id] = p.data);
+  for(const m of Object.keys(LOCKS).filter(m=>LOCKS[m].status==='LOCKED')){const rows=foods.filter(r=>r.month===m).map(r=>r.data);S.food[m]=rows;if(typeof SNAP!=='undefined'&&SNAP?.S?.food)SNAP.S.food[m]=clone(rows);}
 }
 
 function workerInMonth(w, mk){
