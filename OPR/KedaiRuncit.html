@@ -472,7 +472,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
 }
   function openVariantGroup(group){const e=catalogEntries(items(ui.kind)).find(x=>x.group===group);if(!e)return;openModal(variantPickerHTML(group,e.variants,'Leader.openSheet','closeModal',id=>!!ui.cart[id]));}
   function addPage(){
-    const k=ui.kind,list=items(k);if(ui.pending)return `<div class="hero"><h1>${photoLabel()} · ${esc(FARM)}</h1><button class="btn small" onclick="Leader.home()">${t('back')}</button></div><div class="note warn">${specLabel('Not confirmed — retry the same batch','提交尚未确认，请重试原批次','ပို့ထားသောစာရင်း မသေချာသေးပါ။ ဒီစာရင်းကိုပဲ ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitAdd()">↻ ${t('again')}</button>`;
+    const k=ui.kind,list=items(k);if(ui.pending)return `<div class="hero"><h1>${photoLabel()} · ${esc(FARM)}</h1><button class="btn small" onclick="Leader.home()">${t('back')}</button></div><div class="note warn">${specLabel('Not confirmed — retry the same batch','提交尚未确认，请重试原批次','ပို့ထားသောစာရင်း မသေချာသေးပါ။ ဒီစာရင်းကိုပဲ ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitAdd()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and edit unsaved batch','核实后修改未保存批次','စစ်ဆေးပြီး မသိမ်းရသေးသောစာရင်း ပြင်မယ်')}</button>`;
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
       <button class="btn gold block" style="min-height:64px;margin-bottom:10px" onclick="Leader.photoOnly()">📷 ${specLabel('Photo only — no name needed','直接上传照片 · 不用知道名称','ဓာတ်ပုံဖြင့် မှာမယ် · နာမည် မလိုပါ')}</button>${k==='FOOD'?`<div class="note">${specLabel('Extra photo request for this delivery round','本轮额外照片需求，与普通订菜分开','ဒီအကြိမ်အတွက် ဓာတ်ပုံဖြင့် အပိုမှာရန်')} · ${esc(ui.round)}</div>`:''}<div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${leaderCatalogCards(list,k)}</div>
@@ -540,6 +540,20 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       else reqs.push({...base,qty:c.qty,detail:(c.det||'').trim()||undefined,photos:c.photos||[],...(ui.kind==='FOOD'?{round:ui.round}:{})}); }
     return reqs; }
   function addCount(){ return cartReqs().length; }
+
+  async function recoverBatch(){
+    const isFood=ui.view==='food',payload=isFood?ui.foodPending:ui.pending,k=ui.kind;
+    if(!payload||LeaderBusy||payload.farm!==FARM)return;
+    if(!confirm(specLabel('Check whether saved. If not saved, cancel only this submission attempt so it can be edited.','核实是否保存。若未保存，将取消这一次提交编号，再允许修改。','သိမ်းပြီး မပြီး စစ်ပါမယ်။ မသိမ်းရသေးရင် ဒီတစ်ကြိမ်ကို ပယ်ဖျက်ပြီး ပြင်နိုင်ပါမယ်။')))return;
+    LeaderBusy=true;busy(1);
+    try{const r=await rpc('shop_leader_abandon',{op_id:payload.op_id,farm:FARM,manager:MGR,...(!MGR?{device_key:deviceKey()}:{})});
+      if(r?.ok){if(isFood)storeDraft('FOOD_REGULAR',null);else storeDraft(k,{cart:{},pending:null,sheet:null});ui={view:'done',what:isFood||k==='FOOD'?'food':'add',savedCount:r.count};await load();}
+      else if(r?.cancelled){if(isFood){await load();storeDraft('FOOD_REGULAR',null);startFood();}else{ui.pending=null;saveCart();await load();}toast(specLabel('Unsaved attempt cancelled — review and edit','未保存的提交已取消，可以核对修改','မသိမ်းရသေးသော အကြိမ်ကို ပယ်ဖျက်ပြီးပါပြီ။ ပြင်နိုင်ပါပြီ။'));}
+      else throw Error('Unknown save status');
+    }catch(e){toast(specLabel('Could not verify — retry verification','无法核实，请重新核实','မစစ်နိုင်သေးပါ။ ထပ်စစ်ပါ။'));}
+    finally{LeaderBusy=false;busy(0);render();}
+  }
+
   async function commitAdd(){
     if(LeaderBusy||!D||D.status!=='ACTIVE'||D.farm!==FARM)return;
     if(!ui.pending){
@@ -564,7 +578,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function foodPage(){
     const c = tileOf('FOOD'), list = items('FOOD'); let h = `<div class="hero"><div><h1>${c.icon} ${esc(c[LANG].title)}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen" style="margin-bottom:12px"><div class="foodname"><b style="color:var(--warn)">${esc(foodLine())}</b><small>${esc(c[LANG].subtitle)}</small></div>${lsGet('runcit_last_food_'+FARM, null) ? `<button class="btn small" onclick="Leader.sameLast()">${t('sameLast')}</button>` : ''}</div>`;
-    h+=`<button class="btn gold block" onclick="Leader.foodPhoto()">📷 ${specLabel('Extra food with photo','照片订菜（额外需求）','ဓာတ်ပုံဖြင့် စားစရာ အပိုမှာမယ်')}</button>${lines().filter(l=>l.kind==='FOOD'&&l.round===ui.round&&l.photo_count&&l.status==='REQUESTED').map(row).join('')}`;if(ui.foodPending)return h+`<div class="note warn">${specLabel('Retry the saved food order','重试原订菜单','ဒီစာရင်းကို ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitFood()">↻ ${t('again')}</button>`;
+    h+=`<button class="btn gold block" onclick="Leader.foodPhoto()">📷 ${specLabel('Extra food with photo','照片订菜（额外需求）','ဓာတ်ပုံဖြင့် စားစရာ အပိုမှာမယ်')}</button>${lines().filter(l=>l.kind==='FOOD'&&l.round===ui.round&&l.photo_count&&l.status==='REQUESTED').map(row).join('')}`;if(ui.foodPending)return h+`<div class="note warn">${specLabel('Retry the saved food order','重试原订菜单','ဒီစာရင်းကို ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitFood()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and reload current order','核实并重新读取本轮订菜','စစ်ဆေးပြီး ဒီအကြိမ်စာရင်း ပြန်ယူမယ်')}</button>`;
     let cat = '';
     const catOf = code => (FO_SEED.find(a => a[0] === code) || [])[2] || '';
     for(const it of [...list].sort((a,b) => (FO_SEED.findIndex(x=>x[0]===a.code)) - (FO_SEED.findIndex(x=>x[0]===b.code)))){
@@ -672,7 +686,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();
   }
   function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
-  return {start,startManager,setLang,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start,startManager,setLang,recoverBatch,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
