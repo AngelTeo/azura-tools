@@ -126,7 +126,7 @@ function dripDay(S,f,day,st){const used={},short=[];for(const it of dripOn(S,f,d
 /* spray + drip for one farm-day */
 function dayUse(S,f,day,st){const a=sprayDay(S,f,day,st);const b=dripDay(S,f,day,st);const used={...(a.used||{})};for(const k in b.used)used[k]=(used[k]||0)+b.used[k];return {...a,used,short:[...(a.short||[]),...b.short]}}
 /* ledger entries (from cfg.start) sorted */
-function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=>x.date>=st).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1)}
+function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=>!x.void&&x.date>=st).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.at||'')<(b.at||'')?-1:1)}
 
 /* stock of every farm at END of `upto` day. Order per day: spraying first, then that day's records (counts = end-of-day). */
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
