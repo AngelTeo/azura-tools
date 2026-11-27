@@ -93,7 +93,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -144,7 +144,7 @@ const isAlcohol = label => /WHISK|BEER|ARAK|KAPAK|SAMSU|TODDY|WINE|BRANDY|\bRUM\
 
 /* item photos: managers upload them (bucket "shop-items", public read); groceries fall back to the FoodOrder photos */
 const PHOTO_BUCKET = 'shop-items';
-const photoUrl = p => p ? `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${p}` : null;
+const photoUrl = p => p === 'repo:shop_item_img/pruning-shears.webp' ? 'shop_item_img/pruning-shears.webp' : p ? `${SB_URL}/storage/v1/object/public/${PHOTO_BUCKET}/${p}` : null;
 function itemPhoto(it){ if(!it) return null; if(it.photo) return photoUrl(it.photo); if(it.kind === 'FOOD' && it.code) return `foodflow_img/${it.code}.jpg`; return null; }
 function icoBox(it, label, small){
   const u = itemPhoto(it), em = icon(label, it && it.icon), sm = small ? `<small>${small}</small>` : '';
