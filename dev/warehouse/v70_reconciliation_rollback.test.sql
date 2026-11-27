@@ -1,0 +1,52 @@
+
+do $test$
+declare actor uuid; sku uuid; directsku uuid; worker uuid; req uuid; req2 uuid; directreq uuid; orderid uuid; payid uuid; issueid uuid; batchid uuid; rootqty int; result jsonb; cmd jsonb; d date:=(now() at time zone 'Asia/Kuala_Lumpur')::date; tok text:=left(replace(gen_random_uuid()::text,'-',''),10); n int:=0; caught boolean; before_pay bigint; before_ded bigint; gross numeric;
+begin
+ begin
+ select id into actor from public.hub_app_user where role='OWNER' and status='ACTIVE' order by id limit 1;
+ perform set_config('request.jwt.claim.sub',actor::text,true);perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated')::text,true);
+ insert into public.hub_option(list_code,code,label) values('PERSONAL_ITEM','WH_PART_'||tok,'WH_PART_TEST') returning id into sku;
+ insert into public.hub_option(list_code,code,label) values('PERSONAL_ITEM','WH_DIR_'||tok,'WH_DIR_TEST') returning id into directsku;
+ insert into public.hub_worker(name,worker_type,join_date,cost_co) values('WH_REV_ROLLBACK_'||tok,'FOREIGN',d,'AD') returning id into worker;
+ insert into public.hub_worker_farm(worker_id,farm_id,effective_from) values(worker,(select id from public.hub_farm where code='AD 1' limit 1),to_char(d,'YYYY-MM'));
+ select count(*) into before_pay from owner_data.shop_payment;select count(*) into before_ded from public.salary_personal;
+ perform public.shop_owner_wh(jsonb_build_object('action','POLICY','op_id',gen_random_uuid(),'item_id',sku,'stock',true,'price_mode','FIXED','fixed_sell',20));
+ result:=public.shop_owner_wh(jsonb_build_object('action','OPENING','op_id',gen_random_uuid(),'item_id',sku,'qty',6,'unit_cost',12,'reason','test'));batchid:=(result->>'batch_id')::uuid;
+ insert into owner_data.shop_request(client_id,made_by,farm_code,worker_id,option_id,qty,kind,ask_date) values(gen_random_uuid(),actor,'AD 1',worker,sku,5,'PERSONAL',d) returning id into req;
+ perform public.shop_owner_wh_board('{}');
+ cmd:=jsonb_build_object('action','ISSUE','op_id',gen_random_uuid(),'request_id',req,'qty',2,'sell',20,'deduction_authorised',true,'date',d);
+ result:=public.shop_owner_wh(cmd);if public.shop_owner_wh(cmd)<>result then raise exception 'partial issue retry failed';end if;
+ select a.request_id into issueid from owner_data.shop_wh_alloc a where a.batch_id=batchid and a.status='ISSUED';
+ if (select qty from owner_data.shop_request where id=req)<>3 or (select qty from owner_data.shop_request where id=issueid)<>2 or (select on_hand from owner_data.shop_wh_batch where id=batchid)<>4 or (select sum(qty) from owner_data.shop_wh_alloc where batch_id=batchid and status='READY')<>3 or (select sum((data->>'amount')::numeric) from public.salary_personal where worker_id=worker and voided_at is null)<>40 then raise exception 'partial issue balances incorrect';end if;
+ n:=n+1;
+ if (select original_qty from owner_data.shop_wh_root where request_id=req)<>5 or (select sum(r.qty) from owner_data.shop_wh_part p join owner_data.shop_request r on r.id=p.request_id where p.root_id=req)<>5 then raise exception 'root demand lost';end if;n:=n+1;
+ caught:=false;begin perform public.shop_owner_wh(jsonb_build_object('action','ISSUE','op_id',gen_random_uuid(),'request_id',req,'qty',4,'sell',20,'deduction_authorised',true));exception when others then if sqlerrm not like 'Invalid delivery quantity%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'overissue allowed';end if;n:=n+1;
+ cmd:=jsonb_build_object('action','RETURN','op_id',gen_random_uuid(),'request_id',issueid,'date',d,'verified',true,'reason','verified physical return test');
+ result:=public.shop_owner_wh_reconcile(cmd);if public.shop_owner_wh_reconcile(cmd)<>result then raise exception 'return replay failed';end if;
+ if (select on_hand from owner_data.shop_wh_batch where id=batchid)<>6 or exists(select 1 from public.salary_personal where worker_id=worker and voided_at is null) or (select count(*) from owner_data.shop_wh_reversal where request_id=issueid)<>1 then raise exception 'return balances or salary void failed';end if;n:=n+1;
+ perform public.shop_owner_wh_reconcile(jsonb_build_object('action','RELEASE','op_id',gen_random_uuid(),'request_id',req,'date',d,'verified',true,'reason','confirmed not delivered'));
+ if (select on_hand from owner_data.shop_wh_batch where id=batchid)<>6 or (select status from owner_data.shop_request where id=req)<>'CANCELLED' or exists(select 1 from owner_data.shop_wh_alloc where batch_id=batchid and status='READY') then raise exception 'release failed';end if;n:=n+1;
+ insert into owner_data.shop_request(client_id,made_by,farm_code,worker_id,option_id,qty,kind,ask_date) values(gen_random_uuid(),actor,'AD 1',worker,directsku,4,'PERSONAL',d) returning id into directreq;
+ result:=public.shop_owner_wh(jsonb_build_object('action','ORDER','op_id',gen_random_uuid(),'request_id',directreq,'qty',4,'supplier','TEST'));orderid:=(result->>'order_id')::uuid;
+ result:=public.shop_owner_wh(jsonb_build_object('action','PAY','op_id',gen_random_uuid(),'order_id',orderid,'amount',80,'payer','TBF','ref','paid-'||tok,'date',d));payid:=(result->>'pay_id')::uuid;
+ perform public.shop_owner_wh(jsonb_build_object('action','RECEIVE','op_id',gen_random_uuid(),'order_id',orderid,'qty',3,'unit_cost',20,'sell',25));
+ select x.request_id into req2 from owner_data.shop_wh_receipt x where order_id=orderid;
+ perform public.shop_owner_wh(jsonb_build_object('action','ISSUE','op_id',gen_random_uuid(),'request_id',req2,'qty',1,'sell',25,'deduction_authorised',true));
+ if (select qty from owner_data.shop_request where id=req2)<>2 or (select sum(qty) from owner_data.shop_wh_receipt where order_id=orderid)<>3 or (select sum((data->>'amount')::numeric) from public.salary_personal where worker_id=worker and voided_at is null)<>25 then raise exception 'direct partial issue failed';end if;n:=n+1;
+ caught:=false;begin perform public.shop_owner_wh(jsonb_build_object('action','CANCEL_ORDER','op_id',gen_random_uuid(),'order_id',orderid,'qty',1,'reason','test'));exception when others then if sqlerrm not like 'Unreconciled supplier advance%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'unreconciled advance allowed';end if;n:=n+1;
+ cmd:=jsonb_build_object('action','REFUND','op_id',gen_random_uuid(),'payment_id',payid,'amount',20,'date',d,'ref','refund-'||tok,'reason','actual refund test','verified',true,'original_payer_received',true);
+ result:=public.shop_owner_wh_reconcile(cmd);if public.shop_owner_wh_reconcile(cmd)<>result or owner_data.shop_wh_payment_net(payid)<>60 or (select amount from owner_data.shop_payment where id=payid)<>80 then raise exception 'refund net or original preservation failed';end if;n:=n+1;
+ perform public.shop_owner_wh(jsonb_build_object('action','CANCEL_ORDER','op_id',gen_random_uuid(),'order_id',orderid,'qty',1,'reason','refund confirmed'));
+ if (select cancelled_qty from owner_data.shop_wh_order where id=orderid)<>1 then raise exception 'refunded remainder cancellation failed';end if;n:=n+1;
+ result:=public.shop_owner_money('{}');if not exists(select 1 from jsonb_array_elements(result->'payments') x where x->>'id'=payid::text and (x->>'amount')::numeric=60 and (x->>'gross_amount')::numeric=80 and (x->>'refund_amount')::numeric=20) then raise exception 'money view net failed';end if;n:=n+1;
+ result:=public.shop_owner_reimburse(jsonb_build_object('payer','TBF','ids',jsonb_build_array(payid),'date',d,'ref','test reimb','client_id',gen_random_uuid()));
+ if (result->>'amount')::numeric<>60 then raise exception 'reimbursement net failed';end if;n:=n+1;
+ caught:=false;begin perform public.shop_owner_wh_reconcile(jsonb_build_object('action','REFUND','op_id',gen_random_uuid(),'payment_id',payid,'amount',1,'date',d,'ref','second-'||tok,'reason','test','verified',true,'original_payer_received',true));exception when others then if sqlerrm not like 'Invalid refund%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'reimbursed refund allowed';end if;n:=n+1;
+ if (select count(*) from owner_data.shop_payment)<>before_pay+1 or (select count(*) from public.salary_personal)<>before_ded+2 then raise exception 'unexpected duplicate ledger record';end if;n:=n+1;
+ raise exception using errcode='ZX001',message='PASS '||n;
+ exception when sqlstate 'ZX001' then if sqlerrm<>'PASS 13' then raise;end if;end;
+end $test$;
+select '13 partial issue, release, return, refund and net reimbursement database tests passed; fixtures rolled back' as result;
