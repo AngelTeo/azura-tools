@@ -51,6 +51,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 .bar{padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:4px}.bar button{border-radius:12px;transition:background .15s}
 .bar button.on{background:var(--mint);color:var(--green)}.bar button:active{background:#d7ebdf}
 .btn:active,.seg button:active,[data-act]:active{filter:brightness(.94)}
+.ckl{display:flex;flex-direction:column;gap:8px}.ckr{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-start}.ckr.ok{border-color:#9fd0b6;background:#f4fbf7}.ckr.bad{border-color:#e9a5a5;background:#fff8f8}.ckr .pic{flex:0 0 auto}.ckr .grow{flex:1;min-width:0}.ckc{flex:1 1 100%;min-width:0;display:flex;gap:6px;align-items:center}.ckc .btn{min-width:44px;height:44px;padding:0 10px;font-size:18px}.ckc .btn.s{font-size:15px}.ckc input.num{flex:1;min-width:0;width:0;height:44px;font-size:19px;font-weight:800;text-align:center}.ckd{flex:1 1 100%;min-width:0;font-size:14px;font-weight:700}.ckd.g{color:var(--green)}.ckd.r{color:var(--red)}.ckn{flex:1 1 100%;min-width:0;width:0;font-size:16px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script></head>
 <body><div id="root"><div class="top"><div class="in"><div class="logo">📦</div><div class="brand">StoreGo<small>AZURA DELTA · v16</small></div><div class="who" id="who"></div></div></div>
@@ -481,24 +482,41 @@ function payView(){const L=S.po.filter(x=>x.status!=='ordered'&&x.status!=='canc
   ${L.map(po=>`<div class="card"><div class="row"><h3 class="grow">#${po.no} · ${h(supName(po.sup))}</h3><b>${money(poTotal(po))}</b></div><div class="row" style="margin-top:6px">${po.paid?`<span class="badge green">已付 ${dd(po.paidAt?.slice(0,10))}</span>`:`<span class="badge amber">未付</span><button class="btn s sm neededit" data-act="paid" data-id="${h(po.id)}">标已付款</button>`}${(po.photos||[]).length?`<button class="btn sm" data-act="photo" data-id="${h(po.id)}">看单据</button>`:''}</div></div>`).join('')}`}
 
 /* ---------------- COUNT ---------------- */
-function vCount(){const f=sub.farm||'AD1';const all=!!sub.allc;const pl=planOn(S,f,today());const used=pl?pidsUsed(S,f,pl.ver):new Set();
-  const had=new Set(S.ledger.filter(x=>(x.t==='count'||x.t==='dist')&&x.farm===f).map(x=>x.pid));
-  const L=S.products.filter(p=>p.active!==false&&(all||used.has(p.id)||had.has(p.id))).sort((a,b)=>a.name.localeCompare(b.name));
-  const v=sub.cv=sub.cv&&sub.cv.f===f?sub.cv:{f,vals:{}};
-  return `<div class="eyebrow">COUNT</div><h1>点算</h1><p class="tiny">每种药剩几瓶 / 包。零也要填，半瓶填 0.5。存了才看到跟系统差多少。</p>
-  <div class="seg">${FARMS.map(x=>`<button class="${x===f?'on':''}" data-sub="farm" data-v="${x}">${x}</button>`).join('')}</div>
-  <div class="card"><div class="list">${L.map(p=>`<div>${pic(p,f)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${p.home&&p.sub&&f!==p.home?`填几${h(p.sub.word||'小桶')}（一${h(p.sub.word||'小桶')} ${h(p.sub.size)} ${h(p.sub.unit)}）`:h(packLabel(p))}${packBase(p)?'':' · 只记数量'}</div></div><button class="btn sm" data-act="zero" data-id="${h(p.id)}">0</button><input class="num" inputmode="decimal" data-cnt="${h(p.id)}" value="${v.vals[p.id]??''}"></div>`).join('')}</div>
-  <button class="btn sm" style="margin-top:8px" data-act="allc">${all?'只看这园用的药':'显示全部药'}</button></div>
-  <button class="btn p full neededit" data-act="count-save">存 ${f} 点算</button>`}
-async function countSave(){const f=sub.farm||'AD1';const ins=[...document.querySelectorAll('[data-cnt]')];const miss=ins.filter(x=>x.value.trim()==='');
-  ins.forEach(x=>x.classList.toggle('miss',x.value.trim()===''));
-  if(miss.length&&!confirm(`还有 ${miss.length} 种没填。没填的不会记，确定先存？`))return;
-  const date=today(),at=nowIso();const before=stockAt(S,date).st[f];const rows=[];
-  for(const x of ins){if(x.value.trim()==='')continue;const n=Number(x.value);if(!Number.isFinite(n)||n<0){toast('⚠ 数字不对：'+P(x.dataset.cnt)?.name);return}
-    const p=P(x.dataset.cnt);const pb=packBase(p)&&p.track!=='No'?packAt(p,f):null;rows.push({p,n,qty:pb?n*pb:null,sys:before[p.id]})}
-  for(const r of rows)await put('ledger',{id:uid('L'),t:'count',date,at,by:ME.name,farm:f,pid:r.p.id,qty:r.qty,packs:r.n});
-  sub.cv=null;const diff=rows.filter(r=>r.qty!=null&&r.sys!=null).map(r=>{const d=r.qty-r.sys;const pb=packBase(r.p);return {...r,d,big:Math.abs(d)>=Math.max(pb*0.5,Math.abs(r.sys)*0.2)}}).sort((a,b)=>b.big-a.big);
-  sheet(`<h2>${f} 点算存好了</h2><p class="tiny">差额＝实际 − 系统算的。红色＝差很多，要查。</p><table class="t"><tr><th>药</th><th class="n">系统算</th><th class="n">实际</th><th class="n">差</th></tr>${diff.map(r=>`<tr style="${r.big?'background:var(--rose)':''}"><td>${h(r.p.name)}</td><td class="n">${fmt(packs(r.p,r.sys))}</td><td class="n">${fmt(r.n)}</td><td class="n" style="${r.big?'color:var(--red);font-weight:800':''}">${r.d>0?'+':''}${fmt(packs(r.p,r.d))}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">没有可以比较的</td></tr>'}</table><button class="btn p full" style="margin-top:12px" data-act="close">好</button>`);
+/* ---- 点算（进园核对版）---- */
+const amtTxt=(q,u)=>u==='g'?(q>=1000?fmt(Math.round(q/10)/100)+' kg':Math.round(q)+' g'):(q>=1000?fmt(Math.round(q/100)/10)+' L':Math.round(q)+' ml');
+const CK=f=>'sg_cnt2_'+f;
+function cntGet(f){if(sub.cv&&sub.cv.f===f)return sub.cv;let v={};try{v=JSON.parse(localStorage.getItem(CK(f))||'{}')}catch(e){}sub.cv={f,vals:v.vals||{},notes:v.notes||{}};return sub.cv}
+function cntPut(){const v=sub.cv;if(!v)return;try{localStorage.setItem(CK(v.f),JSON.stringify({vals:v.vals,notes:v.notes}))}catch(e){}}
+function cntRows(f){const {pr}=plan();const pl=planOn(S,f,today());const used=pl?pidsUsed(S,f,pl.ver):new Set();
+  const had=new Set(S.ledger.filter(x=>!x.void&&((x.t==='count'||x.t==='dist')&&x.farm===f||x.t==='move'&&(x.to===f||x.from===f))).map(x=>x.pid));
+  return S.products.filter(p=>p.active!==false).map(p=>{const pb=p.track!=='No'?packAt(p,f):null;const q=pr[f].stock[p.id];return {p,pb,q,sp:pb&&q!=null?q/pb:null,w:packWordAt(p,f)||packWord(p),tracked:used.has(p.id)||had.has(p.id)}}).sort((a,b)=>a.p.name.localeCompare(b.p.name))}
+function cntState(r,v){const x=v.vals[r.p.id];if(x==null||x==='')return 'todo';if(r.sp==null)return Number(x)>0?'bad':'ok';return Math.abs(Number(x)-r.sp)<=Math.max(0.1,r.sp*0.1)?'ok':'bad'}
+function vCount(){const f=sub.farm||'AD1';const v=cntGet(f);const R=cntRows(f);const flt=sub.cf||'all';
+  const main=R.filter(r=>r.tracked),more=R.filter(r=>!r.tracked);const st=r=>cntState(r,v);
+  const done=main.filter(r=>st(r)!=='todo').length,bad=R.filter(r=>st(r)==='bad').length,filled=R.filter(r=>st(r)!=='todo').length;
+  const F=r=>flt==='all'||st(r)===flt;const has=main.filter(r=>r.q>1e-9).filter(F),zero=main.filter(r=>!(r.q>1e-9)).filter(F);
+  const row=r=>{const p=r.p,s=st(r),x=v.vals[p.id];const sys=r.pb?(r.q==null?'系统：没记':`系统：<b>${fmt(Math.round((r.sp||0)*10)/10)} ${h(r.w)}</b>${r.q>0?' · '+amtTxt(r.q,unitOf(p)):''}`):`系统：${r.q>0?fmt(r.q)+' '+unitOf(p):'0'}（包装没设定，填几${h(r.w)}）`;
+    const dif=s==='ok'?'<div class="ckd g">✓ 对</div>':s==='bad'?`<div class="ckd r">✗ 实际 ${fmt(x)} ${h(r.w)}${r.sp!=null?`，系统 ${fmt(Math.round(r.sp*10)/10)} → 差 ${x-r.sp>0?'+':''}${fmt(Math.round((x-r.sp)*10)/10)}`:''}</div>`:'';
+    return `<div class="ckr ${s}" id="ck-${h(p.id)}">${pic(p,f)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${r.pb?'一'+h(r.w)+' '+(p.home&&p.sub&&f!==p.home?h(p.sub.size+' '+p.sub.unit):h(packLabel(p))):'包装待补'}</div><div class="tiny" style="font-size:13px;color:var(--ink)">${sys}</div></div>
+      <div class="ckc"><button class="btn s" data-act="ck-yes" data-id="${h(p.id)}">✓ 对</button><button class="btn" data-act="ck-step" data-id="${h(p.id)}" data-d="-0.5">−</button><input class="num" inputmode="decimal" placeholder="实际几${h(r.w)}" data-cnt="${h(p.id)}" value="${x??''}"><button class="btn" data-act="ck-step" data-id="${h(p.id)}" data-d="0.5">＋</button></div>${dif}${s==='bad'?`<input class="txt ckn" placeholder="备注（例如：开了一瓶剩一半 / 放在别园）" data-cnote="${h(p.id)}" value="${h(v.notes[p.id]||'')}">`:''}</div>`};
+  return `<div class="eyebrow">COUNT</div><h1>点算</h1><p class="tiny">跟系统一样按「✓ 对」；不一样填实际几瓶 / 几桶 / 几包，开了的填小数（半瓶 0.5）。差超过 10% 会变红。填的会先留在这支手机，按最下面「存」才进系统。</p>
+  <div class="seg">${FARMS.map(x=>{const vv=x===f?v:cntGet0(x);const n=cntRows(x).filter(r=>r.tracked&&cntState(r,vv)!=='todo').length;return `<button class="${x===f?'on':''}" data-sub="farm" data-v="${x}">${x}<div style="font-size:11px;font-weight:600">${n}/${cntRows(x).filter(r=>r.tracked).length}</div></button>`}).join('')}</div>
+  <div class="seg">${[['all','全部'],['todo','还没点'],['bad','不对'],['ok','对了']].map(([k,l])=>`<button class="${flt===k?'on':''}" data-sub="cf" data-v="${k}">${l}</button>`).join('')}</div>
+  <div style="height:6px;background:#e3ebe7;border-radius:6px;margin-top:8px;overflow:hidden"><i style="display:block;height:100%;width:${main.length?done/main.length*100:0}%;background:var(--green)"></i></div><div class="row tiny" style="margin-top:4px"><span class="grow">${f} 已点 ${done} / ${main.length}</span>${bad?`<span style="color:var(--red);font-weight:800">不对 ${bad} 样</span>`:''}</div>
+  ${has.length?`<h3>系统说有（${has.length}）</h3><div class="ckl">${has.map(row).join('')}</div>`:''}${zero.length?`<h3>系统说没有 / 0（${zero.length}）· 有的话也填</h3><div class="ckl">${zero.map(row).join('')}</div>`:''}${!has.length&&!zero.length?'<div class="empty">这个筛选没有药</div>':''}
+  ${flt==='all'?`<button class="btn full" style="margin-top:10px;border-style:dashed" data-act="allc">${sub.allc?'收起':'＋ 园里还有别的药？（系统没记的 '+more.length+' 样）'}</button>${sub.allc?`<div class="ckl">${more.map(row).join('')}</div>`:''}`:''}
+  <div class="row" style="margin-top:14px;gap:8px"><button class="btn grow" data-act="ck-clear">清空 ${f} 填的</button><button class="btn p grow neededit" data-act="count-save">存 ${f} 点算（${filled} 样）</button></div>`}
+function cntGet0(f){let v={};try{v=JSON.parse(localStorage.getItem(CK(f))||'{}')}catch(e){}return {f,vals:v.vals||{},notes:v.notes||{}}}
+function ckSet(id,val){const f=sub.farm||'AD1';const v=cntGet(f);if(val===''||val==null)delete v.vals[id];else v.vals[id]=Math.max(0,Math.round(Number(val)*100)/100);cntPut();const y=scrollY;render(true);scrollTo(0,y)}
+async function countSave(){const f=sub.farm||'AD1';const v=cntGet(f);const R=cntRows(f);const main=R.filter(r=>r.tracked);const miss=main.filter(r=>cntState(r,v)==='todo');
+  const rowsIn=R.filter(r=>v.vals[r.p.id]!=null&&v.vals[r.p.id]!=='');if(!rowsIn.length){toast('⚠ 还没填');return}
+  if(miss.length&&!confirm(`还有 ${miss.length} 样没点（${miss.slice(0,5).map(r=>r.p.name).join('、')}${miss.length>5?'…':''}）。没点的不会记，确定先存？`))return;
+  const date=today(),at=nowIso();const rows=[];
+  for(const r of rowsIn){const n=Number(v.vals[r.p.id]);if(!Number.isFinite(n)||n<0){toast('⚠ 数字不对：'+r.p.name);return}rows.push({...r,n,qty:r.pb?n*r.pb:null})}
+  for(const r of rows)await put('ledger',{id:uid('L'),t:'count',date,at,by:ME.name,farm:f,pid:r.p.id,qty:r.qty,packs:r.n,sys:r.q==null?null:Math.round(r.q),...(v.notes[r.p.id]?{note:v.notes[r.p.id]}:{})});
+  try{localStorage.removeItem(CK(f))}catch(e){}sub.cv=null;
+  const diff=rows.filter(r=>r.qty!=null&&r.q!=null).map(r=>{const d=r.qty-r.q;return {...r,d,big:Math.abs(d)>Math.max(r.pb*0.1,Math.abs(r.q)*0.1)}}).sort((a,b)=>b.big-a.big);
+  sheet(`<h2>${f} 点算存好了（${rows.length} 样）</h2><p class="tiny">差＝实际 − 系统算的。红色＝差超过 10%，要查。库存已经改成实际数。</p><table class="t"><tr><th>药</th><th class="n">系统</th><th class="n">实际</th><th class="n">差</th></tr>${diff.map(r=>`<tr style="${r.big?'background:var(--rose)':''}"><td>${h(r.p.name)}${v.notes[r.p.id]?`<div class="tiny">${h(v.notes[r.p.id])}</div>`:''}</td><td class="n">${fmt(Math.round(r.q/r.pb*100)/100)}</td><td class="n">${fmt(r.n)}</td><td class="n" style="${r.big?'color:var(--red);font-weight:800':''}">${r.d>0?'+':''}${fmt(Math.round(r.d/r.pb*100)/100)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">没有可以比较的</td></tr>'}</table><button class="btn p full" style="margin-top:12px" data-act="close">好</button>`);
   render()}
 
 /* ---------------- ARCHIVE ---------------- */
@@ -564,7 +582,7 @@ const NAV=[['today','☀️','今天'],['shelf','📦','货架'],['buy','🛒','
 function render(){const v={today:vToday,shelf:vShelf,buy:vBuy,count:vCount,archive:vArchive,set:vSet}[tab]||vToday;
   try{$('#view').innerHTML=v()}catch(x){console.error(x);$('#view').innerHTML=`<div class="card red">画面出错：${h(x.message)}</div>`}
   $('#bar').innerHTML=NAV.map(([k,i,l])=>`<button class="${tab===k?'on':''}" data-go="${k}"><b>${i}</b>${l}</button>`).join('')}
-document.addEventListener('change',e=>{const t=e.target;if(t.dataset.ddf){const x=document.getElementById('ddt-'+t.dataset.ddf);if(x)x.textContent=t.value?dd(t.value):'选日期';return}if(t.dataset.sfsel){sub.sf[t.dataset.sfsel]=t.value;render()}});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.cnt){ckSet(t.dataset.cnt,t.value.trim());return}if(t.dataset.cnote){const v=cntGet(sub.farm||'AD1');v.notes[t.dataset.cnote]=t.value;cntPut();return}if(t.dataset.ddf){const x=document.getElementById('ddt-'+t.dataset.ddf);if(x)x.textContent=t.value?dd(t.value):'选日期';return}if(t.dataset.sfsel){sub.sf[t.dataset.sfsel]=t.value;render()}});
 document.addEventListener('input',e=>{const t=e.target;if(t.dataset.input==='q'){sub.q=t.value;const pos=t.selectionStart;render();const n=document.querySelector('[data-input="q"]');n.focus();n.setSelectionRange(pos,pos)}
   if(t.dataset.cnt){sub.cv=sub.cv||{f:sub.farm||'AD1',vals:{}};sub.cv.vals[t.dataset.cnt]=t.value}});
 document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const z=document.getElementById('zoom');z.hidden=true;z.innerHTML='';return}const g=e.target.closest('[data-go]');if(g){tab=g.dataset.go;closeSheet();render();scrollTo(0,0);return}
@@ -597,7 +615,9 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'photo':{const po=S.po.find(x=>x.id===id);const path=(po.photos||[]).at(-1);if(MOCK){toast('（测试模式没有照片）');break}const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(path,300);if(error){toast('⚠ 打不开：'+error.message);break}window.open(data.signedUrl,'_blank');break}
     case 'sf-toggle':sub.sfo=!sub.sfo;render();break;
     case 'sf-clear':sub.sf=null;render();break;
-    case 'zero':{const n=document.querySelector(`[data-cnt="${CSS.escape(id)}"]`);n.value='0';n.dispatchEvent(new Event('input',{bubbles:true}));break}
+    case 'ck-yes':{const r=cntRows(sub.farm||'AD1').find(x=>x.p.id===id);ckSet(id,r&&r.sp!=null?Math.round(r.sp*100)/100:0);break}
+    case 'ck-step':{const f=sub.farm||'AD1';const v=cntGet(f);const r=cntRows(f).find(x=>x.p.id===id);const cur=v.vals[id];const base=cur!=null?Number(cur)+Number(a.dataset.d):Math.max(0,Math.round((r?.sp||0)*2)/2);ckSet(id,Math.max(0,base));break}
+    case 'ck-clear':{const f=sub.farm||'AD1';if(!confirm(`清空 ${f} 已填的？`))break;try{localStorage.removeItem(CK(f))}catch(e){}sub.cv=null;render();break}
     case 'allc':sub.allc=!sub.allc;render();break;
     case 'count-save':a.disabled=true;await countSave();a.disabled=false;break;
     case 'edit-sup':sheetSup(id);break;
