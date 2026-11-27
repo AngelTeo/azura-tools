@@ -61,7 +61,7 @@ const D=s=>new Date(s+'T00:00:00Z');const ymd=d=>d.toISOString().slice(0,10);
 const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return ymd(d)};
 const diffDays=(a,b)=>Math.round((D(b)-D(a))/86400000);
 const todayStr=()=>{if(globalThis.__TODAY)return globalThis.__TODAY;const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
-const mult=u=>({L:1000,l:1000,kg:1000,KG:1000,ml:1,g:1})[u]||null;
+const mult=u=>({L:1000,l:1000,kg:1000,KG:1000,ml:1,g:1,set:1})[u]||null;
 function packBase(p){if(!p)return null;const s=Number(p.packSize),m=mult(p.packUnit);return s>0&&m?s*m:null}
 function unitOf(p){return p&&p.unit==='g'?'g':'ml'}
 function packLabel(p){if(!p||!(Number(p.packSize)>0))return '包装待补';return `${p.packSize} ${p.packUnit||''}`.trim()}

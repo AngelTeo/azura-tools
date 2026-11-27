@@ -62,7 +62,7 @@ const D=s=>new Date(s+'T00:00:00Z');const ymd=d=>d.toISOString().slice(0,10);
 const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return ymd(d)};
 const diffDays=(a,b)=>Math.round((D(b)-D(a))/86400000);
 const todayStr=()=>{if(globalThis.__TODAY)return globalThis.__TODAY;const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
-const mult=u=>({L:1000,l:1000,kg:1000,KG:1000,ml:1,g:1})[u]||null;
+const mult=u=>({L:1000,l:1000,kg:1000,KG:1000,ml:1,g:1,set:1})[u]||null;
 function packBase(p){if(!p)return null;const s=Number(p.packSize),m=mult(p.packUnit);return s>0&&m?s*m:null}
 function unitOf(p){return p&&p.unit==='g'?'g':'ml'}
 function packLabel(p){if(!p||!(Number(p.packSize)>0))return '包装待补';return `${p.packSize} ${p.packUnit||''}`.trim()}
@@ -499,9 +499,9 @@ function vCount(){const f=sub.farm||'AD1';const v=cntGet(f);const R=cntRows(f);c
   const main=R.filter(r=>r.tracked),more=R.filter(r=>!r.tracked);const st=r=>cntState(r,v);
   const done=main.filter(r=>st(r)!=='todo').length,bad=R.filter(r=>st(r)==='bad').length,filled=R.filter(r=>st(r)!=='todo').length;
   const F=r=>flt==='all'||st(r)===flt;const has=main.filter(r=>r.q>1e-9).filter(F),zero=main.filter(r=>!(r.q>1e-9)).filter(F);
-  const row=r=>{const p=r.p,s=st(r),x=v.vals[p.id];const sys=r.pb?(r.q==null?'系统：没记':`系统：<b>${fmt(Math.round((r.sp||0)*10)/10)} ${h(r.w)}</b>${r.q>0?' · '+amtTxt(r.q,unitOf(p)):''}`):`系统：${r.q>0?fmt(r.q)+' '+unitOf(p):'0'}（包装没设定，填几${h(r.w)}）`;
+  const row=r=>{const p=r.p,s=st(r),x=v.vals[p.id];const sys=r.pb?(r.q==null?'系统：没记':`系统：<b>${fmt(Math.round((r.sp||0)*10)/10)} ${h(r.w)}</b>${r.q>0&&p.packUnit!=='set'?' · '+amtTxt(r.q,unitOf(p)):''}`):`系统：${r.q>0?fmt(r.q)+' '+unitOf(p):'0'}（包装没设定，填几${h(r.w)}）`;
     const dif=s==='ok'?'<div class="ckd g">✓ 对</div>':s==='bad'?`<div class="ckd r">✗ 实际 ${fmt(x)} ${h(r.w)}${r.sp!=null?`，系统 ${fmt(Math.round(r.sp*10)/10)} → 差 ${x-r.sp>0?'+':''}${fmt(Math.round((x-r.sp)*10)/10)}`:''}</div>`:'';
-    return `<div class="ckr ${s}" id="ck-${h(p.id)}">${pic(p,f)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${r.pb?'一'+h(r.w)+' '+(p.home&&p.sub&&f!==p.home?h(p.sub.size+' '+p.sub.unit):h(packLabel(p))):'包装待补'}</div><div class="tiny" style="font-size:13px;color:var(--ink)">${sys}</div></div>
+    return `<div class="ckr ${s}" id="ck-${h(p.id)}">${pic(p,f)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${p.packUnit==='set'?'A 包 + B 包 = 1 set':r.pb?'一'+h(r.w)+' '+(p.home&&p.sub&&f!==p.home?h(p.sub.size+' '+p.sub.unit):h(packLabel(p))):'包装待补'}</div><div class="tiny" style="font-size:13px;color:var(--ink)">${sys}</div></div>
       <div class="ckc"><button class="btn s" data-act="ck-yes" data-id="${h(p.id)}">✓ 对</button><button class="btn" data-act="ck-step" data-id="${h(p.id)}" data-d="-0.5">−</button><input class="num" inputmode="decimal" placeholder="实际几${h(r.w)}" data-cnt="${h(p.id)}" value="${x??''}"><button class="btn" data-act="ck-step" data-id="${h(p.id)}" data-d="0.5">＋</button></div>${dif}${s==='bad'?`<input class="txt ckn" placeholder="备注（例如：开了一瓶剩一半 / 放在别园）" data-cnote="${h(p.id)}" value="${h(v.notes[p.id]||'')}">`:''}</div>`};
   return `<div class="eyebrow">COUNT</div><h1>点算</h1><p class="tiny">跟系统一样按「✓ 对」；不一样填实际几瓶 / 几桶 / 几包，开了的填小数（半瓶 0.5）。差超过 10% 会变红。填的会先留在这支手机，按最下面「存」才进系统。</p>
   <div class="seg">${FARMS.map(x=>{const vv=x===f?v:cntGet0(x);const n=cntRows(x).filter(r=>r.tracked&&cntState(r,vv)!=='todo').length;return `<button class="${x===f?'on':''}" data-sub="farm" data-v="${x}">${x}<div style="font-size:11px;font-weight:600">${n}/${cntRows(x).filter(r=>r.tracked).length}</div></button>`}).join('')}</div>
@@ -575,7 +575,7 @@ function sheetSup(id){const x=SUP(id)||{id:'',name:'',phone:'',leadDays:3,terms:
 function sheetEditDrug(id){const p=P(id)||{id:'',name:'',kind:'还不知道',unit:'ml',packSize:'',packUnit:'L',shops:[],active:true,target:''};
   sheet(`<h2>${id?'编辑药品':'新药'}</h2><label class="l">药名</label><input class="txt" id="dg-name" value="${h(p.name)}"><label class="l">分类</label><select id="dg-kind">${KINDS.map(k=>`<option ${k===p.kind?'selected':''}>${h(k)}</option>`).join('')}</select>
   <label class="l">打什么 / 作用</label><input class="txt" id="dg-target" value="${h(p.target||'')}">
-  <label class="l">包装（一瓶 / 一包多大）</label><div class="row"><input class="num" inputmode="decimal" id="dg-size" value="${h(p.packSize??'')}"><select id="dg-pu" style="width:90px">${['ml','L','g','kg'].map(u=>`<option ${u===p.packUnit?'selected':''}>${u}</option>`).join('')}</select></div>
+  <label class="l">包装（一瓶 / 一包多大）</label><div class="row"><input class="num" inputmode="decimal" id="dg-size" value="${h(p.packSize??'')}"><select id="dg-pu" style="width:90px">${['ml','L','g','kg','set'].map(u=>`<option ${u===p.packUnit?'selected':''}>${u}</option>`).join('')}</select></div>
   <label class="l">供应商</label><select id="dg-shop"><option value="">未指定</option>${S.suppliers.map(s=>`<option value="${h(s.id)}" ${s.id===p.shops?.[0]?'selected':''}>${h(s.name)}</option>`).join('')}</select>
   <label class="l">追踪库存</label><div class="seg"><button class="${p.track!=='No'?'on':''}" data-dg="track" data-v="Yes">追踪</button><button class="${p.track==='No'?'on':''}" data-dg="track" data-v="No">不追踪</button></div>
   <label class="l">状态</label><div class="seg"><button class="${p.active!==false?'on':''}" data-dg="active" data-v="1">在用</button><button class="${p.active===false?'on':''}" data-dg="active" data-v="0">停用</button></div>
@@ -630,7 +630,7 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
       await put('suppliers',x);await audit(`${id?'改':'加'}供应商 ${x.name}`,'suppliers',x.id);closeSheet();render();break}
     case 'edit-drug':sheetEditDrug(id);break;
     case 'drug-save':{const old=P(id)||{};const st=sheetEditDrug.st;const x={...old,id:id||$('#dg-name').value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-')||uid('p'),name:$('#dg-name').value.trim(),kind:$('#dg-kind').value,target:$('#dg-target').value.trim(),
-      packSize:Number($('#dg-size').value)||null,packUnit:$('#dg-pu').value,unit:['g','kg'].includes($('#dg-pu').value)?'g':'ml',shops:$('#dg-shop').value?[$('#dg-shop').value]:[],track:st.track,active:st.active};if(!x.name){toast('⚠ 要药名');return}
+      packSize:Number($('#dg-size').value)||null,packUnit:$('#dg-pu').value,unit:$('#dg-pu').value==='set'?'set':['g','kg'].includes($('#dg-pu').value)?'g':'ml',shops:$('#dg-shop').value?[$('#dg-shop').value]:[],track:st.track,active:st.active};if(!x.name){toast('⚠ 要药名');return}
       await put('products',x);await audit(`${id?'改':'加'}药品 ${x.name}（${packLabel(x)}）`,'products',x.id);closeSheet();render();break}
     case 'cfg-save':{const c={...cfg(S),id:'main'};c.safety=Number($('#cs').value)||7;c.cycle=Number($('#cc').value)||14;c.nextBuy=$('#cnb').value;c.nextCount=$('#cnc').value;
       await put('cfg',c);await audit(`安全 ${c.safety} 天 · ${c.cycle} 天买一次`,'cfg','main');toast('已存');render();break}
