@@ -295,6 +295,16 @@ function mergeDetailSpec(it,detail,chosen){
  return [...parts.filter(Boolean),chosen].join(' · ');
 }
 
+
+let refObserver=null,refPreviewEpoch=0;
+function hydrateReferencePreviews(auth){
+ if(refObserver)refObserver.disconnect();refObserver=null;const epoch=++refPreviewEpoch;
+ if(typeof IntersectionObserver==='undefined')return;
+ const nodes=document.querySelectorAll('#app [data-ref-preview]');if(!nodes.length)return;
+ const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(!entry.isIntersecting)continue;const el=entry.target;observer.unobserve(el);const id=el.dataset.refPreview;if(!id)continue;
+ rpc('shop_request_photo_get',{request_id:id,first:true,...auth}).then(ps=>{if(epoch!==refPreviewEpoch||!el.isConnected||!Array.isArray(ps)||!ps[0]||!/^[A-Za-z0-9+/]+={0,2}$/.test(ps[0]))return;const slot=el.querySelector('.ref-thumb');if(!slot)return;const im=document.createElement('img');im.src='data:image/jpeg;base64,'+ps[0];im.alt='';im.style.cssText='width:52px;height:52px;object-fit:contain;background:white;vertical-align:middle;border-radius:6px;margin-right:5px';slot.replaceChildren(im);}).catch(()=>{});}}, {rootMargin:'80px'});refObserver=observer;for(const el of nodes)observer.observe(el);
+}
+
 async function openRequestPhotos(id,auth,title){try{const ps=await rpc('shop_request_photo_get',{request_id:id,...auth});if(!Array.isArray(ps)||!ps.length)throw Error('No photos');openModal('<h2>'+esc(title)+'</h2>'+ps.map(b=>'<img src="data:image/jpeg;base64,'+esc(b)+'" style="display:block;width:100%;max-height:420px;object-fit:contain;background:#fff;margin:8px 0" onclick="zoomImg(this.src)">').join('')+'<button class="btn block" onclick="closeModal()">OK</button>');}catch(e){toast(title+' · '+e.message);}}
 /* ================= Leader phone: one straight line ================= */
 const Leader = (() => {
@@ -410,7 +420,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     const tag=l.ordered?`<span class="tag warn">${specLabel('Ordered','已订购','မှာပြီး')}</span>`:l.reserved?`<span class="tag ok">${specLabel('Reserved','已预留','ဖယ်ထားပြီး')}</span>`:l.status === 'BOUGHT' ? `<span class="tag ok">${esc(t('bought').replace('🛍 ',''))}</span>` : l.status === 'REJECTED' ? `<span class="tag bad">${esc(t('nobuy').replace('✗ ',''))}</span>`
       : l.trip > 1 ? `<span class="tag ${l.trip > 2 ? 'bad' : 'warn'}">${esc(t('tripN')(l.trip))}</span>` : '';
     const canCancel = l.status === 'REQUESTED' && !l.ordered && l.trip === 1 && l.kind !== 'FOOD' && (l.from_phone || MGR);
-    return `<div class="food" style="margin-bottom:8px">${ico}<div class="foodname"><b>${esc(name)} <span class="mut" style="font-weight:600">× ${l.qty}</span></b><small class="loc">${esc(who)}${l.asked ? ' · 📅 ' + dm(l.asked) : ''}</small>${l.detail ? `<small class="loc">📝 ${esc(l.detail)}</small>` : ''}${l.round?`<small class="loc">📅 ${esc(l.round)}</small>`:''}${l.photo_count?`<button class="btn small" data-id="${esc(l.id)}" onclick="Leader.seePhotos(this.dataset.id)">📷 ${l.photo_count}</button>`:''}${l.note ? `<small style="color:var(--red)">${esc(l.note)}</small>` : ''}</div>${tag}${canCancel ? `<button class="btn small light" style="min-width:40px" onclick="Leader.cancel('${l.id}')" aria-label="remove">✕</button>` : ''}</div>`;
+    return `<div class="food" style="margin-bottom:8px">${ico}<div class="foodname"><b>${esc(name)} <span class="mut" style="font-weight:600">× ${l.qty}</span></b><small class="loc">${esc(who)}${l.asked ? ' · 📅 ' + dm(l.asked) : ''}</small>${l.detail ? `<small class="loc">📝 ${esc(l.detail)}</small>` : ''}${l.round?`<small class="loc">📅 ${esc(l.round)}</small>`:''}${l.photo_count?`<button class="btn small" data-ref-preview="${esc(l.id)}" data-id="${esc(l.id)}" onclick="Leader.seePhotos(this.dataset.id)"><span class="ref-thumb"></span>📷 ${l.photo_count}</button>`:''}${l.note ? `<small style="color:var(--red)">${esc(l.note)}</small>` : ''}</div>${tag}${canCancel ? `<button class="btn small light" style="min-width:40px" onclick="Leader.cancel('${l.id}')" aria-label="remove">✕</button>` : ''}</div>`;
   }
   function home(){
     const L = lines(), F = foodRound();
@@ -526,13 +536,14 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     } else {
       h += `<div class="titleline"><span>${t('qty')}</span>${stepper('_', SH.qty)}</div><div class="field"><input maxlength="80" placeholder="${esc(t('detailPh'))}" value="${esc(SH.det||'')}" oninput="Leader.shSet('_','det',this.value)"></div>${photoControls('_',SH.photos)}`;
     }
-    h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
+    h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="Leader.shCancel()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
     openModal(h); sheetBtn(); }
   function shW(w){if(SH.rows[w]){delete SH.rows[w];drawSheet();return;}const it=cartItem(SH.key),opts=specOptions(it);if(ui.kind==='PERSONAL'&&opts.length&&!opts.includes(SH.spec)){toast(specLabel('Choose a specification first.','请先选择规格。','အမျိုးအစား အရင်ရွေးပါ။'));return;}SH.rows[w]={qty:1};if(opts.length)SH.rows[w].det=SH.spec;if(isTop(it)){const wk=(D.workers||[]).find(x=>x.id===w)||{};SH.rows[w].phone=wk.phone||'';SH.rows[w].telco=wk.telco||'';}drawSheet();}
   function shQty(w,d){if(!SH||PhotoBusy)return;if(w==='_')SH.qty=Math.max(1,Math.min(999,SH.qty+d));else SH.rows[w].qty=Math.max(1,Math.min(20,SH.rows[w].qty+d));saveCart();drawSheet();}
   function shSet(w,k,v,redraw){if(!SH||PhotoBusy)return;if(w==='_')SH[k]=v;else SH.rows[w][k]=v;saveCart();if(redraw)drawSheet();else sheetBtn();}
   function shOk(){if(!sheetOk())return;const {key,...c}=SH,old=ui.cart[key],sheet=SH;ui.cart[key]=c;SH=null;if(!saveCart()){SH=sheet;if(old)ui.cart[key]=old;else delete ui.cart[key];return;}closeModal();render();}
   function shDel(){delete ui.cart[SH.key];SH=null;saveCart();closeModal();render();}
+  function shCancel(){if(PhotoBusy)return;SH=null;saveCart();closeModal();render();}
   function cartReqs(){ const reqs = [];
     for(const [key, c] of Object.entries(ui.cart)){ const it=cartItem(key),base=it.custom?{custom_name:it.photoOnly?(c.name?.trim()||'PHOTO REQUEST'):it.label}:{item_id:it.id};
       if(ui.kind === 'PERSONAL' && c.bottles) for(const b of c.bottles) reqs.push({...base, workers:[...b], qty:1});
@@ -683,10 +694,10 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     if(D.status === 'REVOKED') return $('#app').innerHTML = codeScreen(true);
     if(D.status === 'PIN') return $('#app').innerHTML = pinScreen();
     $('#app').innerHTML = ui.view === 'add' ? addPage() : ui.view === 'food' ? foodPage() : ui.view === 'att' ? attPage() : ui.view === 'done' ? donePage() : home();
-    drawBottom();
+    drawBottom();hydrateReferencePreviews({farm:FARM,manager:MGR,device_key:deviceKey()});
   }
   function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
-  return {start,startManager,setLang,recoverBatch,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start,startManager,setLang,recoverBatch,shCancel,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
@@ -1302,8 +1313,8 @@ const Owner = (() => {
   function handPage(){
     const farm=ui.farm||'AD 1',fromFood=ui.from==='food',all=bought().filter(l=>l.farm===farm&&(fromFood?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD')),ls=all.filter(l=>!whReady(l)),ws=workers(farm);
     for(const l of ls) if(!HO[l.id]) HO[l.id] = {on:true, ws: l.kind === 'SHARED' || l.kind === 'FOOD' ? ws.filter(w => l.kind !== 'FOOD' || w.shares_food).map(w => w.id) : null, sell: l.kind === 'PERSONAL' ? sellOf(l) : null, wpaid:false};
-    let h = `<div class="hero"><div><h1>🚚 ${Z('Hand over','交货')}</h1><div class="sub">${Z('Tick what you gave to the Leader. Only this step deducts salary.','勾你交给工头的东西。只有这一步会扣薪水。')}</div></div><button class="btn small" onclick="Owner.go('${ui.from==='food'?'food':'buy'}')">${Z('← Back','← 返回')}</button></div>
-      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f&&(fromFood?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD')).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}',from:'${ui.from==='food'?'food':'buy'}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
+    let h = `<div class="hero"><div><h1>🚚 ${Z('Hand over','交货')}</h1><div class="sub">${Z('Tick what you gave to the Leader. Only this step deducts salary.','勾你交给工头的东西。只有这一步会扣薪水。')}</div></div><button class="btn small" onclick="Owner.go('${ui.from==='food'?'food':'buy'}'${fromFood?`,{round:'${esc(foodDate())}'}`:''})">${Z('← Back','← 返回')}</button></div>
+      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f&&(fromFood?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD')).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}',from:'${ui.from==='food'?'food':'buy'}'${fromFood?`,round:'${esc(foodDate())}'`:''}})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
       <div class="field" style="max-width:240px"><label>${Z('Hand-over date','交货日期')}</label><input type="date" id="hodate" value="${ui.date || B.today}" max="${B.today}" onchange="Owner.hoDate(this.value)"></div>`;
     for(const l of all.filter(whReady))h+=`<div class="card" style="padding:12px;margin-bottom:8px"><b>${esc(l.item)} × ${l.qty}</b><div>${esc(who(l))} · ${esc(l.detail||'—')}</div>${whBtn('Confirm delivery','确认交货','ISSUE',l.id,'btn primary block')}${whLink(l).allocation==='READY'?whBtn('Release reservation','取消未交付预留','RELEASE',l.id,'btn block'):''}</div>`;
     if(!all.length) h += `<div class="empty">${Z(`Nothing bought for ${farm}.`, `${farm} 没有已买的东西。`)}</div>`;
@@ -1629,7 +1640,7 @@ const Owner = (() => {
 
 
 
-  const refButton=l=>Number(l.photo_count)>0?'<button class="btn small light" data-id="'+esc(l.id)+'" onclick="Owner.seePhotos(this.dataset.id)">📷 '+Number(l.photo_count)+'</button>':'';
+  const refButton=l=>Number(l.photo_count)>0?'<button class="btn small light" data-ref-preview="'+esc(l.id)+'" data-id="'+esc(l.id)+'" onclick="Owner.seePhotos(this.dataset.id)"><span class="ref-thumb"></span>📷 '+Number(l.photo_count)+'</button>':'';
   async function seePhotos(id){await openRequestPhotos(id,{manager:true},Z('Request reference photos','本次需求参考图'));}
   async function identifyPhoto(id){const l=whFindLine(id);if(!l||!l.photo_count||WHBusy)return;WHBusy=true;busy(1);try{const ps=await rpc('shop_request_photo_get',{manager:true,request_id:id});const h='<div class="hint">'+esc(l.farm)+' · '+esc(who(l))+' · × '+l.qty+'</div>'+ps.map(b=>'<img src="data:image/jpeg;base64,'+esc(b)+'" style="width:100%;max-height:300px;object-fit:contain" onclick="zoomImg(this.src)">').join('')+ws('item_id','Existing matching product (or create below)','选择已有商品（或下方新增）',[['',Z('New item','新增商品')],...B.items.filter(x=>x.kind===l.kind&&!['TOP UP','WHISKEY','PINJAM','DOCTOR','UBAT','HANDPHONE','PHONE'].includes(x.code)).map(x=>[x.id,x.label])])+wf('label','New actual product name','实际新商品名称','','text','maxlength="30"')+(l.kind==='FOOD'?wf('unit','Unit for new item','新商品单位','','text','maxlength="30"')+ws('supplier','Supplier for new item','新商品供应商',[['',Z('Choose','请选择')],...SUPPLIERS.map(x=>[x,x])]):'');WForm={action:'PHOTO_IDENTIFY',id,payload:{request_id:id},identify:true};openModal('<h2>'+Z('Identify actual item','识别实际物品')+'</h2><form id="whform" onsubmit="event.preventDefault();Owner.whSubmit()">'+h+'<div class="hint">'+Z('Reference photos remain with this request, not the catalogue.','参考图保留在本次需求，不会变成商品主图。')+'</div><div id="wherr" class="note bad" style="display:none"></div><div class="modalfoot"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button type="submit" id="whsave" class="btn primary">'+Z('Confirm actual item','确认实际商品')+'</button></div></form>');}catch(e){toast(errZ(e.message));}finally{WHBusy=false;busy(0);}}
 
@@ -1794,7 +1805,7 @@ const Owner = (() => {
   function render(){
     if(!WH&&['buy','review','item','warehouse','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;return;}
     $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
-    spotBar(); medBar();
+    spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
   return {start, refresh, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
