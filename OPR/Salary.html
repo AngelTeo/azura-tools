@@ -632,7 +632,7 @@ const REM = { records: [] };
 // -- PERSISTENCE (v57：云端 Supabase，取代 localStorage) ----------------
 // 工人：读写 FarmHub 主资料（hub_worker 等）。其余：读写 salary_ 流水表。
 // 铁律：读不到云端或 0 名工人 → 停下，不写任何东西；只改真的变了的；不删，只作废。
-const APP_VERSION = 94;
+const APP_VERSION = 95;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const sb = supabase.createClient(SB_URL, SB_KEY);
@@ -1463,7 +1463,7 @@ function foodAutoIds(mk, date){ return foodAutoOn(mk, date).map(w => w.id); }
 function foodApply(mk, date, addIds, removeIds){ const rm = new Set(removeIds||[]), inMonth = new Set(workersInMonth(mk).map(w => w.id)), auto = foodAutoIds(mk, date).filter(id => !rm.has(id)), on = new Set(auto);
   (addIds||[]).forEach(id => { if(inMonth.has(id) && !rm.has(id)) on.add(id); }); return [...on]; }
 function foodExceptions(mk, date, sel){ const auto = new Set(foodAutoIds(mk, date)), s = new Set(sel); return {addIds:[...s].filter(id => !auto.has(id)), removeIds:[...auto].filter(id => !s.has(id))}; }
-function foodIds(r, mk){ if(foodLive(r, mk)) return foodApply(mk, r.date, r.addIds, r.removeIds); return r.workerIds || workersInMonth(mk).map(w => w.id); }
+function foodIds(r, mk){ if(mk >= '2026-11' && r.date){ if(isLocked(mk)) return r.workerIds || []; return foodAutoIds(mk,r.date); } if(foodLive(r, mk)) return foodApply(mk, r.date, r.addIds, r.removeIds); return r.workerIds || workersInMonth(mk).map(w => w.id); }
 function foodEach(total, n){ return n > 0 ? (Number(total)||0) / n : 0; }   // 照实，不进位
 function up10(x){ const sen = Math.round(x * 100 * 1000) / 1000; return Math.ceil(sen / 10 - 1e-6) / 10; }
 function foodShare(r, mk){ return foodEach(r.total, foodIds(r, mk).length); }
@@ -1486,7 +1486,7 @@ function foodHalf(mk, date){ const last = mk + '-' + pad2(daysInMonth(...mk.spli
 const inServiceBetween = (w, a, b) => (!w.joinDate || w.joinDate <= b) && (!w.stopDate || w.stopDate >= a);
 function foodPeople(mk, date){ if(mk < FOOD_HALF_START || !date) return foodPeopleOn(mk, date); const [a, b] = foodHalf(mk, date); return workersInMonth(mk).filter(w => inServiceBetween(w, a, b)); }
 function foodHalfLabel(mk, date){ const [a, b] = foodHalf(mk, date); return Number(a.slice(8)) + '–' + Number(b.slice(8)) + ' ' + MONTHS[Number(mk.slice(5))-1].slice(0,3); }
-function foodAutoOn(mk, date){ return foodPeople(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
+function foodAutoOn(mk, date){ if(mk >= '2026-11' && date){const [a,b]=foodHalf(mk,date); return workersInMonth(mk).filter(w=>w.sharesFood!==false && Object.entries(S.attendance[mk]?.[w.id]||{}).some(([day,code])=>Number(day)>=Number(a.slice(8))&&Number(day)<=Number(b.slice(8))&&['ad','ad_half','hx','hx_half','both','split'].includes(code)));} return foodPeople(mk, date).filter(w => w.sharesFood !== false); }   // 自动勾：不含「不分摊食物」的工人
 function fmtDay(d){ if(!d) return ''; const [y,m,dd] = d.split('-').map(Number); return dd + ' ' + MONTHS[m-1].slice(0,3); }
 function renderFood(){
   ensureFood(); const mk = monthKey(), rows = S.food[mk], lock = isLocked(mk), [y, m] = mk.split('-').map(Number);
@@ -1542,7 +1542,7 @@ function fdDraw(){
       + (typing ? '<input class="fd-in" id="fd-shop" style="margin-top:8px" placeholder="New shop name — it will be added to the list" value="' + (picked ? '' : esc(FD.vendor)) + '">' : '')
       + '<div class="ad-lbl">What</div><input class="fd-in" id="fd-what" placeholder="e.g. Rice 10kg x3" value="' + esc(FD.description) + '">'
       + '<div class="ad-lbl">Total (RM)</div><input class="fd-in big" id="fd-total" inputmode="decimal" placeholder="0.00" value="' + esc(FD.total) + '">'
-      + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + fdWhoLabel(mk, n) + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>Change</span></div>'
+      + '<div class="ad-lbl">Who shares</div><div class="fd-who" data-act="who"><div><b>' + fdWhoLabel(mk, n) + '</b><small>' + n + ' people' + (FD.date ? ' · ' + fmtDay(FD.date) : '') + '</small></div><span>'+(mk >= '2026-11'?'View':'Change')+'</span></div>'
       + '<div class="fd-each" id="fd-each">' + (n ? 'Each pays ' + fmtRM(each) : 'Nobody picked yet') + '</div>'
       + '<div class="fd-err" id="fd-err"></div><button class="fd-save" data-act="save">Save</button>'
       + (FD.id ? '<button class="fd-del" data-act="del">Delete purchase</button>' : '') + '<button class="ad-cancel" data-act="cancel">Cancel</button>';
@@ -1565,6 +1565,7 @@ function fdDraw(){
   sh.innerHTML = h;
 }
 function fdWhoLabel(mk, n){
+  if(mk >= '2026-11' && FD.date) return 'Actual attendance · '+foodHalfLabel(mk,FD.date);
   if(mk < FOOD_AUTO_START || !FD.date) return FD.autoSel ? 'Everyone working that day' : n + ' people picked';
   const ex = foodExceptions(mk, FD.date, FD.workerIds), x = [];
   if(ex.addIds.length) x.push(ex.addIds.length + ' added'); if(ex.removeIds.length) x.push(ex.removeIds.length + ' removed');
@@ -1581,6 +1582,7 @@ function fdKeep(){ // 记住表单里打的字
   FD.description = g('fd-what').value; FD.total = g('fd-total').value; if(g('fd-shop')) FD.vendor = g('fd-shop').value.trim();
 }
 function fdSetDate(d){ const mk = monthKey();
+  if(mk >= '2026-11'){FD.date=d;FD.workerIds=d?foodAutoIds(mk,d):[];FD.autoSel=true;return;}
   if(mk >= FOOD_AUTO_START && FD.date && d){ const ex = foodExceptions(mk, FD.date, FD.workerIds); FD.date = d; FD.workerIds = foodApply(mk, d, ex.addIds, ex.removeIds); return; }   // 换日子：手动加 / 拿掉的人跟着走
   FD.date = d; if(FD.autoSel) FD.workerIds = foodAutoOn(mk, d).map(w => w.id); }
 async function fdSave(){
@@ -1588,7 +1590,8 @@ async function fdSave(){
   const total = r2(parseFloat(String(FD.total).replace(/,/g, '')));
   if(!FD.date || FD.date.slice(0,7) !== mk) return err('Pick a date in ' + MONTHS[Number(mk.slice(5))-1] + '.');
   if(!(total > 0)) return err('Type the total.');
-  if(!FD.workerIds.length) return err('Pick at least one person to share.');
+  if(mk >= '2026-11'){FD.workerIds=foodAutoIds(mk,FD.date);FD.autoSel=true;}
+  if(!FD.workerIds.length) return err('No eligible attendance recorded. Check attendance first.');
   if(FD.vendor && !foodShops().some(v => sameShop(v, FD.vendor))){ FD.vendor = FD.vendor.trim().replace(/\s+/g, ' '); try{ await addShop(FD.vendor); }catch(e){ toast('Shop not added to the list: ' + (e.message||e)); } }
   else if(FD.vendor){ FD.vendor = foodShops().find(v => sameShop(v, FD.vendor)); }
   ensureFood(); const data = {date:FD.date, vendor:FD.vendor.trim(), description:FD.description.trim(), qty:1, unitPrice:total, total, workerIds:FD.workerIds.slice(), autoSel:FD.autoSel};
@@ -1613,6 +1616,7 @@ document.getElementById('fd-sheet').addEventListener('click', e => {
   if(a === 'shops'){ fdKeep(); FD_MODE = 'shops'; fdDraw(); return; }
   if(b.dataset.hide){ const x = FOOD_SHOPS.find(z => z.id === b.dataset.hide); if(!x) return;
     sb.from('hub_option').update({shown:false}).eq('id', x.id).then(({error}) => { if(error){ toast('Could not hide: ' + error.message); return; } x.shown = false; if(sameShop(FD.vendor, x.label)) FD.vendor = ''; fdDraw(); toast(x.label + ' hidden'); }); return; }
+  if(a === 'who' && mk >= '2026-11'){fdKeep(); FD.workerIds=foodAutoIds(mk,FD.date); fdDraw(); alert('Actual attendance: '+FD.workerIds.map(id=>getWorker(id)?.name||id).join(', '));return;}
   if(a === 'who'){ fdKeep(); FD_MODE = 'who'; fdDraw(); document.getElementById('fd-sheet').scrollTop = 0; return; }
   if(a === 'back'){ FD_MODE = 'form'; fdDraw(); return; }
   if(a === 'everyone'){ FD.workerIds = foodAutoOn(mk, FD.date).map(w => w.id); FD.autoSel = true; fdDraw(); return; }
