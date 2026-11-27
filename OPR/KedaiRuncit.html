@@ -143,6 +143,100 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 @media(max-width:420px){.manager-ux .topin{gap:6px;padding:9px 12px}.manager-ux .brand{font-size:19px;min-width:0}.manager-ux .mode{padding:3px}.manager-ux .mode button{padding:6px 12px}.manager-ux .mg-tile,.manager-ux .homequick{padding:11px 7px;min-height:108px}.manager-ux .homehead h1{font-size:21px}}
 @media print{.manager-ux .mg-grid,.manager-ux .mg-tile{display:none!important}}
 
+/* v51 · Warehouse design system — all management screens, never Leader or exported cards */
+@media screen{
+body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;--mg-shadow:0 2px 9px #1c302008;--mg-title:clamp(20px,5.5vw,24px);--mg-soft:#f4f6f1}
+.manager-ux #app{min-width:0;max-width:100%;font-size:14px;line-height:1.5}
+.manager-ux .shell{padding-top:16px}
+.manager-ux #app>.hero,.manager-ux #app>.homehead{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:10px;min-width:0;margin:0 0 16px;padding:0}
+.manager-ux #app>.hero>div,.manager-ux #app>.homehead>div{flex:1;min-width:0}
+.manager-ux #app>.hero h1,.manager-ux #app>.homehead h1{margin:0;font-size:var(--mg-title);line-height:1.3;font-weight:800;letter-spacing:-.25px;overflow-wrap:anywhere}
+.manager-ux #app>.hero .sub,.manager-ux #app>.homehead .sub{margin-top:4px;font-size:12px;line-height:1.5;color:var(--mut)}
+.manager-ux .mg-context{display:block;margin:0 0 4px;color:var(--green);font-size:10px;line-height:1.3;font-weight:800;letter-spacing:.8px}
+.manager-ux #app>.hero>.btn,.manager-ux #app>.homehead>.btn{flex:0 0 auto;max-width:37%;min-height:40px;padding:7px 10px;text-align:center;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) :is(.mg-grid,.homequickgrid){grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:var(--mg-gap);margin:8px 0 14px}
+.manager-ux :is(#app,#modalBox) :is(.mg-tile,.homequick){border-radius:var(--mg-radius);min-height:112px;padding:12px 8px;gap:5px;box-shadow:var(--mg-shadow)}
+.manager-ux .mg-tile b,.manager-ux .homequick b{font-size:clamp(14px,4vw,17px);font-weight:750;line-height:1.3;max-width:100%;overflow-wrap:anywhere}
+.manager-ux .mg-tile .mg-stat{font-size:clamp(16px,4.8vw,20px);font-variant-numeric:tabular-nums;line-height:1.3}
+.manager-ux .mg-tile .mg-label,.manager-ux .mg-tile small,.manager-ux .homequick small{font-size:12px;line-height:1.45}
+.manager-ux :is(#app,#modalBox) :is(.card,.food,.attcard,.homeentry,.stat,.farmcard,.tablewrap):not(#mc-preview *):not(#printarea *){min-width:0;max-width:100%;border-radius:var(--mg-radius);border-width:1px;box-shadow:var(--mg-shadow)}
+.manager-ux :is(#app,#modalBox) .card:not(#mc-preview *):not(#printarea *){padding:var(--mg-pad)!important;margin-bottom:10px;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .card:not(#mc-preview *):not(#printarea *)>p{margin:8px 0 12px}
+.manager-ux :is(#app,#modalBox) :is(.food,.attcard,.homeentry):not(#mc-preview *):not(#printarea *){padding:12px;gap:10px}
+.manager-ux :is(#app,#modalBox) .food:not(#mc-preview *):not(#printarea *){flex-wrap:wrap}
+.manager-ux :is(#app,#modalBox) .foodname{flex:1 1 100px;min-width:0}
+.manager-ux :is(#app,#modalBox) :is(.foodname,.atxt,.biname)>b{font-size:15px;line-height:1.4;font-weight:750;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) :is(.foodname,.atxt) small{font-size:12px;line-height:1.45}
+.manager-ux :is(#app,#modalBox) .bitop{gap:10px;min-width:0}
+.manager-ux :is(#app,#modalBox) .biname{font-size:15px;line-height:1.4;padding-right:22px}
+.manager-ux :is(#app,#modalBox) .ico:not(.zb.big .ico):not(#mc-preview *){border-radius:10px;flex-shrink:0}
+.manager-ux :is(#app,#modalBox) .ico.photo img:not(.zb.big img):not(#mc-preview *){object-fit:contain;background:#fff}
+.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *):not(#printarea *){gap:8px;min-width:0;padding:10px 0;line-height:1.45;flex-wrap:wrap}
+.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *):not(#printarea *)>span{min-width:0;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *):not(#printarea *)>span:first-child{flex:1 1 120px}
+.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *):not(#printarea *)>span:last-child:not(:first-child){flex:0 1 auto}
+.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *)>b,.manager-ux :is(#app,#modalBox) .line:not(#mc-preview *)>strong{font-variant-numeric:tabular-nums}
+.manager-ux :is(#app,#modalBox) .sectionhead{margin:18px 0 8px;font-size:12px;font-weight:800;letter-spacing:.4px;line-height:1.5}
+.manager-ux :is(#app,#modalBox) .hint:not(#mc-preview *),.manager-ux :is(#app,#modalBox) .mut{font-size:12px;line-height:1.5}
+.manager-ux :is(#app,#modalBox) .tag{font-size:11px;line-height:1.35;border-radius:8px;padding:5px 8px;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .note{border-radius:var(--mg-control);padding:12px;margin:10px 0;line-height:1.5;font-size:13px}
+.manager-ux :is(#app,#modalBox) .note.warn{background:#fff4e6;border:1px solid #eed4af;color:#8b580c}
+.manager-ux :is(#app,#modalBox) .note.bad{background:#fff0ee;border:1px solid #f0c9c2}
+.manager-ux :is(#app,#modalBox) div.empty:not(.attrow):not(.card){background:#fff;border:1px dashed var(--line);border-radius:var(--mg-radius);padding:26px 14px;margin:10px 0;line-height:1.6;font-size:13px}
+.manager-ux :is(#app,#modalBox) :is(.btn,.pill,.seg button,.nav button){font-size:13px;line-height:1.35;font-weight:700;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .btn{min-height:44px;padding:10px 12px;border-radius:var(--mg-control)}
+.manager-ux :is(#app,#modalBox) .btn.small{min-height:38px;padding:7px 9px;font-size:12px}
+.manager-ux :is(#app,#modalBox) .btn.primary,.manager-ux :is(#app,#modalBox) .btn.gold{background:var(--green);color:#fff;border-color:var(--green)}
+.manager-ux :is(#app,#modalBox) .btn.danger{color:var(--red);border-color:#efc9c2}
+.manager-ux :is(#app,#modalBox) .btnrow{gap:8px;flex-wrap:wrap}
+.manager-ux :is(#app,#modalBox) .btnrow .grow{flex:1 1 120px}
+.manager-ux :is(#app,#modalBox) .btn.block{margin-bottom:8px}
+.manager-ux :is(#app,#modalBox) .pills{gap:6px;max-width:100%;padding:2px 0 10px}
+.manager-ux :is(#app,#modalBox) .pill{min-height:40px;padding:8px 11px;border-radius:var(--mg-control);flex-shrink:0}
+.manager-ux :is(#app,#modalBox) .pill.on,.manager-ux :is(#app,#modalBox) .seg button.on,.manager-ux :is(#app,#modalBox) .nav button.on{background:var(--green);border-color:var(--green);color:#fff}
+.manager-ux :is(#app,#modalBox) .seg{gap:6px}
+.manager-ux :is(#app,#modalBox) .seg button{min-height:38px;border-radius:var(--mg-control);padding:7px 10px}
+.manager-ux :is(#app,#modalBox) :is(.kfilter,.farmgrid){grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.manager-ux :is(#app,#modalBox) :is(.kfilter button,.farmcard){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;min-height:100px;min-width:0;padding:12px 8px;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:var(--mg-radius);box-shadow:var(--mg-shadow)}
+.manager-ux :is(#app,#modalBox) .kfilter button.on{border-color:#87b69a;background:#eaf5ee}
+.manager-ux :is(#app,#modalBox) .kfilter .ktx{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) :is(.kfilter .ktx b,.farmcard b){font-size:15px;line-height:1.35}
+.manager-ux :is(#app,#modalBox) :is(.statgrid,.homestats){gap:8px;min-width:0}
+.manager-ux :is(#app,#modalBox) .stat{padding:12px 7px;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) :is(.stat,.homestat) strong{font-size:clamp(16px,5vw,23px);line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) :is(.stat span,.homestat small){font-size:11px;line-height:1.4}
+.manager-ux :is(#app,#modalBox) .field{gap:5px;margin:0 0 12px;min-width:0}
+.manager-ux :is(#app,#modalBox) .field label{font-size:12px;font-weight:750;color:var(--mut);line-height:1.45}
+.manager-ux :is(#app,#modalBox) :is(input,select,textarea):not([type=checkbox]):not([type=radio]):not([type=hidden]):not(.count){min-height:44px;border-radius:var(--mg-control);padding:10px;max-width:100%;min-width:0;font-size:15px}
+.manager-ux :is(#app,#modalBox) :is(input[type=checkbox],input[type=radio]){accent-color:var(--green);flex-shrink:0}
+.manager-ux :is(#app,#modalBox) .checkrow{min-width:0;gap:8px;line-height:1.5;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .checkrow input{width:22px;height:22px;min-height:22px}
+.manager-ux :is(#app,#modalBox) .tablewrap{overflow:auto;overscroll-behavior-x:contain}
+.manager-ux :is(#app,#modalBox) table:not(#mc-preview *):not(#printarea *){font-size:13px}
+.manager-ux :is(#app,#modalBox) :is(td,th):not(#printarea *){padding:8px 6px;line-height:1.4}
+.manager-ux :is(#app,#modalBox) table.detail-matrix td:first-child{white-space:normal;overflow-wrap:anywhere}
+.manager-ux :is(#app,#modalBox) .detail-farm{font-size:13px;border-radius:var(--mg-control);padding:8px 10px}
+.manager-ux :is(#app,#modalBox) .detail-tick{border-radius:8px}
+.manager-ux :is(#app,#modalBox) .totrow:not(#mc-preview *){background:var(--mg-soft);border-radius:var(--mg-control)}
+.manager-ux :is(#app,#modalBox) .bottom{gap:8px;border-radius:var(--mg-radius);padding:10px}
+.manager-ux .over{padding:12px}
+.manager-ux #modalBox{max-width:570px;max-height:90vh;max-height:90dvh;border-radius:var(--mg-radius);padding:16px;overflow:auto;overscroll-behavior:contain}
+.manager-ux #modalBox>h2{font-size:20px;line-height:1.35;margin:0 0 14px;font-weight:800;overflow-wrap:anywhere}
+.manager-ux #modalBox .modalfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+.manager-ux #modalBox .modalfoot>.btn{flex:1 1 100px}
+.manager-ux #modalBox .modalfoot>.primary{flex:1.5 1 125px}
+.manager-ux #modalBox img{max-width:100%}
+.manager-ux #app>details.card>summary{font-size:13px;font-weight:750}
+@media(max-width:420px){
+.manager-ux .shell{padding:14px 12px 90px}
+.manager-ux #app>.hero,.manager-ux #app>.homehead{gap:8px}
+.manager-ux :is(#app,#modalBox) :is(.mg-tile,.homequick){min-height:108px;padding:11px 7px}
+.manager-ux :is(#app,#modalBox) .pills.mg-farmtabs .pill{min-height:40px;padding:7px 3px;flex-shrink:1}
+.manager-ux :is(#app,#modalBox) .statgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.manager-ux :is(#app,#modalBox) .homestats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+}
+
 </style></head><body>
 <header class="top"><div class="topin" id="hdr"><span class="brand">🛍️ Kedai Runcit</span></div></header>
 <nav id="modetabs" class="modetabs" hidden></nav>
@@ -150,7 +244,7 @@ body.busy{cursor:progress}body.busy #app{opacity:.6;pointer-events:none}
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 50;
+const APP_VERSION = 51;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -949,7 +1043,7 @@ const Owner = (() => {
   function nextTrip(){ const t = B.today; for(let i = 0; i < 8; i++){ const x = addD(t, i); if(new Date(x+'T00:00:00').getDay() === B.trip_day) return x; } return t; }
   function groups(lines){ const m = new Map(); for(const l of lines){ const k = lkey(l); if(!m.has(k)) m.set(k, {key:k, kind:l.kind, name:lname(l), ico:ico(l), item_id:l.item_id, lines:[]}); m.get(k).lines.push(l); }
     const o = {FARM:0, PERSONAL:1, SHARED:2, FOOD:3}; return [...m.values()].sort((a,b) => o[a.kind]-o[b.kind] || a.name.localeCompare(b.name)); }
-  const back = () => `<button class="btn small" onclick="Owner.go('home')">${ui.view==='buy'||ui.view==='food'?Z('← Home','← 回首页'):Z('← Back','← 返回')}</button>`;
+  const back = () => `<button class="btn small mg-back" onclick="Owner.go('home')">${Z('← Home','← 回首页')}</button>`;
 
   async function reload(){
     let w;
@@ -1011,7 +1105,7 @@ const Owner = (() => {
       workCard('🛒','BUY',Z('Purchasing','采购'),Z('Requests · groceries · receipts','需求 · 买菜 · 收据'),"Owner.go('buyhub')",String(whPhysicalRows(toBuy()).length+foodN)+' '+Z('requests','待买'))+
       workCard('📦','STOCK',Z('Warehouse','仓库'),Z('Available · batches · stock take','库存 · 批次 · 点算'),"Owner.go('warehouse')",stockN?String(stockN)+' '+Z('items','种商品'):Z('Setup pending','待设定'))+
       workCard('🚚','DELIVER',Z('Delivery','交货'),Z('Three farms · leader receipts','三个园区 · 点收'),"Owner.go('deliver')",String(n)+' '+Z('ready','待交货'))+
-      workCard('💰','ACCOUNTS',Z('Accounts','结账'),Z('Payments · cards · month end','付款 · 购物卡 · 月底'),"Owner.go('accounts')",s.advance?RM(s.advance)+' '+Z('advance','待报销'):Z('Review accounts','核对账目'))+'</div>';
+      workCard('💰','ACCOUNTS',Z('Accounts','结账'),Z('Payments · cards · month end','付款 · 购物卡 · 月底'),"Owner.go('accounts')",s.advance?RM(s.advance)+' '+Z('advance','待报销'):Z('Settlement pending','待结账'))+'</div>';
     out+='<div class="sectionhead">'+Z('Farm work','园区进度')+'</div><div class="card" style="padding:9px 12px">'+FARMS.map(f=>'<div class="line"><b>'+esc(f)+'</b><span>'+whPhysicalRows(s.ready.filter(l=>l.farm===f)).length+' '+Z('ready','待交货')+' · '+s.pending.filter(x=>x.farm===f).length+' '+Z('receipts','待点收')+'</span><button class="btn small light" onclick="Owner.go(\'deliver\',{farm:\''+f+'\'})">›</button></div>').join('')+'</div>';
     out+='<details class="card homefold"><summary>'+Z('Schedule / attendance / more','日程／点名／其他')+'</summary><div class="hint">'+Z('Next buying trip','下次采购')+' '+ddm(trip)+' · '+Z('Groceries delivery','送菜')+' '+dm(F.deliver)+'</div>'+weekStrip()+FARMS.map(f=>{const a=(B.att||{})[f]||{},d=(a.work||0)+(a.half||0)+(a.off||0);return '<div class="line"><b>'+esc(f)+'</b><span>'+d+'/'+workers(f).length+' '+Z('attendance recorded','已点名')+'</span></div>';}).join('')+'</details>';
     return out;
@@ -1068,7 +1162,7 @@ const Owner = (() => {
     const pend=B.phones.filter(p=>p.status==='PENDING').length;
     return whHeader('Settings','设定','')+workGrid([
       workCard('👷',Z('Leaders & phones','工头和手机'),'',Z('Manage access','权限管理'),"Owner.go('people')",pend?String(pend):'',pend>0),
-      taskRow('🏷',Z('Items & prices','物品和价钱'),Z('Catalogue / prices','商品及定价'),"Owner.go('prices')")
+      taskRow('🏷',Z('Items & prices','商品与价格'),Z('Catalogue / prices','商品及定价'),"Owner.go('prices')")
     ])+`      <div class="card" style="padding:12px"><div class="line" style="border:0"><span>${Z('Buying day','买东西的日子')}</span><span class="seg">${[1,2,3,4,5].map(d=>`<button class="${B.trip_day===d?'on':''}" onclick="Owner.setDay(${d})">${DAYS[d]}</button>`).join('')}</span></div><div class="hint">${Z("Never Saturday or Sunday. The Leaders' list closes the night before.",'礼拜六、礼拜日不买。工头的清单在前一天晚上截止。')}</div>${B.me&&B.me.role!=='OWNER'?`<div class="line" style="border:0"><span>${Z('This phone is','这支手机是')}</span><span class="seg">${['EX','Mr. Low'].map(n=>`<button class="${ME()===n?'on':''}" onclick="Owner.setMe('${n}')">${esc(payerLabel(n))}</button>`).join('')}</span></div>`:''}</div>`;
   }
   function weekStrip(){ const t = B.today, d0 = new Date(t+'T00:00:00'), mon = addD(t, -((d0.getDay()+6)%7)), trip = nextTrip(), F = foodRound(t);
@@ -1123,7 +1217,7 @@ const Owner = (() => {
     if(BuyTab==='buy'&&tk && !g.some(x => x.key === tk)){ g.push({key: tk, kind: 'PERSONAL', name: IT(tk).label || 'TOP UP', ico: '', item_id: tk, lines: []});
       const o = {FARM:0, PERSONAL:1, SHARED:2, FOOD:3}; g.sort((a,b) => o[a.kind]-o[b.kind] || a.name.localeCompare(b.name)); }
     for(const k of WASelected) if(!g.some(x=>x.key===k&&x.lines.some(l=>l.status==='REQUESTED'))) WASelected.delete(k);
-    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','要买的')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${whTabs()}${BuyTab==='buy'?`<button class="btn primary block" onclick="Owner.mrStart()">🧾 ${Z('Record actual receipt · multiple items','录入一张收据 · 多项商品')}</button>`:''}${BuyTab==='ready'?handLink('DAILY'):''}${BuyTab==='buy'?`
+    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','采购清单')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${whTabs()}${BuyTab==='buy'?`<button class="btn primary block" onclick="Owner.mrStart()">🧾 ${Z('Record actual receipt · multiple items','录入一张收据 · 多项商品')}</button>`:''}${BuyTab==='ready'?handLink('DAILY'):''}${BuyTab==='buy'?`
       <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>${Z('Buy alcohol this trip?','这一趟买酒吗？')}</b><div class="hint">${Z(`${al.length} alcohol line${al.length===1?'':'s'} waiting`, `${al.length} 样酒在等`)}</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?Z('✓ Yes','✓ 买'):Z('Not this trip','这趟不买')}</button></div>
       <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 ${Z('Copy shopping list','复制购物清单')}</button></div>`:''}`;
     const rv=reviewLines();if(rv.length)h+=`<button class="attcard todo" style="width:100%;text-align:left;margin:8px 0" onclick="Owner.go('review')"><span class="aico">⚠️</span><span class="atxt"><b>${rv.length} ${Z('need review','笔需核实')}</b><small>${Z('Not included in normal purchase or hand-over','已从普通采购和交货清单分开')}</small></span><span class="aarr">›</span></button>`;
@@ -1139,7 +1233,7 @@ const Owner = (() => {
   }
   function reviewPage(){
     const rows=reviewLines().filter(l=>!ui.reason||reviewReason(l)===ui.reason),codes=['AMOUNT_PENDING','PHOTO','WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
-    let h='<div class="hero"><div><h1>⚠ '+Z('Needs review','需要核实')+'</h1><div class="sub">'+Z('No purchase or deduction is created here','这里只核实，不自动采购或扣薪')+'</div></div><button class="btn small" onclick="Owner.go(\'buy\')">‹ '+Z('Buying list','采购清单')+'</button></div>';
+    let h='<div class="hero"><div><h1>⚠ '+Z('Needs review','待核实')+'</h1><div class="sub">'+Z('No purchase or deduction is created here','这里只核实，不自动采购或扣薪')+'</div></div><button class="btn small" onclick="Owner.go(\'buy\')">‹ '+Z('Buying list','采购清单')+'</button></div>';
     for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+'<div>'+refButton(l)+'</div><div class="btnrow" style="flex-wrap:wrap;margin-top:8px">'+reviewActions(l,k)+'</div></div>';}
     if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';h+='<button class="btn block" onclick="Owner.go(\'whphones\')">'+Z('Phone instalment records','手机分期记录')+'</button>';
     return h;
@@ -1670,7 +1764,7 @@ const Owner = (() => {
   function openSpotVariants(group){const e=catalogEntries(B.items.filter(i=>i.kind===SP.kind)).find(x=>x.group===group);if(e)openModal(variantPickerHTML(group,e.variants,'Owner.pickSpotItem','closeModal',id=>SP.item===id));}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
-    let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','在园里当场记')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
+    let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','园里现场记录')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
       <div class="sectionhead">1 · ${Z('Farm','园')}</div><div class="pills">${FARMS.map(f => `<button class="pill ${SP.farm===f?'on':''}" onclick="Owner.sp({farm:'${f}',kind:null,worker:null,item:null,ws:null})">${f}</button>`).join('')}</div>`;
     if(!SP.farm) return h;
     const K = ['FARM','PERSONAL','SHARED'];
@@ -1807,7 +1901,7 @@ const Owner = (() => {
 
   /* ---------- Items & prices ---------- */
   function pricesPage(){
-    let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','物品和价钱')}</h1><div class="sub">${Z('Usual prices show as buttons when you tick "Bought"','按「买了」时，常用价钱会变成按钮')}</div></div>${back()}</div>`;
+    let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','商品与价格')}</h1><div class="sub">${Z('Usual prices show as buttons when you tick "Bought"','按「买了」时，常用价钱会变成按钮')}</div></div>${back()}</div>`;
     /* v11: filter cards — show one kind at a time, remembered */
     const KS = ['PERSONAL','FARM','SHARED','FOOD'], cur = KS.includes(lsGet('runcit_items_kind','PERSONAL')) ? lsGet('runcit_items_kind','PERSONAL') : 'PERSONAL';
     h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${B.items.filter(x => x.kind === k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
@@ -2208,10 +2302,29 @@ const Owner = (() => {
     finally{WHBusy=false;busy(0);if($('#whsave'))$('#whsave').disabled=false;}
   }
 
+
+  const MG_AREAS={home:'',buyhub:'BUY',buy:'BUY',review:'BUY',item:'BUY',food:'BUY',spot:'BUY',med:'BUY',
+    warehouse:'STOCK',whorders:'STOCK',whpolicy:'STOCK',whbatches:'STOCK',whreturns:'STOCK',
+    deliver:'DELIVER',hand:'DELIVER',receipts:'DELIVER',
+    accounts:'ACCOUNTS',petty:'ACCOUNTS',topstmt:'ACCOUNTS',records:'ACCOUNTS',monthclose:'ACCOUNTS',monthcards:'ACCOUNTS',monthcard:'ACCOUNTS',whphones:'ACCOUNTS',
+    settings:'SETTINGS',people:'SETTINGS',prices:'SETTINGS'};
+  function mgPageChrome(root,view){
+    if(!root)return;
+    const header=[...root.children].find(el=>el.classList.contains('hero')||el.classList.contains('homehead'));
+    if(!header)return;
+    header.classList.add('mg-pagehead');
+    const title=header.querySelector('h1');
+    if(title&&title.parentElement===header){const wrap=document.createElement('div');header.insertBefore(wrap,title);wrap.appendChild(title);}
+    if(title&&MG_AREAS[view]&&!title.parentElement.querySelector('.mg-context')&&!title.textContent.trim().startsWith(MG_AREAS[view]+' ·')){
+      const area=document.createElement('span');area.className='mg-context';area.textContent=MG_AREAS[view];title.parentElement.insertBefore(area,title);
+    }
+    for(const b of header.querySelectorAll(':scope > button.btn'))b.classList.add('mg-back');
+  }
+
   function render(){
-    if(!WH&&['buy','buyhub','deliver','accounts','review','item','warehouse','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;return;}
+    if(!WH&&['buy','buyhub','deliver','accounts','review','item','warehouse','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;mgPageChrome($('#app'),ui.view);return;}
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
-    spotBar();medBar();hydrateReferencePreviews({manager:true});
+    mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
   return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
