@@ -134,13 +134,17 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
+    const doSpray=(part)=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else if(part==='drip')dripDay(S,f,d,st[f]);else if(part==='spray')sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
     /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
-    if(d>start)doSpray();
-    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
+    /* counts flagged pre (counted before that day's spray): records up to the last pre-count go first, then spray, then the rest */
+    let preEnd=-1;for(let k=li;k<L.length&&L[k].date===d;k++)if(L[k].pre)preEnd=k;
+    const rec=x=>{let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)return;const q=Number(qv);if(!Number.isFinite(q))return;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
-      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
+      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}};
+    /* pre-count day: drip (late morning) happens before the count, the evening spray after it */
+    if(d>start){if(preEnd>=0){doSpray('drip');while(li<=preEnd)rec(L[li++]);doSpray('spray')}else doSpray()}
+    while(li<L.length&&L[li].date===d)rec(L[li++]);
     if(d===start)doSpray()}
   return {st,counted}}
 
@@ -508,12 +512,12 @@ function vCount(){const f=sub.farm||'AD1';const v=cntGet(f);const R=cntRows(f);c
   <div class="row" style="margin-top:14px;gap:8px"><button class="btn grow" data-act="ck-clear">清空 ${f} 填的</button><button class="btn p grow neededit" data-act="count-save">存 ${f} 点算（${filled} 样）</button></div>`}
 function cntGet0(f){let v={};try{v=JSON.parse(localStorage.getItem(CK(f))||'{}')}catch(e){}return {f,vals:v.vals||{},notes:v.notes||{}}}
 function ckSet(id,val){const f=sub.farm||'AD1';const v=cntGet(f);if(val===''||val==null)delete v.vals[id];else v.vals[id]=Math.max(0,Math.round(Number(val)*100)/100);cntPut();const y=scrollY;render(true);scrollTo(0,y)}
-async function countSave(){const f=sub.farm||'AD1';const v=cntGet(f);const R=cntRows(f);const main=R.filter(r=>r.tracked);const miss=main.filter(r=>cntState(r,v)==='todo');
+async function countSave(pre){const f=sub.farm||'AD1';if(pre==null&&!recOn(S,f,today())){sheet(`<h2>${f} 今天的药喷了吗？</h2><p class="tiny">今天 ${f} 的喷药还没记。系统要知道你点货的时候，今天那桶喷了没有，才不会多扣或少扣。</p><div class="row" style="gap:8px;margin-top:12px"><button class="btn grow" data-act="count-save2" data-pre="0">已经喷了才点</button><button class="btn p grow" data-act="count-save2" data-pre="1">点完才喷 / 今天还没喷</button></div>`);return}if(pre==null)pre=false;const v=cntGet(f);const R=cntRows(f);const main=R.filter(r=>r.tracked);const miss=main.filter(r=>cntState(r,v)==='todo');
   const rowsIn=R.filter(r=>v.vals[r.p.id]!=null&&v.vals[r.p.id]!=='');if(!rowsIn.length){toast('⚠ 还没填');return}
   if(miss.length&&!confirm(`还有 ${miss.length} 样没点（${miss.slice(0,5).map(r=>r.p.name).join('、')}${miss.length>5?'…':''}）。没点的不会记，确定先存？`))return;
   const date=today(),at=nowIso();const rows=[];
   for(const r of rowsIn){const n=Number(v.vals[r.p.id]);if(!Number.isFinite(n)||n<0){toast('⚠ 数字不对：'+r.p.name);return}rows.push({...r,n,qty:r.pb?n*r.pb:null})}
-  for(const r of rows)await put('ledger',{id:uid('L'),t:'count',date,at,by:ME.name,farm:f,pid:r.p.id,qty:r.qty,packs:r.n,sys:r.q==null?null:Math.round(r.q),...(v.notes[r.p.id]?{note:v.notes[r.p.id]}:{})});
+  for(const r of rows)await put('ledger',{id:uid('L'),t:'count',date,at,by:ME.name,farm:f,pid:r.p.id,qty:r.qty,packs:r.n,sys:r.q==null?null:Math.round(r.q),...(pre?{pre:true}:{}),...(v.notes[r.p.id]?{note:v.notes[r.p.id]}:{})});
   try{localStorage.removeItem(CK(f))}catch(e){}sub.cv=null;
   const diff=rows.filter(r=>r.qty!=null&&r.q!=null).map(r=>{const d=r.qty-r.q;return {...r,d,big:Math.abs(d)>Math.max(r.pb*0.1,Math.abs(r.q)*0.1)}}).sort((a,b)=>b.big-a.big);
   sheet(`<h2>${f} 点算存好了（${rows.length} 样）</h2><p class="tiny">差＝实际 − 系统算的。红色＝差超过 10%，要查。库存已经改成实际数。</p><table class="t"><tr><th>药</th><th class="n">系统</th><th class="n">实际</th><th class="n">差</th></tr>${diff.map(r=>`<tr style="${r.big?'background:var(--rose)':''}"><td>${h(r.p.name)}${v.notes[r.p.id]?`<div class="tiny">${h(v.notes[r.p.id])}</div>`:''}</td><td class="n">${fmt(Math.round(r.q/r.pb*100)/100)}</td><td class="n">${fmt(r.n)}</td><td class="n" style="${r.big?'color:var(--red);font-weight:800':''}">${r.d>0?'+':''}${fmt(Math.round(r.d/r.pb*100)/100)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">没有可以比较的</td></tr>'}</table><button class="btn p full" style="margin-top:12px" data-act="close">好</button>`);
@@ -620,6 +624,7 @@ document.addEventListener('click',async e=>{if(e.target.closest('#zoom')){const 
     case 'ck-clear':{const f=sub.farm||'AD1';if(!confirm(`清空 ${f} 已填的？`))break;try{localStorage.removeItem(CK(f))}catch(e){}sub.cv=null;render();break}
     case 'allc':sub.allc=!sub.allc;render();break;
     case 'count-save':a.disabled=true;await countSave();a.disabled=false;break;
+    case 'count-save2':closeSheet();await countSave(a.dataset.pre==='1');break;
     case 'edit-sup':sheetSup(id);break;
     case 'sup-save':{const old=SUP(id)||{};const x={...old,id:id||uid('S')};for(const k of ['name','phone','leadDays','terms','bank','note'])x[k]=$('#sp-'+k).value.trim();x.leadDays=Number(x.leadDays)||null;if(!x.name){toast('⚠ 要名字');return}
       await put('suppliers',x);await audit(`${id?'改':'加'}供应商 ${x.name}`,'suppliers',x.id);closeSheet();render();break}

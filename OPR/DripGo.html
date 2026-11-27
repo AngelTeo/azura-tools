@@ -133,13 +133,17 @@ function ledger(S){const st=cfg(S).start||'2026-11-21';return S.ledger.filter(x=
 function stockAt(S,upto,opts={}){const c=cfg(S);const start=c.start||'2026-11-21';const L=ledger(S).filter(x=>x.date<=upto);
   const st={AD1:{},AD2:{},AD3:{}};const counted={AD1:{},AD2:{},AD3:{}};let li=0;
   for(let d=start;d<=upto;d=addDays(d,1)){
-    const doSpray=()=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
+    const doSpray=(part)=>{for(const f of FARMS){if(d===start&&!recOn(S,f,d))continue;if(d===upto&&opts.last){if(opts.last==='none')continue;if(opts.last==='recorded'&&!recOn(S,f,d))continue}if(d===start)sprayDay(S,f,d,st[f]);else if(part==='drip')dripDay(S,f,d,st[f]);else if(part==='spray')sprayDay(S,f,d,st[f]);else dayUse(S,f,d,st[f])}};
     /* start day: counts were taken before spraying, so records first, then that day's recorded spray */
-    if(d>start)doSpray();
-    while(li<L.length&&L[li].date===d){const x=L[li++];let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)continue;const q=Number(qv);if(!Number.isFinite(q))continue;
+    /* counts flagged pre (counted before that day's spray): records up to the last pre-count go first, then spray, then the rest */
+    let preEnd=-1;for(let k=li;k<L.length&&L[k].date===d;k++)if(L[k].pre)preEnd=k;
+    const rec=x=>{let qv=x.qty;if(qv==null&&x.packs!=null){const pb=packAt(S.products.find(p=>p.id===x.pid),x.farm);if(pb)qv=Number(x.packs)*pb}if(qv==null)return;const q=Number(qv);if(!Number.isFinite(q))return;
       if(x.t==='count'){st[x.farm][x.pid]=q;counted[x.farm][x.pid]=x.date}
       else if(x.t==='dist'){st[x.farm][x.pid]=(st[x.farm][x.pid]||0)+q}
-      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}}
+      else if(x.t==='move'){st[x.from][x.pid]=(st[x.from][x.pid]||0)-q;st[x.to][x.pid]=(st[x.to][x.pid]||0)+q}};
+    /* pre-count day: drip (late morning) happens before the count, the evening spray after it */
+    if(d>start){if(preEnd>=0){doSpray('drip');while(li<=preEnd)rec(L[li++]);doSpray('spray')}else doSpray()}
+    while(li<L.length&&L[li].date===d)rec(L[li++]);
     if(d===start)doSpray()}
   return {st,counted}}
 
