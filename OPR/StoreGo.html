@@ -337,9 +337,13 @@ function poolMoves(r,pr){const P0=pool(S);const out=[];for(const pid in P0){let 
     for(const x of fs){if(!(left>0))break;let give=Math.min(left,Math.ceil(x.need/pb)*pb);if(give<=0)continue;left-=give;out.push({pid,from:'仓库',to:x.f,qty:give,forPid:pid,pool:true})}}return out}
 const mvKey=m=>[m.pid,m.from,m.to,m.forPid||m.pid].join('|');
 const mvDays=(m,pr)=>{const x=pr[m.to];if(!x)return null;const a=x.slotShort?.[m.forPid],b=x.runOut?.[m.forPid];return a==null?b:b==null?a:Math.min(a,b)};
-function movesCard(r,pr,today){const SAFE=Number(cfg(S).safety)||7;r.moves=[...poolMoves(r,pr),...r.moves.filter(m=>!m.pool)].filter(m=>{const d=mvDays(m,pr);const pb=packAt(P(m.pid),m.to)||packBase(P(m.pid));return d!=null&&d<=SAFE&&!(pb&&m.qty<pb*0.1)});if(!r.moves.length)return '';const urg=m=>{const d=pr[m.to]?.slotShort?.[m.forPid];return d!=null&&d<=leadOf(S,P(m.forPid))};
-  const L=r.moves.map((m,i)=>({m,i,u:urg(m)})).sort((x,y)=>y.u-x.u);
-  return `<div class="card amber"><h2>先调货：别园或仓库</h2><p class="tiny">${today?'不用等买，今天就能补。':'别的园有多，先调过去就不用买。'}叫工人调好之后，按「调好了，记下来」，两园的库存才会跟着变。</p><div class="list" style="margin-top:6px">${L.map(({m,i,u})=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> ${u?'<span class="badge red">急</span>':''}<div class="tiny">${m.from} → ${m.to} · ${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-k="${h(mvKey(m))}">调好了，记下来</button></div>`}).join('')}</div></div>`}
+function splitMoves(r,pr){const SAFE=Number(cfg(S).safety)||7;const all=[...poolMoves(r,pr),...r.moves.filter(m=>!m.pool)].filter(m=>{const pb=packAt(P(m.pid),m.to)||packBase(P(m.pid));return !(pb&&m.qty<pb*0.1)});
+  const now=[],later=[];for(const m of all){const d=mvDays(m,pr);if(m.pool||(d!=null&&d<=SAFE))now.push(m);else later.push({...m,d})}return {now,later,SAFE}}
+function movesCard(r,pr,today){const {now}=splitMoves(r,pr);r.moves=now;if(!now.length)return '';const urg=m=>{const d=pr[m.to]?.slotShort?.[m.forPid];return d!=null&&d<=leadOf(S,P(m.forPid))};
+  const L=now.map((m,i)=>({m,i,u:urg(m)})).sort((x,y)=>y.u-x.u);
+  return `<div class="card amber"><h2>先调货：别园或仓库</h2><p class="tiny">7 天内会用完，或仓库有货等分。叫工人调好之后，按「调好了，记下来」，两园的库存才会跟着变。</p><div class="list" style="margin-top:6px">${L.map(({m,i,u})=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b> ${u?'<span class="badge red">急</span>':''}<div class="tiny">${m.from} → ${m.to} · ${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''}</div></div><button class="btn s sm neededit" data-act="move-done" data-k="${h(mvKey(m))}">调好了，记下来</button></div>`}).join('')}</div></div>`}
+function laterCard(r,pr){const {later,SAFE}=splitMoves(r,pr);if(!later.length)return '';
+  return `<div class="card"><h2>这次不用买，到时候从别园调</h2><p class="tiny">别的园有多出来的，采购单已经扣掉没买。现在还不急（超过 ${SAFE} 天才会用完），到时候会出现在「先调货」。想早点调也可以按。</p><div class="list" style="margin-top:6px">${later.sort((x,y)=>(x.d??99)-(y.d??99)).map(m=>{const p=P(m.pid);return `<div><div class="grow"><b>${h(p.name)}</b><div class="tiny">${m.from} → ${m.to} · ${qtyText(p,m.qty)}${m.forPid!==m.pid?' · 顶 '+h(P(m.forPid)?.name||''):''} · ${m.d!=null?`${m.to} 约 ${m.d} 天后不够`:'21 天内会不够'}</div></div><button class="btn sm neededit" data-act="move-done" data-k="${h(mvKey(m))}">已经调了</button></div>`}).join('')}</div></div>`}
 function vBuy(){const s=sub.buy||'plan';const seg=[['plan','采购单'],['ordered','等收货'],['recv','等分货'],['pay','付款']].map(([k,l])=>`<button class="${s===k?'on':''}" data-sub="buy" data-v="${k}">${l}${k==='ordered'?' '+S.po.filter(x=>owedOf(x).length).length:k==='recv'?' '+S.po.filter(x=>x.status==='received').length:''}</button>`).join('');
   return `<div class="eyebrow">BUY</div><h1>采购</h1><div class="seg">${seg}</div>${s==='plan'?buyPlanView():s==='ordered'?poList('ordered'):s==='recv'?poList('received'):payView()}`}
 let draft=null;
@@ -382,6 +386,7 @@ function buyPlanView(){const r=buyPlan(S);const {pr}=plan();const c=cfg(S);
     <button class="btn p full neededit" style="margin-top:8px" data-act="make-po" data-sup="${h(sid)}">下单给 ${h(sup?.name||'这家')} →</button></div>`}).join('');
   return `<p class="tiny">买 ${r.H} 天份（${c.cycle||14} 天用＋${c.safety||7} 天安全）− 现在库存 · 下次采购 ${dd(c.nextBuy)}</p>
   ${movesCard(r,pr,false)}
+  ${laterCard(buyPlan(S),pr)}
   ${gh||'<div class="card green"><b>这两星期不用买</b></div>'}
   ${r.covered&&r.covered.length?`<div class="card"><b>已订、等收货就够</b><div class="tiny">${r.covered.map(c=>h(P(c.pid)?.name)).join(' · ')}</div></div>`:''}`}
 async function makePO(sid){const r=buyPlan(S);const L=r.buys.filter(b=>effSup(b)===sid);const items=L.map(b=>({pid:effPid(b),...(effPid(b)!==b.pid?{for:b.pid}:{}),packs:draft.lines[b.pid].packs,alloc:{...draft.lines[b.pid].alloc}})).filter(x=>x.packs>0);
