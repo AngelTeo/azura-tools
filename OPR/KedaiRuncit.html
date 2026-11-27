@@ -529,8 +529,8 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     h += `<div class="modalfoot">${ui.cart[SH.key] ? `<button class="btn danger" onclick="Leader.shDel()">${t('remove')}</button>` : ''}<button class="btn" onclick="closeModal()">${t('cancel')}</button><button class="btn primary" id="shok" onclick="Leader.shOk()">${t('ok')}</button></div>`;
     openModal(h); sheetBtn(); }
   function shW(w){if(SH.rows[w]){delete SH.rows[w];drawSheet();return;}const it=cartItem(SH.key),opts=specOptions(it);if(ui.kind==='PERSONAL'&&opts.length&&!opts.includes(SH.spec)){toast(specLabel('Choose a specification first.','请先选择规格。','အမျိုးအစား အရင်ရွေးပါ။'));return;}SH.rows[w]={qty:1};if(opts.length)SH.rows[w].det=SH.spec;if(isTop(it)){const wk=(D.workers||[]).find(x=>x.id===w)||{};SH.rows[w].phone=wk.phone||'';SH.rows[w].telco=wk.telco||'';}drawSheet();}
-  function shQty(w, d){ if(w === '_') SH.qty = Math.max(1, Math.min(999, SH.qty + d)); else SH.rows[w].qty = Math.max(1, Math.min(20, SH.rows[w].qty + d)); drawSheet(); }
-  function shSet(w, k, v, redraw){ if(w === '_') SH[k] = v; else SH.rows[w][k] = v; if(redraw) drawSheet(); else sheetBtn(); }
+  function shQty(w,d){if(!SH||PhotoBusy)return;if(w==='_')SH.qty=Math.max(1,Math.min(999,SH.qty+d));else SH.rows[w].qty=Math.max(1,Math.min(20,SH.rows[w].qty+d));saveCart();drawSheet();}
+  function shSet(w,k,v,redraw){if(!SH||PhotoBusy)return;if(w==='_')SH[k]=v;else SH.rows[w][k]=v;saveCart();if(redraw)drawSheet();else sheetBtn();}
   function shOk(){if(!sheetOk())return;const {key,...c}=SH,old=ui.cart[key],sheet=SH;ui.cart[key]=c;SH=null;if(!saveCart()){SH=sheet;if(old)ui.cart[key]=old;else delete ui.cart[key];return;}closeModal();render();}
   function shDel(){delete ui.cart[SH.key];SH=null;saveCart();closeModal();render();}
   function cartReqs(){ const reqs = [];
@@ -671,7 +671,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     $('#app').innerHTML = ui.view === 'add' ? addPage() : ui.view === 'food' ? foodPage() : ui.view === 'att' ? attPage() : ui.view === 'done' ? donePage() : home();
     drawBottom();
   }
-  function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add')saveCart();ui={view:'home'};SH=null;render();scrollTo(0,0);}
+  function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
   return {start,startManager,setLang,photoOnly,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
@@ -774,9 +774,9 @@ const Owner = (() => {
 
   /* ---------- Management homepage UX ---------- */
   function handLink(kind){
-    const ls = bought().filter(l => kind === 'FOOD' ? l.kind === 'FOOD' : l.kind !== 'FOOD');
+    const ls=bought().filter(l=>kind==='FOOD'?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD');
     const f = FARMS.find(f => ls.some(l => l.farm === f)) || 'AD 1';
-    return `<div class="btnrow noprint" style="margin:0 0 12px"><button class="btn ${ls.length?'primary':'light'}" onclick="Owner.go('hand',{farm:'${f}',from:'${kind==='FOOD'?'food':'buy'}'})">📦 ${Z('Hand over','交货')} · ${ls.length} ${Z('pending','待交货')}</button></div>`;
+    return `<div class="btnrow noprint" style="margin:0 0 12px"><button class="btn ${ls.length?'primary':'light'}" onclick="Owner.go('hand',{farm:'${f}',from:'${kind==='FOOD'?'food':'buy'}'${kind==='FOOD'?`,round:'${esc(foodDate())}'`:''}})">📦 ${Z('Hand over','交货')} · ${ls.length} ${Z('pending','待交货')}</button></div>`;
   }
   function home(){
     const F=foodRound(B.today),pending=toBuy().length,b=bought().filter(l=>l.kind!=='FOOD').length,ord=whOrderLines().length;
@@ -1286,10 +1286,10 @@ const Owner = (() => {
 
   /* ---------- Hand over: per farm; the only step that writes money ---------- */
   function handPage(){
-    const farm=ui.farm||'AD 1',fromFood=ui.from==='food',all=bought().filter(l=>l.farm===farm&&(fromFood?l.kind==='FOOD':l.kind!=='FOOD')),ls=all.filter(l=>!whReady(l)),ws=workers(farm);
+    const farm=ui.farm||'AD 1',fromFood=ui.from==='food',all=bought().filter(l=>l.farm===farm&&(fromFood?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD')),ls=all.filter(l=>!whReady(l)),ws=workers(farm);
     for(const l of ls) if(!HO[l.id]) HO[l.id] = {on:true, ws: l.kind === 'SHARED' || l.kind === 'FOOD' ? ws.filter(w => l.kind !== 'FOOD' || w.shares_food).map(w => w.id) : null, sell: l.kind === 'PERSONAL' ? sellOf(l) : null, wpaid:false};
     let h = `<div class="hero"><div><h1>🚚 ${Z('Hand over','交货')}</h1><div class="sub">${Z('Tick what you gave to the Leader. Only this step deducts salary.','勾你交给工头的东西。只有这一步会扣薪水。')}</div></div><button class="btn small" onclick="Owner.go('${ui.from==='food'?'food':'buy'}')">${Z('← Back','← 返回')}</button></div>
-      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f&&(fromFood?l.kind==='FOOD':l.kind!=='FOOD')).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}',from:'${ui.from==='food'?'food':'buy'}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
+      <div class="pills">${FARMS.map(f => { const n = bought().filter(l => l.farm === f&&(fromFood?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD')).length; return `<button class="pill ${f===farm?'on':''}" onclick="Owner.go('hand',{farm:'${f}',from:'${ui.from==='food'?'food':'buy'}'})">${f}${n?` · ${n}`:''}</button>`; }).join('')}</div>
       <div class="field" style="max-width:240px"><label>${Z('Hand-over date','交货日期')}</label><input type="date" id="hodate" value="${ui.date || B.today}" max="${B.today}" onchange="Owner.hoDate(this.value)"></div>`;
     for(const l of all.filter(whReady))h+=`<div class="card" style="padding:12px;margin-bottom:8px"><b>${esc(l.item)} × ${l.qty}</b><div>${esc(who(l))} · ${esc(l.detail||'—')}</div>${whBtn('Confirm delivery','确认交货','ISSUE',l.id,'btn primary block')}${whLink(l).allocation==='READY'?whBtn('Release reservation','取消未交付预留','RELEASE',l.id,'btn block'):''}</div>`;
     if(!all.length) h += `<div class="empty">${Z(`Nothing bought for ${farm}.`, `${farm} 没有已买的东西。`)}</div>`;
@@ -1306,14 +1306,14 @@ const Owner = (() => {
     return h + `<div class="bottom" id="bottombar"><button class="btn primary" ${n?'':'disabled'} onclick="Owner.handOver('${farm}')">${Z(`✓ Handed over (${n}) · write to Salary`, `✓ 已交货 (${n}) · 写进 Salary`)}</button></div>`;
   }
   function shareBox(id, ws, food){ const s = HO[id]; return `<div style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${ws.map(w => `<button class="pill ${s.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.toggleShare('${id}','${w.id}',${!!food})">${esc(w.name)}</button>`).join('')}</div>`; }
-  function hoWs(l){ if(l.kind === 'PERSONAL' || l.kind === 'FARM') return [1]; if(l.kind === 'FOOD'){ const f = bought().find(x => x.kind === 'FOOD' && x.farm === l.farm); return HO[f.id] ? HO[f.id].ws : []; } return HO[l.id].ws; }
+  function hoWs(l){ if(l.kind === 'PERSONAL' || l.kind === 'FARM') return [1]; if(l.kind === 'FOOD'){ const f = bought().find(x => x.kind === 'FOOD' && x.farm === l.farm && x.round===l.round); return HO[f.id] ? HO[f.id].ws : []; } return HO[l.id].ws; }
   function toggleShare(id, w){ const s = HO[id]; s.ws = s.ws.includes(w) ? s.ws.filter(x => x !== w) : [...s.ws, w]; render(); }
   function hoTick(id, on){ HO[id].on = on; render(); }
   function hoPaid(id, on){ HO[id].wpaid = on; render(); }
   function hoDate(v){ ui.date = v; }
   async function unbuy(id){ const l = B.lines.find(x => x.id === id); if(!confirm(Z(`Undo "bought" for ${lname(l)} (${who(l)})? It goes back to the list.`, `撤回「买了」：${lname(l)}（${who(l)}）？会回到清单上。`))) return; delete HO[id]; await act('shop_owner_unbuy', {id}, Z('Back on the list','已回到清单')); }
   async function handOver(farm){
-    const ls = bought().filter(l => l.farm === farm && (ui.from==='food'?l.kind==='FOOD':l.kind!=='FOOD') && !whReady(l) && HO[l.id] && HO[l.id].on && hoWs(l).length && (l.kind !== 'PERSONAL' || HO[l.id].wpaid || HO[l.id].sell > 0));
+    const ls = bought().filter(l => l.farm === farm && (ui.from==='food'?l.kind==='FOOD'&&l.round===foodDate():l.kind!=='FOOD') && !whReady(l) && HO[l.id] && HO[l.id].on && hoWs(l).length && (l.kind !== 'PERSONAL' || HO[l.id].wpaid || HO[l.id].sell > 0));
     if(!ls.length||!ui.date&& !B.today|| (ui.date||B.today)>B.today)return toast(Z('Check hand-over date and lines','请核对交货日期及项目'));
     const lines = ls.map(l => ({id:l.id, share_ids: l.kind === 'SHARED' || l.kind === 'FOOD' ? hoWs(l) : undefined, sell: l.kind === 'PERSONAL' && !l.bottle_id ? HO[l.id].sell : undefined, worker_paid: l.kind === 'PERSONAL' ? HO[l.id].wpaid : undefined}));
     const tot = ls.reduce((s,l) => s + (l.kind === 'PERSONAL' ? (HO[l.id].wpaid ? 0 : l.qty * HO[l.id].sell) : l.qty * l.buy.price), 0);
