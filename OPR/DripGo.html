@@ -70,6 +70,7 @@ function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
 function homeOf(S,pid){const p=S.products.find(x=>x.id===pid);return p&&p.home&&FARMS.includes(p.home)?p.home:null}
 function subBase(p){if(!p||!p.sub)return null;const s=Number(p.sub.size),m=mult(p.sub.unit);return s>0&&m?s*m:null}
 function packAt(p,f){return p&&p.home&&f&&f!==p.home&&subBase(p)?subBase(p):packBase(p)}
+function imgId(p,f,id){const x=id||p?.id;return p&&p.home&&p.sub&&f&&f!==p.home&&p.sub.img?x+'-sub':x}
 function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'小桶'):packWord(p)}
 
 /* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
@@ -184,7 +185,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,fromOrder,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,covered,short:res}}
-if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+if(typeof module!=='undefined')module.exports={imgId,onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* DripGo v1 UI. Needs engine.js. Shares data with StoreGo v16 / SprayGo v13 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=1;
@@ -245,7 +246,7 @@ function vToday(){const d=day();const c=dcfg();const seg=[[-1,'昨天'],[0,'今�
   const f=farmSel;const R=rowsFor(f,d);const wd=new Date(d+'T00:00:00Z').getUTCDay();const rd=relDay(d);
   let body='';if(!R.length)body='<p class="tiny" style="padding:10px 4px">这天没有排滴灌加料。</p>';
   else (c.slots||[]).forEach((sl,si)=>{const L=R.filter(r=>r.slot===si);if(!L.length)return;body+=`<div class="slt">${h(sl)}</div>`+L.map(r=>{const cls=r.skip?'skip':r.cls;const chip=r.skip?'没放':cls==='ok'?'✓ 有':cls==='ask'?'? 要确认':cls==='part'?'✗ 不够':'✗ 没有';
-    return `<div class="cr ${cls}"><img src="storego_img/${h(r.pid)}.jpg" alt="" onerror="this.style.visibility='hidden'"><div class="mid"><div class="nm">${h(short(r.p))}</div><div class="st">${r.skip?`没放${r.skip.reason?' · '+h(r.skip.reason):''} · ${h(r.skip.by||'')}`:(packBase(r.p)?leftTxt(r.p,r.v):'')}</div></div><div class="ds">${qtyTxt(r.p,r.qty)}</div><div class="chip ${cls}">${chip}</div>${r.skip?`<button class="btn sm neededit" data-act="unskip" data-id="${h(r.pid)}">撤回</button>`:`<button class="btn sm neededit" data-act="skip" data-id="${h(r.pid)}">没放</button>`}</div>`}).join('')});
+    return `<div class="cr ${cls}"><img src="storego_img/${h(imgId(r.p,f,r.pid))}.jpg" alt="" onerror="this.style.visibility='hidden'"><div class="mid"><div class="nm">${h(short(r.p))}</div><div class="st">${r.skip?`没放${r.skip.reason?' · '+h(r.skip.reason):''} · ${h(r.skip.by||'')}`:(packBase(r.p)?leftTxt(r.p,r.v):'')}</div></div><div class="ds">${qtyTxt(r.p,r.qty)}</div><div class="chip ${cls}">${chip}</div>${r.skip?`<button class="btn sm neededit" data-act="unskip" data-id="${h(r.pid)}">撤回</button>`:`<button class="btn sm neededit" data-act="skip" data-id="${h(r.pid)}">没放</button>`}</div>`}).join('')});
   const warn=R.filter(r=>!r.skip&&(r.cls==='no'||r.cls==='part')).map(r=>short(r.p));
   return `<div class="eyebrow">DRIP · ${dd(d)}</div><h1>${dayOff===0?'今天':dayOff<0?'昨天':'明天'}滴什么</h1><div class="seg">${seg}</div><div class="seg" style="margin-top:8px">${ftab}</div>
   <div class="fc"><div class="fh"><div class="big">滴</div><div class="grow"><div class="t1">滴灌加料 · ${WD[wd]}</div><div class="t2">${dd(d)}${rd?' '+rd:''} · 默认照排放了，没放才按</div></div><div class="farm">${f}</div></div>
@@ -290,7 +291,7 @@ async function drawCard(f,d){const c=dcfg();const R=rowsFor(f,d).filter(r=>!r.sk
   g.font=F(900,54);const fw=g.measureText(f).width+44;g.fillStyle='#fff';rr(974-fw,61,fw,90,16);g.fill();g.fillStyle=DC;g.textAlign='center';g.fillText(f,974-fw/2,126);g.textAlign='left';
   let y=207;for(const gp of groups){g.fillStyle='#e8f1f5';g.fillRect(24,y,980,GH-8);g.fillStyle=DC;g.font=F(900,28);g.fillText(`${gp.sl} · ${SLOT_MY[gp.si]||''}`,40,y+34);y+=GH;
     for(const r of gp.L){const no=r.cls==='no'||r.cls==='part';if(no){g.fillStyle='#fef2f2';g.fillRect(24,y,980,ROWH)}g.fillStyle='#e5e7eb';g.fillRect(24,y+ROWH-2,980,2);
-      const im=await loadImg(`storego_img/${r.pid}.jpg`);if(im){const s=Math.min(92/im.width,112/im.height);g.drawImage(im,32+(92-im.width*s)/2,y+(ROWH-112)/2+(112-im.height*s)/2,im.width*s,im.height*s)}
+      const im=await loadImg(`storego_img/${imgId(r.p,f,r.pid)}.jpg`);if(im){const s=Math.min(92/im.width,112/im.height);g.drawImage(im,32+(92-im.width*s)/2,y+(ROWH-112)/2+(112-im.height*s)/2,im.width*s,im.height*s)}
       g.fillStyle=no?'#b91c1c':'#1f2937';g.font=F(800,36);g.fillText(short(r.p),144,y+64);g.fillStyle='#4b5563';g.font=F(400,20);if(no)g.fillText('没有就先不放，等老板通知 ｜ မရှိရင် မထည့်ပါနဲ့ · သူဌေးကို စောင့်ပါ',144,y+102);
       g.fillStyle=DC;g.font=F(900,48);g.textAlign='right';g.fillText(qtyTxt(r.p,r.qty),826,y+ROWH/2+16);
       const [bg,fg,zh,my]=no?['#fee2e2','#b91c1c','✗ 没有','မရှိ']:r.cls==='ask'?['#fef3c7','#92400e','? 要确认','စစ်ပါ']:['#dcfce7','#166534','✓ 有','ရှိ'];

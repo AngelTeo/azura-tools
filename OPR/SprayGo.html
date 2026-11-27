@@ -70,6 +70,7 @@ function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
 function homeOf(S,pid){const p=S.products.find(x=>x.id===pid);return p&&p.home&&FARMS.includes(p.home)?p.home:null}
 function subBase(p){if(!p||!p.sub)return null;const s=Number(p.sub.size),m=mult(p.sub.unit);return s>0&&m?s*m:null}
 function packAt(p,f){return p&&p.home&&f&&f!==p.home&&subBase(p)?subBase(p):packBase(p)}
+function imgId(p,f,id){const x=id||p?.id;return p&&p.home&&p.sub&&f&&f!==p.home&&p.sub.img?x+'-sub':x}
 function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'小桶'):packWord(p)}
 
 /* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
@@ -184,7 +185,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,fromOrder,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,covered,short:res}}
-if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+if(typeof module!=='undefined')module.exports={imgId,onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* SprayGo v15 UI. Needs engine.js. Shares data with StoreGo v16 (store_doc sg16_*). */
 (()=>{'use strict';
 const APP_VERSION=13;

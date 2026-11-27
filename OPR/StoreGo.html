@@ -70,6 +70,7 @@ function packWord(p){return p&&p.packWord||(unitOf(p)==='g'?'包':'瓶')}
 function homeOf(S,pid){const p=S.products.find(x=>x.id===pid);return p&&p.home&&FARMS.includes(p.home)?p.home:null}
 function subBase(p){if(!p||!p.sub)return null;const s=Number(p.sub.size),m=mult(p.sub.unit);return s>0&&m?s*m:null}
 function packAt(p,f){return p&&p.home&&f&&f!==p.home&&subBase(p)?subBase(p):packBase(p)}
+function imgId(p,f,id){const x=id||p?.id;return p&&p.home&&p.sub&&f&&f!==p.home&&p.sub.img?x+'-sub':x}
 function packWordAt(p,f){return p&&p.home&&f&&f!==p.home&&p.sub?(p.sub.word||'小桶'):packWord(p)}
 
 /* plan for farm on a date: farmplan hist sorted by from; returns {ver, mix} or null */
@@ -184,7 +185,7 @@ function buyPlan(S){const c=cfg(S);const H=(Number(c.cycle)||14)+(Number(c.safet
     buys.push({pid,packs,alloc,shortBase:tot,fromPool,fromOrder,noPack:!pb})}
   buys.sort((a,b)=>{const pa=S.products.find(x=>x.id===a.pid),pb2=S.products.find(x=>x.id===b.pid);return (pa?.name||'').localeCompare(pb2?.name||'')});
   return {H,moves,buys,covered,short:res}}
-if(typeof module!=='undefined')module.exports={onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
+if(typeof module!=='undefined')module.exports={imgId,onOrder,resolveDay,recOn,FARMS,MIXES,addDays,diffDays,todayStr,packBase,planOn,itemsOn,stockAt,pool,project,buyPlan,cfg,pidsUsed,leadOf,supplierOf,sprayDay,dripDay,dripOn,dayUse,ledger,homeOf,packAt,packWordAt,subBase};
 </script><script>/* StoreGo v16 UI. Needs engine.js loaded first. */
 (()=>{'use strict';
 const APP_VERSION=16;
@@ -224,7 +225,7 @@ async function audit(what,c,id){try{await put('audit',{id:uid('A'),at:nowIso(),b
 /* ---------------- shared bits ---------------- */
 const KINDS=['杀虫剂','杀菌剂','营养 / 叶面肥','展着剂','生物制剂','还不知道'];
 const kindBadge=k=>{const c={'杀虫剂':'red','杀菌剂':'blue','营养 / 叶面肥':'green','展着剂':'grey'}[k]||'amber';return `<span class="badge ${c}">${h(k||'还不知道')}</span>`};
-const pic=p=>`<div class="pic" data-act="zoom" data-id="${h(p?.id)}"><img src="storego_img/${h(p?.id)}.jpg" alt="" onerror="this.parentNode.removeAttribute('data-act');this.replaceWith(document.createTextNode('🧴'))"></div>`;
+const pic=(p,f)=>`<div class="pic" data-act="zoom" data-id="${h(p?.id)}"><img src="storego_img/${h(imgId(p,f))}.jpg" alt="" onerror="this.parentNode.removeAttribute('data-act');this.replaceWith(document.createTextNode('🧴'))"></div>`;
 function zoom(id){const p=P(id);const z=document.getElementById('zoom');z.innerHTML=`<img src="storego_img/${h(id)}.jpg" alt=""><div class="zc">${h(p?.name||'')}<span>点一下关掉</span></div>`;z.hidden=false}
 function packs(p,base){const pb=packBase(p);return pb?base/pb:null}
 function qtyText(p,base){if(base==null)return '—';if(p&&p.sub)return `${fmt(base/1000)} L`;const n=packs(p,base);if(unitOf(p)==='g'&&packBase(p)>=1000&&n!=null&&n<1)return `${fmt(base/1000)} kg`;return n==null?`${fmt(base)} ${unitOf(p)}`:`${fmt(n)} ${packWord(p)}`}
@@ -279,7 +280,7 @@ function vShelf(){const {pr}=plan();const t=today();const q=(sub.q||'').toLowerC
   let L=S.products.filter(p=>p.active!==false&&(k==='all'||p.kind===k)&&(!q||p.name.toLowerCase().includes(q))
     &&(!onlyUsed||q||WH||used.has(p.id)||FF.some(f=>pr[f].stock[p.id]>0))
     &&(!WH||PL[p.id]>0)&&(F.mix==='all'||inMix(p.id))&&stOK(p)&&(F.sup==='all'||(p.shops?.[0]||'_')===F.sup)&&(F.alt==='all'||subsFor(p.id).length>0)).sort((a,b)=>a.name.localeCompare(b.name));const L0=L.slice();L.splice(0,L.length,...L0.filter(p=>F.grp==='all'||(F.grp==='none'?!GC(p).length:GC(p).includes(F.grp))));
-  const cards=L.map(p=>`<div data-act="drug" data-id="${h(p.id)}">${pic(p)}<div class="grow"><div class="row"><b class="grow">${h(p.name)}</b>${p.group?`<span class="badge grey" style="margin-right:4px">${h(p.group.replace(/^(IRAC|FRAC)\s*/,''))}</span>`:''}${kindBadge(p.kind)}</div>
+  const cards=L.map(p=>`<div data-act="drug" data-id="${h(p.id)}">${pic(p,FARMS.includes(F.farm)?F.farm:null)}<div class="grow"><div class="row"><b class="grow">${h(p.name)}</b>${p.group?`<span class="badge grey" style="margin-right:4px">${h(p.group.replace(/^(IRAC|FRAC)\s*/,''))}</span>`:''}${kindBadge(p.kind)}</div>
     ${p.target?`<div class="tiny" style="color:${p.kind==='杀虫剂'?'#a63638':p.kind==='杀菌剂'?'#365f91':'var(--green)'};font-weight:700">${h(p.target)}</div>`:''}<div class="tiny">${h(packLabel(p))}${p.track==='No'?' · 不追踪':''}</div><div class="farms">${PL[p.id]>0&&(F.farm==='all'||WH)?`<span class="f" style="background:var(--sky);color:var(--blue)">仓库 ${qtyText(p,PL[p.id])} · 待分货</span>`:''}${WH?'':FF.map(f=>{const st=pr[f].stock[p.id];const d=farmDays(pr,f,p.id);return `<span class="f ${d.cls}">${f} ${st==null?(d.raw?`${dd(d.raw.date)} 点 ${fmt(d.raw.packs)} ${packWordAt(p,f)}`:'—'):qtyText(p,st)} · ${d.txt}</span>`}).join('')}</div></div></div>`).join('');
   const segK=['all',...KINDS].map(x=>`<button class="${k===x?'on':''}" data-sub="kind" data-v="${h(x)}">${x==='all'?'全部':h(x.replace(' / 叶面肥',''))}</button>`).join('');
   const sg=(key,opts)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${F[key]===v?'on':''}" data-sf="${key}" data-v="${h(v)}">${h(l)}</button>`).join('')}</div>`;
@@ -472,7 +473,7 @@ function vCount(){const f=sub.farm||'AD1';const all=!!sub.allc;const pl=planOn(S
   const v=sub.cv=sub.cv&&sub.cv.f===f?sub.cv:{f,vals:{}};
   return `<div class="eyebrow">COUNT</div><h1>点算</h1><p class="tiny">每种药剩几瓶 / 包。零也要填，半瓶填 0.5。存了才看到跟系统差多少。</p>
   <div class="seg">${FARMS.map(x=>`<button class="${x===f?'on':''}" data-sub="farm" data-v="${x}">${x}</button>`).join('')}</div>
-  <div class="card"><div class="list">${L.map(p=>`<div>${pic(p)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${p.home&&p.sub&&f!==p.home?`填几${h(p.sub.word||'小桶')}（一${h(p.sub.word||'小桶')} ${h(p.sub.size)} ${h(p.sub.unit)}）`:h(packLabel(p))}${packBase(p)?'':' · 只记数量'}</div></div><button class="btn sm" data-act="zero" data-id="${h(p.id)}">0</button><input class="num" inputmode="decimal" data-cnt="${h(p.id)}" value="${v.vals[p.id]??''}"></div>`).join('')}</div>
+  <div class="card"><div class="list">${L.map(p=>`<div>${pic(p,f)}<div class="grow"><b>${h(p.name)}</b><div class="tiny">${p.home&&p.sub&&f!==p.home?`填几${h(p.sub.word||'小桶')}（一${h(p.sub.word||'小桶')} ${h(p.sub.size)} ${h(p.sub.unit)}）`:h(packLabel(p))}${packBase(p)?'':' · 只记数量'}</div></div><button class="btn sm" data-act="zero" data-id="${h(p.id)}">0</button><input class="num" inputmode="decimal" data-cnt="${h(p.id)}" value="${v.vals[p.id]??''}"></div>`).join('')}</div>
   <button class="btn sm" style="margin-top:8px" data-act="allc">${all?'只看这园用的药':'显示全部药'}</button></div>
   <button class="btn p full neededit" data-act="count-save">存 ${f} 点算</button>`}
 async function countSave(){const f=sub.farm||'AD1';const ins=[...document.querySelectorAll('[data-cnt]')];const miss=ins.filter(x=>x.value.trim()==='');
