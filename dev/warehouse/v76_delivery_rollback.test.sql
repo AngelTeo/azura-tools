@@ -1,0 +1,53 @@
+
+do $test$
+declare actor uuid; worker uuid; devkey uuid:=gen_random_uuid(); sku uuid; req uuid; rid uuid; ord uuid; foodsku uuid; foodreq uuid; today date:=(now() at time zone 'Asia/Kuala_Lumpur')::date; tok text:=left(replace(gen_random_uuid()::text,'-',''),10); cmd jsonb; res jsonb; n int:=0; caught boolean; s0 bigint; f0 bigint; p0 bigint; c0 bigint; x jsonb;
+begin
+ begin
+ select id into actor from public.hub_app_user where role='OWNER' and status='ACTIVE' order by id limit 1;
+ perform set_config('request.jwt.claim.sub',actor::text,true);perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated')::text,true);
+ insert into public.hub_worker(name,worker_type,join_date,cost_co) values('ACK_ROLLBACK_'||tok,'FOREIGN',today,'AD') returning id into worker;
+ insert into public.hub_worker_farm(worker_id,farm_id,effective_from) values(worker,(select id from public.hub_farm where code='AD 1'),to_char(today,'YYYY-MM'));
+ insert into owner_data.shop_leader(worker_id,role,farm_code) values(worker,'LEADER','AD 1');
+ insert into owner_data.shop_device(device_key,worker_id,status,unlocked_on,farm_code) values(devkey,worker,'ACTIVE',today,'AD 1');
+ insert into public.hub_option(list_code,code,label) values('FARM_ITEM','ACK_TEST_'||tok,'TEST HAT') returning id into sku;
+ insert into public.hub_option(list_code,code,label) values('FOOD_ITEM','ACK_FOOD_'||tok,'TEST FOOD') returning id into foodsku;
+ insert into owner_data.shop_request(client_id,made_by,farm_code,option_id,qty,kind,ask_date) values(gen_random_uuid(),actor,'AD 1',sku,6,'FARM',today) returning id into req;
+ cmd:=jsonb_build_object('device_key',devkey,'manager',false,'farm','AD 1','op_id',gen_random_uuid(),'action','EDIT_QTY','request_id',req,'qty',9,'expected_qty',6);
+ res:=public.shop_leader_delivery_action(cmd);
+ if public.shop_leader_delivery_action(cmd)<>res or (select qty from owner_data.shop_request where id=req)<>9 or (select count(*) from owner_data.shop_leader_qty_change where request_id=req)<>1 then raise exception 'Quantity update/replay failed';end if;n:=n+1;
+ caught:=false;begin perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid(),'qty',7));exception when others then if sqlerrm not like 'Request changed%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'Stale quantity accepted';end if;n:=n+1;
+ caught:=false;begin perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid(),'farm','AD 2'));exception when others then caught:=true;end;
+ if not caught then raise exception 'Cross farm edit accepted';end if;n:=n+1;
+ res:=public.shop_owner_wh(jsonb_build_object('action','ORDER','op_id',gen_random_uuid(),'request_id',req,'qty',9,'supplier','TEST'));ord:=(res->>'order_id')::uuid;
+ caught:=false;begin perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid(),'expected_qty',9,'qty',8));exception when others then if sqlerrm not like 'Request changed%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'Ordered quantity edited';end if;n:=n+1;
+ perform public.shop_owner_wh(jsonb_build_object('action','RECEIVE','op_id',gen_random_uuid(),'order_id',ord,'qty',9,'unit_cost',12));
+ if exists(select 1 from owner_data.shop_delivery_ack where request_id=req) then raise exception 'Supplier receipt incorrectly generated leader receipt';end if;n:=n+1;
+ perform public.shop_owner_wh(jsonb_build_object('action','ISSUE','op_id',gen_random_uuid(),'request_id',req));
+ if (select sent_qty from owner_data.shop_delivery_ack where request_id=req)<>9 then raise exception 'Manager handover not captured';end if;n:=n+1;
+ select count(*) into s0 from public.salary_personal;select count(*) into f0 from public.salary_food;select count(*) into p0 from owner_data.shop_payment;select count(*) into c0 from owner_data.farm_cost;
+ cmd:=jsonb_build_object('device_key',devkey,'manager',false,'farm','AD 1','op_id',gen_random_uuid(),'action','RECEIVE','lines',jsonb_build_array(jsonb_build_object('id',req,'qty',6,'expected_received',0,'note','3 missing')));
+ res:=public.shop_leader_delivery_action(cmd);
+ if public.shop_leader_delivery_action(cmd)<>res or (select received_qty from owner_data.shop_delivery_ack where request_id=req)<>6 or (select count(*) from owner_data.shop_delivery_event where request_id=req)<>1 then raise exception 'Partial ack or retry failed';end if;n:=n+1;
+ caught:=false;begin perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid()));exception when others then if sqlerrm not like 'Delivery changed%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'Stale ack accepted';end if;n:=n+1;
+ caught:=false;begin perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid(),'lines',jsonb_build_array(jsonb_build_object('id',req,'qty',4,'expected_received',6))));exception when others then if sqlerrm not like 'Check quantity%' then raise;end if;caught:=true;end;
+ if not caught then raise exception 'Overreceipt accepted';end if;n:=n+1;
+ perform public.shop_leader_delivery_action(cmd||jsonb_build_object('op_id',gen_random_uuid(),'lines',jsonb_build_array(jsonb_build_object('id',req,'qty',3,'expected_received',6))));
+ if (select received_qty from owner_data.shop_delivery_ack where request_id=req)<>9 then raise exception 'Full receipt failed';end if;n:=n+1;
+ if (select count(*) from public.salary_personal)<>s0 or (select count(*) from public.salary_food)<>f0 or (select count(*) from owner_data.shop_payment)<>p0 or (select count(*) from owner_data.farm_cost)<>c0 then raise exception 'Ack wrote finance';end if;n:=n+1;
+ x:=public.shop_hello(jsonb_build_object('device_key',devkey,'farm','AD 1'));
+ if not exists(select 1 from jsonb_array_elements(x->'deliveries') a where a->>'id'=req::text and (a->>'received_qty')::int=9 and jsonb_array_length(a->'events')=2) then raise exception 'Receipt history missing';end if;n:=n+1;
+ if exists(select 1 from jsonb_array_elements(owner_data.shop_delivery_json('AD 2')) a where a->>'id'=req::text) then raise exception 'Wrong farm receipt history';end if;n:=n+1;
+ insert into owner_data.shop_request(client_id,made_by,farm_code,option_id,qty,kind,round,ask_date) values(gen_random_uuid(),actor,'AD 1',foodsku,3,'FOOD',owner_data.shop_food_round(today),today) returning id into foodreq;
+ perform public.shop_owner_buy(jsonb_build_object('ids',jsonb_build_array(foodreq),'price',10,'paid_by','TBF','client_id',gen_random_uuid()));
+ perform public.shop_owner_hand(jsonb_build_object('lines',jsonb_build_array(jsonb_build_object('id',foodreq,'share_ids',jsonb_build_array(worker))),'date',today));
+ select count(*) into f0 from public.salary_food;
+ perform public.shop_leader_delivery_action(jsonb_build_object('device_key',devkey,'farm','AD 1','op_id',gen_random_uuid(),'action','RECEIVE','lines',jsonb_build_array(jsonb_build_object('id',foodreq,'qty',3,'expected_received',0))));
+ if (select received_qty from owner_data.shop_delivery_ack where request_id=foodreq)<>3 or (select count(*) from public.salary_food)<>f0 then raise exception 'Food receipt duplicate salary';end if;n:=n+1;
+ if has_table_privilege('anon','owner_data.shop_delivery_ack','SELECT') or has_table_privilege('authenticated','owner_data.shop_delivery_event','INSERT') then raise exception 'Public receipt table access';end if;n:=n+1;
+ raise exception using errcode='ZX001',message='PASS '||n;
+ exception when sqlstate 'ZX001' then if sqlerrm<>'PASS 15' then raise;end if;end;
+end $test$;
+select '15 leader quantity, handover, receipt and history tests passed; fixtures rolled back' result;
