@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 52;
+const APP_VERSION = 53;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -436,7 +436,7 @@ function personalSpecs(it){
  if(any(['CABLE','USB CABLE','CHARGING CABLE','PHONE CABLE','USB CHARGING CABLE']))return ['Type-C','Micro USB'];
  if(any(['CHARGER','USB CHARGER','PHONE CHARGER','USB ADAPTER','CHARGING ADAPTER']))return ['USB-A','Type-C'];
  if(any(['BAJU','SELUAR','PANTS SHORT','PANTS LONG','PANTS','SHORTS','SHIRT','T SHIRT','SHIRT 短袖','SHIRT 长袖','SHIRT SHORT SLEEVE','SHIRT LONG SLEEVE']))return ['S','M','L','XL','2XL','3XL'];
- if(any(['SELIPAR','KASUT','SLIPPER','SLIPPERS','FLIP FLOP','FLIP FLOPS']))return ['37','38','39','40','41','42','43','44','45','46'];
+ if(any(['SELIPAR','KASUT','BOOTS','BOOT','SHOES','SHOE','SLIPPER','SLIPPERS','FLIP FLOP','FLIP FLOPS']))return ['37','38','39','40','41','42','43','44','45','46'];
  return [];
 }
 
@@ -673,7 +673,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     return '<div class="lp-head"><div><h1>🛍️ '+esc(ct('PERSONAL','title'))+'</h1><div class="sub">'+esc(FARM)+' · '+esc(ct('PERSONAL','subtitle'))+'</div></div><button class="btn small" onclick="Leader.home()">'+esc(t('back'))+'</button></div>'
       +'<div class="lp-photo"><div class="lp-photo-title"><span style="font-size:30px">📷</span><span>'+esc(specLabel('Order by photo','照片订购','ဓာတ်ပုံဖြင့် မှာမယ်'))+'<small>'+esc(specLabel('No item name needed','不需要知道物品名称','ပစ္စည်းနာမည် မလိုပါ'))+'</small></span></div><div class="lp-photo-actions"><button class="btn" onclick="Leader.photoStart(true)">📷 '+esc(specLabel('Camera','拍照','ဓာတ်ပုံ ရိုက်မယ်'))+'</button><button class="btn" onclick="Leader.photoStart(false)">🖼 '+esc(specLabel('Gallery','相册','ဓာတ်ပုံ ရွေးမယ်'))+'</button></div></div>'
       +'<div class="lp-grid">'+leaderEntries(list).map(personalTile).join('')+'</div>'
-      +(customKeys.length?'<div class="sectionhead">'+esc(specLabel('Other items in your list','其他已选物品','ရွေးထားသော အခြားပစ္စည်း'))+'</div>'+customKeys.map(personalReviewRow).join(''):'')
+      +(customKeys.length?'<div class="sectionhead">'+esc(specLabel('Other items in your draft','其他待提交物品','ပို့ရန်ကျန်သော အခြားပစ္စည်း'))+'</div>'+customKeys.map(personalReviewRow).join(''):'')
       +'<details class="lp-other"><summary>'+esc(t('otherHead'))+'</summary><div class="btnrow"><input class="grow" maxlength="40" placeholder="'+esc(t('other'))+'" value="'+esc(ui.other)+'" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ '+esc(t('add'))+'</button></div></details><div class="bottom" id="bottombar"></div>';
   }
   function personalReviewRow(key){const c=ui.cart[key],it=cartItem(key);if(!c)return '';const p=c.photos?.[0]||Object.values(c.rows||{}).find(r=>r.photos?.length)?.photos?.[0],label=it.photoOnly?(c.name||photoLabel()):it.label;
@@ -695,7 +695,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     return '<div class="lp-head"><div><h1>🧤 '+esc(ct('FARM','title'))+'</h1><div class="sub">'+esc(FARM)+' · '+esc(ct('FARM','subtitle'))+'</div></div><button class="btn small" onclick="Leader.home()">'+esc(t('back'))+'</button></div>'
       +'<div class="lp-photo"><div class="lp-photo-title"><span style="font-size:30px">📷</span><span>'+esc(specLabel('Order by photo','照片订购','ဓာတ်ပုံဖြင့် မှာမယ်'))+'<small>'+esc(specLabel('Parts / tools — no name needed','机器零件／工具 · 不必知道名称','စက်အပိုပစ္စည်း / ကိရိယာ · နာမည် မလိုပါ'))+'</small></span></div><div class="lp-photo-actions"><button class="btn" onclick="Leader.photoStart(true)">📷 '+esc(specLabel('Camera','拍照','ဓာတ်ပုံ ရိုက်မယ်'))+'</button><button class="btn" onclick="Leader.photoStart(false)">🖼 '+esc(specLabel('Gallery','相册','ဓာတ်ပုံ ရွေးမယ်'))+'</button></div></div>'
       +'<div class="lp-grid">'+list.map(farmTile).join('')+'</div>'
-      +(customKeys.length?'<div class="sectionhead">'+esc(specLabel('Other items in your list','其他已选物品','ရွေးထားသော အခြားပစ္စည်း'))+'</div>'+customKeys.map(personalReviewRow).join(''):'')
+      +(customKeys.length?'<div class="sectionhead">'+esc(specLabel('Other items in your draft','其他待提交物品','ပို့ရန်ကျန်သော အခြားပစ္စည်း'))+'</div>'+customKeys.map(personalReviewRow).join(''):'')
       +'<details class="lp-other"><summary>'+esc(t('otherHead'))+'</summary><div class="btnrow"><input class="grow" maxlength="40" placeholder="'+esc(t('other'))+'" value="'+esc(ui.other)+'" oninput="Leader.setOther(this.value)"><button class="btn" onclick="Leader.openOther()">+ '+esc(t('add'))+'</button></div></details><div class="bottom" id="bottombar"></div>';
   }
   function farmQty(v){if(!SH||ui.kind!=='FARM'||PhotoBusy)return;const n=Number(v);if(!Number.isInteger(n)||n<1||n>999){toast(specLabel('Enter 1–999','请输入1至999','၁ မှ ၉၉၉ အထိ ရိုက်ပါ'));drawSheet();return;}SH.qty=n;saveCart();sheetBtn();}
@@ -727,7 +727,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     return h;
   }
   function setOther(v){ ui.other = v; }
-  function openOther(){ const n = ui.other.trim().toUpperCase().replace(/\s+/g, ' '); if(!n) return; ui.other = ''; openSheet('c:' + n); }
+  function openOther(){const norm=v=>String(v??'').trim().toUpperCase().replace(/\s+/g,' '),n=norm(ui.other);if(!n)return;const hit=items(ui.kind).filter(i=>[i.code,i.label].some(v=>norm(v)===n));if(hit.length>1){toast(specLabel('Several matches — select the correct catalogue item','有多个同名商品，请直接选择正确商品','နာမည်တူ ပစ္စည်းများ ရှိပါသည်။ မှန်ကန်သော ပစ္စည်းကို ရွေးပါ။'));return;}ui.other='';openSheet(hit.length===1?hit[0].id:'c:'+n);}
   function openSheet(key){if(ui.pending||LeaderBusy)return;const c=ui.cart[key];
     SH = c ? JSON.parse(JSON.stringify({key, ...c})) : {key, rows:{}, qty:1, det:''}; if(ui.kind==='PERSONAL'&&isWhisky(cartItem(key))&&!SH.bottles)SH.bottles=[[]]; if(ui.kind==='PERSONAL'&&specOptions(cartItem(key)).length&&!SH.spec)SH.spec=''; drawSheet(); }
   function specSelect(v){const opts=specOptions(cartItem(SH.key));if(!opts.includes(v))return;SH.spec=v;drawSheet();}
@@ -813,7 +813,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       if(!saveCart()){ui.pending=null;return;}
     }
     const payload=ui.pending,k=ui.kind;if(payload.farm!==FARM||payload.manager!==MGR)return;LeaderBusy=true;busy(1);let saved=false;
-    try{const r=await rpc('shop_leader_submit',{...payload,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;storeDraft(k,{cart:{},pending:null,sheet:null});ui={view:'done',what:k==='FOOD'?'food':'add',savedCount:r.count};await load();}
+    try{const r=await rpc('shop_leader_submit',{...payload,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;storeDraft(k,{cart:{},pending:null,sheet:null});ui={view:'done',what:k==='FOOD'?'food':'add',savedCount:r.count,catalogueCount:Number(r.catalogue_count)||0};await load();}
     catch(e){toast(saved?specLabel('Saved — refresh','已保存，请刷新','သိမ်းပြီးပါပြီ။'):specLabel('Not confirmed — retry saved batch','未确认成功，请重试原批次','မသေချာသေးပါ။ ဒီစာရင်းကို ထပ်ပို့ပါ။'));if(!saved)try{await load();}catch(x){}}
     finally{LeaderBusy=false;busy(0);render();scrollTo(0,0);}
   }
@@ -870,7 +870,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   /* ---------- after adding: send WhatsApp ---------- */
   function donePage(){
     const n=ui.savedCount??lines().filter(l=>l.status==='REQUESTED').length;
-    return `<div class="donebox" style="margin-top:8px"><div class="tick">✅</div><h2 style="margin:6px 0">${esc((ui.what === 'food' ? t('foodAdded') : t('added')).replace(' ✓',''))}</h2><div class="sub">${esc(FARM)} · ${n} ${t('items')}</div></div>
+    return `<div class="donebox" style="margin-top:8px"><div class="tick">✅</div><h2 style="margin:6px 0">${esc((ui.what === 'food' ? t('foodAdded') : t('added')).replace(' ✓',''))}</h2><div class="sub">${esc(FARM)} · ${n} ${t('items')}</div>${ui.catalogueCount?`<div class="note" style="margin:12px 0 0">${esc(specLabel('Named items saved in catalogue · choose directly next time','有名称的商品已存入商品资料库 · 下次直接选择','နာမည်ပါ ပစ္စည်းများကို စာရင်းထဲ သိမ်းပြီးပါပြီ။ နောက်တစ်ခါ တိုက်ရိုက်ရွေးနိုင်ပါသည်။'))}</div>`:''}</div>
       <button class="btn gold block" style="min-height:58px;font-size:18px;margin-top:16px" onclick="Leader.showCard()">${t('wa')}</button>
       <button class="btn block" style="margin-top:10px" onclick="Leader.home()">${t('home')}</button>`;
   }
@@ -1009,7 +1009,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     if(ui.view === 'food'){ const n = Object.values(ui.qty).filter(q => q > 0).length; const had=lines().some(l=>l.kind==='FOOD'&&l.status==='REQUESTED'&&l.round===ui.round&&!l.photo_count);
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n || had ? '' : 'disabled'} onclick="Leader.commitFood()">${esc(t('addFood')(n))}</button>`; return; }
     if(ui.view === 'add'){if(ui.pending)return;const n=addCount(),needW=false;
-      if(ui.kind==='PERSONAL'||ui.kind==='FARM'){b.innerHTML='<span style="font-weight:800;font-size:18px;min-width:32px">'+n+'</span><button class="btn primary" '+(n?'':'disabled')+' onclick="Leader.personalReview()">🛒 '+esc(specLabel('View list','查看购物清单','စာရင်းကြည့်မယ်'))+' · '+n+' →</button>';return;}
+      if(ui.kind==='PERSONAL'||ui.kind==='FARM'){b.innerHTML='<span style="font-weight:800;font-size:18px;min-width:32px">'+n+'</span><button class="btn primary" '+(n?'':'disabled')+' onclick="Leader.personalReview()">🛒 '+esc(specLabel('Review & submit','核对清单并提交','စာရင်းစစ်ပြီး ပို့မယ်'))+' · '+n+' →</button>';return;}
       b.innerHTML = `<span style="font-weight:800;font-size:18px;min-width:44px">${n}</span><button class="btn primary" ${n && !needW ? '' : 'disabled'} onclick="Leader.commitAdd()">${esc(needW ? t('pickW') : t('addN')(n))}</button>`; }
   }
 
@@ -1987,17 +1987,19 @@ const Owner = (() => {
 
   /* ---------- Items & prices ---------- */
   function pricesPage(){
-    let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','商品与价格')}</h1><div class="sub">${Z('Usual prices show as buttons when you tick "Bought"','按「买了」时，常用价钱会变成按钮')}</div></div>${back()}</div>`;
+    let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','商品与价格')}</h1><div class="sub">${Z('Leader-named items join the catalogue automatically. Set price and photo here.','工头新增的具名物品自动进入资料库；在这里补照片与价格。')}</div></div>${back()}</div>`;
     /* v11: filter cards — show one kind at a time, remembered */
     const KS = ['PERSONAL','FARM','SHARED','FOOD'], cur = KS.includes(lsGet('runcit_items_kind','PERSONAL')) ? lsGet('runcit_items_kind','PERSONAL') : 'PERSONAL';
     h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${B.items.filter(x => x.kind === k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
+    h+='<div class="field"><label>'+Z('Search this category','搜索当前商品类别')+'</label><input id="catalogue-search" type="search" placeholder="'+Z('Name or code','商品名称／编号')+'" oninput="Owner.catalogueSearch(this.value)"></div>';
     for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
-      for(const i of B.items.filter(x => x.kind === k)) h += `<div class="line" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${k === 'PERSONAL' ? `<span class="tag ok">${Z('Sell','卖')} ${i.default != null ? RM(i.default) : '—'}</span>${(i.prices||[]).length > 1 ? ` <span class="mut" style="font-size:12px">${(i.prices||[]).join(' / ')}</span>` : ''}` : (i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
+      for(const i of B.items.filter(x => x.kind === k).sort((a,b)=>String(a.label).localeCompare(String(b.label),OL==="zh"?"zh":"en"))) h += `<div class="line" data-catalogue-row="1" data-search="${esc(String(i.label||"")+" "+String(i.code||""))}" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${!itemPhoto(i)?` <span class="tag warn">${Z('Photo pending','照片待补')}</span>`:''}${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${k === 'PERSONAL' ? `<span class="tag ok">${Z('Sell','卖')} ${i.default != null ? RM(i.default) : '—'}</span>${(i.prices||[]).length > 1 ? ` <span class="mut" style="font-size:12px">${(i.prices||[]).join(' / ')}</span>` : ''}` : (i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
         <button class="btn small light" onclick="Owner.editItem('${i.id}')">✎ ${Z('Edit','编辑')}</button></div>`;
       h += '</div>'; }
     return h;
   }
+  function catalogueSearch(value){const q=String(value||'').trim().toLowerCase();for(const el of document.querySelectorAll('#app [data-catalogue-row]'))el.style.display=String(el.dataset.search||'').toLowerCase().includes(q)?'':'none';}
   /* v13: one Edit sheet per item — name, prices, photo, list, managers only, delete */
   function editItem(id){ const i = IT(id); if(!i) return closeModal(); const food = i.kind === 'FOOD';
     openModal(`<h2>✎ ${esc(i.label)}</h2>
@@ -2412,7 +2414,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
