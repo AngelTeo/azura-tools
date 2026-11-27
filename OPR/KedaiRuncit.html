@@ -719,16 +719,18 @@ const Owner = (() => {
   const whOrdered=l=>!!whLink(l).ordered;
   const whFixed=l=>whLink(l).fixed_sell??null;
   const whOpening=l=>whManaged(l)&&!whPolicy(l.item_id).opening_confirmed;
-  const reviewReason=l=>whLink(l).review||requestReview(l,B.all_workers||[])||(whOpening(l)?'OPENING':null);
+  const reviewReason=l=>whLink(l).review||(!l.item_id&&l.photo_count?'PHOTO':null)||requestReview(l,B.all_workers||[])||(whOpening(l)?'OPENING':null);
   const reviewLines=()=>B.lines.filter(l=>['REQUESTED','BOUGHT'].includes(l.status)&&reviewReason(l));
-  const reviewLabel=k=>({WORKER:Z('Worker not in active AD list — verify history','工人不在现有 AD 名单 · 核实历史'),MEDICAL:Z('Medical service already reported — reconcile','已发生医疗事项 · 核实付款及原扣款'),INSTALMENT:Z('Quote and instalment terms pending','等待报价及分期安排'),CATALOG:Z('Custom personal item — catalogue link required','自填个人物品 · 需关联正式商品'),OPENING:Z('Opening stock not confirmed','期初库存尚未确认')}[k]||'');
+  const reviewLabel=k=>({PHOTO:Z('Identify item from photo','照片需求 · 核实实际物品'),WORKER:Z('Worker not in active AD list — verify history','工人不在现有 AD 名单 · 核实历史'),MEDICAL:Z('Medical service already reported — reconcile','已发生医疗事项 · 核实付款及原扣款'),INSTALMENT:Z('Quote and instalment terms pending','等待报价及分期安排'),CATALOG:Z('Custom personal item — catalogue link required','自填个人物品 · 需关联正式商品'),OPENING:Z('Opening stock not confirmed','期初库存尚未确认')}[k]||'');
   const ico = l => l.kind === 'FOOD' ? (IT(l.item_id).icon || '🥬') : icon(l.item, IT(l.item_id).icon);
   const who = l => l.kind === 'PERSONAL' ? l.worker : KINDS[l.kind].name;
   const open = () => B.lines.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD');
   const toBuy = () => open().filter(l => !reviewReason(l)&&!whOrdered(l)&&(ALC || !isAlcohol(l.item)));
   const alcWait = () => open().filter(l => isAlcohol(l.item));
   const bought = () => B.lines.filter(l => l.status === 'BOUGHT'&&!reviewReason(l));
-  const food = () => B.lines.filter(l => l.kind === 'FOOD' && (l.status === 'REQUESTED' || l.status === 'BOUGHT'));
+  const foodAll=()=>B.lines.filter(l=>l.kind==='FOOD'&&['REQUESTED','BOUGHT'].includes(l.status));
+  const foodDate=()=>ui.round||foodRound(B.today).deliver;
+  const food=()=>foodAll().filter(l=>l.round===foodDate()&&!reviewReason(l));
   const sumQty = ls => ls.reduce((s,l) => s + l.qty, 0);
   const byFarm = ls => FARMS.map(f => [f, sumQty(ls.filter(l => l.farm === f))]).filter(x => x[1]).map(x => `${x[0]} ${x[1]}`).join(' · ');
   /* v19: request date (要求日期) — normal lines: the day entered; old records: filled in by hand (待补 until then) */
@@ -868,9 +870,9 @@ const Owner = (() => {
     return h + `<div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"><div class="btnrow"><button class="btn primary grow" id="wa-batch-button" ${WASelected.size?'':'disabled'} onclick="Owner.waBatch()">📲 WhatsApp (${WASelected.size})</button><button class="btn small" id="wa-batch-clear" ${WASelected.size?'':'disabled'} onclick="Owner.waClear()">${Z('Clear','清除勾选')}</button></div><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
   }
   function reviewPage(){
-    const rows=reviewLines(),codes=['WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
+    const rows=reviewLines(),codes=['PHOTO','WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
     let h='<div class="hero"><div><h1>⚠ '+Z('Needs review','需要核实')+'</h1><div class="sub">'+Z('No purchase or deduction is created here','这里只核实，不自动采购或扣薪')+'</div></div><button class="btn small" onclick="Owner.go(\'buy\')">‹ '+Z('Buying list','采购清单')+'</button></div>';
-    for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+'<div class="btnrow" style="flex-wrap:wrap;margin-top:8px">'+reviewActions(l,k)+'</div></div>';}
+    for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+'<div>'+refButton(l)+'</div><div class="btnrow" style="flex-wrap:wrap;margin-top:8px">'+reviewActions(l,k)+'</div></div>';}
     if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';h+='<button class="btn block" onclick="Owner.go(\'whphones\')">'+Z('Phone instalment records','手机分期记录')+'</button>';
     return h;
   }
@@ -882,7 +884,7 @@ const Owner = (() => {
   /* v9: every item shows a grid — farm · who · detail · qty — one row per line */
   const sortL = ls => ls.slice().sort((a,b) => a.farm.localeCompare(b.farm) || String(a.worker||'').localeCompare(String(b.worker||'')));
   function matrix(ls, tags){ return `<table class="mx"><thead><tr><th>${Z('Farm','园')}</th><th>${Z('Who','谁')}</th><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th></tr></thead><tbody>${sortL(ls).map(l =>
-      `<tr><td>${l.farm}<div>${askTag(l)}</div></td><td>${l.kind === 'PERSONAL' ? esc(l.worker) : '<span class="mut">—</span>'}</td><td>${l.detail ? esc(l.detail) : '<span class="mut">—</span>'}${tags ? ' ' + waitTag(l) : ''}</td><td class="num">${l.qty}</td></tr>`).join('')}</tbody></table>`; }
+      `<tr><td>${l.farm}<div>${askTag(l)}</div></td><td>${l.kind === 'PERSONAL' ? esc(l.worker) : '<span class="mut">—</span>'}</td><td>${l.detail ? esc(l.detail) : '<span class="mut">—</span>'}${refButton(l)}${tags ? ' ' + waitTag(l) : ''}</td><td class="num">${l.qty}</td></tr>`).join('')}</tbody></table>`; }
   function zoomBox(x, big){ const it = IT(x.item_id), u = itemPhoto(it);
     return u ? `<button class="zb${big ? ' big' : ''}" onclick="zoomImg('${esc(u)}')">${icoBox(it, x.name)}</button>` : (big ? `<div class="zb big">${icoBox(it, x.name)}</div>` : icoBox(it, x.name)); }
   /* v10.3 product detail — existing financial RPCs; confirmed session-only hand-over snapshot */
@@ -898,7 +900,7 @@ const Owner = (() => {
   const lines=detailLines();if(!lines.length){ui={view:'buy'};return buyPage();}
   const x=groups(lines)[0],it=IT(x.item_id),n=lines.filter(l=>l.status==='REQUESTED').length;
   const tick=(l,hand)=>{const done=hand?l.status==='DONE_DETAIL':l.status!=='REQUESTED';return `<button class="detail-tick ${done?'done':''}" ${hand&&l.status!=='BOUGHT'||!hand&&l.status==='REQUESTED'&&whManaged(l)?'disabled':''} data-id="${esc(l.id)}" aria-label="${esc(hand?Z('Hand over','交货'):Z('Purchase / record','购买／记录'))}" onclick="Owner.${hand?'detailHand':'detailBuy'}(this.dataset.id)">${done?'✓':''}</button>`;};
-  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Back to List','返回清单')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${l.bottle_id?bottleTag(l):''}${l.status==='REQUESTED'&&specMissing(l)?`<button class="btn small light" data-id="${esc(l.id)}" onclick="Owner.editLine(this.dataset.id)">${Z('Choose spec','选规格')}</button>`:esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}<div>${askTag(l)}</div></td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}${l.status==='REQUESTED'&&!l.bottle_id&&!isTopIt(IT(l.item_id))?`<div>${whBtn('Order','订购','ORDER',l.id,'btn small light')}</div>`:''}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1&&lines.every(l=>!whManaged(l))?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
+  return `<div class="hero"><div><h1>${esc(x.name)} <span class="mut">× ${sumQty(lines)}</span></h1><div class="sub">${KINDS[x.kind].ico} ${KINDS[x.kind].name}${it.unit?' · '+esc(it.unit):''}</div></div><button class="btn small light" onclick="Owner.go('buy')">‹ ${Z('Back to List','返回清单')}</button></div><div class="card" style="padding:12px">${zoomBox(x,true)}${FARMS.map(f=>{const ls=sortL(lines.filter(l=>l.farm===f));return ls.length?`<div class="detail-farm">${esc(f)}</div><table class="mx detail-matrix"><thead><tr><th>${Z('Detail','细节')}</th><th class="num">${Z('Qty','数量')}</th><th>${Z('Bought','买了')}</th><th>${Z('Handed','交货')}</th></tr></thead><tbody>${ls.map(l=>`<tr><td>${l.bottle_id?bottleTag(l):''}${l.status==='REQUESTED'&&specMissing(l)?`<button class="btn small light" data-id="${esc(l.id)}" onclick="Owner.editLine(this.dataset.id)">${Z('Choose spec','选规格')}</button>`:esc(l.detail||'—')}${l.status==='REQUESTED'?' '+waitTag(l):''}<div>${askTag(l)} ${refButton(l)}</div></td><td class="num"><b>${l.qty}</b></td><td>${tick(l,false)}${l.status==='REQUESTED'&&!l.bottle_id&&!isTopIt(IT(l.item_id))?`<div>${whBtn('Order','订购','ORDER',l.id,'btn small light')}</div>`:''}</td><td>${l.status==='DONE_DETAIL'?'<span class="detail-tick done" aria-label="Completed">✓</span>':tick(l,true)}</td></tr>`).join('')}</tbody></table>`:'';}).join('')}</div>${n>1&&lines.every(l=>!whManaged(l))?`<button class="btn primary block" onclick="Owner.detailBuy()">✓ ${Z('Buy several together','一起买了…')} (${n})</button>`:''}<div class="hint">${Z('Tap Bought to enter or view payment. Tap Handed only after actual delivery.','点「买了」填写或查看付款；实际交货后才点「交货」。')}</div>`;
 }
   function detailBuy(id){
   const ls=detailLines(),l=ls.find(x=>x.id===id);if(l&&l.status!=='REQUESTED')return detailRecord(l);if(l&&specMissing(l))return editLine(l.id);
@@ -1257,30 +1259,30 @@ const Owner = (() => {
     const order = (FO_SEED||[]).map(a => a[0]); return [...m.values()].sort((a,b) => order.indexOf(a.it.code) - order.indexOf(b.it.code)); }
   const qf = (ls, f) => sumQty(ls.filter(l => l.farm === f));
   function foodPage(){
-    const F = foodRound(B.today), sup = ui.sup || 'Huat Tiong', rows = fItems(sup), all = food();
+    const d=foodDate(),F={deliver:d,order:addD(d,-4)},sup=ui.sup||'Huat Tiong',rows=fItems(sup),all=food();
     const sent = f => all.some(l => l.farm === f);
-    let h = `<div class="hero"><div><h1>🥬 ${Z('Groceries','买菜')}</h1><div class="sub">${Z(`Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`)}</div></div>${back()}</div>${handLink('FOOD')}
+    let h = `<div class="hero"><div><h1>🥬 ${Z('Groceries','买菜')}</h1><div class="sub">${Z(`Order by ${ddm(F.order)} · Delivery ${ddm(F.deliver)}`, `${ddm(F.order)} 前订 · ${ddm(F.deliver)} 送到`)}</div></div>${back()}</div>${handLink('FOOD')}<div class="pills">${[...new Set([foodRound(B.today).deliver,...foodAll().map(l=>l.round).filter(Boolean)])].sort().map(d=>`<button class="pill ${d===foodDate()?'on':''}" onclick="Owner.go('food',{round:'${esc(d)}',sup:'${esc(sup)}'})">${esc(d)}</button>`).join('')}</div>${foodAll().some(l=>reviewReason(l)==='PHOTO')?`<button class="btn block" onclick="Owner.go('review')">📷 ${Z('Food photo requests to identify','照片订菜待核实')}</button>`:''}
       <div class="card" style="padding:10px 14px">${FARMS.map(f => `<div class="line"><b>${f}</b>${sent(f) ? `<span class="tag ok">${Z('Sent','已报')}</span>` : `<span class="tag warn">${Z('Not sent yet','还没报')}</span>`}</div>`).join('')}</div>
-      <div class="pills noprint">${SUPPLIERS.map(s => `<button class="pill ${s===sup?'on':''}" onclick="Owner.go('food',{sup:'${s}'})">${esc(s)} · ${fItems(s).length}</button>`).join('')}</div>
+      <div class="pills noprint">${SUPPLIERS.map(s => `<button class="pill ${s===sup?'on':''}" onclick="Owner.go('food',{sup:'${s}',round:'${esc(foodDate())}'})">${esc(s)} · ${fItems(s).length}</button>`).join('')}</div>
       <div id="printarea"><h2 class="printonly">${esc(sup === 'Huat Tiong' ? 'Huat Thiong' : sup)} x Azura Delta ${pdfDate(F.deliver)}</h2>`;
     if(!rows.length) h += `<div class="card empty">${Z(`No items for ${esc(sup)}`, `${esc(sup)} 没有东西`)}</div>`;
     else h += `<div class="tablewrap"><table><thead><tr><th>${Z('Food','食物')}</th>${FARMS.map(f => `<th class="num">${f}</th>`).join('')}<th class="num">TOTAL</th><th class="noprint"></th></tr></thead><tbody>${rows.map(r => {
       const tot = sumQty(r.lines), done = r.lines.every(l => l.status === 'BOUGHT');
-      return `<tr><td><b>${esc(r.it.label)}</b><div class="hint">${esc(r.it.unit||'')}</div></td>${FARMS.map(f => `<td class="num">${qf(r.lines,f) || '–'}</td>`).join('')}<td class="num"><b>${tot}</b></td>
+      return `<tr><td><b>${esc(r.it.label)}</b><div class="hint">${esc(r.it.unit||'')}</div>${r.lines.map(refButton).join('')}</td>${FARMS.map(f => `<td class="num">${qf(r.lines,f) || '–'}</td>`).join('')}<td class="num"><b>${tot}</b></td>
         <td class="noprint">${done ? `<span class="tag ok">${Z('Bought','已买')}</span>` : `<button class="btn small primary" onclick="Owner.buySheet('${r.it.id}','food')">${Z('Bought…','买了…')}</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
     h += `</div><div class="btnrow noprint" style="margin-top:14px"><button class="btn gold" ${rows.length?'':'disabled'} onclick="Owner.copySup('${sup}')">📋 ${Z('Copy WhatsApp Order','复制 WhatsApp 订单')}</button><button class="btn" ${rows.length?'':'disabled'} onclick="Owner.printSup()">🖨 ${Z('Print / PDF','列印 / PDF')}</button></div>
       <div class="hint noprint" style="margin-top:9px">${Z('Tick "Bought" with the real price after the supplier bills you. Then hand over each farm — groceries become one Salary Food entry per farm.','供应商开单后，按「买了」填实际价钱。然后每个园交货，买菜会变成每个园一笔 Salary Food。')}</div>`;
     return h;
   }
   function pdfDate(s){ const d = new Date(s+'T00:00:00'); return `${d.getDate()}${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}${d.getFullYear()}`; }
-  function supText(sup){ const F = foodRound(B.today), rows = fItems(sup);
+  function supText(sup){const F={deliver:foodDate()},rows=fItems(sup);
     let t = `AZURA DELTA · FOOD ORDER\nDate: ${dm(F.deliver)}/${F.deliver.slice(0,4)}\nSupplier: ${sup}\n\n`;
     for(const f of FARMS){ t += `====== ${f} ======\n`; for(const r of rows){ const v = qf(r.lines, f); if(v) t += `${r.it.label}: ${v} ${r.it.unit||''}\n`; } t += '\n'; }
     t += `====== TOTAL ======\n`; for(const r of rows) t += `${r.it.label}: ${sumQty(r.lines)} ${r.it.unit||''}\n`; return t; }
   function copySup(sup){ openModal(`<h2>📋 ${esc(sup)} · WhatsApp</h2><div class="field"><label>${Z('Farm-by-farm order (editable before copying)','按园分的订单（复制前可以改）')}</label><textarea id="waText" rows="17">${esc(supText(sup))}</textarea></div>
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Close','关闭')}</button><button class="btn primary" onclick="Owner.copyWa()">${Z('Copy to clipboard','复制')}</button></div>`); }
   async function copyWa(){ const s = $('#waText').value; try { await navigator.clipboard.writeText(s); toast(Z('Copied · paste into WhatsApp','已复制 · 贴到 WhatsApp')); } catch(e){ $('#waText').select(); toast(Z('Select and copy text manually','请自己选取文字复制')); } }
-  function printSup(){ const F = foodRound(B.today), old = document.title; document.title = `${(ui.sup||'Huat Tiong') === 'Huat Tiong' ? 'Huat Thiong' : ui.sup} x Azura Delta ${pdfDate(F.deliver)}`; window.print(); setTimeout(() => document.title = old, 1000); }
+  function printSup(){const F={deliver:foodDate()},old=document.title; document.title = `${(ui.sup||'Huat Tiong') === 'Huat Tiong' ? 'Huat Thiong' : ui.sup} x Azura Delta ${pdfDate(F.deliver)}`; window.print(); setTimeout(() => document.title = old, 1000); }
 
   /* ---------- Hand over: per farm; the only step that writes money ---------- */
   function handPage(){
@@ -1612,6 +1614,11 @@ const Owner = (() => {
   async function voidRec(fn, id){ if(!confirm(Z('Void this record? It is taken out of Salary.','作废这笔？Salary 那笔也会作废。'))) return; await act(fn, {id}, Z('Voided','已作废')); }
 
 
+
+  const refButton=l=>Number(l.photo_count)>0?'<button class="btn small light" data-id="'+esc(l.id)+'" onclick="Owner.seePhotos(this.dataset.id)">📷 '+Number(l.photo_count)+'</button>':'';
+  async function seePhotos(id){await openRequestPhotos(id,{manager:true},Z('Request reference photos','本次需求参考图'));}
+  async function identifyPhoto(id){const l=whFindLine(id);if(!l||!l.photo_count||WHBusy)return;WHBusy=true;busy(1);try{const ps=await rpc('shop_request_photo_get',{manager:true,request_id:id});const h='<div class="hint">'+esc(l.farm)+' · '+esc(who(l))+' · × '+l.qty+'</div>'+ps.map(b=>'<img src="data:image/jpeg;base64,'+esc(b)+'" style="width:100%;max-height:300px;object-fit:contain" onclick="zoomImg(this.src)">').join('')+ws('item_id','Existing matching product (or create below)','选择已有商品（或下方新增）',[['',Z('New item','新增商品')],...B.items.filter(x=>x.kind===l.kind&&!['TOP UP','WHISKEY','PINJAM','DOCTOR','UBAT','HANDPHONE','PHONE'].includes(x.code)).map(x=>[x.id,x.label])])+wf('label','New actual product name','实际新商品名称','','text','maxlength="30"')+(l.kind==='FOOD'?wf('unit','Unit for new item','新商品单位','','text','maxlength="30"')+ws('supplier','Supplier for new item','新商品供应商',[['',Z('Choose','请选择')],...SUPPLIERS.map(x=>[x,x])]):'');WForm={action:'PHOTO_IDENTIFY',id,payload:{request_id:id},identify:true};openModal('<h2>'+Z('Identify actual item','识别实际物品')+'</h2><form id="whform" onsubmit="event.preventDefault();Owner.whSubmit()">'+h+'<div class="hint">'+Z('Reference photos remain with this request, not the catalogue.','参考图保留在本次需求，不会变成商品主图。')+'</div><div id="wherr" class="note bad" style="display:none"></div><div class="modalfoot"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button type="submit" id="whsave" class="btn primary">'+Z('Confirm actual item','确认实际商品')+'</button></div></form>');}catch(e){toast(errZ(e.message));}finally{WHBusy=false;busy(0);}}
+
   const whOrderLines=()=>WH?.orders?.filter(o=>o.request_id&&Number(o.remaining)>0)||[];
   const whFindOrder=id=>WH.orders.find(o=>o.id===id);
   const whFindLine=id=>B.lines.find(l=>l.id===id);
@@ -1655,6 +1662,7 @@ const Owner = (() => {
   const wd=()=>wf('date','Actual date','实际日期',B.today,'date','max="'+B.today+'" required');
   const wr=()=>wf('reason','Reason / evidence','原因／凭证','','text','maxlength="300" required');
   function whOpen(action,id){
+    if(action==='PHOTO_IDENTIFY')return identifyPhoto(id);
     if(['LINK_SALARY','MEDICAL_ACTUAL','CANCEL_REVIEW','PHONE_QUOTE','PHONE_APPROVE','PHONE_BUY','PHONE_DELIVER'].includes(action))return specialOpen(action,id);
     if(!WH||WHBusy)return;const l=whFindLine(id),o=whFindOrder(id),i=IT(id),p=whPolicy(id),b=WH.batches.find(x=>x.id===id);let h='',title='',payload={action,op_id:uuid()},note='';
     if(action==='POLICY'){title=i.label;payload.item_id=id;h=ws('stock','Fulfilment','采购模式',[['false',Z('Buy on request','按需代购')],['true',Z('Stock item','库存商品')]],String(!!p.stock_managed));if(i.kind==='PERSONAL')h+=ws('price_mode','Selling price','卖价模式',[['VARIABLE',Z('Variable','浮动卖价')],['FIXED',Z('Fixed','固定卖价')]],p.price_mode||'VARIABLE')+wf('fixed_sell','Fixed selling price RM','固定卖价 RM',p.fixed_sell??'','number','min="0.01" max="5000" step=".01"');else payload.price_mode='VARIABLE';h+=wf('minimum','Minimum stock (optional)','最低库存（可空）',p.minimum_qty??'','number','min="0" step="1"')+wf('pack','Purchase pack (optional)','采购包装数量（可空）',p.pack_qty??'','number','min="1" step="1"');note=Z('Stock must be counted before use. Changing price mode does not change past charges.','库存必须实盘确认；修改价格模式不会改历史收费。');}
@@ -1677,6 +1685,7 @@ const Owner = (() => {
   const phoneFind=id=>WH?.phones?.find(x=>x.request_id===id);
   const phoneStage=x=>({QUOTED:Z('Quote recorded','报价已记录'),APPROVED:Z('Terms approved','分期已批准'),BOUGHT:Z('Purchased / pending delivery','已购买／待交付'),DELIVERED:Z('Delivered / Salary loan','已交付／Salary 分期'),CANCELLED:Z('Cancelled','已取消')}[x]||Z('Awaiting quote','等待报价'));
   function reviewActions(l,k){
+    if(k==='PHOTO')return whBtn('Identify actual item','识别实际物品','PHOTO_IDENTIFY',l.id,'btn primary grow');
     if(k==='OPENING')return whBtn('Confirm opening stock','确认期初库存','OPENING',l.item_id);
     if(k==='CATALOG')return whBtn('Link actual item','关联正式商品','LINK_ITEM',l.id,'btn primary grow')+whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id);
     if(k==='WORKER')return whBtn('Link verified deduction','关联已核实扣款','LINK_SALARY',l.id,'btn primary grow')+(l.status==='REQUESTED'?whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id):'');
@@ -1763,7 +1772,7 @@ const Owner = (() => {
     if(WForm.special){for(const k of ['payment_pending','replace_plan','deposit_received','deduction_authorised','unfulfilled_confirmed'])p[k]=d[k]==='true';if(WForm.action==='PHONE_APPROVE'&&(WForm.planMonth!==p.start_month||!WForm.plan)){toast(Z('Check the Salary plan for the selected start month first','请先核对所选月份的 Salary 计划'));return;}if(WForm.action==='PHONE_APPROVE'&&!Number(WForm.plan?.loan_count)&&p.combined_monthly!==p.monthly){toast(Z('No other loan records: combined monthly payment must equal agreed phone repayment','无其他借款记录：合计月还款须等于约定手机月供'));return;}if(WForm.action==='LINK_SALARY'&&!p.salary_id||WForm.action==='MEDICAL_ACTUAL'&&(!p.mode||p.mode!=='WORKER_CASH'&&!p.payer||p.mode==='DEDUCT'&&!p.deduction_authorised)||WForm.action==='PHONE_BUY'&&!p.payer||WForm.action==='CANCEL_REVIEW'&&!p.unfulfilled_confirmed){toast(Z('Confirm all actual evidence and required details','请确认实际凭证与必要资料'));return;}}
     if(WForm.reconcile){p.verified=d.verified==='true';p.original_payer_received=d.original_payer_received==='true';if(!p.verified||WForm.action==='REFUND'&&!p.original_payer_received){toast(Z('Confirm actual evidence','请确认实际凭证'));return;}}
     const err=$('#wherr');WHBusy=true;busy(1);$('#whsave').disabled=true;let saved=false;
-    try{const r=await rpc(WForm.reconcile?'shop_owner_wh_reconcile':WForm.special?'shop_owner_wh_special':'shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();PC=null;render();toast(Z('Saved to official database','已保存到正式数据库'));}
+    try{const r=await rpc(WForm.identify?'shop_owner_photo_identify':WForm.reconcile?'shop_owner_wh_reconcile':WForm.special?'shop_owner_wh_special':'shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();PC=null;render();toast(Z('Saved to official database','已保存到正式数据库'));}
     catch(e){if(saved){WH=null;WHError=e.message;render();toast(Z('Saved; refresh to verify the new status','已保存，请刷新核对状态'));}else if(err){err.textContent=errZ(e.message)+' · '+Z('If the result is uncertain, keep this form or refresh before retrying.','结果不明确时保留此表或刷新核对，避免重复付款。');err.style.display='block';}}
     finally{WHBusy=false;busy(0);if($('#whsave'))$('#whsave').disabled=false;}
   }
@@ -1773,7 +1782,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     spotBar(); medBar();
   }
-  return {start, refresh, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, itemsKind, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
