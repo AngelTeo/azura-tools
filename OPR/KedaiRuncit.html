@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 66;
+const APP_VERSION = 67;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -869,7 +869,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     }
     return h + (cat ? '</div>' : '') + '<div class="bottom" id="bottombar"></div>';
   }
-  function fstep(id,d){if(ui.foodPending||LeaderBusy)return;const it=items('FOOD').find(x=>x.id===id);if(!it)return;const q=Number(ui.qty[id]||0),step=String(it.unit||'').trim().toLowerCase()==='kg'?.5:1;ui.qty[id]=Math.max(0,Math.min(999,q+d*step));storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline});render();}
+  function fstep(id,d){if(ui.foodPending||LeaderBusy)return;const it=items('FOOD').find(x=>x.id===id);if(!it)return;const q=Number(ui.qty[id]||0),step=String(it.unit||'').trim().toLowerCase()==='kg'&&!Number.isInteger(q)?.5:1;ui.qty[id]=Math.max(0,Math.min(999,q+d*step));storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline});render();}
   // v65: use official prior round, never an undated device cache.
   function previousFoodQuantities(prev,farm,round,list){
     if(!prev||prev.farm!==farm||!/^\d{4}-\d{2}-\d{2}$/.test(String(prev.round||''))||prev.round>=round||!prev.items||typeof prev.items!=='object'||Array.isArray(prev.items))return null;
