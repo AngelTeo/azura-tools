@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 87;
+const APP_VERSION = 88;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1478,6 +1478,7 @@ const Owner = (() => {
     set('detail-sell-total',validQty&&validSell?RM(p.charges):'—');
     set('detail-margin',validQty&&validCost&&validSell?RM(p.charges-p.delivered*p.cost):'—');
     const row=$('#detail-surplus-row');if(row)row.hidden=!validQty||p.surplus===0;
+    const jump=$('#detail-stock-jump');if(jump)jump.disabled=DetailBusy||!!p.error||!p.surplus;
     const allocation=$('#detail-allocation-row');if(allocation)allocation.hidden=!validQty||(!p.batch&&!p.partial);
     const stock=$('#detail-opening');if(stock)stock.hidden=!p.batch||whPolicy(p.it.id).opening_confirmed;
     set('detail-buy-warning',p.error);
@@ -1524,7 +1525,7 @@ const Owner = (() => {
     if(personal&&!l.bottle_id)html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+buy+sell+'</div><div style="margin-top:12px">'+qty+'</div>';
     else html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+qty+buy+'</div>';
     if(l.bottle_id)html+='<div class="hint" style="margin-top:8px">'+ls.map(x=>esc(who(x))+' · '+RM(whiskeyRate(x.bottle_n))).join(' / ')+'</div>';
-    html+='<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'+line(label('Total purchase cost','采购总额'),'detail-buy-total')+line(label('For delivery','本次待交货'),'detail-deliver-qty',false,'detail-allocation-row')+line(label('Extra stock','多买入库'),'detail-extra-qty',false,'detail-surplus-row')+(personal?line(label('Worker total','工人应付总额'),'detail-sell-total')+line(label('Expected gross margin','预计毛利'),'detail-margin',true):'')+'</div></div>';
+    html+='<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'+line(label('Total purchase cost','采购总额'),'detail-buy-total')+line(label('For delivery','本次待交货'),'detail-deliver-qty',false,'detail-allocation-row')+'<div id="detail-surplus-row" class="line" hidden style="gap:8px;flex-wrap:wrap;align-items:center"><span style="flex:1;min-width:0">'+label('Extra stock','多买入库')+'</span><b id="detail-extra-qty" style="color:var(--green)">—</b><button id="detail-stock-jump" class="btn small light" style="color:var(--green);font-weight:750;white-space:nowrap" onclick="Owner.detailSaveBuy(true)" disabled>'+label('Save & view stock ›','保存并查看库存 ›')+'</button></div>'+(personal?line(label('Worker total','工人应付总额'),'detail-sell-total')+line(label('Expected gross margin','预计毛利'),'detail-margin',true):'')+'</div></div>';
     if(batches.length)html+='<details class="card homefold" '+(DBuy.showStock?'open':'')+' ontoggle="Owner.detailToggle(\'showStock\',this.open)"><summary>'+label('Use existing stock instead','从现有库存调货')+' · '+batches.length+' '+label('batches','批')+'</summary><div class="hint">'+batches.map(b=>esc(b.received_on)+' · '+RM(b.unit_cost)+' · '+(Number(b.on_hand)-Number(b.reserved))+' '+label('available','可用')).join('<br>')+'</div>'+whBtn('Choose actual batch','选择实际批次','PICK_BATCH',l.id,'btn primary block')+'</details>';
     html+='<div class="card" style="padding:14px">'+field(label('Purchase date','购买日期'),'<input type="date" max="'+esc(B.today)+'" value="'+esc(DBuy.date)+'" onchange="Owner.detailBuyDate(this.value)">')+'<div style="margin-top:12px">'+field(label('Paid by','付款人'),'<div class="pills" style="flex-wrap:wrap">'+BUYERS.map(x=>'<button class="pill '+(DBuy.by===x?'on':'')+'" onclick="Owner.detailPayer(\''+x+'\')">'+esc(payerLabel(x))+'</button>').join('')+'</div>')+'</div><div id="detail-opening" hidden style="margin-top:10px"><label class="checkrow"><input type="checkbox" '+(DBuy.openingZero?'checked':'')+' onchange="Owner.detailBatchField(\'openingZero\',this.checked)">'+label('Confirmed previous physical stock was zero','确认采购前原有实物库存为零')+'</label><div class="hint">'+label('If stock already exists, count it first.','如果原本已经有货，请先点算原有库存。')+'</div></div></div>';
     html+='<details class="card homefold" '+(DBuy.showExtra?'open':'')+' ontoggle="Owner.detailToggle(\'showExtra\',this.open)"><summary>'+label('Extra details (optional)','补充资料（有才填写）')+'</summary><div style="display:grid;gap:12px;margin-top:8px">'+field(label('Supplier','供应商'),'<input maxlength="100" value="'+esc(DBuy.supplier)+'" oninput="Owner.detailBatchField(\'supplier\',this.value)">')+field(label('Receipt / payment reference','收据／付款参考'),'<input maxlength="80" value="'+esc(DBuy.ref)+'" oninput="Owner.detailBatchField(\'ref\',this.value)">')+'</div></details>';
@@ -1537,9 +1538,9 @@ const Owner = (() => {
   function detailBuyDate(v){if(DBuy&&!DetailBusy){DBuy.date=v;detailBuyTotal();}}
   function detailSetPrice(id,v){if(DBuy&&!DetailBusy){DBuy.price=v;detailBuyTotal();}}
   function detailPayer(p){if(DBuy&&!DetailBusy&&BUYERS.includes(p)){DBuy.by=p;drawDetailBuy();}}
-  async function detailSaveBuy(){
+  async function detailSaveBuy(openStock=false){
     if(DetailBusy||!DBuy||ui.key!==DBuy.key||ui.request!==DBuy.request)return;
-    const plan=detailBatchPlan(),d=DBuy;if(plan.error)return toast(plan.error);
+    const plan=detailBatchPlan(),d=DBuy;if(plan.error)return toast(plan.error);if(openStock&&(!plan.batch||plan.surplus<=0))return;
     const {ls,l}=plan,by=d.by,snap=ls.map(x=>[x.id,d.snap[x.id]]),price=Number(d.price),sell=needSell(l)?Number(detailSell(l)):null;
     const meta={supplier:d.supplier.trim(),ref:d.ref.trim()},ids=ls.map(x=>x.id);
     DetailBusy=true;busy(1);detailBuyTotal();let saved=false,err=null;
@@ -1552,7 +1553,7 @@ const Owner = (() => {
       else{res=await rpc('shop_owner_buy',{ids,price,prices:Object.fromEntries(ids.map(id=>[id,price])),bottle_prices:l.bottle_id?{[l.bottle_id]:price}:{},sells:needSell(l)?{[l.id]:sell}:{},paid_by:by,date:d.date,client_id:d.op,...meta});if(!res?.ok||(!res.repeat&&Number(res.count)!==ids.length))throw Error(Z('Check purchase result before retrying','请先核对购买结果'));}
       saved=true;
     }catch(e){err=e;}
-    try{await reload();if(saved){DBuy=null;go('buy');}else render();}catch(e){err=err||e;}
+    try{await reload();if(saved){DBuy=null;if(openStock){WHFilter='ALL';WHSearch='';go('whinventory');if((WH?.stock||[]).some(x=>x.item_id===plan.it.id))whStockDetail(plan.it.id,true);else toast(Z('Purchase saved; refresh inventory to check','采购已保存，请刷新库存核对'));}else go('buy');}else render();}catch(e){err=err||e;}
     finally{busy(0);DetailBusy=false;detailBuyTotal();}
     if(err){openModal('<h2>'+Z('Check purchase result','核对购买结果')+'</h2><div class="note bad">'+esc(errZ(err.message))+'</div><p>'+Z('Refresh and verify before entering again. No automatic retry.','先刷新核对是否已保存，不会自动重试。')+'</p><button class="btn block" onclick="closeModal()">'+Z('Close','关闭')+'</button>');}
     else toast(Z('Purchase recorded','本笔购买已保存'));
@@ -2557,7 +2558,7 @@ const Owner = (() => {
     if(unresolved)h+='<div class="note warn">'+unresolved+' '+Z('batches excluded pending reconciliation','批销售资料待核实，暂不计入毛利合计')+'</div>';
     return h+(all.length?all.map(b=>whBatchCard(b)).join(''):'<div class="empty">'+Z('No stock batches recorded','尚未记录库存批次')+'</div>');
   }
-  function whStockDetail(id){
+  function whStockDetail(id,openBatches=false){
     const x=(WH?.stock||[]).find(s=>s.item_id===id);if(!x)return;
     let h='<h2>'+esc(x.item)+'</h2><div style="display:flex;align-items:center;gap:12px">'+icoBox(IT(id),x.item)+'<span>'+esc(x.unit||'—')+'</span></div>';
     if(x.opening_confirmed){
@@ -2565,7 +2566,7 @@ const Owner = (() => {
       h+=whBtn('Bought · stock in','买了 · 入库','QUICK_STOCK',id,'btn primary block');
     }else h+='<div class="note warn">'+Z('Opening count not confirmed','期初库存待确认，不视作零库存。')+'</div>'+whBtn('Confirm opening','确认期初库存','OPENING',id,'btn primary block');
     h+='<div class="btnrow"><button class="btn grow" data-id="'+esc(id)+'" onclick="closeModal();Owner.go(\'whhistory\',{item_id:this.dataset.id})">'+Z('Movement history','进出历史')+'</button><button class="btn grow" data-id="'+esc(id)+'" onclick="closeModal();Owner.go(\'whprofit\',{item_id:this.dataset.id})">'+Z('Batch costs & profit','批次成本与利润')+'</button></div>';
-    h+='<details style="margin:12px 0"><summary>'+Z('Batch details / count','批次详情／点算')+'</summary>'+(whReport()?whReportBatches().filter(b=>b.option_id===id).map(b=>whBatchCard(b,true)).join(''):whReportUnavailable())+whBtn('Adjust up','盘盈入库','ADJUST_UP',id,'btn block')+'</details><details><summary>'+Z('Stock settings','库存设定')+'</summary>'+whBtn('Minimum / price settings','最低库存／定价','POLICY',id,'btn block')+whBtn('Supplier order','计划订货','RESTOCK',id,'btn block')+'</details><button class="btn block" onclick="closeModal()">'+Z('Close','关闭')+'</button>';
+    h+='<details '+(openBatches?'open':'')+' style="margin:12px 0"><summary>'+Z('Batch details / count','批次详情／点算')+'</summary>'+(whReport()?whReportBatches().filter(b=>b.option_id===id).map(b=>whBatchCard(b,true)).join(''):whReportUnavailable())+whBtn('Adjust up','盘盈入库','ADJUST_UP',id,'btn block')+'</details><details><summary>'+Z('Stock settings','库存设定')+'</summary>'+whBtn('Minimum / price settings','最低库存／定价','POLICY',id,'btn block')+whBtn('Supplier order','计划订货','RESTOCK',id,'btn block')+'</details><button class="btn block" onclick="closeModal()">'+Z('Close','关闭')+'</button>';
     openModal(h);
   }
   function warehousePage(){
