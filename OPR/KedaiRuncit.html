@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 71;
+const APP_VERSION = 72;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -2094,6 +2094,7 @@ const Owner = (() => {
   function editItem(id){ const i = IT(id); if(!i) return closeModal(); const food = i.kind === 'FOOD';
     openModal(`<h2>✎ ${esc(i.label)}</h2>
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">${icoBox(i, i.label)}<span class="btnrow"><button class="btn small light" onclick="closeModal();Owner.photo('${id}')">📷 ${itemPhoto(i) ? Z('Change photo','换照片') : Z('Add photo','加照片')}</button>${itemPhoto(i) ? `<button class="btn small light" onclick="closeModal();Owner.photoDel('${id}')">✕ ${Z('Remove photo','拿掉照片')}</button>` : ''}</span></div>
+      ${i.image_master_id&&i.image_master_id!==id?`<div class="hint">${Z('Photo shared with Food Order · ','共用 Food Order 主图 · ')}${esc(IT(i.image_master_id).label||'')}</div>`:''}
       ${whiskeyBrands(i).length?`<div class="field"><label>${Z('Brand variants (same product)','品牌规格（同一商品）')}</label>${whiskeyBrands(i).map(v=>`<div class="line">${icoBox(v,v.label)}<b>${esc(v.label)}</b></div>`).join('')}<div class="hint">${Z('Original bottle sharing and pricing rules are unchanged.','保留原有分瓶及收费规则。')}</div></div>`:''}
       ${food ? '' : `<div class="field"><label>${Z('Name','名字')}</label><input id="ein" maxlength="30" value="${esc(i.label)}"></div>`}
       ${i.kind === 'PERSONAL' ? `<div class="hint">${Z('Buy price is typed every time at Bought — it is not fixed here.','买价每次按「买了」时填，这里不设固定买价。')}</div>` : ''}
@@ -2172,7 +2173,7 @@ const Owner = (() => {
     finally{CatBusy=false;busy(0);const b=$('#catSave');if(b)b.disabled=false;}
   }
   function photo(id){
-    if(CatBusy)return;const it=IT(id);if(!it.id){toast(Z('Item not found — refresh','找不到商品，请刷新'));return;}
+    if(CatBusy)return;id=IT(id)?.image_master_id||id;const it=IT(id);if(!it.id){toast(Z('Item not found — refresh','找不到商品，请刷新'));return;}
     const old=catDraft();if(old&&old.id!==id){catResume();return;}
     catPersist(old||{id,kind:it.kind,label:it.label});catModal(CatDraft);
   }
@@ -2186,13 +2187,13 @@ const Owner = (() => {
         const {error}=await sb.storage.from(PHOTO_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw Error(error.message);
         catPersist({...d,path});}
       const result=await rpc('shop_owner_photo_set',{item_id:d.id,path});if(!result?.ok)throw Error('Photo save not confirmed');
-      B.items=B.items.map(x=>x.id===d.id?{...x,photo:path,image_src:path,image_reference:false}:x);catPersist(null);closeModal();ui={view:'prices'};render();
+      B.items=B.items.map(x=>(x.image_master_id||x.id)===d.id?{...x,photo:path,image_src:path,image_reference:false}:x);catPersist(null);closeModal();ui={view:'prices'};render();
       toast(Z('Item and photo saved','商品和照片已保存'));
       try{await catRefresh();}catch(e){toast(Z('Saved; refresh later to verify','已保存；稍后刷新核实'));}
     }catch(e){catError(Z('Photo not confirmed. Product name remains saved: ','照片保存未确认，商品名称仍已保存：')+errZ(e.message));}
     finally{CatBusy=false;busy(0);const b=$('#catSave');if(b)b.disabled=false;}
   }
-  async function photoDel(id){ if(!confirm(Z('Remove this photo?','拿掉这张照片？'))) return; await act('shop_owner_photo_set', {item_id:id, path:null}, Z('Photo removed','照片已拿掉')); }
+  async function photoDel(id){const master=IT(id)?.image_master_id||id,shared=B.items.filter(x=>(x.image_master_id||x.id)===master).length>1; if(!confirm(shared?Z('Remove the shared master photo from all linked items?','删除共用主图？所有关联商品将同时失去这张照片。'):Z('Remove this photo?','拿掉这张照片？'))) return; await act('shop_owner_photo_set', {item_id:master, path:null}, Z('Photo removed','照片已拿掉')); }
   function moveItem(id){ const i = IT(id);
     openModal(`<h2>${esc(i.label)}</h2><div class="hint" style="margin-bottom:10px">${Z('Move to another list','换到别的类')}</div><div class="farmgrid">${['FARM','PERSONAL','SHARED'].map(k => `<button class="farmcard" style="min-height:80px" ${i.kind===k?'disabled':''} onclick="Owner.saveMove('${id}','${k}')"><span style="font-size:26px">${KINDS[k].ico}</span><b style="font-size:16px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button></div>`); }
