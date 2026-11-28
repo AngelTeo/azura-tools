@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 99;
+const APP_VERSION = 100;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1339,10 +1339,10 @@ const Owner = (() => {
     out+=pendingCloseCards(f);
     if(!ls.length&&!d.submitted&&(phoneRows.length||pendingCloseRows(f).length))return out;
     if(!ls.length&&!d.submitted)return out+(d.error?'<div class="note warn">'+esc(d.error)+'</div>':'')+'<div class="empty">'+Z('No goods ready for delivery','目前没有待交货商品')+'</div>';
-    out+='<div class="field"><label>'+Z('Actual hand-over date','实际交货日期')+'</label><input type="date" '+disable+' max="'+esc(B.today)+'" min="2026-11-01" value="'+esc(d.date)+'" onchange="Owner.dvSet(\''+f+'\',\'date\',this.value)"></div><div class="btnrow"><button class="btn small" '+disable+' onclick="Owner.dvAll(\''+f+'\',true)">'+Z('Select all prepared','全选已备货')+'</button><button class="btn small" '+disable+' onclick="Owner.dvAll(\''+f+'\',false)">'+Z('Clear','清除')+'</button></div>';
+    out+='<div class="btnrow"><button class="btn small" '+disable+' onclick="Owner.dvAll(\''+f+'\',true)">'+Z('Select all prepared','全选已备货')+'</button><button class="btn small" '+disable+' onclick="Owner.dvAll(\''+f+'\',false)">'+Z('Clear','清除')+'</button></div>';
     for(const k of ['FARM','PERSONAL','SHARED','FOOD']){const rr=ls.filter(l=>l.kind===k);if(rr.length)out+='<div class="sectionhead">'+esc(KINDS[k].name)+' · '+rr.length+'</div>'+rr.map(l=>dvCard(f,l,d)).join('');}
     const badDate=selected.some(l=>l.buy?.date&&d.date<String(l.buy.date).slice(0,10));
-    out+='<div class="card" style="padding:12px;margin:10px 0"><b>'+Z('Selected goods','已选商品')+' '+selected.length+'/'+ls.length+'</b>'+(needsAuth?'<label class="checkrow"><input type="checkbox" '+disable+' '+(d.authorised?'checked':'')+' onchange="Owner.dvSet(\''+f+'\',\'authorised\',this.checked)">'+Z('Confirm authorised salary deductions for unpaid personal goods','确认个人物品已获扣薪授权')+'</label>':'')+(badDate?'<div class="hint">'+Z('Delivery cannot precede purchase date.','交货日期不能早于购买日期。')+'</div>':'')+(d.error?'<div class="note warn">'+esc(d.error)+'</div>':'')+(d.submitted?'<button class="btn primary block" '+(WHBusy?'disabled':'')+' onclick="Owner.dvRecover(\''+f+'\')">'+Z('Check delivery status','核对交货状态')+'</button>':'<button class="btn primary block" '+(dvPayload(f,d)&&!WHBusy?'':'disabled')+' onclick="Owner.dvSave(\''+f+'\')">✓ '+Z('Confirm delivered','确认交货')+' · '+selected.length+'</button>')+'</div>';return out;
+    out+='<div class="card" style="padding:12px;margin:10px 0"><b>'+Z('Selected goods','已选商品')+' '+selected.length+'/'+ls.length+'</b>'+'<div class="field" style="margin-top:12px"><label>'+Z('Actual hand-over date','实际交货日期')+'</label><input type="date" '+disable+' max="'+esc(B.today)+'" min="2026-11-01" value="'+esc(d.date)+'" onchange="Owner.dvSet(\''+f+'\',\'date\',this.value)"></div>'+(needsAuth?'<label class="checkrow"><input type="checkbox" '+disable+' '+(d.authorised?'checked':'')+' onchange="Owner.dvSet(\''+f+'\',\'authorised\',this.checked)">'+Z('Confirm authorised salary deductions for unpaid personal goods','确认个人物品已获扣薪授权')+'</label>':'')+(badDate?'<div class="hint">'+Z('Delivery cannot precede purchase date.','交货日期不能早于购买日期。')+'</div>':'')+(d.error?'<div class="note warn">'+esc(d.error)+'</div>':'')+(d.submitted?'<button class="btn primary block" '+(WHBusy?'disabled':'')+' onclick="Owner.dvRecover(\''+f+'\')">'+Z('Check delivery status','核对交货状态')+'</button>':'<button class="btn primary block" '+(dvPayload(f,d)&&!WHBusy?'':'disabled')+' onclick="Owner.dvSave(\''+f+'\')">✓ '+Z('Confirm delivered','确认交货')+' · '+selected.length+'</button>')+'</div>';return out;
   }
   async function dvSave(f){
     const d=dvState(f);if(WHBusy||d.submitted)return;const p=dvPayload(f,d);if(!p){render();return;}
