@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 78;
+const APP_VERSION = 79;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1151,7 +1151,13 @@ const Owner = (() => {
   let B = null, ui = {view:'home'}, ALC = lsGet('runcit_alcohol', false), HO = {}, BS = null, SP = null;
   const ME = () => ({OWNER:'Teo'})[B.me && B.me.role] || lsGet('runcit_me', 'EX');
   const ddm = s => { const d = new Date(String(s).slice(0,10)+'T00:00:00'); return `${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`; };
-  const IT = id => B.items.find(i => i.id === id) || {};
+  const IT = id => {
+    const items=B?.items||[], direct=items.find(i=>i.id===id);
+    if(direct){const master=direct.image_master_id&&items.find(i=>i.id===direct.image_master_id);return master&&master.id!==direct.id?{...direct,photo:master.photo,image_src:master.image_src,image_reference:master.image_reference}:direct;}
+    const l=(B?.lines||[]).find(x=>x.item_id===id&&x.image_master_id&&x.image_master_id!==id);
+    const master=l&&items.find(i=>i.id===l.image_master_id);
+    return master?{id:l.item_id,code:l.code,label:l.item,kind:l.kind,image_master_id:master.id,photo:master.photo,image_src:master.image_src,image_reference:master.image_reference}: {};
+  };
   const lname = l => l.item;
   const lkey = l => l.item_id || 'c:' + l.kind + ':' + l.item;
   function requestReview(l,activeWorkers){
