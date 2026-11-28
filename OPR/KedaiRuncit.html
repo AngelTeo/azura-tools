@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 65;
+const APP_VERSION = 66;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -860,6 +860,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     const c = tileOf('FOOD'), list = items('FOOD'); let h = `<div class="hero"><div><h1>${c.icon} ${esc(c[LANG].title)}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen" style="margin-bottom:12px"><div class="foodname"><b style="color:var(--warn)">${esc(foodLine())}</b><small>${esc(c[LANG].subtitle)}</small></div></div>${foodCopyCard()}`;
     h+=`<button class="btn gold block" onclick="Leader.foodPhoto()">📷 ${specLabel('Extra food with photo','照片订菜（额外需求）','ဓာတ်ပုံဖြင့် စားစရာ အပိုမှာမယ်')}</button>${lines().filter(l=>l.kind==='FOOD'&&l.round===ui.round&&l.photo_count&&l.status==='REQUESTED').map(row).join('')}`;if(ui.foodPending)return h+`<div class="note warn">${specLabel('Retry the saved food order','重试原订菜单','ဒီစာရင်းကို ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitFood()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and reload current order','核实并重新读取本轮订菜','စစ်ဆေးပြီး ဒီအကြိမ်စာရင်း ပြန်ယူမယ်')}</button>`;
+    if(Object.values(ui.qty||{}).some(q=>!Number.isInteger(Number(q))))h+=`<div class="note warn">${esc(specLabel('Half-kg quantities are preserved in this draft. Official ordering currently accepts whole units only; review before submitting.','半公斤数量已原样保留；正式订单目前只接受整数数量，提交前须核对。','ကီလိုတစ်ဝက် အရေအတွက်ကို မူကြမ်းတွင် သိမ်းထားသည်။ လက်ရှိ အပြည့်ကိန်းသာ ပို့နိုင်ပါသည်။'))}</div>`;
     let cat = '';
     const catOf = code => (FO_SEED.find(a => a[0] === code) || [])[2] || '';
     for(const it of [...list].sort((a,b) => (FO_SEED.findIndex(x=>x[0]===a.code)) - (FO_SEED.findIndex(x=>x[0]===b.code)))){
@@ -868,17 +869,17 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     }
     return h + (cat ? '</div>' : '') + '<div class="bottom" id="bottombar"></div>';
   }
-  function fstep(id,d){if(ui.foodPending||LeaderBusy)return;ui.qty[id]=Math.max(0,Math.min(999,(ui.qty[id]||0)+d));storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline});render();}
+  function fstep(id,d){if(ui.foodPending||LeaderBusy)return;const it=items('FOOD').find(x=>x.id===id);if(!it)return;const q=Number(ui.qty[id]||0),step=String(it.unit||'').trim().toLowerCase()==='kg'?.5:1;ui.qty[id]=Math.max(0,Math.min(999,q+d*step));storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline});render();}
   // v65: use official prior round, never an undated device cache.
   function previousFoodQuantities(prev,farm,round,list){
     if(!prev||prev.farm!==farm||!/^\d{4}-\d{2}-\d{2}$/.test(String(prev.round||''))||prev.round>=round||!prev.items||typeof prev.items!=='object'||Array.isArray(prev.items))return null;
-    const allowed=new Set(list.map(x=>x.id)),qty={};let skipped=Number(prev.skipped)||0;
-    for(const [id,value] of Object.entries(prev.items)){const q=Number(value);if(!allowed.has(id)||!Number.isInteger(q)||q<1||q>999){skipped++;continue;}qty[id]=q;}
-    return {round:prev.round,qty,count:Object.keys(qty).length,skipped};
+    const allowed=new Map(list.map(x=>[x.id,x])),qty={};let skipped=Number(prev.skipped)||0;
+    for(const [id,value] of Object.entries(prev.items)){const q=Number(value);if(!allowed.has(id)||!Number.isFinite(q)||q<0.5||q>999||(!Number.isInteger(q)&&!(String(allowed.get(id)?.unit||'').trim().toLowerCase()==='kg'&&Number.isInteger(q*2)))){skipped++;continue;}qty[id]=q;}
+    return {round:prev.round,qty,count:Object.keys(qty).length,skipped,source:prev.source||'official_order'};
   }
   function foodCopyCard(){
     const prev=previousFoodQuantities(D?.last_food_order,FARM,ui.round,items('FOOD'));
-    const description=prev?.count?prev.round.split('-').reverse().join('/')+' · '+prev.count+' '+specLabel('items','样商品','မျိုး'):specLabel('No earlier recorded list yet','暂无上次正式订单','အရင်မှာယူစာရင်း မရှိသေးပါ');
+    const description=prev?.count?prev.round.split('-').reverse().join('/')+' · '+prev.count+' '+specLabel('items','样商品','မျိုး')+(prev.source==='owner_history'?' · '+specLabel('Historical list','历史清单','အရင်စာရင်း'):''):specLabel('No earlier recorded list yet','暂无上次正式订单','အရင်မှာယူစာရင်း မရှိသေးပါ');
     return '<div class="card" style="padding:12px;margin:10px 0"><button class="btn primary block" '+(ui.foodPending||LeaderBusy?'disabled':'')+' onclick="Leader.sameLast()">↺ '+esc(specLabel('Copy last order','复制上一次订单','အရင်မှာယူစာရင်း ကူးမယ်'))+'</button><div class="hint" style="text-align:center;margin-top:6px">'+esc(description)+'</div><div class="hint" style="text-align:center">'+esc(specLabel('Copy quantities only, then adjust and submit','只复制数量，可调整后再提交','အရေအတွက် ကူးပြီး ပြင်ဆင်ကာ ပို့ပါ'))+'</div></div>';
   }
   async function sameLast(){
@@ -898,7 +899,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     }catch(e){toast(specLabel('Could not load last order — retry','无法读取上次订单，请重试','အရင်စာရင်း မရပါ။ ထပ်ကြိုးစားပါ။'));}
     finally{LeaderBusy=false;busy(0);render();}
   }
-  async function commitFood(){if(LeaderBusy||D?.status!=='ACTIVE'||D.farm!==FARM||ui.round!==activeRound())return;const its={};for(const [id,q] of Object.entries(ui.qty))if(q>0)its[id]=q;if(!ui.foodPending){ui.foodPending={op_id:uuid(),manager:MGR,farm:FARM,round:ui.round,items:its,baseline:ui.baseline};if(!storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline,pending:ui.foodPending})){ui.foodPending=null;return;}}LeaderBusy=true;busy(1);let saved=false;try{const r=await rpc('shop_leader_food_save',{...ui.foodPending,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;lsSet('runcit_last_food_'+FARM,its);storeDraft('FOOD_REGULAR',null);ui={view:'done',what:'food',savedCount:r.count};await load();}catch(e){toast(saved?specLabel('Saved — refresh','已保存，请刷新','သိမ်းပြီးပါပြီ။'):specLabel('Not confirmed — retry saved order','未确认，请重试原单','ဒီစာရင်းကို ထပ်ပို့ပါ။'));}finally{LeaderBusy=false;busy(0);render();scrollTo(0,0);}}
+  async function commitFood(){if(LeaderBusy||D?.status!=='ACTIVE'||D.farm!==FARM||ui.round!==activeRound())return;const its={};for(const [id,q] of Object.entries(ui.qty))if(q>0)its[id]=q;if(!ui.foodPending&&Object.values(its).some(q=>!Number.isInteger(Number(q)))){toast(specLabel('Half-kg lines cannot yet be submitted. Quantities have not been changed.','有半公斤项目暂不能提交，数量没有被改动。','ကီလိုတစ်ဝက် အရေအတွက်ကို မပို့နိုင်သေးပါ။ မူရင်းအတိုင်း ရှိပါသည်။'));return;}if(!ui.foodPending){ui.foodPending={op_id:uuid(),manager:MGR,farm:FARM,round:ui.round,items:its,baseline:ui.baseline};if(!storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline,pending:ui.foodPending})){ui.foodPending=null;return;}}LeaderBusy=true;busy(1);let saved=false;try{const r=await rpc('shop_leader_food_save',{...ui.foodPending,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;lsSet('runcit_last_food_'+FARM,its);storeDraft('FOOD_REGULAR',null);ui={view:'done',what:'food',savedCount:r.count};await load();}catch(e){toast(saved?specLabel('Saved — refresh','已保存，请刷新','သိမ်းပြီးပါပြီ။'):specLabel('Not confirmed — retry saved order','未确认，请重试原单','ဒီစာရင်းကို ထပ်ပို့ပါ။'));}finally{LeaderBusy=false;busy(0);render();scrollTo(0,0);}}
 
   /* ---------- roll call ---------- */
   function startAtt(){ attDraft = {}; const a = D.att || {}; for(const w of D.workers||[]) if(a[w.id] && CODE_ST[a[w.id].code]) attDraft[w.id] = {st: CODE_ST[a[w.id].code], why: a[w.id].why || undefined};
