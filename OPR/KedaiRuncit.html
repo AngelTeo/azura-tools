@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 73;
+const APP_VERSION = 74;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1183,7 +1183,7 @@ const Owner = (() => {
   const whOpening=l=>whManaged(l)&&!whPolicy(l.item_id).opening_confirmed;
   const reviewReason=l=>whLink(l).review||(!l.item_id&&l.photo_count?'PHOTO':null)||requestReview(l,B.all_workers||[])||(whOpening(l)?'OPENING':null);
   const reviewLines=()=>B.lines.filter(l=>['REQUESTED','BOUGHT'].includes(l.status)&&reviewReason(l));
-  const reviewLabel=k=>({AMOUNT_PENDING:Z('Actually delivered · amount pending','已实际交货 · 金额待补'),PHOTO:Z('Identify item from photo','照片需求 · 核实实际物品'),WORKER:Z('Worker not in active AD list — verify history','工人不在现有 AD 名单 · 核实历史'),MEDICAL:Z('Medical service already reported — reconcile','已发生医疗事项 · 核实付款及原扣款'),INSTALMENT:Z('Quote and instalment terms pending','等待报价及分期安排'),CATALOG:Z('Custom personal item — catalogue link required','自填个人物品 · 需关联正式商品'),OPENING:Z('Opening stock not confirmed','期初库存尚未确认')}[k]||'');
+  const reviewLabel=k=>({FOOD_UNIT:Z('Old grocery request · verify original unit','旧订菜申请 · 核对原有单位'),AMOUNT_PENDING:Z('Actually delivered · amount pending','已实际交货 · 金额待补'),PHOTO:Z('Identify item from photo','照片需求 · 核实实际物品'),WORKER:Z('Worker not in active AD list — verify history','工人不在现有 AD 名单 · 核实历史'),MEDICAL:Z('Medical service already reported — reconcile','已发生医疗事项 · 核实付款及原扣款'),INSTALMENT:Z('Quote and instalment terms pending','等待报价及分期安排'),CATALOG:Z('Custom personal item — catalogue link required','自填个人物品 · 需关联正式商品'),OPENING:Z('Opening stock not confirmed','期初库存尚未确认')}[k]||'');
   const ico = l => l.kind === 'FOOD' ? (IT(l.item_id).icon || '🥬') : icon(l.item, IT(l.item_id).icon);
   const who = l => l.kind === 'PERSONAL' ? l.worker : KINDS[l.kind].name;
   const open = () => B.lines.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD');
@@ -1396,7 +1396,7 @@ const Owner = (() => {
     return h + `<div class="bottom" id="bottombar" style="flex-direction:column;align-items:stretch"><div class="btnrow"><button class="btn primary grow" id="wa-batch-button" ${WASelected.size?'':'disabled'} onclick="Owner.waBatch()">📲 WhatsApp (${WASelected.size})</button><button class="btn small" id="wa-batch-clear" ${WASelected.size?'':'disabled'} onclick="Owner.waClear()">${Z('Clear','清除勾选')}</button></div><button class="btn" onclick="Owner.finishTrip()" ${left?'':'disabled'}>${Z(`Finish trip · ${left} not bought move to next trip`, `这趟买完 · 没买的 ${left} 样移到下一趟`)}</button></div>`;
   }
   function reviewPage(){
-    const rows=reviewLines().filter(l=>!ui.reason||reviewReason(l)===ui.reason),codes=['AMOUNT_PENDING','PHOTO','WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
+    const rows=reviewLines().filter(l=>!ui.reason||reviewReason(l)===ui.reason),codes=['FOOD_UNIT','AMOUNT_PENDING','PHOTO','WORKER','MEDICAL','INSTALMENT','CATALOG','OPENING'];
     let h='<div class="hero"><div><h1>⚠ '+Z('Needs review','待核实')+'</h1><div class="sub">'+Z('No purchase or deduction is created here','这里只核实，不自动采购或扣薪')+'</div></div><button class="btn small" onclick="Owner.go(\'buy\')">‹ '+Z('Buying list','采购清单')+'</button></div>';
     for(const k of codes){const ls=rows.filter(l=>reviewReason(l)===k);if(!ls.length)continue;h+='<div class="sectionhead">'+esc(reviewLabel(k))+' · '+ls.length+'</div>';for(const l of ls)h+='<div class="card" style="padding:12px;margin-bottom:8px"><b>'+esc(l.item)+' × '+l.qty+'</b><div>'+esc(l.farm)+' · '+esc(l.worker||'—')+'</div><div class="hint">'+esc(l.detail||'—')+'</div><div>'+askTag(l)+'</div><div class="hint">'+esc(l.status)+'</div>'+'<div>'+refButton(l)+'</div><div class="btnrow" style="flex-wrap:wrap;margin-top:8px">'+reviewActions(l,k)+'</div></div>';}
     if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';h+='<button class="btn block" onclick="Owner.go(\'whphones\')">'+Z('Phone instalment records','手机分期记录')+'</button>';
@@ -1796,6 +1796,7 @@ const Owner = (() => {
       <div class="card" style="padding:10px 14px">${FARMS.map(f => `<div class="line"><b>${f}</b>${sent(f) ? `<span class="tag ok">${Z('Sent','已报')}</span>` : `<span class="tag warn">${Z('Not sent yet','还没报')}</span>`}</div>`).join('')}</div>
       <div class="pills noprint">${SUPPLIERS.map(s => `<button class="pill ${s===sup?'on':''}" onclick="Owner.go('food',{sup:'${s}',round:'${esc(foodDate())}'})">${esc(s)} · ${fItems(s).length}</button>`).join('')}</div>
       <div id="printarea"><h2 class="printonly">${esc(sup === 'Huat Tiong' ? 'Huat Thiong' : sup)} x Azura Delta ${pdfDate(F.deliver)}</h2>`;
+    const oldFood=reviewLines().filter(l=>reviewReason(l)==='FOOD_UNIT');if(oldFood.length)h+='<div class="note warn">'+Z('Old grocery requests pending unit confirmation: ','旧订菜申请待核实单位：')+oldFood.length+' <button class="btn small" onclick="Owner.go(\'review\',{reason:\'FOOD_UNIT\'})">'+Z('View','查看')+'</button></div>';
     if(!rows.length) h += `<div class="card empty">${Z(`No items for ${esc(sup)}`, `${esc(sup)} 没有东西`)}</div>`;
     else h += `<div class="tablewrap"><table><thead><tr><th>${Z('Food','食物')}</th>${FARMS.map(f => `<th class="num">${f}</th>`).join('')}<th class="num">TOTAL</th><th class="noprint"></th></tr></thead><tbody>${rows.map(r => {
       const tot = sumQty(r.lines), done = r.lines.every(l => l.status === 'BOUGHT');
@@ -2533,6 +2534,7 @@ const Owner = (() => {
   const phoneFind=id=>WH?.phones?.find(x=>x.request_id===id);
   const phoneStage=x=>({QUOTED:Z('Quote recorded','报价已记录'),APPROVED:Z('Terms approved','分期已批准'),BOUGHT:Z('Purchased / pending delivery','已购买／待交付'),DELIVERED:Z('Delivered / Salary loan','已交付／Salary 分期'),CANCELLED:Z('Cancelled','已取消')}[x]||Z('Awaiting quote','等待报价'));
   function reviewActions(l,k){
+    if(k==='FOOD_UNIT')return '<div class="hint">'+Z('This is an original 15 Nov request. Confirm the actual unit and whether still needed before transferring to Food Order. Original quantity retained; no purchase or deduction created.','这是15/11旧申请。转入买菜前须核实实际包装单位及是否仍需采购；原数量保留，尚未产生采购或扣薪。')+'</div>';
     if(k==='PHOTO')return whBtn('Identify actual item','识别实际物品','PHOTO_IDENTIFY',l.id,'btn primary grow');
     if(k==='OPENING')return whBtn('Confirm opening stock','确认期初库存','OPENING',l.item_id);
     if(k==='CATALOG')return whBtn('Link actual item','关联正式商品','LINK_ITEM',l.id,'btn primary grow')+whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id);
