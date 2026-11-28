@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 95;
+const APP_VERSION = 96;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1273,7 +1273,7 @@ const Owner = (() => {
       workCard('📦','STOCK',Z('Warehouse','仓库'),Z('Available · batches · stock take','库存 · 批次 · 点算'),"Owner.go('warehouse')",stockN?String(stockN)+' '+Z('items','种商品'):Z('Setup pending','待设定'))+
       workCard('🚚','DELIVER',Z('Delivery','交货'),Z('Three farms · leader receipts','三个园区 · 点收'),"Owner.go('deliver')",String(n)+' '+Z('ready','待交货'))+
       workCard('💰','ACCOUNTS',Z('Accounts','结账'),Z('Payments · cards · month end','付款 · 购物卡 · 月底'),"Owner.go('accounts')",s.advance?RM(s.advance)+' '+Z('advance','待报销'):Z('Settlement pending','待结账'))+'</div>';
-    out+='<button class="btn light block" style="margin:4px 0 14px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="Owner.historyOpen()">📋 '+Z('History','历史记录')+' ›</button>';
+    out+=workGrid([workCard('📋','HISTORY',Z('History','历史记录'),Z('By product · worker','按商品 · 工人'),"Owner.historyOpen()").replace('homequick mg-tile','homequick mg-tile mg-span')]);
     out+='<details class="card homefold"><summary>'+Z('Schedule / attendance / more','日程／点名／其他')+'</summary><div class="hint">'+Z('Next buying trip','下次采购')+' '+ddm(trip)+' · '+Z('Groceries delivery','送菜')+' '+dm(F.deliver)+'</div>'+weekStrip()+FARMS.map(f=>{const a=(B.att||{})[f]||{},d=(a.work||0)+(a.half||0)+(a.off||0);return '<div class="line"><b>'+esc(f)+'</b><span>'+d+'/'+workers(f).length+' '+Z('attendance recorded','已点名')+'</span></div>';}).join('')+'</details>';
     return out;
   }
