@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salary v94</title>
+<title>Salary v95</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -150,6 +150,14 @@ tr:hover td{background:#fafaf8;}
 .fd-chips{display:flex;flex-wrap:wrap;gap:6px}
 .fd-chip{border:1.5px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;cursor:pointer}
 .fd-chip.on{border-color:var(--acc);background:var(--accl);color:var(--acc)}
+.av-farm-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.av-farm-card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px 4px;text-align:center;color:var(--text);cursor:pointer;min-height:74px}
+.av-farm-card.on{background:var(--accl);border:2px solid var(--acc);color:var(--acc)}
+.av-farm-card b,.av-farm-card small{display:block}.av-farm-card b{font-size:16px}.av-farm-card small{font-size:12px;margin-top:5px}
+.av-worker-card{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--border);border-radius:10px;text-align:left;padding:12px;margin:6px 0;color:var(--text);min-height:52px;cursor:pointer}
+.av-worker-card.on{border-color:var(--acc);background:var(--accl)}.av-worker-card small{display:block;color:var(--text3);margin-top:3px}
+.av-picker-title{font-size:13px;color:var(--text3);margin:14px 0 6px;font-weight:700}
+
 .sm-top{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px}.sm-top .l{font-size:11px;color:var(--text3)}.sm-top .b{font-size:24px;font-weight:700}
 .sm-top .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.sm-top .g3 div{font-size:11px;color:var(--text3)}.sm-top .g3 b{display:block;font-size:14px;color:var(--text)}
 .sm-flt{display:flex;gap:6px;overflow:auto;padding:2px 0 8px}.sm-flt span{border:1.5px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--text3);background:#fff;white-space:nowrap;cursor:pointer}.sm-flt span.on{border-color:var(--text);background:var(--text);color:#fff}
@@ -3572,6 +3580,8 @@ function avWorker(wid){
   avSet(h);
 }
 function avLoanForm(wid){ // 新借款 / 加借
+  if(!CAN_EDIT){toast('View only. Salary edit permission is required.');return;}
+  if(wid&&!avLoanFarm(getWorker(wid))){toast('New loans are limited to current AD workers. Historical records are retained.');return;}
   const mk = monthKey(), t0 = new Date(), today = t0.getFullYear() + '-' + pad2(t0.getMonth()+1) + '-' + pad2(t0.getDate());
   AV = {mode:'loan', wid: wid || null, amount:'', date: today.slice(0,7) === mk ? today : mk + '-01', monthly:'', from: effMonth(), note:'', pickWho: !wid};
   avLoanDraw();
@@ -3600,16 +3610,31 @@ function avLine(){ // 绿色那行：每月多少 · 几个月还完
   const total = r2((L ? avOwesBefore(advanceTrack(AV.wid, AV.from)) : 0) + amt), months = mo > 0 && amt > 0 ? Math.ceil(total / mo - 1e-9) : 0;
   let end = AV.from; for(let i = 1; i < months; i++) end = nextMk(end);
   return months ? fmtRM(mo) + ' a month · paid back in ' + months + ' month' + (months>1?'s':'') + ' (' + MONTHS[Number(end.slice(5))-1].slice(0,3) + ' ' + end.slice(0,4) + ')' : 'Type the amount and pick the monthly amount'; }
-function avWho(){ const mk = monthKey(), ws = workersInMonthLive(mk).filter(w => !avLeft(w, mk)), groups = {};
-  ws.forEach(w => { const f = homeFarm(w, mk) || 'Farm not set'; (groups[f] ??= []).push(w); });
-  const order = [...FARMS.map(f => f[0]), 'ALL', 'Farm not set'].filter(f => groups[f]);
-  let h = '<h3>Who is borrowing?</h3>';
-  order.forEach(f => { h += '<div class="fd-farm"><b>' + (f === 'ALL' ? 'ALL FARMS' : f.toUpperCase()) + '</b></div><div class="fd-chips">' + groups[f].map(w => '<span class="fd-chip' + (AV.wid===w.id?' on':'') + '" data-pick="' + w.id + '">' + esc(w.name) + (avOwesBefore(advanceTrack(w.id, mk)) > 0.004 ? ' · owes' : '') + '</span>').join('') + '</div>'; });
-  h += '<button class="ad-cancel" data-act="loanback">Back</button>'; avSet(h); }
+// v95: new borrowing uses today's AD assignment, not the historical salary month.
+const AV_AD_FARMS=['AD 1','AD 2','AD 3'];
+function avLoanFarm(w){
+  if(!w||(w.stopDate&&w.stopDate<=TODAY_KL)||(w.joinDate&&w.joinDate>TODAY_KL))return null;
+  const mk=TODAY_KL.slice(0,7),farmRows=(W_FARM[w.id]||[]).filter(r=>r.effective_from<=mk),fr=farmRows.slice(-1)[0];
+  const f=fr?.farm_id?String(FARM_CODE[fr.farm_id]||'').trim().toUpperCase().replace(/\s+/g,' '):'';
+  if(AV_AD_FARMS.includes(f))return f;
+  if(f)return null;
+  const co=(W_COMP[w.id]||[]).filter(r=>r.effective_from<=mk).slice(-1)[0];
+  return co?.company_id&&CO_CODE[co.company_id]==='AD'?'AD FLEX':null;
+}
+function avLoanWorkers(f){return S.workers.filter(w=>avLoanFarm(w)===f).sort((a,b)=>a.name.localeCompare(b.name));}
+function avWho(){
+  const mk=monthKey(), current=avLoanFarm(getWorker(AV.wid)), selected=AV_AD_FARMS.includes(AV.farmFilter)?AV.farmFilter:AV_AD_FARMS.includes(current)?current:'AD 1';
+  AV.farmFilter=selected;
+  const groups=AV_AD_FARMS.map(f=>[f,avLoanWorkers(f)]),list=avLoanWorkers(selected),flex=avLoanWorkers('AD FLEX');
+  const row=w=>{const owes=avOwesBefore(advanceTrack(w.id,mk));return '<button type="button" class="av-worker-card'+(AV.wid===w.id?' on':'')+'" data-pick="'+esc(w.id)+'"><span><b>'+esc(w.name)+'</b>'+(owes>0.004?'<small>Owes '+fmtRM(owes)+'</small>':'')+'</span><span aria-hidden="true">›</span></button>';};
+  let h='<h3>Who is borrowing?</h3><p>Select a farm, then a worker.</p><div class="av-farm-cards">'+groups.map(([f,ws])=>'<button type="button" class="av-farm-card'+(selected===f?' on':'')+'" data-avfarm="'+f+'" aria-pressed="'+(selected===f)+'"><b>'+f.replace(' ','')+'</b><small>'+ws.length+' workers</small></button>').join('')+'</div><div class="av-picker-title">'+selected+' · '+list.length+' workers</div>'+ (list.length?list.map(row).join(''):'<p>No active workers assigned.</p>');
+  if(flex.length)h+='<div class="av-picker-title">AD · No fixed farm / mobile workers</div>'+flex.map(row).join('');
+  h+='<button class="ad-cancel" data-act="loanback">Back</button>';avSet(h);
+}
 function avKeep(){ const g = id => document.getElementById(id); if(g('av-amt')) AV.amount = g('av-amt').value; if(g('av-note')) AV.note = g('av-note').value; if(g('av-mo') && g('av-mo').value) AV.monthly = g('av-mo').value; }
 function avSaveLoan(){
   avKeep(); const err = m => { document.getElementById('av-err').textContent = m; }, wid = AV.wid, a = r2(parseFloat(String(AV.amount).replace(/,/g,''))), d = AV.date;
-  if(!wid) return err('Pick the worker.'); if(!(a > 0)) return err('Type the amount.'); if(!d) return err('Pick the date.');
+  if(!CAN_EDIT)return err('Salary edit permission is required.'); if(!wid) return err('Pick the worker.'); if(!avLoanFarm(getWorker(wid)))return err('Select a current AD worker.'); if(!(a > 0)) return err('Type the amount.'); if(!d) return err('Pick the date.');
   S.loans ??= {}; const L = S.loans[wid] ??= {txn:[], plan:[], months:{}};
   const mo = AV.monthly !== '' ? r2(parseFloat(AV.monthly)) : null;
   if(mo == null && loanPlanFor(L, AV.from) == null) return err('Pick how much to take each month.');
@@ -3677,7 +3702,7 @@ document.getElementById('av-sheet').addEventListener('input', e => {
 });
 document.getElementById('av-sheet').addEventListener('change', e => { if(AV && e.target.id === 'av-date'){ avKeep(); AV.date = e.target.value; avLoanDraw(); } });
 document.getElementById('av-sheet').addEventListener('click', e => {
-  const b = e.target.closest('[data-act],[data-date],[data-mo],[data-from],[data-pick],[data-pmo],[data-pfrom],[data-choice],[data-void]'); if(!b || !AV) return;
+  const b = e.target.closest('[data-act],[data-date],[data-mo],[data-from],[data-pick],[data-pmo],[data-pfrom],[data-choice],[data-void],[data-avfarm]'); if(!b || !AV) return;
   const a = b.dataset.act, mk = monthKey();
   if(a === 'close') return avClose();
   if(a === 'back') return avWorker(AV.wid);
@@ -3688,7 +3713,8 @@ document.getElementById('av-sheet').addEventListener('click', e => {
   if(a === 'writeoff'){ const t = advanceTrack(AV.wid, mk); return avReason('Write off ' + fmtRM(avOwesBefore(t)), 'writeoff', avOwesBefore(t)); }
   if(a === 'who'){ avKeep(); return avWho(); }
   if(a === 'loanback') return avLoanDraw();
-  if(b.dataset.pick){ AV.wid = b.dataset.pick; return avLoanDraw(); }
+  if(b.dataset.avfarm&&AV.mode==='loan'){if(!AV_AD_FARMS.includes(b.dataset.avfarm))return;AV.farmFilter=b.dataset.avfarm;return avWho();}
+  if(b.dataset.pick){if(!avLoanFarm(getWorker(b.dataset.pick)))return toast('Select a current AD worker.'); AV.wid = b.dataset.pick; return avLoanDraw(); }
   if(b.dataset.date){ avKeep(); AV.date = b.dataset.date; return avLoanDraw(); }
   if(b.dataset.mo){ avKeep(); AV.monthly = b.dataset.mo; return avLoanDraw(); }
   if(b.dataset.from){ avKeep(); AV.from = b.dataset.from; return avLoanDraw(); }
