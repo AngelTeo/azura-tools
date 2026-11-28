@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 53;
+const APP_VERSION = 54;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1154,7 +1154,7 @@ const Owner = (() => {
   async function refresh(){busy(1);try{await reload();}catch(e){toast(e.message);}finally{busy(0);render();}}
   function start(board){if(B!==board)WH=null;B=board;
     $('#hdr').innerHTML = `<span class="brand">🛍️ Kedai Runcit</span><span class="ver">${Z('Management','管理')} · v${APP_VERSION}</span><div class="lang">${[['zh','中文'],['en','EN']].map(([k,v]) => `<button class="${OL===k?'on':''}" onclick="Owner.setLang('${k}')">${v}</button>`).join('')}</div>`;
-    document.documentElement.lang=OL;render();
+    document.documentElement.lang=OL;render();if(catDraft()&&!CatBusy)catResume();
     if(!WH&&!WHLoad){WHLoad=reload().then(()=>render()).catch(e=>{WHError=e.message;render();}).finally(()=>{WHLoad=null;});}
   }
   function go(v, extra){ if(['monthcards','monthcard'].includes(ui.view)&&!['monthcards','monthcard'].includes(v)){++MC.epoch;mcDiscard();MC.preparing=false;} if(v!=='item'||ui.key!==extra?.key)DetailDone.clear();if(v==='buy'&&extra?.tab)BuyTab=extra.tab; if(v==='topstmt'&&ui.view!=='topstmt'){TS=null;ST=null;} if(v==='petty'&&ui.view!=='petty')PC=null; ui = {view:v, ...(extra||{})}; render(); scrollTo(0,0); }
@@ -1988,6 +1988,7 @@ const Owner = (() => {
   /* ---------- Items & prices ---------- */
   function pricesPage(){
     let h = `<div class="hero"><div><h1>🏷 ${Z('Items & prices','商品与价格')}</h1><div class="sub">${Z('Leader-named items join the catalogue automatically. Set price and photo here.','工头新增的具名物品自动进入资料库；在这里补照片与价格。')}</div></div>${back()}</div>`;
+    if(catDraft())h+=`<button class="btn gold block" onclick="Owner.catResume()">${Z('Continue unfinished product','继续未完成的商品')} · ${esc(catDraft().label||'')}</button>`;
     /* v11: filter cards — show one kind at a time, remembered */
     const KS = ['PERSONAL','FARM','SHARED','FOOD'], cur = KS.includes(lsGet('runcit_items_kind','PERSONAL')) ? lsGet('runcit_items_kind','PERSONAL') : 'PERSONAL';
     h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${B.items.filter(x => x.kind === k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
@@ -2036,18 +2037,69 @@ const Owner = (() => {
       <div class="modalfoot"><button class="btn" onclick="closeModal()">${Z('Cancel','取消')}</button><button class="btn primary" onclick="Owner.savePrice('${id}')">${Z('Save','存')}</button></div>`); }
   async function savePrice(id){ const ps = $('#pp').value.split(/[,\s]+/).map(Number).filter(x => x > 0), d = Number($('#pd').value) || null;
     if(d && !ps.includes(d)) ps.push(d); closeModal(); await act('shop_owner_prices_set', {item_id:id, prices:ps, default:d}, Z('Prices saved','价钱已存')); }
-  async function addItem(kind){ const n = prompt(Z(`New ${KINDS[kind].name} item name`, `新的「${KINDS[kind].name}」物品名称`)); if(!n || !n.trim()) return;
-    const id = await act('shop_owner_item_add', {label:n.trim(), kind}, Z('Item added','物品已加'));
-    if(id && confirm(Z('Add a photo for it now?','现在帮它加照片吗？'))) photo(id); }
-  /* photos: pick or take a picture → made small on the phone → uploaded → shown to Leaders at once */
-  function photo(id){ const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none'; document.body.appendChild(inp);
-    inp.onchange = async () => { const f = inp.files[0]; inp.remove(); if(!f) return; busy(1);
-      try { const blob = await shrinkPhoto(f), path = `${id}/${Date.now()}.jpg`;
-        const {error} = await sb.storage.from(PHOTO_BUCKET).upload(path, blob, {contentType:'image/jpeg', upsert:false});
-        if(error) throw new Error(error.message);
-        busy(0); await act('shop_owner_photo_set', {item_id:id, path}, Z('Photo saved','照片已存'));
-      } catch(e){ busy(0); toast(Z('Photo not saved: ','照片没存到：') + e.message); } };
-    inp.click(); }
+
+  /* v54: catalogue writes are independent of warehouse and optional photos. */
+  let CatBusy=false, CatDraft=null;
+  const catKey=()=> 'runcit_catalogue_draft_v54_'+(B?.me?.id||'');
+  function catPersist(d){CatDraft=d;lsSet(catKey(),d);}
+  function catDraft(){return CatDraft||lsGet(catKey(),null);}
+  function catClose(){if(CatBusy)return;catPersist(null);closeModal();render();}
+  function catEditName(v){if(CatBusy)return;const d=catDraft();if(d&&!d.id)catPersist({...d,label:v.slice(0,30)});}
+  function catError(msg){const el=$('#catError');if(el){el.textContent=msg;el.hidden=false;}else toast(msg);}
+  function catModal(d){
+    if(!d)return;
+    const saved=!!d.id, it=saved?IT(d.id):{};
+    openModal(`<h2>${saved?'✅ '+esc(d.label):Z('Add new item','新增商品')}</h2>
+      <div class="hint">${esc(KINDS[d.kind]?.name||d.kind)}</div>
+      ${saved?`<div class="note">${Z('Product name saved in official catalogue. Photo is optional.','商品名称已存入正式资料库。照片可以稍后补。')}</div><div class="field"><label>${Z('Choose or take a photo','选择照片或拍照')}</label><input id="catFile" type="file" accept="image/*" style="width:100%"></div><button id="catSave" class="btn primary block" onclick="Owner.catSavePhoto()">📷 ${Z('Save photo','保存照片')}</button>`:`<div class="field"><label>${Z('Item name','商品名称')}</label><input id="catName" maxlength="30" value="${esc(d.label||'')}" oninput="Owner.catEditName(this.value)" style="width:100%"></div><button id="catSave" class="btn primary block" onclick="Owner.catSaveName()">${Z('Save item','保存商品')}</button>`}
+      <div id="catError" class="note bad" hidden style="margin-top:10px" role="alert"></div>
+      <div class="modalfoot"><button class="btn block" onclick="Owner.catClose()">${saved?Z('Done / photo later','完成／稍后加照片'):Z('Cancel','取消')}</button></div>`);
+  }
+  function catResume(){const d=catDraft();if(!d)return;CatDraft=d;lsSet('runcit_items_kind',d.kind);ui={view:'prices'};render();catModal(d);}
+  async function catRefresh(){
+    const b=await rpc('shop_owner_board',{});if(!Array.isArray(b?.items))throw Error('Invalid catalogue response');
+    B={...B,items:b.items};if(ui.view==='prices')render();
+  }
+  function addItem(kind){
+    if(CatBusy)return;const old=catDraft();if(old){catResume();return;}
+    catPersist({kind,label:'',id:null});catModal(CatDraft);
+  }
+  async function catSaveName(){
+    if(CatBusy)return;const d=catDraft();if(!d||d.id)return;
+    const label=String($('#catName')?.value||d.label||'').trim().replace(/\s+/g,' ').toUpperCase();
+    if(!label||label.length>30){catError(Z('Enter 1–30 characters','请输入 1–30 个字'));return;}
+    catPersist({...d,label});CatBusy=true;busy(1);const btn=$('#catSave');if(btn)btn.disabled=true;
+    try{
+      const id=await rpc('shop_owner_item_add',{label,kind:d.kind});
+      if(typeof id!=='string'||!(/^[0-9a-f-]{36}$/i.test(id)))throw Error(Z('Could not confirm saved item. Retry the same name.','未能确认保存结果，请重试同一个名称。'));
+      catPersist({...d,label,id});lsSet('runcit_items_kind',d.kind);ui={view:'prices'};
+      if(!B.items.some(x=>x.id===id))B.items=[...B.items,{id,kind:d.kind,code:label,label,photo:null}];
+      render();catModal(CatDraft);
+      try{await catRefresh();}catch(e){catError(Z('Name saved. Catalogue refresh failed: ','名称已保存，资料库刷新失败：')+errZ(e.message));}
+    }catch(e){catError(Z('Item save not confirmed: ','商品保存未确认：')+errZ(e.message));}
+    finally{CatBusy=false;busy(0);const b=$('#catSave');if(b)b.disabled=false;}
+  }
+  function photo(id){
+    if(CatBusy)return;const it=IT(id);if(!it.id){toast(Z('Item not found — refresh','找不到商品，请刷新'));return;}
+    const old=catDraft();if(old&&old.id!==id){catResume();return;}
+    catPersist(old||{id,kind:it.kind,label:it.label});catModal(CatDraft);
+  }
+  async function catSavePhoto(){
+    if(CatBusy)return;const d=catDraft();if(!d?.id)return;
+    const file=$('#catFile')?.files?.[0];if(!file&&!d.path){catError(Z('Choose a photo first','请先选择照片'));return;}
+    CatBusy=true;busy(1);const btn=$('#catSave');if(btn)btn.disabled=true;
+    try{
+      let path=d.path;
+      if(file){const blob=await shrinkPhoto(file);if(!blob)throw Error('Invalid photo');path=d.id+'/'+Date.now()+'.jpg';
+        const {error}=await sb.storage.from(PHOTO_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw Error(error.message);
+        catPersist({...d,path});}
+      const result=await rpc('shop_owner_photo_set',{item_id:d.id,path});if(!result?.ok)throw Error('Photo save not confirmed');
+      B.items=B.items.map(x=>x.id===d.id?{...x,photo:path}:x);catPersist(null);closeModal();ui={view:'prices'};render();
+      toast(Z('Item and photo saved','商品和照片已保存'));
+      try{await catRefresh();}catch(e){toast(Z('Saved; refresh later to verify','已保存；稍后刷新核实'));}
+    }catch(e){catError(Z('Photo not confirmed. Product name remains saved: ','照片保存未确认，商品名称仍已保存：')+errZ(e.message));}
+    finally{CatBusy=false;busy(0);const b=$('#catSave');if(b)b.disabled=false;}
+  }
   async function photoDel(id){ if(!confirm(Z('Remove this photo?','拿掉这张照片？'))) return; await act('shop_owner_photo_set', {item_id:id, path:null}, Z('Photo removed','照片已拿掉')); }
   function moveItem(id){ const i = IT(id);
     openModal(`<h2>${esc(i.label)}</h2><div class="hint" style="margin-bottom:10px">${Z('Move to another list','换到别的类')}</div><div class="farmgrid">${['FARM','PERSONAL','SHARED'].map(k => `<button class="farmcard" style="min-height:80px" ${i.kind===k?'disabled':''} onclick="Owner.saveMove('${id}','${k}')"><span style="font-size:26px">${KINDS[k].ico}</span><b style="font-size:16px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>
@@ -2416,7 +2468,7 @@ const Owner = (() => {
   }
   return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
-          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
+          approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, catClose, catEditName, catSaveName, catSavePhoto, catResume, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
 
 
