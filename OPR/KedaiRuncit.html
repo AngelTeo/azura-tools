@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 77;
+const APP_VERSION = 78;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -2389,7 +2389,7 @@ const Owner = (() => {
   function whStockRows(){
     const q=WHSearch.trim().toLowerCase(),rows=(WH?.stock||[]).filter(x=>!q||String(x.item||'').toLowerCase().includes(q)||String(IT(x.item_id).code||'').toLowerCase().includes(q)).filter(x=>WHFilter==='ALL'||(WHFilter==='AVAILABLE'&&x.opening_confirmed&&whAvailable(x)>0)||(WHFilter==='LOW'&&whLow(x))||(WHFilter==='CHECK'&&!x.opening_confirmed));
     if(!rows.length)return '<div class="empty">'+esc((WH?.stock||[]).length?Z('No matching stock items','没有符合条件的库存商品'):Z('No warehouse items recorded yet. Add goods after actual purchase or count existing stock.','尚未登记库存商品。实际买了货物再入库，已有货物则先点算。'))+'</div>';
-    return '<div class="lp-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+rows.map(x=>'<button type="button" class="lp-tile" style="min-height:170px;padding:12px 8px" data-id="'+esc(x.item_id)+'" onclick="Owner.whStockDetail(this.dataset.id)"><span class="lp-art">'+icoBox(IT(x.item_id),x.item)+'</span><b style="font-size:15px">'+esc(x.item)+'</b>'+(x.opening_confirmed?'<strong style="font-size:30px;color:var(--green)">'+esc(whAvailable(x))+'</strong><small>'+esc(Z('Available','可用库存')+' · '+(x.unit||Z('unit','件')))+'</small><small class="lp-sub">'+esc(Z('Physical','实际')+' '+x.physical+' · '+Z('Reserved','预留')+' '+x.reserved)+'</small>':'<span class="tag warn">'+esc(Z('Count required','待点算'))+'</span>')+(whLow(x)?'<span class="tag warn">'+esc(Z('Low stock','待补货'))+'</span>':'')+'</button>').join('')+'</div>';
+    return '<div class="mg-grid">'+rows.map(x=>'<button type="button" class="homequick mg-tile" style="min-height:150px" data-id="'+esc(x.item_id)+'" onclick="Owner.whStockDetail(this.dataset.id)"><span class="lp-art">'+icoBox(IT(x.item_id),x.item)+'</span><b style="font-size:15px">'+esc(x.item)+'</b>'+(x.opening_confirmed?'<span class="mg-stat">'+esc(whAvailable(x))+'</span><small>'+esc(Z('Available','可用库存')+' · '+(x.unit||Z('unit','件')))+'</small><small class="lp-sub">'+esc(Z('Physical','实际')+' '+x.physical+' · '+Z('Reserved','预留')+' '+x.reserved)+'</small>':'<span class="tag warn">'+esc(Z('Count required','待点算'))+'</span>')+(whLow(x)?'<span class="tag warn">'+esc(Z('Low stock','待补货'))+'</span>':'')+'</button>').join('')+'</div>';
   }
   function whStockSearch(v){WHSearch=v;const el=$('#wh-stock-list');if(el)el.innerHTML=whStockRows();}
   function whStockFilter(v){if(!['ALL','AVAILABLE','LOW','CHECK'].includes(v))return;WHFilter=v;render();}
@@ -2451,15 +2451,30 @@ const Owner = (() => {
     openModal(h);
   }
   function warehousePage(){
+    const stocks=WH.stock||[],ready=stocks.filter(x=>x.opening_confirmed&&whAvailable(x)>0).length,low=stocks.filter(whLow).length,check=stocks.filter(x=>!x.opening_confirmed).length;
+    const tiles=[
+      workCard('📥',Z('Stock in','买了 · 入库'),'',Z('Select product · actual purchase','选商品 · 实际买价'),"Owner.whPickStart('BUY')"),
+      workCard('📦',Z('Current inventory','现有库存'),'',ready+' '+Z('with available stock','种有可用库存'),"Owner.go('whinventory')",String(stocks.length)+' '+Z('items','种商品'),low>0),
+      workCard('📋',Z('Movement history','进出历史'),'',Z('In · out · recipient','入库 · 出库 · 去向'),"Owner.go('whhistory')"),
+      workCard('📊',Z('Cost & profit','成本与利润'),'',Z('Purchase cost · batch profit','批次买价 · 毛利'),"Owner.go('whprofit')")
+    ];
+    let h=whHeader('STOCK · Warehouse','STOCK · 仓库',Z('Purchase · inventory · batch history','购买入库 · 库存 · 批次记录'))+workGrid(tiles);
+    if(low||check)h+='<div class="note warn">'+(low?Z('Low stock','待补货')+' · '+low:'')+(low&&check?' · ':'')+(check?Z('Count required','待点算')+' · '+check:'')+'</div>';
+    if(!stocks.length)h+='<div class="note">'+Z('No stock items recorded yet','目前尚未登记库存商品')+'</div>';
+    h+='<details class="card homefold"><summary>'+Z('Stock count / settings','盘点／设置')+'</summary>'+workGrid([
+      taskRow('📝',Z('First stock count','首次点算'),Z('Record actual existing stock','登记现有实物库存'),"Owner.whPickStart('OPENING')"),
+      taskRow('📦',Z('Batch stock count','批次点算'),Z('Count · adjust existing batches','点算 · 调整现有批次'),"Owner.go('whbatches')"),
+      taskRow('🗂️',Z('Master items','商品资料库'),Z('Photos · product settings','照片 · 商品设定'),"Owner.go('prices')")
+    ])+'</details>';
+    return h;
+  }
+  function whInventoryPage(){
     const stocks=WH.stock||[],ready=stocks.filter(x=>x.opening_confirmed&&whAvailable(x)>0).length,low=stocks.filter(whLow).length;
-    let h=whHeader('Warehouse','仓库',Z('Buy · stock in · automatic allocation','购买入库 · 自动配货'));
-    h+='<button class="btn primary block" style="min-height:58px;margin:10px 0;font-size:18px" onclick="Owner.whPickStart(\'BUY\')">＋ '+Z('Bought · stock in','买了 · 入库')+'</button>';
-    h+='<div class="pills" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"><button class="pill on" onclick="Owner.go(\'warehouse\')">'+Z('Stock','现有库存')+'</button><button class="pill" onclick="Owner.go(\'whhistory\')">'+Z('History','进出历史')+'</button><button class="pill" onclick="Owner.go(\'whprofit\')">'+Z('Cost & profit','成本与利润')+'</button></div>';
+    let h=whPageHead('Current inventory','现有库存',Z('Physical · reserved · available','实际 · 预留 · 可用'));
     if(low)h+='<button class="btn block" style="margin:8px 0" onclick="Owner.whStockFilter(\'LOW\')">'+Z('Replenishment needed','需要补货')+' · '+low+'</button>';
     h+='<div class="line"><b>'+Z('Stock items','库存商品')+' · '+stocks.length+'</b><span class="hint">'+ready+' '+Z('with available stock','种有可用库存')+'</span><button class="btn small" onclick="Owner.refresh()" aria-label="'+Z('Refresh','刷新')+'">↻</button></div>';
     if(stocks.length)h+='<div class="field"><input placeholder="'+Z('Search stock','搜索库存商品')+'" value="'+esc(WHSearch)+'" oninput="Owner.whStockSearch(this.value)"></div><div class="pills">'+[['ALL',Z('All','全部')],['AVAILABLE',Z('In stock','有库存')],['LOW',Z('Low stock','待补货')],['CHECK',Z('Count needed','待点算')]].map(([k,t])=>'<button class="pill '+(WHFilter===k?'on':'')+'" data-filter="'+k+'" onclick="Owner.whStockFilter(this.dataset.filter)">'+esc(t)+'</button>').join('')+'</div>';
-    h+='<div id="wh-stock-list">'+whStockRows()+'</div><div class="hint">'+Z('Existing requests are allocated automatically. Confirm physical handover in Delivery.','工人申请有货自动预留；实际交货在交货页面确认，不需重复录入。')+'</div>';
-    h+='<details style="margin:16px 0"><summary>'+Z('Stock count / settings','盘点／设置')+'</summary><button class="btn block" onclick="Owner.whPickStart(\'OPENING\')">'+Z('First count of existing stock','首次点算现有库存')+'</button>'+whNav('Batch stock count','批次点算','whbatches')+whNav('Product library','商品资料库','prices')+'</details>';
+    h+='<div id="wh-stock-list">'+whStockRows()+'</div>';
     return h;
   }
   function whReceiptGroups(){const m=new Map();for(const o of WH?.orders||[]){if(!o.receipt_group_id)continue;if(!m.has(o.receipt_group_id))m.set(o.receipt_group_id,[]);m.get(o.receipt_group_id).push(o);}return m;}
@@ -2496,7 +2511,7 @@ const Owner = (() => {
       +(WPickMode==='BUY'?'<button class="btn block" onclick="Owner.mrStart()">🧾 '+Z('Several items on one receipt','一张收据 · 多项商品')+'</button>':'')
       +'<div class="mg-grid">'+['FARM','PERSONAL','SHARED'].map(k=>'<button class="lp-tile '+(WPickKind===k?'chosen':'')+'" style="min-height:78px" data-kind="'+k+'" onclick="Owner.whPickCategory(this.dataset.kind)"><span style="font-size:24px">'+KINDS[k].ico+'</span><b>'+esc(KINDS[k].name)+'</b></button>').join('')+'</div><div class="field"><input placeholder="'+Z('Search product','搜索商品')+'" value="'+esc(WSearch)+'" oninput="Owner.whSearch(this.value)"></div><div id="wh-policy-list">'+whPolicyRows()+'</div>';
   }
-  function whBatchesPage(){return whHeader('Stock batches','库存批次／点算',Z('Actual batch cost · FIFO','实际批次成本 · FIFO'))+(WH.batches.length?WH.batches.map(b=>`<div class="card" style="padding:12px;margin:8px 0"><b>${esc(IT(b.option_id).label||'—')}</b><div>Batch ${esc(whBatchLabel(b))} · ${b.received_on} · ${esc(b.source)} · ${RM(b.unit_cost)} / ${Z('unit','件')}</div><div class="hint">${Z('Specification','规格')}：${esc(b.stock_spec||Z('Standard','标准'))} · ${Z('Original qty','原批数量')} ${b.original_qty}</div><div class="line"><span>${Z('Physical / reserved / available','实际 / 预留 / 可用')}</span><b>${b.on_hand} / ${b.reserved} / ${b.on_hand-b.reserved}</b></div>${b.on_hand>b.reserved?whBtn('Reduce stock','损坏／盘亏','ADJUST_DOWN',b.id):''}</div>`).join(''):`<div class="empty">${Z('No stock batches','尚无库存批次')}</div>`);}
+  function whBatchesPage(){return whPageHead('Stock batches','库存批次／点算',Z('Actual batch cost · FIFO','实际批次成本 · FIFO'))+(WH.batches.length?WH.batches.map(b=>`<div class="card" style="padding:12px;margin:8px 0"><b>${esc(IT(b.option_id).label||'—')}</b><div>Batch ${esc(whBatchLabel(b))} · ${b.received_on} · ${esc(b.source)} · ${RM(b.unit_cost)} / ${Z('unit','件')}</div><div class="hint">${Z('Specification','规格')}：${esc(b.stock_spec||Z('Standard','标准'))} · ${Z('Original qty','原批数量')} ${b.original_qty}</div><div class="line"><span>${Z('Physical / reserved / available','实际 / 预留 / 可用')}</span><b>${b.on_hand} / ${b.reserved} / ${b.on_hand-b.reserved}</b></div>${b.on_hand>b.reserved?whBtn('Reduce stock','损坏／盘亏','ADJUST_DOWN',b.id):''}</div>`).join(''):`<div class="empty">${Z('No stock batches','尚无库存批次')}</div>`);}
   const wf=(n,en,zh,val='',type='text',more='')=>`<div class="field"><label>${Z(en,zh)}</label><input id="wf_${n}" name="${n}" type="${type}" value="${esc(val)}" ${more}></div>`;
   const ws=(n,en,zh,opts,val='')=>`<div class="field"><label>${Z(en,zh)}</label><select id="wf_${n}" name="${n}" onchange="Owner.whChange(this.name,this.value)">${opts.map(([v,t])=>`<option value="${esc(v)}" ${String(v)===String(val)?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`;
   const wq=(v,max)=>wf('qty','Quantity','数量',v,'number','min="1" max="'+max+'" step="1" required');
@@ -2677,14 +2692,14 @@ const Owner = (() => {
     if(WForm.special){for(const k of ['payment_pending','replace_plan','deposit_received','deduction_authorised','unfulfilled_confirmed','physical_verified','no_existing_deduction'])p[k]=d[k]==='true';if(WForm.action==='PHONE_APPROVE'&&(WForm.planMonth!==p.start_month||!WForm.plan)){toast(Z('Check the Salary plan for the selected start month first','请先核对所选月份的 Salary 计划'));return;}if(WForm.action==='PHONE_APPROVE'&&!Number(WForm.plan?.loan_count)&&p.combined_monthly!==p.monthly){toast(Z('No other loan records: combined monthly payment must equal agreed phone repayment','无其他借款记录：合计月还款须等于约定手机月供'));return;}if(WForm.action==='LINK_SALARY'&&!p.salary_id||WForm.action==='MEDICAL_ACTUAL'&&(!p.mode||p.mode!=='WORKER_CASH'&&!p.payer||p.mode==='DEDUCT'&&!p.deduction_authorised)||WForm.action==='PHONE_BUY'&&!p.payer||WForm.action==='CANCEL_REVIEW'&&!p.unfulfilled_confirmed){toast(Z('Confirm all actual evidence and required details','请确认实际凭证与必要资料'));return;}}
     if(WForm.reconcile){p.verified=d.verified==='true';p.original_payer_received=d.original_payer_received==='true';if(!p.verified||WForm.action==='REFUND'&&!p.original_payer_received){toast(Z('Confirm actual evidence','请确认实际凭证'));return;}}
     const err=$('#wherr');WHBusy=true;busy(1);$('#whsave').disabled=true;let saved=false;
-    try{const r=await rpc(WForm.identify?'shop_owner_photo_identify':WForm.reconcile?'shop_owner_wh_reconcile':WForm.special?'shop_owner_wh_special':'shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();PC=null;if(WForm.action==='QUICK_STOCK'||WForm.action==='OPENING')go('warehouse');else render();toast(Z('Saved to official database','已保存到正式数据库'));}
+    try{const r=await rpc(WForm.identify?'shop_owner_photo_identify':WForm.reconcile?'shop_owner_wh_reconcile':WForm.special?'shop_owner_wh_special':'shop_owner_wh',p);if(!r?.ok)throw Error('Unexpected response — verify before retry');saved=true;closeModal();await reload();PC=null;if(WForm.action==='QUICK_STOCK'||WForm.action==='OPENING'){WHFilter='ALL';WHSearch='';go('whinventory');}else render();toast(Z('Saved to official database','已保存到正式数据库'));}
     catch(e){if(saved){WH=null;WHError=e.message;render();toast(Z('Saved; refresh to verify the new status','已保存，请刷新核对状态'));}else if(err){err.textContent=errZ(e.message)+' · '+Z('If the result is uncertain, keep this form or refresh before retrying.','结果不明确时保留此表或刷新核对，避免重复付款。');err.style.display='block';}}
     finally{WHBusy=false;busy(0);if($('#whsave'))$('#whsave').disabled=false;}
   }
 
 
   const MG_AREAS={home:'',buyhub:'BUY',buy:'BUY',review:'BUY',item:'BUY',food:'BUY',spot:'BUY',med:'BUY',
-    warehouse:'STOCK',whhistory:'STOCK',whprofit:'STOCK',whorders:'STOCK',whpolicy:'STOCK',whbatches:'STOCK',whreturns:'DELIVER',
+    warehouse:'STOCK',whinventory:'STOCK',whhistory:'STOCK',whprofit:'STOCK',whorders:'STOCK',whpolicy:'STOCK',whbatches:'STOCK',whreturns:'DELIVER',
     deliver:'DELIVER',hand:'DELIVER',receipts:'DELIVER',
     accounts:'ACCOUNTS',petty:'ACCOUNTS',topstmt:'ACCOUNTS',records:'ACCOUNTS',monthclose:'ACCOUNTS',monthcards:'ACCOUNTS',monthcard:'ACCOUNTS',whphones:'ACCOUNTS',
     settings:'SETTINGS',people:'SETTINGS',prices:'SETTINGS'};
@@ -2702,8 +2717,8 @@ const Owner = (() => {
   }
 
   function render(){
-    if(!WH&&['buy','buyhub','deliver','accounts','review','item','warehouse','whhistory','whprofit','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;mgPageChrome($('#app'),ui.view);return;}
-    $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whhistory:whHistoryPage,whprofit:whProfitPage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
+    if(!WH&&['buy','buyhub','deliver','accounts','review','item','warehouse','whinventory','whhistory','whprofit','whorders','whpolicy','whbatches','whphones','whreturns','hand','spot','petty'].includes(ui.view)){$('#app').innerHTML=`<div class="hero"><h1>${Z('Checking warehouse','正在核对仓库')}</h1>${back()}</div><div class="card" style="padding:15px">${esc(WHError||Z('Loading official stock…','载入正式库存资料…'))}<button class="btn block" onclick="Owner.refresh()">${Z('Retry','重试')}</button></div>`;mgPageChrome($('#app'),ui.view);return;}
+    $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whinventory:whInventoryPage,whhistory:whHistoryPage,whprofit:whProfitPage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
   return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
