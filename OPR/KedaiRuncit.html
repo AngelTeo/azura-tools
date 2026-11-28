@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 68;
+const APP_VERSION = 69;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -652,7 +652,30 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function saveCart(){return storeDraft(ui.kind,{cart:ui.cart,pending:ui.pending||null,sheet:SH||null});}
   async function startAdd(k){if(LeaderBusy||PhotoBusy)return;LeaderBusy=true;busy(1);try{await load();if(D.status!=='ACTIVE'){render();return;}}catch(e){toast(specLabel('Cannot refresh products — try again','无法更新商品资料，请重试','ပစ္စည်းစာရင်း အသစ်မရပါ။ ထပ်ကြိုးစားပါ။'));return;}finally{LeaderBusy=false;busy(0);}const d=draft(k);ui={view:'add',kind:k,cart:d?.cart||{},other:'',pending:d?.pending||null,round:k==='FOOD'?activeRound():null};SH=d?.sheet||null;render();scrollTo(0,0);if(SH&&!ui.pending)drawSheet();}
   function photoOnly(){if(!ui.pending)openSheet('p:'+uuid());}
-  function foodPhoto(id){startAdd('FOOD');if(!ui.pending&&!SH&&id)openSheet(id);}
+  // v69: one regular grocery catalogue; extra photo requests use a dedicated draft only.
+  function foodPhoto(){
+    if(ui.view!=='food'||ui.foodPending||LeaderBusy||PhotoBusy||D?.status!=='ACTIVE'||D.farm!==FARM)return;
+    if(ui.round!==activeRound()){toast(specLabel('Food round changed — reopen food order','订菜轮次已变更，请重新打开订菜','မှာယူရက် ပြောင်းသွားပါပြီ။ ပြန်ဖွင့်ပါ။'));return;}
+    if(!storeDraft('FOOD_REGULAR',{round:ui.round,qty:ui.qty,baseline:ui.baseline,pending:ui.foodPending||null}))return;
+    const d=draft('FOOD');ui={view:'add',kind:'FOOD',cart:d?.cart||{},other:'',pending:d?.pending||null,round:activeRound()};SH=d?.sheet||null;
+    render();scrollTo(0,0);
+    if(ui.pending)return;
+    if(SH)return drawSheet();
+    if(!Object.keys(ui.cart).length)openSheet('p:'+uuid());
+  }
+  function foodBack(){
+    if(LeaderBusy||PhotoBusy)return;
+    if(ui.view==='add'&&ui.kind==='FOOD'&&!saveCart())return;
+    SH=null;closeModal();startFood();
+  }
+  function foodExtraPage(){
+    const keys=Object.keys(ui.cart);
+    return '<div class="hero"><div><h1>📷 '+esc(specLabel('Extra food request','额外订菜','စားစရာ အပိုမှာမယ်'))+'</h1><div class="sub">'+esc(FARM+' · '+ui.round)+'</div></div><button class="btn small" onclick="Leader.foodBack()">'+esc(specLabel('← Food order','← 返回订菜','← စားစရာစာရင်း'))+'</button></div>'
+      +'<div class="hint">'+esc(specLabel('Only for items missing from the regular list. Regular quantities are kept separately.','只用于清单上没有的食物，普通订菜数量已独立保留。','ပုံမှန်စာရင်းတွင် မရှိသောပစ္စည်းအတွက်သာ။ ပုံမှန်စာရင်းကို သီးခြားသိမ်းထားသည်။'))+'</div>'
+      +'<button class="btn gold block" onclick="Leader.photoOnly()">＋ 📷 '+esc(specLabel('Add photo request','添加照片需求','ဓာတ်ပုံဖြင့် အပိုမှာမယ်'))+'</button>'
+      +(keys.length?keys.map(personalReviewRow).join(''):'<div class="empty">'+esc(specLabel('No extra items yet','暂无额外需求','အပိုပစ္စည်း မရှိသေးပါ'))+'</div>')
+      +'<div class="bottom" id="bottombar"></div>';
+  }
   const pOnly=k=>String(k).startsWith('p:');
   const photoLabel=()=>specLabel('Photo request','照片需求','ဓာတ်ပုံဖြင့် မှာမယ်');
   function photoControls(w,photos){const ps=photos||[];return '<div style="width:100%;margin:8px 0"><b>📷 '+esc(specLabel('Reference photos','参考照片','နမူနာ ဓာတ်ပုံ'))+' · '+ps.length+'/3</b><div style="display:flex;gap:6px;flex-wrap:wrap">'+ps.map((p,i)=>'<div><img src="data:image/jpeg;base64,'+esc(p)+'" style="width:68px;height:68px;object-fit:contain;background:white;border:1px solid var(--line);border-radius:8px" onclick="zoomImg(this.src)"><button class="btn small" data-w="'+esc(w)+'" data-i="'+i+'" onclick="Leader.removePhoto(this.dataset.w,Number(this.dataset.i))">✕</button></div>').join('')+'</div>'+(ps.length<3?'<div class="btnrow"><button class="btn small" data-w="'+esc(w)+'" onclick="Leader.pickPhotos(this.dataset.w,true)">📷 '+esc(specLabel('Camera','拍照','ဓာတ်ပုံ ရိုက်မယ်'))+'</button><button class="btn small" data-w="'+esc(w)+'" onclick="Leader.pickPhotos(this.dataset.w,false)">🖼 '+esc(specLabel('Gallery','相册','ဓာတ်ပုံ ရွေးမယ်'))+'</button></div>':'')+'</div>';}
@@ -748,6 +771,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     const k=ui.kind,list=items(k);if(ui.pending)return `<div class="hero"><h1>${photoLabel()} · ${esc(FARM)}</h1><button class="btn small" onclick="Leader.home()">${t('back')}</button></div><div class="note warn">${specLabel('Not confirmed — retry the same batch','提交尚未确认，请重试原批次','ပို့ထားသောစာရင်း မသေချာသေးပါ။ ဒီစာရင်းကိုပဲ ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitAdd()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and edit unsaved batch','核实后修改未保存批次','စစ်ဆေးပြီး မသိမ်းရသေးသောစာရင်း ပြင်မယ်')}</button>`;
     if(k==='PERSONAL')return personalPage(list);
     if(k==='FARM')return farmPage(list);
+    if(k==='FOOD')return foodExtraPage();
     let h = `<div class="hero"><div><h1>${KICO[k]} ${esc(ct(k,'title'))}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen"><div class="ico">${KICO[k]}</div><div class="foodname"><b>${esc(ct(k,'title'))}</b><small>${esc(ct(k,'subtitle'))}</small></div></div>
       <button class="btn gold block" style="min-height:64px;margin-bottom:10px" onclick="Leader.photoOnly()">📷 ${specLabel('Photo only — no name needed','直接上传照片 · 不用知道名称','ဓာတ်ပုံဖြင့် မှာမယ် · နာမည် မလိုပါ')}</button>${k==='FOOD'?`<div class="note">${specLabel('Extra photo request for this delivery round','本轮额外照片需求，与普通订菜分开','ဒီအကြိမ်အတွက် ဓာတ်ပုံဖြင့် အပိုမှာရန်')} · ${esc(ui.round)}</div>`:''}<div class="sectionhead">2 · ${t('s3')}</div><div class="itemsgrid">${leaderCatalogCards(list,k)}</div>
@@ -812,7 +836,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function shSet(w,k,v,redraw){if(!SH||PhotoBusy)return;if(w==='_')SH[k]=v;else SH.rows[w][k]=v;saveCart();if(redraw)drawSheet();else sheetBtn();}
   function shOk(){if(!sheetOk())return;const {key,...c}=SH,old=ui.cart[key],sheet=SH;ui.cart[key]=c;SH=null;if(!saveCart()){SH=sheet;if(old)ui.cart[key]=old;else delete ui.cart[key];return;}if(ui.kind==='PERSONAL')sizeSave(cartItem(key),c.rows);closeModal();render();}
   function shDel(){delete ui.cart[SH.key];SH=null;saveCart();closeModal();render();}
-  function shCancel(){if(PhotoBusy)return;SH=null;saveCart();closeModal();render();}
+  function shCancel(){if(PhotoBusy||LeaderBusy)return;SH=null;if(!saveCart())return;closeModal();if(ui.kind==='FOOD'&&!Object.keys(ui.cart).length&&!ui.pending)return foodBack();render();}
   function cartReqs(){ const reqs = [];
     for(const [key, c] of Object.entries(ui.cart)){ const it=cartItem(key),base=it.custom?{custom_name:it.photoOnly?(c.name?.trim()||'PHOTO REQUEST'):it.label}:{item_id:it.id};
       if(ui.kind === 'PERSONAL' && c.bottles) for(const b of c.bottles) reqs.push({...base, workers:[...b], qty:1, detail:c.det==='KAPAK'?'KAPAK':undefined});
@@ -845,7 +869,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
       if(!saveCart()){ui.pending=null;return;}
     }
     const payload=ui.pending,k=ui.kind;if(payload.farm!==FARM||payload.manager!==MGR)return;LeaderBusy=true;busy(1);let saved=false;
-    try{const r=await rpc('shop_leader_submit',{...payload,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;storeDraft(k,{cart:{},pending:null,sheet:null});ui={view:'done',what:k==='FOOD'?'food':'add',savedCount:r.count,catalogueCount:Number(r.catalogue_count)||0};await load();}
+    try{const r=await rpc('shop_leader_submit',{...payload,...(!MGR?{device_key:deviceKey()}:{})});if(!r?.ok)throw Error('Unconfirmed save');saved=true;storeDraft(k,{cart:{},pending:null,sheet:null});ui={view:'done',what:k==='FOOD'?'food':'add',foodExtra:k==='FOOD',savedCount:r.count,catalogueCount:Number(r.catalogue_count)||0};await load();}
     catch(e){toast(saved?specLabel('Saved — refresh','已保存，请刷新','သိမ်းပြီးပါပြီ။'):specLabel('Not confirmed — retry saved batch','未确认成功，请重试原批次','မသေချာသေးပါ။ ဒီစာရင်းကို ထပ်ပို့ပါ။'));if(!saved)try{await load();}catch(x){}}
     finally{LeaderBusy=false;busy(0);render();scrollTo(0,0);}
   }
@@ -859,13 +883,13 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function foodPage(){
     const c = tileOf('FOOD'), list = items('FOOD'); let h = `<div class="hero"><div><h1>${c.icon} ${esc(c[LANG].title)}</h1><div class="sub">${esc(FARM)}</div></div><button class="btn small" onclick="Leader.home()">${t('back')}</button></div>
       <div class="food chosen" style="margin-bottom:12px"><div class="foodname"><b style="color:var(--warn)">${esc(foodLine())}</b><small>${esc(c[LANG].subtitle)}</small></div></div>${foodCopyCard()}`;
-    h+=`<button class="btn gold block" onclick="Leader.foodPhoto()">📷 ${specLabel('Extra food with photo','照片订菜（额外需求）','ဓာတ်ပုံဖြင့် စားစရာ အပိုမှာမယ်')}</button>${lines().filter(l=>l.kind==='FOOD'&&l.round===ui.round&&l.photo_count&&l.status==='REQUESTED').map(row).join('')}`;if(ui.foodPending)return h+`<div class="note warn">${specLabel('Retry the saved food order','重试原订菜单','ဒီစာရင်းကို ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitFood()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and reload current order','核实并重新读取本轮订菜','စစ်ဆေးပြီး ဒီအကြိမ်စာရင်း ပြန်ယူမယ်')}</button>`;
+    h+=`<button class="btn light block" ${ui.foodPending||LeaderBusy||PhotoBusy?'disabled':''} onclick="Leader.foodPhoto()">＋ 📷 ${specLabel('Not on the list? Add photo','清单上没有？添加照片','စာရင်းမှာ မရှိဘူးလား။ ဓာတ်ပုံထည့်မယ်')}${draft('FOOD')?.pending?' · ⚠':Object.keys(draft('FOOD')?.cart||{}).length?' · '+Object.keys(draft('FOOD').cart).length:''}</button>${lines().filter(l=>l.kind==='FOOD'&&l.round===ui.round&&l.photo_count&&l.status==='REQUESTED').map(row).join('')}`;if(ui.foodPending)return h+`<div class="note warn">${specLabel('Retry the saved food order','重试原订菜单','ဒီစာရင်းကို ထပ်ပို့ပါ။')}</div><button class="btn primary block" onclick="Leader.commitFood()">↻ ${t('again')}</button><button class="btn block" onclick="Leader.recoverBatch()">${specLabel('Verify and reload current order','核实并重新读取本轮订菜','စစ်ဆေးပြီး ဒီအကြိမ်စာရင်း ပြန်ယူမယ်')}</button>`;
     h+=`<div class="hint">${esc(specLabel('Kg items: 0.5 kg per tap. Other items: 1 unit per tap.','公斤商品每次加减 0.5kg，其余商品每次加减 1 件。','ကီလိုပစ္စည်း တစ်ချက်လျှင် ၀.၅ ကီလို၊ အခြားပစ္စည်း တစ်ခုစီ။'))}</div>`;
     let cat = '';
     const catOf = code => (FO_SEED.find(a => a[0] === code) || [])[2] || '';
     for(const it of [...list].sort((a,b) => (FO_SEED.findIndex(x=>x[0]===a.code)) - (FO_SEED.findIndex(x=>x[0]===b.code)))){
       const ca = catOf(it.code); if(ca !== cat){ if(cat) h += '</div>'; cat = ca; h += `<div class="sectionhead">${esc((FO_CT[LANG] && FO_CT[LANG][ca]) || ca)}</div><div class="itemsgrid">`; }
-      h += `<div class="food ${ui.qty[it.id]?'chosen':''}">${foodArt(it)}<div class="foodname"><b>${esc(it.label)}</b>${foodLoc(it)}<small>${esc(it.unit||'')}</small><button class="btn small" onclick="Leader.foodPhoto('${it.id}')">📷</button></div><div class="step"><button onclick="Leader.fstep('${it.id}',-1)">−</button><input class="count" readonly value="${ui.qty[it.id]||0}"><button class="plus" onclick="Leader.fstep('${it.id}',1)">+</button></div></div>`;
+      h += `<div class="food ${ui.qty[it.id]?'chosen':''}">${foodArt(it)}<div class="foodname"><b>${esc(it.label)}</b>${foodLoc(it)}<small>${esc(it.unit||'')}</small></div><div class="step"><button onclick="Leader.fstep('${it.id}',-1)">−</button><input class="count" readonly value="${ui.qty[it.id]||0}"><button class="plus" onclick="Leader.fstep('${it.id}',1)">+</button></div></div>`;
     }
     return h + (cat ? '</div>' : '') + '<div class="bottom" id="bottombar"></div>';
   }
@@ -935,7 +959,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     const n=ui.savedCount??lines().filter(l=>l.status==='REQUESTED').length;
     return `<div class="donebox" style="margin-top:8px"><div class="tick">✅</div><h2 style="margin:6px 0">${esc((ui.what === 'food' ? t('foodAdded') : t('added')).replace(' ✓',''))}</h2><div class="sub">${esc(FARM)} · ${n} ${t('items')}</div>${ui.catalogueCount?`<div class="note" style="margin:12px 0 0">${esc(specLabel('Named items saved in catalogue · choose directly next time','有名称的商品已存入商品资料库 · 下次直接选择','နာမည်ပါ ပစ္စည်းများကို စာရင်းထဲ သိမ်းပြီးပါပြီ။ နောက်တစ်ခါ တိုက်ရိုက်ရွေးနိုင်ပါသည်။'))}</div>`:''}</div>
       <button class="btn gold block" style="min-height:58px;font-size:18px;margin-top:16px" onclick="Leader.showCard()">${t('wa')}</button>
-      <button class="btn block" style="margin-top:10px" onclick="Leader.home()">${t('home')}</button>`;
+      ${ui.foodExtra?`<button class="btn primary block" style="margin-top:10px" onclick="Leader.foodBack()">${esc(specLabel('Back to regular food order','返回普通订菜','ပုံမှန်စားစရာစာရင်းသို့'))}</button>`:''}<button class="btn block" style="margin-top:10px" onclick="Leader.home()">${t('home')}</button>`;
   }
 
   /* WhatsApp card: same family as SprayGo (Burmese first, small Chinese) */
@@ -1112,7 +1136,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
     drawBottom();hydrateReferencePreviews({farm:FARM,manager:MGR,device_key:deviceKey()});
   }
   function goHome(){if(LeaderBusy||PhotoBusy)return;if(ui.view==='add'&&!saveCart())return;ui={view:'home'};SH=null;render();scrollTo(0,0);}
-  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,photoStart,farmQty,personalReview,personalSubmit,foodPhoto,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shNew, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
+  return {start,startManager,setLang,refreshLeader,openReceipts,receiveOne,receivePart,receiveFoodAll,deliveryNote,editQty,saveDeliveryForm,retryDelivery,recoverDelivery,recoverBatch,shCancel,photoOnly,photoStart,farmQty,personalReview,personalSubmit,foodPhoto,foodBack,pickPhotos,removePhoto,photoName,seePhotos,bW, bAdd, bOpen, bDel, openSheet, openVariantGroup, openOther, shW, shNew, shQty, shSet, shOk, specSelect, shSpecWorker, shTopPhone, shDel, pinKey, pickFarm, cancel, openTile, openHarvest, setOther, commitAdd, fstep, sameLast, commitFood,
           startAtt, markAll, mark, why, saveAtt, showCard, shareCard, home: goHome, _state: () => ({D, ui, FARM, attDraft, MGR, LANG})};
 })();
 
