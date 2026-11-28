@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 58;
+const APP_VERSION = 59;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1225,7 +1225,8 @@ const Owner = (() => {
     workCard('🚚',Z('Supplier orders','已订购'),'',Z('Awaiting receipt','跟进未到货'),"Owner.go('buy',{tab:'ordered'})",String(whOrderLines().length)),
     workCard('🔎',Z('Needs review','待核实'),'',Z('Special cases / missing details','特殊事项／缺少资料'),"Owner.go('review')",String(s.review.length),s.review.length>0),
     taskRow('✍️',Z('At the farm','园里现场记录'),Z('Direct request or purchase','现场需求／采购'),"Owner.go('spot')"),
-    taskRow('🩺',Z('Medical','看医生／买药'),Z('Verified medical expenses','核实医疗费用'),"Owner.go('med')")
+    taskRow('🩺',Z('Medical','看医生／买药'),Z('Verified medical expenses','核实医疗费用'),"Owner.go('med')")+
+      taskRow('💵',Z('PINJAM · Worker loan','PINJAM · 工人借钱'),Z('New loan / borrow more · Salary','新借款／追加借款 · Salary'),"location.href='Salary.html#loan'")
     ])+'<button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('Record actual receipt','录入一张收据')+'</button>';}
   function accountsPage(){const s=workStats(),m=B.today.slice(0,7),pay=[
     workCard('🧾',Z('Supplier payment','供应商付款'),'',s.unpaidCount+' '+Z('receipts pending','张待付款收据'),"Owner.go('whorders',{filter:'UNPAID'})",RM(s.unpaidTotal),s.unpaidCount>0),
@@ -2021,7 +2022,7 @@ const Owner = (() => {
     for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
       for(const e of priceEntries(k)) h+=e.group?catalogueGroupRow(e):catalogueItemRow(e.item,k);
-      h += '</div>';const restricted=priceEntries(k,true);if(restricted.length){h+=`<div class="sectionhead">🔒 ${Z('Management only','管理层专属')} · ${restricted.length}</div><div class="hint">${Z('Not visible to Leaders and excluded from the count above.','工头看不到这些项目，不计入上方商品数量。')}</div><div class="card" style="padding:8px 14px">`;for(const e of restricted){for(const i of e.group?e.variants:[e.item])h+=catalogueItemRow(i,k);}h+='</div>';} }
+      h += '</div>';const restricted=priceEntries(k,true);if(restricted.length){h+=`<div class="sectionhead">🔒 ${Z('Management only','管理层专属')} · ${restricted.length+(k==='PERSONAL'?1:0)}</div><div class="hint">${Z('Not visible to Leaders and excluded from the count above.','工头看不到这些项目，不计入上方商品数量。')}</div><div class="card" style="padding:8px 14px">`;for(const e of restricted){for(const i of e.group?e.variants:[e.item])h+=catalogueItemRow(i,k);}if(k==='PERSONAL')h+='<div class="line" data-catalogue-row="1" data-search="PINJAM LOAN 借钱 借款" style="flex-wrap:wrap"><span style="display:flex;align-items:center;gap:10px"><span class="ico">💵</span><span><b>PINJAM</b><br><small class="mut">'+Z('Worker loan · Salary only','工人借钱 · 直接记录于 Salary')+'</small></span></span><button class="btn small light" onclick="location.href=\'Salary.html#loan\'">'+Z('New loan','新增借款')+' ›</button></div>';h+='</div>';} }
     return h;
   }
 
