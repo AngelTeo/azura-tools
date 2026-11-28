@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 93;
+const APP_VERSION = 94;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1442,7 +1442,81 @@ const Owner = (() => {
   function purchaseCancelButton(l){
     if(!l||l.status!=='REQUESTED'||whOrdered(l)||l.pay_id||l.buy||l.reserved)return '';
     const title=Z('Cancel this request','取消这笔申请');
-    return '<button class="btn light" style="flex:0 0 38px;min-width:38px;min-height:44px;margin:0;padding:4px;color:#a33b36;background:transparent;border:1px solid var(--line);display:flex;align-items:center;justify-content:center" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-id="'+esc(l.id)+'" onclick="Owner.cancelPurchaseRequest(this.dataset.id)"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>';
+    return '<button class="btn light" style="width:30px;min-width:30px;min-height:30px;height:30px;margin:0;padding:3px;color:#a33b36;background:transparent;border:1px solid var(--line);display:flex;align-items:center;justify-content:center" title="'+esc(title)+'" aria-label="'+esc(title)+'" data-id="'+esc(l.id)+'" onclick="Owner.cancelPurchaseRequest(this.dataset.id)"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button>';
+  }
+  function purchaseRowActions(l){
+    if(!l||l.status!=='REQUESTED'||whOrdered(l)||l.pay_id||l.buy||l.reserved)return '';
+    const label=Z('Edit request','编辑申请');
+    return '<div style="display:flex;flex:0 0 32px;flex-direction:column;align-items:center;justify-content:center;gap:4px"><button class="btn light" style="width:30px;min-width:30px;min-height:30px;height:30px;margin:0;padding:3px;color:var(--green);background:transparent;display:flex;align-items:center;justify-content:center" aria-label="'+esc(label)+'" title="'+esc(label)+'" data-id="'+esc(l.id)+'" onclick="Owner.purchaseEditOpen(this.dataset.id)"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15l-1 5z"/></svg></button>'+purchaseCancelButton(l)+'</div>';
+  }
+  let PE=null,PEBusy=false;
+  const purchaseEditSnapshot=l=>({farm:l.farm,kind:l.kind,worker_id:l.worker_id||null,detail:l.detail||'',qty:Number(l.qty),asked:l.asked||null,item_id:l.item_id||null,farm_recipient_ids:[...(l.farm_recipient_ids||[])]});
+  function purchaseEditOpen(id){
+    if(PEBusy||DetailBusy||TogetherBusy||WHBusy||PurchaseCancelBusy)return;
+    const l=B.lines.find(x=>x.id===id);
+    if(!l||l.status!=='REQUESTED'||whOrdered(l)||l.pay_id||l.buy||l.reserved)return;
+    const old=purchaseEditSnapshot(l);
+    PE={id,old,farm:old.farm,kind:old.kind,worker_id:old.worker_id,detail:old.detail,qty:String(old.qty),asked:old.asked||'',recipients:[...old.farm_recipient_ids],bottle:!!l.bottle_id,error:''};purchaseEditDraw();
+  }
+  function purchaseEditKinds(l){
+    if(PE.bottle)return [PE.old.kind];
+    const it=IT(l.item_id),special=['TOP UP','WHISKEY','PHONE','HANDPHONE','MOBILE PHONE','SMARTPHONE','UBAT','DOCTOR','PINJAM','SIM CARD'].includes(String(it.code||l.item).toUpperCase());
+    if(special)return [PE.old.kind];
+    return ['FARM','PERSONAL','SHARED'].filter(k=>k===PE.old.kind||!l.item_id||B.items.some(x=>x.kind===k&&x.code===it.code&&x.id!==it.id));
+  }
+  function purchaseEditError(){
+    if(!PE)return Z('Open request','请打开申请');const d=PE,l=B.lines.find(x=>x.id===d.id),q=Number(d.qty);
+    if(!l||l.status!=='REQUESTED')return Z('Request changed','申请已变更');
+    if(!Number.isInteger(q)||q<1||q>999)return Z('Enter quantity 1–999','请输入正确数量');
+    if(!d.asked||d.asked>B.today)return Z('Select request date','请选择要求日期');
+    if(d.detail.length>80)return Z('Detail too long','规格／细节最多80字');
+    if(d.kind==='FARM'&&d.recipients.length>q)return Z('Remove extra recipients before reducing quantity','领用人数超过数量，请先移除多余领用人');
+    if(d.kind==='PERSONAL'&&(!d.worker_id||!workers(d.farm).some(w=>w.id===d.worker_id)&&!(d.worker_id===d.old.worker_id&&d.farm===d.old.farm&&d.kind===d.old.kind)))return Z('Choose worker','请选择工人');
+    return '';
+  }
+  function purchaseEditValidate(){
+    const err=purchaseEditError(),e=$('#pe-warning'),b=$('#pe-save');if(e)e.textContent=PE?.error||err;if(b)b.disabled=PEBusy||!!err;
+  }
+  function purchaseEditField(k,v){
+    if(!PE||PEBusy||!['qty','asked','detail','farm','kind','worker_id'].includes(k))return;
+    if(PE.bottle&&['qty','farm','kind','worker_id'].includes(k))return;
+    if(k==='farm'||k==='kind'){
+      if(PE[k]===v)return;
+      if((PE.recipients.length||PE.worker_id)&&!confirm(Z('Changing farm or category clears current recipient selection. Continue?','更换园区或类别会清空现有领用人／工人选择，继续？')))return;
+      PE.worker_id=null;PE.recipients=[];PE[k]=v;PE.error='';purchaseEditDraw();return;
+    }
+    PE[k]=v;PE.error='';if(k==='worker_id')purchaseEditDraw();else purchaseEditValidate();
+  }
+  function purchaseEditRecipient(id,remove=false){
+    if(!PE||PEBusy||PE.kind!=='FARM')return;
+    if(remove){const i=PE.recipients.lastIndexOf(id);if(i>=0)PE.recipients.splice(i,1);}
+    else if(PE.recipients.length<Number(PE.qty)&&workers(PE.farm).some(w=>w.id===id))PE.recipients.push(id);
+    PE.error='';purchaseEditDraw();
+  }
+  function purchaseEditDraw(){
+    const d=PE;if(!d)return;const l=B.lines.find(x=>x.id===d.id);if(!l)return;const ws=workers(d.farm),disabled=PEBusy?'disabled':'',bottle=d.bottle?'disabled':'',kinds=purchaseEditKinds(l),lab=(en,zh)=>esc(Z(en,zh));
+    const opts=personalSpecs(IT(l.item_id)),sizes=opts.length?'<div class="pills" style="flex-wrap:wrap;margin-bottom:8px">'+opts.map(v=>'<button class="pill '+(specFromDetail(IT(l.item_id),d.detail)===v?'on':'')+'" data-spec="'+esc(v)+'" onclick="Owner.purchaseEditSpec(this.dataset.spec)">'+esc(v)+'</button>').join('')+'</div>':'';
+    let h='<h2>'+lab('Edit request','编辑购买需求')+'</h2><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+zoomBox({item_id:l.item_id,name:l.item},false)+'<b>'+esc(l.item)+'</b></div>';
+    h+='<div class="field"><label>'+lab('Specification / details','规格／细节')+'</label>'+sizes+'<input maxlength="80" '+disabled+' value="'+esc(d.detail)+'" oninput="Owner.purchaseEditField(\'detail\',this.value)"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="field"><label>'+lab('Quantity','数量')+'</label><input type="number" min="1" max="999" step="1" inputmode="numeric" '+disabled+' '+bottle+' value="'+esc(d.qty)+'" oninput="Owner.purchaseEditField(\'qty\',this.value)"></div><div class="field"><label>'+lab('Request date','要求日期')+'</label><input type="date" '+disabled+' max="'+esc(B.today)+'" value="'+esc(d.asked)+'" onchange="Owner.purchaseEditField(\'asked\',this.value)"></div></div>';
+    h+='<div class="field"><label>'+lab('Farm','园区')+'</label><div class="pills">'+FARMS.map(f=>'<button class="pill '+(d.farm===f?'on':'')+'" '+disabled+' '+bottle+' onclick="Owner.purchaseEditField(\'farm\',\''+f+'\')">'+esc(f)+'</button>').join('')+'</div></div><div class="field"><label>'+lab('Category','类别')+'</label><div class="pills" style="flex-wrap:wrap">'+kinds.map(k=>'<button class="pill '+(d.kind===k?'on':'')+'" '+disabled+' '+bottle+' onclick="Owner.purchaseEditField(\'kind\',\''+k+'\')">'+esc(KINDS[k].name)+'</button>').join('')+'</div><div class="hint">'+esc(KINDS[d.kind].sub)+'</div></div>';
+    if(d.kind==='PERSONAL'&&!d.bottle)h+='<div class="field"><label>'+lab('Worker (required)','工人姓名（必填）')+'</label><div class="pills" style="flex-wrap:wrap">'+(d.worker_id&&!ws.some(w=>w.id===d.worker_id)?'<span class="hint">'+esc(l.worker||'—')+'</span>':'')+ws.map(w=>'<button class="pill '+(w.id===d.worker_id?'on':'')+'" '+disabled+' data-id="'+esc(w.id)+'" onclick="Owner.purchaseEditField(\'worker_id\',this.dataset.id)">'+esc(w.name)+'</button>').join('')+'</div></div>';
+    if(d.bottle)h+='<div class="hint">'+lab('Shared bottle: only details and request date can change for the whole group.','同瓶分摊只可一起修改规格及日期，数量及成员保持原状。')+'</div>';
+    if(d.kind==='FARM'){
+      const counts=new Map();for(const id of d.recipients)counts.set(id,(counts.get(id)||0)+1);
+      h+='<details class="card homefold" '+(d.recipients.length||/^(BOOTS|SHOES|KASUT|BAJU|SHIRT|PANTS|STRAW HAT|GLOVES|HEADLAMP)( |$|[-_])/i.test(String(IT(l.item_id).code||''))?'open':'')+'><summary>'+lab('Recipient (company pays)','领用人（公司承担）')+' · '+d.recipients.length+'</summary>'+[...counts].map(([id,n])=>'<div class="line"><span>'+esc(ws.find(w=>w.id===id)?.name||wname(id))+' × '+n+'</span><button class="btn small light" '+disabled+' data-id="'+esc(id)+'" onclick="Owner.purchaseEditRecipient(this.dataset.id,true)">−</button></div>').join('')+'<select '+disabled+' onchange="if(this.value)Owner.purchaseEditRecipient(this.value)"><option value="">'+lab('Choose worker…','选择领用人…')+'</option>'+ws.map(w=>'<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>').join('')+'</select><div class="hint">'+lab('Optional; does not deduct salary.','可留空，不扣薪。')+'</div></details>';
+    }
+    h+='<div id="pe-warning" class="hint" role="status"></div><div class="modalfoot"><button class="btn" '+disabled+' onclick="closeModal()">'+lab('Cancel','取消')+'</button><button class="btn primary" id="pe-save" onclick="Owner.purchaseEditSave()">'+lab('Save changes','保存修改')+'</button></div>';openModal(h);purchaseEditValidate();
+  }
+  function purchaseEditSpec(v){if(!PE||PEBusy)return;const l=B.lines.find(x=>x.id===PE.id);if(!l)return;PE.detail=mergeDetailSpec(IT(l.item_id),PE.detail,v);purchaseEditDraw();}
+  async function purchaseEditSave(){
+    if(!PE||PEBusy||purchaseEditError())return;const d=PE;PEBusy=true;busy(1);purchaseEditValidate();
+    try{
+      const res=await rpc('shop_owner_line_edit',{standard_edit:true,id:d.id,expected:d.old,qty:Number(d.qty),asked:d.asked,detail:d.detail,farm:d.farm,kind:d.kind,worker_id:d.kind==='PERSONAL'?d.worker_id:null,farm_recipient_ids:d.kind==='FARM'?d.recipients:[]});
+      if(!res?.ok)throw Error(Z('Save not confirmed','保存尚未确认'));
+      await reload();const fresh=B.lines.find(x=>x.id===d.id);if(!fresh||Number(fresh.qty)!==Number(d.qty)||fresh.asked!==d.asked||fresh.farm!==d.farm||fresh.kind!==d.kind||(fresh.detail||'')!==d.detail.trim()||(fresh.worker_id||null)!==(d.kind==='PERSONAL'?d.worker_id:null)||JSON.stringify(fresh.farm_recipient_ids||[])!==JSON.stringify(d.kind==='FARM'?d.recipients:[]))throw Error(Z('Refresh to verify saved request','请刷新核对申请'));
+      PE=null;closeModal();DBuy=null;if(ui.view==='item'){ui.key=lkey(fresh);ui.request=fresh.id;}render();toast(Z('Request updated','申请已修改'));
+    }catch(e){d.error=errZ(e.message);purchaseEditValidate();}
+    finally{PEBusy=false;busy(0);if(PE===d)purchaseEditValidate();}
   }
   let PurchaseCancelBusy=false;
   async function cancelPurchaseRequest(id){
@@ -1464,7 +1538,7 @@ const Owner = (() => {
   function purchaseEntryRows(ls){
     return whPhysicalRows(sortL(ls.filter(l=>l.status==='REQUESTED'))).map(l=>{
       const members=l.bottle_id?ls.filter(x=>x.bottle_id===l.bottle_id):[l],qty=l.bottle_id?1:l.qty,people=l.kind==='PERSONAL'?members.map(x=>who(x)||Z('Choose worker','待选工人')).join(' / '):l.kind==='FARM'?(l.farm_recipients||''):'';
-      return '<div style="display:flex;align-items:stretch;gap:5px;margin:7px 0"><button class="btn light" style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;text-align:left;white-space:normal;padding:10px 12px;margin:0;gap:8px" data-key="'+esc(lkey(l))+'" data-id="'+esc(l.id)+'" onclick="Owner.go(\'item\',{key:this.dataset.key,request:this.dataset.id})"><span style="flex:1;min-width:0"><b>'+esc(l.farm)+(people?' · '+esc(people):'')+'</b><span class="hint" style="display:block;overflow-wrap:anywhere">'+esc(l.detail||'')+' '+askTag(l)+'</span></span><span style="flex:none;font-weight:700">× '+qty+' ›</span></button>'+purchaseCancelButton(l)+'</div>';
+      return '<div style="display:flex;align-items:stretch;gap:5px;margin:7px 0"><button class="btn light" style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;text-align:left;white-space:normal;padding:10px 12px;margin:0;gap:8px" data-key="'+esc(lkey(l))+'" data-id="'+esc(l.id)+'" onclick="Owner.go(\'item\',{key:this.dataset.key,request:this.dataset.id})"><span style="flex:1;min-width:0"><b>'+esc(l.farm)+(people?' · '+esc(people):'')+'</b><span class="hint" style="display:block;overflow-wrap:anywhere">'+esc(l.detail||'')+' '+askTag(l)+'</span></span><span style="flex:none;font-weight:700">× '+qty+' ›</span></button>'+purchaseRowActions(l)+'</div>';
     }).join('');
   }
   function itemPage(){
@@ -1635,7 +1709,7 @@ const Owner = (() => {
     if(batches.length)html+='<details class="card homefold" '+(DBuy.showStock?'open':'')+' ontoggle="Owner.detailToggle(\'showStock\',this.open)"><summary>'+label('Use existing stock instead','从现有库存调货')+' · '+batches.length+' '+label('batches','批')+'</summary><div class="hint">'+batches.map(b=>esc(b.received_on)+' · '+RM(b.unit_cost)+' · '+(Number(b.on_hand)-Number(b.reserved))+' '+label('available','可用')).join('<br>')+'</div>'+whBtn('Choose actual batch','选择实际批次','PICK_BATCH',l.id,'btn primary block')+'</details>';
     html+='<div class="card" style="padding:14px">'+field(label('Purchase date','购买日期'),'<input type="date" max="'+esc(B.today)+'" value="'+esc(DBuy.date)+'" onchange="Owner.detailBuyDate(this.value)">')+'<div style="margin-top:12px">'+field(label('Paid by','付款人'),'<div class="pills" style="flex-wrap:wrap">'+BUYERS.map(x=>'<button class="pill '+(DBuy.by===x?'on':'')+'" onclick="Owner.detailPayer(\''+x+'\')">'+esc(payerLabel(x))+'</button>').join('')+'</div>')+'</div><div id="detail-opening" hidden style="margin-top:10px"><label class="checkrow"><input type="checkbox" '+(DBuy.openingZero?'checked':'')+' onchange="Owner.detailBatchField(\'openingZero\',this.checked)">'+label('Confirmed previous physical stock was zero','确认采购前原有实物库存为零')+'</label><div class="hint">'+label('If stock already exists, count it first.','如果原本已经有货，请先点算原有库存。')+'</div></div></div>';
     html+='<details class="card homefold" '+(DBuy.showExtra?'open':'')+' ontoggle="Owner.detailToggle(\'showExtra\',this.open)"><summary>'+label('Extra details (optional)','补充资料（有才填写）')+'</summary><div style="display:grid;gap:12px;margin-top:8px">'+field(label('Receipt / payment reference','收据／付款参考'),'<input maxlength="80" value="'+esc(DBuy.ref)+'" oninput="Owner.detailBatchField(\'ref\',this.value)">')+'</div></details>';
-    html+='<div class="card" style="padding:12px"><div class="hint" id="detail-buy-warning" role="status"></div><button class="btn primary block" id="detail-buy-ok" onclick="Owner.detailSaveBuy()">'+label('Confirm purchase','✓ 确认买了')+'</button><div class="btnrow" style="margin-top:8px"><button class="btn small light grow" data-id="'+esc(l.id)+'" onclick="Owner.editLine(this.dataset.id)">'+label('Edit request','修改申请资料')+'</button>'+(!l.bottle_id&&!batches.length?whBtn('Order','订购','ORDER',l.id,'btn small light'):'')+'<button class="btn small light" data-id="'+esc(l.id)+'" onclick="Owner.cancelPurchaseRequest(this.dataset.id)">'+label("Won't buy",'取消申请')+'</button></div></div>';
+    html+='<div class="card" style="padding:12px"><div class="hint" id="detail-buy-warning" role="status"></div><button class="btn primary block" id="detail-buy-ok" onclick="Owner.detailSaveBuy()">'+label('Confirm purchase','✓ 确认买了')+'</button><div class="btnrow" style="margin-top:8px"><button class="btn small light grow" data-id="'+esc(l.id)+'" onclick="Owner.purchaseEditOpen(this.dataset.id)">'+label('Edit request','修改申请资料')+'</button>'+(!l.bottle_id&&!batches.length?whBtn('Order','订购','ORDER',l.id,'btn small light'):'')+'<button class="btn small light" data-id="'+esc(l.id)+'" onclick="Owner.cancelPurchaseRequest(this.dataset.id)">'+label("Won't buy",'取消申请')+'</button></div></div>';
     const inline=document.getElementById('detail-buy-form');if(inline){inline.innerHTML=html;detailBuyTotal();}
   }
   function detailBuyTick(){/* retired: one independent request per entry */}
@@ -2947,7 +3021,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whinventory:whInventoryPage,whhistory:whHistoryPage,whprofit:whProfitPage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);initDetailBuy();spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, detailSetQty, detailBatchField, detailToggle, detailWorkerToggle, detailWorkerFarm, detailWorkerChoose, farmRecipientToggle, farmRecipientChange, cancelPurchaseRequest, togetherOpen, togetherField, togetherPick, togetherSell, togetherSave, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, detailSetQty, detailBatchField, detailToggle, detailWorkerToggle, detailWorkerFarm, detailWorkerChoose, farmRecipientToggle, farmRecipientChange, cancelPurchaseRequest, purchaseEditOpen, purchaseEditField, purchaseEditSpec, purchaseEditRecipient, purchaseEditSave, togetherOpen, togetherField, togetherPick, togetherSell, togetherSave, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, spotClear, spotCustomChoose, spotMode, spotTopField, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, catClose, catEditName, catSaveName, catSavePhoto, catResume, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
