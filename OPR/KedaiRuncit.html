@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 75;
+const APP_VERSION = 76;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1181,7 +1181,7 @@ const Owner = (() => {
   const whOrdered=l=>!!whLink(l).ordered;
   const whFixed=l=>whLink(l).fixed_sell??null;
   const whOpening=l=>whManaged(l)&&!whPolicy(l.item_id).opening_confirmed;
-  const reviewReason=l=>whLink(l).review||(!l.item_id&&l.photo_count?'PHOTO':null)||requestReview(l,B.all_workers||[])||(whOpening(l)?'OPENING':null);
+  const reviewReason=l=>{const link=whLink(l);const reason=Object.prototype.hasOwnProperty.call(link,'review')?link.review:((!l.item_id&&l.photo_count?'PHOTO':null)||requestReview(l,B.all_workers||[]));return reason||(whOpening(l)?'OPENING':null);};
   const reviewLines=()=>B.lines.filter(l=>['REQUESTED','BOUGHT'].includes(l.status)&&reviewReason(l));
   const reviewLabel=k=>({FOOD_UNIT:Z('Old grocery request · verify original unit','旧订菜申请 · 核对原有单位'),AMOUNT_PENDING:Z('Actually delivered · amount pending','已实际交货 · 金额待补'),PHOTO:Z('Identify item from photo','照片需求 · 核实实际物品'),WORKER:Z('Worker not in active AD list — verify history','工人不在现有 AD 名单 · 核实历史'),MEDICAL:Z('Medical service already reported — reconcile','已发生医疗事项 · 核实付款及原扣款'),INSTALMENT:Z('Quote and instalment terms pending','等待报价及分期安排'),CATALOG:Z('Custom personal item — catalogue link required','自填个人物品 · 需关联正式商品'),OPENING:Z('Opening stock not confirmed','期初库存尚未确认')}[k]||'');
   const ico = l => l.kind === 'FOOD' ? (IT(l.item_id).icon || '🥬') : icon(l.item, IT(l.item_id).icon);
