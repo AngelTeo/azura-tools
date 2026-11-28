@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 54;
+const APP_VERSION = 55;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -424,8 +424,33 @@ function catalogEntries(list){
  }
  return out;
 }
+ function garment(it){const n=String(it?.label||'').toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
+ if(/^(SHIRT|T SHIRT) (短袖|SHORT(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'SHORT SLEEVE'};
+ if(/^(SHIRT|T SHIRT) (长袖|LONG(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'LONG SLEEVE'};
+ if(/^PANTS (SHORT|短裤)$/.test(n))return {group:'PANTS',spec:'SHORT'};
+ if(/^PANTS (LONG|长裤)$/.test(n))return {group:'PANTS',spec:'LONG'};return null;}
+
+function productEntries(list,includeMissing=false){
+ const out=[],seen=new Set();
+ for(const e of catalogEntries(list)){
+  const v=e.item&&garment(e.item);if(!v){out.push(e);continue;}
+  if(seen.has(v.group))continue;seen.add(v.group);
+  const variants=list.filter(i=>garment(i)?.group===v.group);
+  if(includeMissing)for(const spec of (v.group==='SHIRT'?['SHORT SLEEVE','LONG SLEEVE']:['SHORT','LONG'])){
+   if(!variants.some(i=>garment(i)?.spec===spec)){const label=v.group+' - '+spec;variants.push({id:'c:'+label,label,custom:true});}
+  }
+  out.push({group:v.group,label:v.group,variants,garment:true});
+ }
+ return out;
+}
+function productVariant(it){return garment(it)||fixedVariant(it);}
+function variantSpecLabel(it,zh){const v=productVariant(it);if(!v)return it.label;
+ const labels={'SHORT SLEEVE':'短袖','LONG SLEEVE':'长袖','SHORT':'短裤','LONG':'长裤'};
+ return zh?(labels[v.spec]||v.spec):v.spec;
+}
+
 function variantPickerHTML(group, variants, onpick, onclose, marked){
- return `<h2>${esc(group)}</h2><div class="itemsgrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${variants.map(it=>{const v=fixedVariant(it),on=marked&&marked(it.id);return `<button class="food pick ${on?'chosen':''}" style="display:flex;flex-direction:column;align-items:center;min-width:0;padding:10px;gap:8px;text-align:center" data-id="${esc(it.id)}" onclick="${onpick}(this.dataset.id)"><div style="width:100%;display:flex;justify-content:center">${icoBox(it,it.label)}</div><b style="font-size:15px">${esc(v.spec)}</b>${on?'<small>✓</small>':''}</button>`;}).join('')}</div><div class="modalfoot"><button class="btn" onclick="${onclose}()">${esc(group)} · ×</button></div>`;
+ return `<h2>${esc(group)}</h2><div class="itemsgrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${variants.map(it=>{const v=productVariant(it),on=marked&&marked(it.id);return `<button class="food pick ${on?'chosen':''}" style="display:flex;flex-direction:column;align-items:center;min-width:0;padding:10px;gap:8px;text-align:center" data-id="${esc(it.id)}" onclick="${onpick}(this.dataset.id)"><div style="width:100%;display:flex;justify-content:center">${icoBox(it,it.label)}</div><b style="font-size:15px">${esc(v.spec)}</b>${on?'<small>✓</small>':''}</button>`;}).join('')}</div><div class="modalfoot"><button class="btn" onclick="${onclose}()">${esc(group)} · ×</button></div>`;
 }
 function personalSpecs(it){
  if(!it)return [];if(it.custom)return /^(SHIRT - (SHORT|LONG) SLEEVE|PANTS - (SHORT|LONG))$/i.test(it.label||'')?['S','M','L','XL','2XL','3XL']:[];
@@ -635,12 +660,7 @@ en:{title:'My List',sub:'Anything not delivered stays on the list',next:'Next tr
   function topDetail(d){const p=String(d||'').split('·').map(v=>v.trim());if(p.length!==2&&p.length!==3)return null;if(!phoneValid(p[0]))return null;const m=/^RM\s*(\d+(?:\.\d{1,2})?)$/i.exec(p[p.length-1]);if(!m||!amountValid(m[1]))return null;if(p.length===3&&!p[1])return null;return {phone:p[0],telco:p.length===3?p[1]:'',amount:Number(m[1])};}
   const baseKey=k=>String(k).startsWith('b:')?String(k).slice(String(k).indexOf(':',2)+1):String(k);
  const cartItem=key=>{key=baseKey(key);return pOnly(key)?{id:null,label:photoLabel(),custom:true,photoOnly:true}:key.startsWith('c:')?{id:null,label:key.slice(2),custom:true}:itemById(key);};
- function garment(it){const n=String(it?.label||'').toUpperCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
- if(/^(SHIRT|T SHIRT) (短袖|SHORT(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'SHORT SLEEVE'};
- if(/^(SHIRT|T SHIRT) (长袖|LONG(?: SLEEVE)?)$/.test(n))return {group:'SHIRT',spec:'LONG SLEEVE'};
- if(/^PANTS (SHORT|短裤)$/.test(n))return {group:'PANTS',spec:'SHORT'};
- if(/^PANTS (LONG|长裤)$/.test(n))return {group:'PANTS',spec:'LONG'};return null;}
- function leaderEntries(list){const out=[],seen=new Set();for(const e of catalogEntries(list)){const v=e.item&&garment(e.item);if(!v){out.push(e);continue;}if(seen.has(v.group))continue;seen.add(v.group);const variants=list.filter(i=>garment(i)?.group===v.group);for(const spec of (v.group==='SHIRT'?['SHORT SLEEVE','LONG SLEEVE']:['SHORT','LONG']))if(!variants.some(i=>garment(i)?.spec===spec)){const label=v.group+' - '+spec;variants.push({id:'c:'+label,label,custom:true});}out.push({group:v.group,variants,garment:true});}return out;}
+ function leaderEntries(list){return productEntries(list,true);}
  const photoMode=it=>!!(it?.custom||garment(it)||/^(BAG|KASUT|SELIPAR|SHOES?|SLIPPERS?|SANDALS?|BAJU|SELUAR|PANTS|SHIRT|T SHIRT)(?:\s|$)/i.test(String(it?.label||it?.code||'')));
  const effectivePhotos=(c,r)=>r.photos?.length?r.photos:(c.photos||[]);
  const sizeKey=(it,w)=>'runcit_size_v35:'+w+':'+(garment(it)?.group||it.id||it.label);
@@ -1841,13 +1861,13 @@ const Owner = (() => {
  else toast(taken?Z('Written now','已经记了'):Z('Added to next trip','已加入下一趟'));
 }
   function ownerSpotCatalog(list){
- return (SP.kind==='PERSONAL'?catalogEntries(list):list.map(item=>({item}))).map(e=>{
- if(e.group){const on=e.variants.some(i=>i.id===SP.item);return `<button class="food pick ${on?'chosen':''}" style="width:100%" onclick="Owner.openSpotVariants('${e.group}')"><span style="display:flex;gap:2px;flex:none">${e.variants.map(i=>icoBox(i,i.label)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${esc(on?fixedVariant(IT(SP.item)).spec:e.variants.map(i=>fixedVariant(i).spec).join(' / '))}</small></span><span class="plusbig">›</span></button>`;}
+ return (SP.kind==='PERSONAL'?productEntries(list):list.map(item=>({item}))).map(e=>{
+ if(e.group){const on=e.variants.some(i=>i.id===SP.item);return `<button class="food pick ${on?'chosen':''}" style="width:100%" onclick="Owner.openSpotVariants('${e.group}')"><span style="display:flex;gap:2px;flex:none">${e.variants.map(i=>icoBox(i,i.label)).join('')}</span><span class="foodname"><b>${esc(e.group)}</b><small>${esc(on?variantSpecLabel(IT(SP.item),OL==='zh'):e.variants.map(i=>variantSpecLabel(i,OL==='zh')).join(' / '))}</small></span><span class="plusbig">›</span></button>`;}
  const i=e.item;return `<button class="food pick ${SP.item===i.id?'chosen':''}" style="width:100%" data-id="${esc(i.id)}" onclick="Owner.pickSpotItem(this.dataset.id)">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b></span><span class="plusbig">${SP.item===i.id?'✓':'+'}</span></button>`;
  }).join('');
 }
   function pickSpotItem(id){const it=IT(id);if(!it.id||it.kind!==SP.kind)return;closeModal();sp({item:id,price:buyRef(it)??null,sell:it.kind==='PERSONAL'?(whPolicy(id).fixed_sell??null):null,custom:''});}
-  function openSpotVariants(group){const e=catalogEntries(B.items.filter(i=>i.kind===SP.kind)).find(x=>x.group===group);if(e)openModal(variantPickerHTML(group,e.variants,'Owner.pickSpotItem','closeModal',id=>SP.item===id));}
+  function openSpotVariants(group){const e=productEntries(B.items.filter(i=>i.kind===SP.kind)).find(x=>x.group===group);if(e)openModal(variantPickerHTML(group,e.variants,'Owner.pickSpotItem','closeModal',id=>SP.item===id));}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
     let h = `<div class="hero"><div><h1>✍️ ${Z('At the farm','园里现场记录')}</h1><div class="sub">${Z('"I just took…" → deduct now · "I want…" → next trip','「我刚拿了…」→ 马上扣 · 「我要…」→ 下一趟')}</div></div>${back()}</div>
@@ -1991,15 +2011,24 @@ const Owner = (() => {
     if(catDraft())h+=`<button class="btn gold block" onclick="Owner.catResume()">${Z('Continue unfinished product','继续未完成的商品')} · ${esc(catDraft().label||'')}</button>`;
     /* v11: filter cards — show one kind at a time, remembered */
     const KS = ['PERSONAL','FARM','SHARED','FOOD'], cur = KS.includes(lsGet('runcit_items_kind','PERSONAL')) ? lsGet('runcit_items_kind','PERSONAL') : 'PERSONAL';
-    h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${B.items.filter(x => x.kind === k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
+    h += `<div class="kfilter">${KS.map(k => `<button class="${k === cur ? 'on' : ''}" onclick="Owner.itemsKind('${k}')"><span class="kico">${KINDS[k].ico}</span><span class="ktx"><b>${KINDS[k].name}</b><small>${priceEntries(k).length} ${Z('items','样')}</small></span></button>`).join('')}</div>`;
     h+='<div class="field"><label>'+Z('Search this category','搜索当前商品类别')+'</label><input id="catalogue-search" type="search" placeholder="'+Z('Name or code','商品名称／编号')+'" oninput="Owner.catalogueSearch(this.value)"></div>';
     for(const k of [cur]){
       h += `<div class="sectionhead">${KINDS[k].ico} ${KINDS[k].name}${k === 'FOOD' ? '' : ` <button class="btn small light" style="margin-left:8px" onclick="Owner.addItem('${k}')">${Z('+ Add item','+ 加物品')}</button>`}</div><div class="card" style="padding:8px 14px">`;
-      for(const i of B.items.filter(x => x.kind === k).sort((a,b)=>String(a.label).localeCompare(String(b.label),OL==="zh"?"zh":"en"))) h += `<div class="line" data-catalogue-row="1" data-search="${esc(String(i.label||"")+" "+String(i.code||""))}" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i, i.label)}<span><b>${esc(i.label)}</b>${!itemPhoto(i)?` <span class="tag warn">${Z('Photo pending','照片待补')}</span>`:''}${i.unit ? ` <span class="mut">${esc(i.unit)}</span>` : ''}<br>${k === 'PERSONAL' ? `<span class="tag ok">${Z('Sell','卖')} ${i.default != null ? RM(i.default) : '—'}</span>${(i.prices||[]).length > 1 ? ` <span class="mut" style="font-size:12px">${(i.prices||[]).join(' / ')}</span>` : ''}` : (i.prices||[]).map(p => `<span class="tag ${p == i.default ? 'ok' : ''}">${p}</span>`).join(' ') || `<span class="mut">${Z('no price','没价钱')}</span>`}</span></span>
-        <button class="btn small light" onclick="Owner.editItem('${i.id}')">✎ ${Z('Edit','编辑')}</button></div>`;
+      for(const e of priceEntries(k)) h+=e.group?catalogueGroupRow(e):catalogueItemRow(e.item,k);
       h += '</div>'; }
     return h;
   }
+
+  function priceEntries(k){const list=B.items.filter(x=>x.kind===k).slice().sort((a,b)=>String(a.label).localeCompare(String(b.label),OL==="zh"?"zh":"en"));return k==='PERSONAL'?productEntries(list,true):list.map(item=>({item}));}
+  function catalogueItemRow(i,k){return `<div class="line" data-catalogue-row="1" data-search="${esc(String(i.label||"")+" "+String(i.code||""))}" style="flex-wrap:wrap"><span style="display:flex;gap:10px;align-items:center;min-width:0">${icoBox(i,i.label)}<span><b>${esc(i.label)}</b>${!itemPhoto(i)?` <span class="tag warn">${Z('Photo pending','照片待补')}</span>`:''}${i.unit?` <span class="mut">${esc(i.unit)}</span>`:''}<br>${k==='PERSONAL'?`<span class="tag ok">${Z('Sell','卖')} ${i.default!=null?RM(i.default):'—'}</span>${(i.prices||[]).length>1?` <span class="mut" style="font-size:12px">${(i.prices||[]).map(RM).join(' / ')}</span>`:''}`:(i.prices||[]).map(p=>`<span class="tag ${p==i.default?'ok':''}">${RM(p)}</span>`).join(' ')||`<span class="mut">${Z('no price','没价钱')}</span>`}</span></span><button class="btn small light" onclick="Owner.editItem('${i.id}')">✎ ${Z('Edit','编辑')}</button></div>`;}
+  const catGroupLabel=g=>({SHIRT:Z('SHIRT','SHIRT · 衣服'),PANTS:Z('PANTS','PANTS · 裤子'),CABLE:Z('CABLE','CABLE · 电话线'),CHARGER:Z('CHARGER','CHARGER · 充电头')})[g]||g;
+  function catalogueGroupRow(e){const real=e.variants.filter(i=>!i.custom),first=real.find(i=>itemPhoto(i))||real[0],labels=e.variants.map(i=>variantSpecLabel(i,OL==='zh'));
+    return `<div class="line" data-catalogue-row="1" data-search="${esc([catGroupLabel(e.group),...e.variants.flatMap(i=>[i.code,i.label,variantSpecLabel(i,true)])].join(' '))}" style="flex-wrap:wrap"><span style="display:flex;align-items:center;gap:10px;min-width:0">${icoBox(first,e.group)}<span><b>${esc(catGroupLabel(e.group))}</b><br><small class="mut">${esc(labels.join(' / '))}</small><br><small class="mut">${real.length} / ${e.variants.length} ${Z('variants saved','规格已建立')}</small></span></span><button class="btn small light" onclick="Owner.editProductGroup('${e.group}')">${Z('Manage variants','管理规格')} ›</button></div>`;}
+  function editProductGroup(group){const e=priceEntries('PERSONAL').find(x=>x.group===group);if(!e)return;
+    openModal(`<h2>${esc(catGroupLabel(group))}</h2><div class="hint">${Z('One product · select a variant to edit its photo and prices','一个商品 · 选择规格编辑照片及价格')}</div>${e.variants.map(i=>`<div class="line" style="gap:10px;flex-wrap:wrap">${icoBox(i,i.label)}<span class="grow"><b>${esc(variantSpecLabel(i,OL==='zh'))}</b><br><small class="mut">${i.custom?Z('Not yet in catalogue','尚未建立正式规格'):Z('Sell','卖价')+' '+(i.default!=null?RM(i.default):'—')}${!i.custom&&!itemPhoto(i)?' · '+Z('Photo pending','照片待补'):''}</small></span>${i.custom?`<button class="btn small" data-label="${esc(i.label)}" onclick="Owner.addItem('PERSONAL',this.dataset.label)">+ ${Z('Set up','建立规格')}</button>`:`<button class="btn small light" onclick="Owner.editItem('${i.id}')">✎ ${Z('Edit','编辑')}</button>`}</div>`).join('')}<button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button>`);
+  }
+
   function catalogueSearch(value){const q=String(value||'').trim().toLowerCase();for(const el of document.querySelectorAll('#app [data-catalogue-row]'))el.style.display=String(el.dataset.search||'').toLowerCase().includes(q)?'':'none';}
   /* v13: one Edit sheet per item — name, prices, photo, list, managers only, delete */
   function editItem(id){ const i = IT(id); if(!i) return closeModal(); const food = i.kind === 'FOOD';
@@ -2060,9 +2089,9 @@ const Owner = (() => {
     const b=await rpc('shop_owner_board',{});if(!Array.isArray(b?.items))throw Error('Invalid catalogue response');
     B={...B,items:b.items};if(ui.view==='prices')render();
   }
-  function addItem(kind){
+  function addItem(kind,prefill=''){
     if(CatBusy)return;const old=catDraft();if(old){catResume();return;}
-    catPersist({kind,label:'',id:null});catModal(CatDraft);
+    catPersist({kind,label:prefill,id:null});catModal(CatDraft);
   }
   async function catSaveName(){
     if(CatBusy)return;const d=catDraft();if(!d||d.id)return;
@@ -2466,7 +2495,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, catClose, catEditName, catSaveName, catSavePhoto, catResume, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
