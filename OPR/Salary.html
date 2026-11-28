@@ -1013,6 +1013,16 @@ async function boot(){
   setSync(CAN_EDIT ? 'ok' : 'err', CAN_EDIT ? 'Connected' : 'View only');
   initMonthSel(); renderDashboard(); renderExitRecords(); updateLockStrip();
   const hm = location.hash.match(/hist=([0-9a-f-]{36})/); if(hm && getWorker(hm[1])){ goPage('summary'); renderSummary(); smHist(hm[1], 'salary', 'fromhash'); }
+  // Kedai Runcit management shortcut: existing loan form, current Malaysian calendar month.
+  if(location.hash==='#loan'){
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'numeric'}).formatToParts(new Date());
+    const y=parts.find(p=>p.type==='year').value,m=String(Number(parts.find(p=>p.type==='month').value));
+    document.getElementById('gYear').value=y;document.getElementById('gMonth').value=m;
+    goPage('advance');
+    if(CAN_EDIT&&!isLocked(monthKey()))avLoanForm(null);
+    else toast(CAN_EDIT?'This salary month is locked. Choose an open month.':'View only. Ask management with Salary edit permission.');
+    history.replaceState(null,'',location.pathname+location.search);
+  }
 }
 
 
