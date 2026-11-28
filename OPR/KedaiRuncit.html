@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 81;
+const APP_VERSION = 82;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1148,7 +1148,7 @@ const Owner = (() => {
   const BUYERS = ['TBF','LEX','LZF','Petty Cash'];   // v18: who really paid — always picked, never assumed
   // Display abbreviations only: retain existing cloud payer values and historical records.
   const payerLabel = n => ({'Teo':'TBF','AT':'TBF','EX':'LEX','LZ':'LZF','Mr. Low':'LZF','PETTY':'Petty Cash'})[n] || n;
-  let B = null, ui = {view:'home'}, ALC = lsGet('runcit_alcohol', false), HO = {}, BS = null, SP = null;
+  let B = null, ui = {view:'home'}, HO = {}, BS = null, SP = null;
   const ME = () => ({OWNER:'Teo'})[B.me && B.me.role] || lsGet('runcit_me', 'EX');
   const ddm = s => { const d = new Date(String(s).slice(0,10)+'T00:00:00'); return `${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`; };
   const IT = id => {
@@ -1193,8 +1193,7 @@ const Owner = (() => {
   const ico = l => l.kind === 'FOOD' ? (IT(l.item_id).icon || '🥬') : icon(l.item, IT(l.item_id).icon);
   const who = l => l.kind === 'PERSONAL' ? l.worker : KINDS[l.kind].name;
   const open = () => B.lines.filter(l => l.status === 'REQUESTED' && l.kind !== 'FOOD');
-  const toBuy = () => open().filter(l => !reviewReason(l)&&!whOrdered(l)&&(ALC || !isAlcohol(l.item)));
-  const alcWait = () => open().filter(l => isAlcohol(l.item));
+  const toBuy = () => open().filter(l => !reviewReason(l)&&!whOrdered(l));
   const bought = () => B.lines.filter(l => l.status === 'BOUGHT'&&!reviewReason(l));
   const foodAll=()=>B.lines.filter(l=>l.kind==='FOOD'&&['REQUESTED','BOUGHT'].includes(l.status));
   const foodDate=()=>ui.round||foodRound(B.today).deliver;
@@ -1283,7 +1282,7 @@ const Owner = (() => {
     taskRow('✍️',Z('At the farm','园里现场记录'),Z('Direct request or purchase','现场需求／采购'),"Owner.go('spot')"),
     taskRow('🩺',Z('Medical','看医生／买药'),Z('Verified medical expenses','核实医疗费用'),"Owner.go('med')")+
       taskRow('💵',Z('PINJAM · Worker loan','PINJAM · 工人借钱'),Z('New loan / borrow more · Salary','新借款／追加借款 · Salary'),"location.href='Salary.html#loan'")
-    ])+'<button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('Record actual receipt','录入一张收据')+'</button>';}
+    ]);}
   function accountsPage(){const s=workStats(),m=B.today.slice(0,7),pay=[
     workCard('🧾',Z('Supplier payment','供应商付款'),'',s.unpaidCount+' '+Z('receipts pending','张待付款收据'),"Owner.go('whorders',{filter:'UNPAID'})",RM(s.unpaidTotal),s.unpaidCount>0),
     workCard('💰',Z('Management advances','管理层垫款'),'',s.advanceN+' '+Z('payments to reimburse','笔待报销'),"Owner.go('petty')",RM(s.advance)),
@@ -1380,12 +1379,11 @@ const Owner = (() => {
   function waBatchSend(){const t=$('#waBatchMsg').value.trim();if(!t)return;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener');}
   async function waBatchCopy(){const el=$('#waBatchMsg');try{await navigator.clipboard.writeText(el.value);toast(Z('Copied','已复制'));}catch(e){el.focus();el.select();toast(Z('Select and copy manually','请手动复制已选文字'));}}
   function buyPage(){
-    const g = groups(toBuy()), al=alcWait(),tk=TOPKEY();
+    const g = groups(toBuy()),tk=TOPKEY();
     if(BuyTab==='buy'&&tk && !g.some(x => x.key === tk)){ g.push({key: tk, kind: 'PERSONAL', name: IT(tk).label || 'TOP UP', ico: '', item_id: tk, lines: []});
       const o = {FARM:0, PERSONAL:1, SHARED:2, FOOD:3}; g.sort((a,b) => o[a.kind]-o[b.kind] || a.name.localeCompare(b.name)); }
     for(const k of WASelected) if(!g.some(x=>x.key===k&&x.lines.some(l=>l.status==='REQUESTED'))) WASelected.delete(k);
-    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','采购清单')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${whTabs()}${BuyTab==='buy'?`<button class="btn primary block" onclick="Owner.mrStart()">🧾 ${Z('Record actual receipt · multiple items','录入一张收据 · 多项商品')}</button>`:''}${BuyTab==='buy'?`
-      <div class="card" style="padding:12px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">🥃</span><div style="flex:1"><b>${Z('Buy alcohol this trip?','这一趟买酒吗？')}</b><div class="hint">${Z(`${al.length} alcohol line${al.length===1?'':'s'} waiting`, `${al.length} 样酒在等`)}</div></div><button class="btn small ${ALC?'primary':''}" onclick="Owner.alc()">${ALC?Z('✓ Yes','✓ 买'):Z('Not this trip','这趟不买')}</button></div>
+    let h = `<div class="hero"><div><h1>🛒 ${Z('Buying list','采购清单')}</h1><div class="sub">${Z(`Next trip ${ddm(nextTrip())} · ${toBuy().length} lines · 3 farms`, `下一趟 ${ddm(nextTrip())} · ${toBuy().length} 样 · 3 个园`)}</div></div>${back()}</div>${whTabs()}${BuyTab==='buy'?`
       <div class="btnrow" style="margin:4px 0 6px"><button class="btn small light" onclick="Owner.copyList()">📋 ${Z('Copy shopping list','复制购物清单')}</button></div>`:''}`;
     const rv=reviewLines();if(rv.length)h+=`<button class="attcard todo" style="width:100%;text-align:left;margin:8px 0" onclick="Owner.go('review')"><span class="aico">⚠️</span><span class="atxt"><b>${rv.length} ${Z('need review','笔需核实')}</b><small>${Z('Not included in normal purchase or hand-over','已从普通采购和交货清单分开')}</small></span><span class="aarr">›</span></button>`;
     if(BuyTab==='ordered')return whOrderedPage(h);
@@ -1405,7 +1403,6 @@ const Owner = (() => {
     if(!rows.length)h+='<div class="empty">'+Z('Nothing needs review','没有需要核实的需求')+'</div>';h+='<button class="btn block" onclick="Owner.go(\'whphones\')">'+Z('Phone instalment records','手机分期记录')+'</button>';
     return h;
   }
-  function alc(){ ALC = !ALC; lsSet('runcit_alcohol', ALC); render(); }
   /* one row per line when it matters (who it is for, size, phone + amount); otherwise farm totals */
   const lineTxt = l => `${l.farm}${l.kind === 'PERSONAL' ? ' · ' + l.worker : ''}${l.detail ? ' · ' + l.detail : ''} × ${l.qty}${l.asked ? ' · ' + Z('asked ','要求 ') + dm(l.asked) : ''}`;
   const needRows = ls => ls.some(l => l.detail || l.kind === 'PERSONAL');
@@ -2509,7 +2506,7 @@ const Owner = (() => {
   }
   function whReceiptGroups(){const m=new Map();for(const o of WH?.orders||[]){if(!o.receipt_group_id)continue;if(!m.has(o.receipt_group_id))m.set(o.receipt_group_id,[]);m.get(o.receipt_group_id).push(o);}return m;}
   function whReceiptGroupCard(id,os){const total=os.reduce((s,o)=>s+Number(o.received_cost),0),paid=os.reduce((s,o)=>s+Number(o.paid),0),linked=(WH.order_payments||[]).some(p=>os.some(o=>o.id===p.order_id));return `<div class="card" style="padding:12px;margin:10px 0"><div class="line"><b>🧾 ${esc(os[0].supplier)}</b><b>${RM(total)}</b></div><div class="hint">${esc(os[0].ordered_on)} · ${esc(os[0].ref||'—')} · ${os.length} ${Z('items','项')}</div>${os[0].receipt_photo?`<button class="btn small light" data-id="${esc(id)}" onclick="Owner.mrViewPhoto(this.dataset.id)">📷 ${Z('Original receipt','原收据照片')}</button>`:''}${os.map(o=>`<div class="line"><span>${esc(o.item)}${o.stock_spec?' · '+esc(o.stock_spec):''} × ${o.qty}</span><b>${RM(o.received_cost)}</b></div>`).join('')}<div class="line"><span>${Z('Net paid','实际净付款')}</span><b>${RM(paid)}</b></div>${linked?`<div class="hint">${paid===total?Z('Paid once','已一次付款'):Z('Payment adjusted · review refunds','付款已调整 · 核对退款')}</div>`:whBtn('Record full receipt payment','记录整张收据付款','PAY_RECEIPT',id,'btn primary block')}<details><summary>${Z('Batch / original allocation / refund','批次／原付款分配／退款')}</summary>${os.map(whOrderCard).join('')}</details></div>`;}
-  function whOrdersPage(){const filter=ui.filter||'ALL',match=o=>filter==='ALL'||(filter==='UNPAID'?Number(o.received_cost)>Number(o.paid)&&!(WH.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped):Number(o.received_cost)>Number(o.paid)&&(WH.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped)),groups=new Map([...whReceiptGroups()].filter(([id,os])=>os.some(match))),single=WH.orders.filter(o=>!o.receipt_group_id&&match(o));return whHeader('Supplier orders / receipts','供应商订单／收据',Z('One receipt, one actual payment','一张收据，一次实际付款'))+'<div class="pills">'+[['ALL',Z('All','全部')],['UNPAID',Z('Unpaid','待付款')],['ADJUSTED',Z('Adjusted','退款核对')]].map(([k,t])=>'<button class="pill '+(filter===k?'on':'')+'" onclick="Owner.go(\'whorders\',{filter:\''+k+'\'})">'+esc(t)+'</button>').join('')+'</div><button class="btn primary block" onclick="Owner.mrStart()">🧾 '+Z('New actual receipt','录入一张收据')+'</button>'+(groups.size?[...groups].map(([id,os])=>whReceiptGroupCard(id,os)).join(''):'')+(single.length?single.map(whOrderCard).join(''):'')+(!groups.size&&!single.length?`<div class="empty">${Z('No matching orders','没有对应订单')}</div>`:'');}
+  function whOrdersPage(){const filter=ui.filter||'ALL',match=o=>filter==='ALL'||(filter==='UNPAID'?Number(o.received_cost)>Number(o.paid)&&!(WH.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped):Number(o.received_cost)>Number(o.paid)&&(WH.order_payments||[]).some(p=>p.order_id===o.id&&p.grouped)),groups=new Map([...whReceiptGroups()].filter(([id,os])=>os.some(match))),single=WH.orders.filter(o=>!o.receipt_group_id&&match(o));return whHeader('Supplier orders / receipts','供应商订单／收据',Z('One receipt, one actual payment','一张收据，一次实际付款'))+'<div class="pills">'+[['ALL',Z('All','全部')],['UNPAID',Z('Unpaid','待付款')],['ADJUSTED',Z('Adjusted','退款核对')]].map(([k,t])=>'<button class="pill '+(filter===k?'on':'')+'" onclick="Owner.go(\'whorders\',{filter:\''+k+'\'})">'+esc(t)+'</button>').join('')+'</div>'+(groups.size?[...groups].map(([id,os])=>whReceiptGroupCard(id,os)).join(''):'')+(single.length?single.map(whOrderCard).join(''):'')+(!groups.size&&!single.length?`<div class="empty">${Z('No matching orders','没有对应订单')}</div>`:'');}
 
   function whReturnsPage(){
     const issued=WH.issued||[],returns=WH.returns||[];
@@ -2538,7 +2535,6 @@ const Owner = (() => {
   }
   function whPolicyPage(){
     return '<div class="hero"><div><h1>'+Z(WPickMode==='OPENING'?'First stock count':'Bought · stock in',WPickMode==='OPENING'?'首次点算':'买了 · 入库')+'</h1><div class="sub">'+Z('Select from the existing product library','直接从商品资料库选择，不重复建商品')+'</div></div><button class="btn small" onclick="Owner.go(\'warehouse\')">'+Z('← Warehouse','← 返回仓库')+'</button></div>'
-      +(WPickMode==='BUY'?'<button class="btn block" onclick="Owner.mrStart()">🧾 '+Z('Several items on one receipt','一张收据 · 多项商品')+'</button>':'')
       +'<div class="mg-grid">'+['FARM','PERSONAL','SHARED'].map(k=>'<button class="lp-tile '+(WPickKind===k?'chosen':'')+'" style="min-height:78px" data-kind="'+k+'" onclick="Owner.whPickCategory(this.dataset.kind)"><span style="font-size:24px">'+KINDS[k].ico+'</span><b>'+esc(KINDS[k].name)+'</b></button>').join('')+'</div><div class="field"><input placeholder="'+Z('Search product','搜索商品')+'" value="'+esc(WSearch)+'" oninput="Owner.whSearch(this.value)"></div><div id="wh-policy-list">'+whPolicyRows()+'</div>';
   }
   function whBatchesPage(){return whPageHead('Stock batches','库存批次／点算',Z('Actual batch cost · FIFO','实际批次成本 · FIFO'))+(WH.batches.length?WH.batches.map(b=>`<div class="card" style="padding:12px;margin:8px 0"><b>${esc(IT(b.option_id).label||'—')}</b><div>Batch ${esc(whBatchLabel(b))} · ${b.received_on} · ${esc(b.source)} · ${RM(b.unit_cost)} / ${Z('unit','件')}</div><div class="hint">${Z('Specification','规格')}：${esc(b.stock_spec||Z('Standard','标准'))} · ${Z('Original qty','原批数量')} ${b.original_qty}</div><div class="line"><span>${Z('Physical / reserved / available','实际 / 预留 / 可用')}</span><b>${b.on_hand} / ${b.reserved} / ${b.on_hand-b.reserved}</b></div>${b.on_hand>b.reserved?whBtn('Reduce stock','损坏／盘亏','ADJUST_DOWN',b.id):''}</div>`).join(''):`<div class="empty">${Z('No stock batches','尚无库存批次')}</div>`);}
@@ -2751,7 +2747,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whinventory:whInventoryPage,whhistory:whHistoryPage,whprofit:whProfitPage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, spotClear, spotCustomChoose, spotMode, spotTopField, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, catClose, catEditName, catSaveName, catSavePhoto, catResume, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
