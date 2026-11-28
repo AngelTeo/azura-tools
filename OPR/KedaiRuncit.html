@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 74;
+const APP_VERSION = 75;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -2533,8 +2533,38 @@ const Owner = (() => {
 
   const phoneFind=id=>WH?.phones?.find(x=>x.request_id===id);
   const phoneStage=x=>({QUOTED:Z('Quote recorded','报价已记录'),APPROVED:Z('Terms approved','分期已批准'),BOUGHT:Z('Purchased / pending delivery','已购买／待交付'),DELIVERED:Z('Delivered / Salary loan','已交付／Salary 分期'),CANCELLED:Z('Cancelled','已取消')}[x]||Z('Awaiting quote','等待报价'));
+  // v75: explicit owner decision on retired shared grocery requests.
+  let FoodReview=null,FoodReviewBusy=false;
+  function foodReviewMaster(l){const code=({'ANTABAX (香皂)':'sabun_mandi','NESCAFE 3IN1':'kopi_3in1','UBAT GIGI (牙膏)':'ubat_gigi'})[l.code];return B.items.find(i=>i.kind==='FOOD'&&i.code===code);}
+  function foodReviewOpen(id){
+    if(FoodReviewBusy)return;
+    const l=whFindLine(id),it=l&&foodReviewMaster(l);if(!l||reviewReason(l)!=='FOOD_UNIT'||!it){toast(Z('Refresh official records first','请先刷新正式资料'));return;}
+    if(FoodReview?.payload){if(FoodReview.id!==id){toast(Z('Resolve the previous save attempt first','请先核实上一笔提交'));return;}return foodReviewDraw();}
+    FoodReview={id,op:uuid(),action:'',qty:'',reason:'',verified:false,round:B.food_round||foodRound(B.today).deliver,payload:null};foodReviewDraw();
+  }
+  function foodReviewDraw(){
+    const d=FoodReview,l=d&&whFindLine(d.id),it=l&&foodReviewMaster(l);if(!d||!it)return;
+    const frozen=d.payload?'disabled':'';
+    let h='<h2>'+Z('Verify original grocery request','核实旧订菜申请')+'</h2><div style="display:flex;gap:12px;align-items:center">'+icoBox(it,it.label)+'<div><b>'+esc(l.item)+' × '+esc(l.qty)+'</b><div>'+esc(l.farm)+' · '+esc(l.asked||'15/11')+'</div><small>'+Z('Original unit not recorded','原有单位未记录')+'</small></div></div><div class="line"><span>'+Z('Food Order item','买菜主档')+'</span><b>'+esc(it.label)+' · '+esc(it.unit||'—')+'</b></div>';
+    h+='<div class="field"><label>'+Z('What actually happened?','实际情况是什么？')+'</label><div class="pills" style="flex-wrap:wrap">'+[['TRANSFER',Z('Still need to buy','还需要买')],['CANCEL',Z('No longer needed / already in order','不需要了／已在订单内')],['HOLD',Z('Already bought / not sure','已购买／不确定')]].map(([k,t])=>'<button type="button" class="pill '+(d.action===k?'on':'')+'" '+frozen+' data-action="'+k+'" onclick="Owner.foodReviewChoose(this.dataset.action)">'+esc(t)+'</button>').join('')+'</div></div>';
+    if(d.action==='TRANSFER')h+='<div class="note">'+Z('Confirm actual quantity in the catalogue unit. Transfer to current food round: ','核实实际包装数量，转入本轮订菜：')+esc(d.round)+'</div><div class="field"><label>'+Z('Confirmed quantity','确认数量')+' · '+esc(it.unit||'')+'</label><input id="frqty" '+frozen+' type="number" min="1" max="999" step="1" value="'+esc(d.qty)+'" oninput="Owner.foodReviewField(\'qty\',this.value)"></div>';
+    if(d.action==='HOLD')h+='<div class="note warn">'+Z('Keep this request pending. Check the receipt, delivery and any existing salary entry before further action. Do not order again.','保留待核实。先检查收据、实际交货及原有扣薪记录；不要再下单。')+'</div>';
+    if(['TRANSFER','CANCEL'].includes(d.action))h+='<div class="field"><label>'+Z('Reason / evidence','核实依据／原因')+'</label><textarea rows="2" maxlength="200" '+frozen+' oninput="Owner.foodReviewField(\'reason\',this.value)">'+esc(d.reason)+'</textarea></div><label class="checkrow"><input type="checkbox" '+frozen+' '+(d.verified?'checked':'')+' onchange="Owner.foodReviewField(\'verified\',this.checked)"> '+Z('Confirmed no separate purchase, payment or salary deduction for this old request','确认此旧申请没有独立采购、付款或扣薪')+'</label>';
+    h+='<div id="frerr" class="note bad" style="display:none"></div>';
+    if(['TRANSFER','CANCEL'].includes(d.action))h+='<button class="btn primary block" id="frsave" onclick="Owner.foodReviewSave()">'+Z(d.payload?'Retry same decision':'Confirm decision',d.payload?'重试同一决定':'确认处理')+'</button>';
+    h+='<button class="btn block" onclick="closeModal()">'+Z('Close / leave pending','关闭／暂不处理')+'</button>';openModal(h);
+  }
+  function foodReviewChoose(a){if(!FoodReview||FoodReview.payload||FoodReviewBusy||!['TRANSFER','CANCEL','HOLD'].includes(a))return;FoodReview.action=a;FoodReview.verified=false;foodReviewDraw();}
+  function foodReviewField(k,v){if(FoodReview&&!FoodReview.payload&&!FoodReviewBusy&&['qty','reason','verified'].includes(k))FoodReview[k]=v;}
+  async function foodReviewSave(){
+    const d=FoodReview;if(!d||FoodReviewBusy||!['TRANSFER','CANCEL'].includes(d.action))return;
+    const l=whFindLine(d.id),it=l&&foodReviewMaster(l);if(!it)return;
+    if(!d.payload){const q=Number(d.qty);if(!d.verified||!String(d.reason).trim()||d.action==='TRANSFER'&&(!Number.isInteger(q)||q<1||q>999)){toast(Z('Confirm quantity, reason and actual circumstances','请确认数量、原因及实际情况'));return;}
+      d.payload={request_id:d.id,op_id:d.op,action:d.action,reason:d.reason.trim(),verified:true,...(d.action==='TRANSFER'?{qty:q,unit:it.unit,round:d.round}:{})};}
+    FoodReviewBusy=true;busy(1);let saved=false;try{const r=await rpc('shop_owner_food_review',d.payload);if(!r?.ok)throw Error('Save not confirmed');saved=true;FoodReview=null;closeModal();await reload();render();toast(Z('Decision saved','核实处理已保存'));}catch(e){if(saved){toast(Z('Saved; refresh to verify','已保存，请刷新核实'));}else{foodReviewDraw();const el=$('#frerr');if(el){el.textContent=errZ(e.message)+' · '+Z('Refresh to verify before changing the decision','修改决定前请先刷新核实');el.style.display='block';}}}finally{FoodReviewBusy=false;busy(0);}
+  }
   function reviewActions(l,k){
-    if(k==='FOOD_UNIT')return '<div class="hint">'+Z('This is an original 15 Nov request. Confirm the actual unit and whether still needed before transferring to Food Order. Original quantity retained; no purchase or deduction created.','这是15/11旧申请。转入买菜前须核实实际包装单位及是否仍需采购；原数量保留，尚未产生采购或扣薪。')+'</div>';
+    if(k==='FOOD_UNIT')return '<button class="btn primary block" data-id="'+esc(l.id)+'" onclick="Owner.foodReviewOpen(this.dataset.id)">'+Z('Verify & decide','核实并处理')+'</button>';
     if(k==='PHOTO')return whBtn('Identify actual item','识别实际物品','PHOTO_IDENTIFY',l.id,'btn primary grow');
     if(k==='OPENING')return whBtn('Confirm opening stock','确认期初库存','OPENING',l.item_id);
     if(k==='CATALOG')return whBtn('Link actual item','关联正式商品','LINK_ITEM',l.id,'btn primary grow')+whBtn('Cancel unfulfilled','取消未发生需求','CANCEL_REVIEW',l.id);
@@ -2679,7 +2709,7 @@ const Owner = (() => {
     $('#app').innerHTML = ({buyhub:buyHub,deliver:deliverPage,accounts:accountsPage,buy:buyPage, review:reviewPage, item:itemPage,warehouse:warehousePage,whhistory:whHistoryPage,whprofit:whProfitPage,whorders:whOrdersPage,whpolicy:whPolicyPage,whbatches:whBatchesPage,whphones:phonePage,whreturns:whReturnsPage, food:foodPage, hand:handPage, spot:spotPage, med:medPage, people:peoplePage, prices:pricesPage, records:recordsPage,monthclose:monthClosePage,monthcards:monthCardsPage,monthcard:monthCardPage,receipts:ownerReceipts, settings:settingsPage, topstmt:topStmtPage, petty:pettyPage}[ui.view] || home)();
     mgPageChrome($('#app'),ui.view);spotBar();medBar();hydrateReferencePreviews({manager:true});
   }
-  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
+  return {start, refresh,closeMonthOpen,closeOpenWorker,dvPick,dvCash,dvSell,dvSet,dvAll,dvSave,dvRecover,hoSell,whQuickTotal,mrStart,mrSet,mrAdd,mrRemove,mrRow,mrSave,mrPhoto,mrPhotoRemove,mrDiscard,mrRecover,mrViewPhoto,openMonthCards,mcFilter,mcSearch,mcOpen,mcBack,mcNext,mcPrepare,mcShare,mcDownload,mcCopy,mcSetLang, seePhotos, whOpen, whSubmit, whChange, specialPlan, whTab, whSearch, whStockSearch, whStockFilter, whStockDetail, whHistoryFilter, foodReviewOpen, foodReviewChoose, foodReviewField, foodReviewSave, whPickStart, whPickCategory, whPickAction, whPickGroup, whCataloguePolicy, tfSel, tfAll, tfStart, tfSet, tfBy, tfAddSup, tfSave, tfUndo, bfSel, bfAll, bfStart, bfPrice, bfBy, bfSet, bfSave, fuUndo, askEdit, askSet, askSave, tuOne, tfOne, bfOne, detailSetSell, detailSameSell, detailBuyDate, itemsKind, catalogueSearch, refreshCatalogue, editProductGroup, hideItem, editItem, saveItem, edMgr, tuSel, tuAll, tuWa, nobuyTop, tuDone, tdSet, tdAll, tdSup, tdBy, tdDate, tdNew, tdAddSup, tdSave, tuUndo, stSet, stTick, stAll, stPay, pvBy, pvSet, pvSave, stUndo, stXlsx, pfSet, rbStart, rbTick, rbAll, rbSet, rbSave, rbUndo, pcXlsx, detailHandSell, detailHandPaid, hoPaid, spSell, spPayer, mdBy, whiskeyCost, setLang, lang, go, setDay, setMe, alc, copyList, detailBuy, detailBuyTick, detailSame, detailSetPrice, detailPayer, detailSaveBuy, detailHand, detailHandDate, detailHandShare, detailSaveHand, waToggle, waClear, waBatch, waBatchSend, waBatchCopy, buySheet, bsSet, bsTick, bsPrice, confirmBuy, nobuy, finishTrip, copySup, copyWa, printSup,
           hoTick, hoDate, toggleShare, unbuy, handOver, sp, spWs, spCustom, spPrice, spot, whiskeyToggle, whiskeyAdd, whiskeyOpen, whiskeyRemove, spotChooseSpec, spotWorkerToggle, spotWorkerQty, spotWorkerSpec, spotSpecPayer, openSpotVariants, pickSpotItem, pickLeader, saveLeader, pinFor, savePin, unlead,
           approve, saveApprove, lockPhone, editPrice, savePrice, addItem, photo, photoDel, catClose, catEditName, catSaveName, catSavePhoto, catResume, moveItem, saveMove, md, mdAmt, medSave, mgrOnly, sendWa, editLine, edSet, edSpec, saveEdit, spDet, voidRec, _state: () => ({B, ui, HO, SP, MD, ED, TD, TS, PC, DBuy, DHand})};
 })();
