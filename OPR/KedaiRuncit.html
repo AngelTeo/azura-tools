@@ -54,7 +54,7 @@ button.howcard,button.farmcard{font:inherit;color:inherit;cursor:pointer}
 .farmswitch{display:flex;gap:6px;margin:-4px 0 12px}.farmswitch button{flex:1;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:800 17px system-ui;color:var(--ink)}
 .farmswitch button.on{background:var(--green);border-color:var(--green);color:#fff}
 .lang button{border:0;background:transparent;color:#fff;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer}.lang button.on{background:#fff;color:var(--gold)}
-.modetabs{display:flex;gap:6px;max-width:1180px;margin:12px auto 0;padding:0 18px}@media(max-width:700px){.modetabs{padding:0 12px}}.modetabs[hidden]{display:none}
+.modetabs{display:flex;gap:6px;max-width:1180px;margin:12px auto 0;padding:0 18px}@media(max-width:700px){.modetabs{padding:0 12px}}.modetabs[hidden],.manager-ux #app [hidden]{display:none!important}
 .modetabs button{flex:1;min-height:46px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:800 16px system-ui;color:var(--ink);cursor:pointer}
 .modetabs button.on{background:var(--gold);border-color:var(--gold);color:#fff}
 .ico.photo img.fit{object-fit:contain;background:#fff;height:72px}
@@ -244,7 +244,7 @@ body.manager-ux{--mg-radius:15px;--mg-control:10px;--mg-gap:10px;--mg-pad:14px;-
 <div id="modalOverlay" class="over" onclick="if(event.target===this)closeModal()"><div id="modalBox" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 'use strict';
-const APP_VERSION = 80;
+const APP_VERSION = 81;
 const SB_URL = 'https://dittqalvrjiamzdzrskd.supabase.co';
 const SB_KEY = 'sb_publishable_OPS4DgPqKrwuv11bzy7ceA_VtzJ9x8t';
 const QS = new URLSearchParams(location.search);
@@ -1876,7 +1876,7 @@ const Owner = (() => {
     if(!confirm((taken?Z(`Took it now · paid by ${SP.payer}`,`已经拿了 · ${SP.payer} 付`):Z('Add to next trip','加进下一趟'))+'\n'+sum))return;
     const p={farm:SP.farm,kind:'PERSONAL',item_id:SP.item,mode,bottles:a,detail:SP.detail==='KAPAK'?'KAPAK':undefined};if(taken){p.bottle_prices=a.map((b,i)=>SP.bottleCost[i]);p.paid_by=SP.payer;}
     const r=await act('shop_owner_spot',p,taken?Z('Written now','已经记了'):Z('Added to next trip','已加入下一趟'));
-    if(r){SP={farm:SP.farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};render();}
+    if(r){SP={farm:SP.farm,kind:SP.kind,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:'',mode:'WANT'};render();}
   }
   function whiskeySpotPage(){
  const a=whiskeyBottles(),idx=SP.bottleOpen??0,tot=a.reduce((sum,b)=>sum+b.length*whiskeyRate(b.length),0);
@@ -1921,7 +1921,7 @@ const Owner = (() => {
  SpotSpecBusy=true;busy(1);let saved=0,err=null;
  try{for(const [id,r] of rows){const p={farm,kind:'PERSONAL',item_id:item,worker_id:id,qty:r.qty,detail:fixedVariant(it)?undefined:r.detail,mode};if(taken){p.price=price;p.paid_by=payer;p.sell=Number(SP.sell);}await rpc('shop_owner_spot',p);saved++;}}
  catch(e){err=e;}
- SP={farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};
+ SP={farm,kind:'PERSONAL',worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:'',mode:'WANT'};
  try{await reload();render();}catch(e){err=err||e;}finally{SpotSpecBusy=false;busy(0);}
  if(err)openModal(`<h2>${Z('Check saved results','核对保存结果')}</h2><div class="note warn">${Z('Confirmed saved','已确认保存')} ${saved}/${rows.length} · ${esc(errZ(err.message))}</div><p>${Z('Refresh and check before submitting any remaining request again.','请刷新并核对原记录，避免重复提交；未确认部分不会自动重试。')}</p><button class="btn block" onclick="closeModal()">${Z('Close','关闭')}</button>`);
  else toast(taken?Z('Written now','已经记了'):Z('Added to next trip','已加入下一趟'));
@@ -1932,7 +1932,7 @@ const Owner = (() => {
  const i=e.item;return `<button class="food pick ${SP.item===i.id?'chosen':''}" style="width:100%" data-id="${esc(i.id)}" onclick="Owner.pickSpotItem(this.dataset.id)">${icoBox(i,i.label)}<span class="foodname"><b>${esc(i.label)}</b></span><span class="plusbig">${SP.item===i.id?'✓':'+'}</span></button>`;
  }).join('');
 }
-  function pickSpotItem(id){const it=IT(id);if(!it.id||it.kind!==SP.kind)return;closeModal();if(SP.item===id){spotClear();return;}sp({item:id,price:null,sell:it.kind==='PERSONAL'?(whPolicy(id).fixed_sell??null):null,custom:'',mode:'WANT'});spotFocus();}
+  function pickSpotItem(id){if(SpotSubmitBusy||SpotSpecBusy)return;const it=IT(id);if(!it.id||it.kind!==SP.kind)return;closeModal();if(SP.item===id){spotClear();return;}sp({item:id,price:null,sell:it.kind==='PERSONAL'?(whPolicy(id).fixed_sell??null):null,custom:'',mode:'WANT'});spotFocus();}
   function openSpotVariants(group){const e=productEntries(B.items.filter(i=>i.kind===SP.kind)).find(x=>x.group===group);if(e)openModal(variantPickerHTML(group,e.variants,'Owner.pickSpotItem','closeModal',id=>SP.item===id));}
   function spotPage(){
     if(!SP) SP = {farm:null, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null};
@@ -1944,7 +1944,7 @@ const Owner = (() => {
       : `<div class="sectionhead">2 · ${Z('What kind','哪一种')}</div><div class="farmgrid">${K.map(k => `<button class="farmcard" style="min-height:90px" onclick="Owner.sp({kind:'${k}',item:null,worker:null,ws:${k==='SHARED'?'null':'null'}})"><span style="font-size:30px">${KINDS[k].ico}</span><b style="font-size:17px">${KINDS[k].name}</b><span class="mut" style="font-size:12px">${KINDS[k].sub}</span></button>`).join('')}</div>`;
     if(!SP.kind) return h;
     if(SP.kind === 'SHARED'){ if(!SP.ws) SP.ws = workers(SP.farm).map(w => w.id); }
-    if(!SP.item&&!SP.customSelected)return h+'<div class="sectionhead">3 · '+Z('Choose item','选择物品')+'</div><div class="itemsgrid">'+ownerSpotCatalog(B.items.filter(i=>i.kind===SP.kind))+'</div><div class="field" style="margin-top:8px"><label>'+Z('Other item','其他物品')+'</label><div class="btnrow"><input class="grow" id="spot-custom" maxlength="40" placeholder="'+Z('Type item name','输入物品名称')+'" value="'+esc(SP.custom||'')+'" oninput="Owner.spCustom(this.value)"><button class="btn" onclick="Owner.spotCustomChoose()">'+Z('Next','下一步')+'</button></div></div>';
+    if(!SP.item&&!SP.customSelected)return h+'<div id="spot-catalogue" class="sectionhead" style="scroll-margin-top:90px">3 · '+Z('Choose item','选择物品')+'</div><div class="itemsgrid">'+ownerSpotCatalog(B.items.filter(i=>i.kind===SP.kind))+'</div><div class="field" style="margin-top:8px"><label>'+Z('Other item','其他物品')+'</label><div class="btnrow"><input class="grow" id="spot-custom" maxlength="40" placeholder="'+Z('Type item name','输入物品名称')+'" value="'+esc(SP.custom||'')+'" oninput="Owner.spCustom(this.value)"><button class="btn" onclick="Owner.spotCustomChoose()">'+Z('Next','下一步')+'</button></div></div>';
     const it=IT(SP.item),selectedLabel=SP.item?it.label:SP.custom;
     h+='<div id="spot-item-focus" style="scroll-margin-top:90px"><div class="sectionhead">3 · '+Z('Selected item','已选物品')+'</div><div class="food chosen" style="margin-bottom:12px">'+icoBox(it,selectedLabel)+'<div class="foodname"><b>'+esc(selectedLabel)+'</b><small>'+esc(SP.farm)+' · '+esc(KINDS[SP.kind].name)+'</small></div><button class="btn small danger" onclick="Owner.spotClear()">'+Z('Cancel / change','取消／换商品')+'</button></div>'+spotModeHTML()+'</div>';
     if(spotIsTopup())return h+spotTopupPage();
@@ -1961,11 +1961,11 @@ const Owner = (() => {
     return h;
   }
   function shareSp(){ return `<div style="display:flex;gap:6px;flex-wrap:wrap">${workers(SP.farm).map(w => `<button class="pill ${SP.ws.includes(w.id)?'on':''}" style="min-height:34px;padding:5px 10px" onclick="Owner.spWs('${w.id}')">${esc(w.name)}</button>`).join('')}</div>`; }
-  function sp(o){const prev=SP||{};SP={...prev,...o};if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleCost=[];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;SP.spec=fixedVariant(IT(SP.item))?.spec||'';SP.specRows={};SP.specPayer=null;SP.payer=null;SP.wpaid=false;SP.mode='WANT';SP.customSelected=false;SP.topPhone='';SP.topAmount='';SP.client_id=null;if(!SP.item){SP.custom='';SP.price=null;SP.sell=null;}}render();}
+  function sp(o){if(SpotSubmitBusy||SpotSpecBusy)return;const prev=SP||{};SP={...prev,...o};if(['farm','kind','item'].some(k=>Object.prototype.hasOwnProperty.call(o,k)&&prev[k]!==SP[k])){SP.bottles=[[]];SP.bottleCost=[];SP.bottleOpen=0;SP.qty=1;SP.detail='';SP.worker=null;SP.spec=fixedVariant(IT(SP.item))?.spec||'';SP.specRows={};SP.specPayer=null;SP.payer=null;SP.wpaid=false;SP.mode='WANT';SP.customSelected=false;SP.topPhone='';SP.topAmount='';SP.client_id=null;if(!SP.item){SP.custom='';SP.price=null;SP.sell=null;}}render();}
   function spWs(id){ SP.ws = SP.ws.includes(id) ? SP.ws.filter(x => x !== id) : [...SP.ws, id]; render(); }
   function spDet(v){ SP.detail = v; }
   function spotFocus(){document.getElementById('spot-item-focus')?.scrollIntoView({block:'start',behavior:'auto'});}
-  function spotClear(){if(SpotSubmitBusy||SpotSpecBusy)return;const farm=SP.farm,kind=SP.kind;SP={farm,kind,item:null,worker:null,qty:1,custom:'',customSelected:false,detail:'',price:null,sell:null,ws:null,mode:'WANT'};render();scrollTo(0,0);}
+  function spotClear(){if(SpotSubmitBusy||SpotSpecBusy)return;const farm=SP.farm,kind=SP.kind;SP={farm,kind,item:null,worker:null,qty:1,custom:'',customSelected:false,detail:'',price:null,sell:null,ws:null,mode:'WANT'};render();document.getElementById('spot-catalogue')?.scrollIntoView({block:'start'});}
   function spCustom(v){SP.custom=String(v||'').toUpperCase();}
   function spotCustomChoose(){if(!SP.custom.trim())return toast(Z('Enter item name','请输入物品名称'));SP.customSelected=true;SP.item=null;SP.mode='WANT';SP.worker=null;SP.qty=1;SP.price=null;SP.sell=null;SP.detail='';SP.payer=null;SP.wpaid=false;render();spotFocus();}
   const spotIsTopup=()=>IT(SP?.item).code==='TOP UP';
@@ -1976,7 +1976,7 @@ const Owner = (() => {
   function spotActionBar(b,ok,reason,count=''){const taken=SP.mode==='TAKEN';b.className='card';b.style.cssText='margin-top:12px;display:flex;flex-direction:column;gap:8px';b.innerHTML=(reason?'<div class="hint" role="status">'+esc(reason)+'</div>':'')+'<button class="btn primary block" '+(ok&&!SpotSubmitBusy?'':'disabled')+' onclick="Owner.spot(\''+(taken?'TAKEN':'WANT')+'\')">'+(taken?Z('Confirm actual purchase & charge','确认实际购买及扣款'):Z('Add to purchase list','加入采购清单'))+(count?' · '+esc(count):'')+'</button><button class="btn block" '+(SpotSubmitBusy?'disabled':'')+' onclick="Owner.spotClear()">'+Z('Cancel / choose another item','取消／选择其他商品')+'</button>';}
   function spotTopupPage(){return '<div class="sectionhead">4 · '+Z('Choose worker','选择工人')+'</div><div class="pills" style="flex-wrap:wrap">'+workers(SP.farm).map(w=>'<button class="pill '+(SP.worker===w.id?'on':'')+'" onclick="Owner.sp({worker:\''+w.id+'\'})">'+esc(w.name)+'</button>').join('')+'</div><div class="field"><label>'+Z('Phone number','电话号码')+'</label><input type="tel" value="'+esc(SP.topPhone||'')+'" oninput="Owner.spotTopField(\'topPhone\',this.value)"></div><div class="field"><label>'+Z('Top-up RM','充值金额 RM')+'</label><input type="number" min="0.01" step="0.01" inputmode="decimal" value="'+esc(SP.topAmount||'')+'" oninput="Owner.spotTopField(\'topAmount\',this.value)"></div><div id="bottombar" class="card"></div>';}
   function spotTopField(k,v){if(['topPhone','topAmount'].includes(k)){SP[k]=v;SP.client_id=null;spotBar();}}
-  function spotTopDetail(){return topDetail(String(SP.topPhone||'').replace(/[^+0-9]/g,'')+' · RM '+String(SP.topAmount||''));}
+  function spotTopDetail(){const phone=String(SP.topPhone||'').trim();if(!phoneValid(phone))return null;return topDetail(phone.replace(/[ ()-]/g,'')+' · RM '+String(SP.topAmount||''));}
   function spPrice(v){ SP.price = parseFloat(v) || null; spotBar(); }
   function spSell(v){ SP.sell = whPolicy(SP.item).fixed_sell??(parseFloat(v) || null); spotBar(); }
   function spPayer(v){ SP.payer = v; SP.specPayer = v; render(); }
@@ -1997,7 +1997,7 @@ const Owner = (() => {
     if(false){
       const id=whiskeyBottles()[0][0];if(!confirm(Z('Deduct RM50 for one bottle from '+wname(id)+'?','确认 '+wname(id)+' 一人一瓶，扣 RM50？')))return;
       const p={farm:SP.farm,kind:SP.kind,item_id:SP.item,qty:1,mode:'TAKEN',price:50,paid_by:SP.payer};if(SP.kind==='PERSONAL')p.worker_id=id;else p.share_ids=[id];
-      const r=await act('shop_owner_spot',p,Z('Written now','已经记了'));if(r){SP={farm:SP.farm,kind:null,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:''};render();}return;
+      const r=await act('shop_owner_spot',p,Z('Written now','已经记了'));if(r){SP={farm:SP.farm,kind:SP.kind,worker:null,item:null,qty:1,price:null,custom:'',ws:null,detail:'',mode:'WANT'};render();}return;
     }
     const p = {farm:SP.farm, kind:SP.kind, worker_id: SP.kind === 'PERSONAL' ? SP.worker : undefined, qty:SP.qty, mode};
     if(SP.item) p.item_id = SP.item; else p.custom_name = SP.custom.trim();
@@ -2005,7 +2005,7 @@ const Owner = (() => {
     if(mode === 'TAKEN'){ p.price = SP.price; p.paid_by = SP.payer; if(SP.kind === 'SHARED') p.share_ids = halfAuto(B.today)?[]:SP.ws; if(SP.kind === 'PERSONAL'){ p.sell = SP.sell; p.worker_paid = !!SP.wpaid; }
       if(!confirm(SP.kind === 'PERSONAL' ? Z(`Bought ${RM(SP.price*SP.qty)} (${SP.payer}) · worker ${SP.wpaid ? 'paid cash' : 'pays ' + RM(SP.sell*SP.qty)}?`, `买价 ${RM(SP.price*SP.qty)}（${SP.payer}）· 工人${SP.wpaid ? '已付现金' : '扣 ' + RM(SP.sell*SP.qty)}？`) : Z(`Write ${RM(SP.price*SP.qty)} now (${SP.payer})?`, `马上记 ${RM(SP.price*SP.qty)}（${SP.payer} 付）？`))) return; }
     const r = await act('shop_owner_spot', p, mode === 'TAKEN' ? Z('Written now','已经记了') : Z('Added to the next trip — the Leader sees it too','已加进下一趟 — 工头也看得到'));
-    if(r){ SP = {farm:SP.farm, kind:null, worker:null, item:null, qty:1, price:null, custom:'', ws:null, detail:''}; render(); }
+    if(r){ SP = {farm:SP.farm, kind:SP.kind, worker:null, item:null, qty:1, price:null, custom:'', ws:null, detail:'',mode:'WANT'}; render(); }
   }
 
   /* ---------- edit a line not bought yet: detail, farm, kind, worker ---------- */
